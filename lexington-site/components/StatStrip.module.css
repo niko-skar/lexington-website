@@ -1,0 +1,24 @@
+.strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--space-8);
+}
+
+.stat {
+  border-top: 1px solid var(--brass);
+  padding-top: var(--space-4);
+}
+
+.stat b {
+  font-family: var(--font-serif);
+  font-size: var(--fs-600);
+  display: block;
+  color: var(--paper);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat span {
+  font-size: 13px;
+  color: var(--stone);
+}

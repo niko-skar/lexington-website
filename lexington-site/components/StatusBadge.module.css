@@ -1,0 +1,35 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 5px 10px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+
+.badge::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.available {
+  color: var(--status-available);
+  background: rgba(103, 115, 95, 0.14);
+}
+
+.reserved {
+  color: var(--status-reserved);
+  background: rgba(176, 141, 87, 0.16);
+}
+
+.sold {
+  color: var(--status-sold);
+  background: rgba(139, 74, 52, 0.14);
+}

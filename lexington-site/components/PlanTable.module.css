@@ -1,0 +1,36 @@
+.tableScroll {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--ink-line);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.table thead th {
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--brass-lt);
+  border-bottom: 2px solid var(--brass);
+}
+
+.table td {
+  font-variant-numeric: tabular-nums;
+  font-size: 15px;
+  color: var(--paper);
+}
+
+.discount {
+  color: var(--clay-lt);
+  font-weight: 600;
+  font-family: var(--font-serif);
+}

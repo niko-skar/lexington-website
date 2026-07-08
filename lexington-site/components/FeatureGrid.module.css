@@ -1,0 +1,29 @@
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 2px;
+  background: var(--stone);
+}
+
+.card {
+  background: var(--paper);
+  padding: 30px 26px;
+  min-height: 150px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
+}
+
+.idx {
+  font-family: var(--font-serif);
+  font-style: italic;
+  color: var(--brass);
+  font-size: 14px;
+}
+
+.card h3 {
+  font-size: 18px;
+  margin-top: 22px;
+  font-weight: 500;
+}
