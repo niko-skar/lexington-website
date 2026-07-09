@@ -4,6 +4,7 @@ import { amenity } from "./amenity";
 import { familyMember } from "./familyMember";
 import { financingPlan } from "./financingPlan";
 import { siteSettings } from "./siteSettings";
+import { unitLocationPlan } from "./unitLocationPlan";
 
 export const schemaTypes = [
   unit,
@@ -12,4 +13,5 @@ export const schemaTypes = [
   familyMember,
   financingPlan,
   siteSettings,
+  unitLocationPlan,
 ];

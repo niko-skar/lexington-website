@@ -120,6 +120,128 @@
   color: var(--clay);
 }
 
+.checkboxCol {
+  width: 20px;
+}
+
+.compareCheckbox {
+  width: 17px;
+  height: 17px;
+  accent-color: var(--brass);
+  cursor: pointer;
+}
+
+.cardActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-top: 14px;
+}
+
+.card .planLink {
+  margin-top: 0;
+}
+
+.compareLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #6b6355;
+}
+
+.compareLabel input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--brass);
+  cursor: pointer;
+}
+
+.compareBar {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  z-index: 150;
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  background: var(--ink);
+  color: var(--paper);
+  padding: 16px 24px;
+  border-radius: var(--radius);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
+  max-width: calc(100vw - 32px);
+}
+
+.compareBarCount {
+  font-size: 13.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.compareBarActions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: none;
+}
+
+.compareBarClear {
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--stone);
+}
+
+.compareBarClear:hover {
+  color: var(--paper);
+}
+
+.compareBarButton {
+  background: var(--brass);
+  color: var(--ink);
+  padding: 10px 20px;
+  border-radius: var(--radius);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.compareBarButton:hover {
+  background: var(--brass-lt);
+}
+
+.compareBarButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (max-width: 640px) {
+  .compareBar {
+    left: 16px;
+    right: 16px;
+    bottom: 16px;
+    transform: none;
+    max-width: none;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .compareBarActions {
+    justify-content: space-between;
+  }
+}
+
 @media (max-width: 720px) {
   .tableWrap {
     display: none;

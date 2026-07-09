@@ -1,7 +1,12 @@
 import { client } from "@/lib/sanity/client";
 import { urlFor } from "@/lib/sanity/image";
-import { galleryImagesQuery, siteSettingsQuery, unitsQuery } from "@/lib/sanity/queries";
-import type { BedroomType, GalleryImage, SiteSettings, Unit } from "@/lib/sanity/types";
+import {
+  galleryImagesQuery,
+  siteSettingsQuery,
+  unitLocationPlansQuery,
+  unitsQuery,
+} from "@/lib/sanity/queries";
+import type { BedroomType, GalleryImage, SiteSettings, Unit, UnitLocationPlan } from "@/lib/sanity/types";
 
 import { PageIntro } from "@/components/PageIntro";
 import { UnitFinder } from "@/components/UnitFinder";
@@ -23,10 +28,11 @@ const extras = [
 ];
 
 export default async function ResidencesPage() {
-  const [units, images, siteSettings] = await Promise.all([
+  const [units, images, siteSettings, unitLocationPlans] = await Promise.all([
     client.fetch<Unit[]>(unitsQuery),
     client.fetch<GalleryImage[]>(galleryImagesQuery),
     client.fetch<SiteSettings>(siteSettingsQuery),
+    client.fetch<UnitLocationPlan[]>(unitLocationPlansQuery),
   ]);
 
   const floorplanImages = images.filter((i) => i.category === "floorplan");
@@ -40,13 +46,23 @@ export default async function ResidencesPage() {
     "3BR Duplex Penthouse": floorplanImages.filter((i) => i.alt.toLowerCase().includes("duplex")),
   };
 
+  // A floor's units are sometimes split across two location diagrams (not
+  // every unit fits in one render), so look up by unit number rather than
+  // by floor alone.
+  const locationPlanByUnit: Record<string, UnitLocationPlan> = {};
+  for (const plan of unitLocationPlans) {
+    for (const unitNumber of plan.units) {
+      locationPlanByUnit[unitNumber] = plan;
+    }
+  }
+
   return (
     <>
       <PageIntro {...siteSettings.residencesIntro} />
 
       <section className="section sectionStone" style={{ paddingTop: "clamp(32px, 4vw, 56px)" }}>
         <div className="wrap">
-          <UnitFinder units={units} floorPlans={floorPlansByType} />
+          <UnitFinder units={units} floorPlans={floorPlansByType} locationPlanByUnit={locationPlanByUnit} />
         </div>
       </section>
 

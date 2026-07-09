@@ -184,6 +184,20 @@ const familyMembers = [
   },
 ];
 
+// Each floor's brochure diagram splits its units across one or two
+// images (not every unit fits in a single render) — floors 3 and 5 are
+// the exception, where one image already covers every unit.
+const unitLocationPlans = [
+  { id: "floor1-a", floor: 1, units: ["101A", "102B", "103B"], file: "location-floor1-a.png" },
+  { id: "floor1-b", floor: 1, units: ["104B"], file: "location-floor1-b.png" },
+  { id: "floor2-a", floor: 2, units: ["202A", "203B", "204B"], file: "location-floor2-a.png" },
+  { id: "floor2-b", floor: 2, units: ["201A", "205B"], file: "location-floor2-b.png" },
+  { id: "floor3", floor: 3, units: ["301A", "302A", "303B", "304B", "305B"], file: "location-floor3.png" },
+  { id: "floor4-a", floor: 4, units: ["402A", "403B", "404B"], file: "location-floor4-a.png" },
+  { id: "floor4-b", floor: 4, units: ["401A", "405B"], file: "location-floor4-b.png" },
+  { id: "floor5", floor: 5, units: ["501A", "502B", "503B"], file: "location-floor5.png" },
+];
+
 function slugify(input: string) {
   return input
     .toLowerCase()
@@ -334,6 +348,28 @@ async function seedGallery() {
   }
 }
 
+async function seedUnitLocationPlans() {
+  console.log(`Seeding ${unitLocationPlans.length} unit location plans...`);
+  for (const p of unitLocationPlans) {
+    const id = `unit-location-${p.id}`;
+    const existing = await client.fetch<{ image?: { asset?: { _ref: string } } } | null>(
+      `*[_id == $id][0]{image}`,
+      { id }
+    );
+    const assetId = existing?.image?.asset?._ref ?? (await uploadImage(p.file));
+    await client.createOrReplace({
+      _id: id,
+      _type: "unitLocationPlan",
+      floor: p.floor,
+      units: p.units,
+      image: {
+        _type: "image",
+        asset: { _type: "reference", _ref: assetId },
+      },
+    });
+  }
+}
+
 async function seedSiteSettings() {
   console.log("Seeding site settings...");
   await client.createIfNotExists({
@@ -388,6 +424,7 @@ async function main() {
   await seedFamilyMembers();
   await seedFinancingPlan();
   await seedGallery();
+  await seedUnitLocationPlans();
   await seedSiteSettings();
   console.log("Seed complete.");
 }

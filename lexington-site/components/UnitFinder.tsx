@@ -2,26 +2,32 @@
 
 import { useMemo, useState } from "react";
 
-import type { BedroomType, GalleryImage, Unit, UnitStatus } from "@/lib/sanity/types";
+import type { BedroomType, GalleryImage, Unit, UnitLocationPlan, UnitStatus } from "@/lib/sanity/types";
 import { formatUSD } from "@/lib/format";
 import { StatusBadge } from "./StatusBadge";
 import { UnitDetailModal } from "./UnitDetailModal";
+import { CompareModal } from "./CompareModal";
 import styles from "./UnitFinder.module.css";
 
 type FloorFilter = number | "all";
 type TypeFilter = BedroomType | "all";
 type StatusFilter = UnitStatus | "all";
 
+const MAX_COMPARE = 4;
+
 interface UnitFinderProps {
   units: Unit[];
   floorPlans: Record<BedroomType, GalleryImage[]>;
+  locationPlanByUnit: Record<string, UnitLocationPlan>;
 }
 
-export function UnitFinder({ units, floorPlans }: UnitFinderProps) {
+export function UnitFinder({ units, floorPlans, locationPlanByUnit }: UnitFinderProps) {
   const [floor, setFloor] = useState<FloorFilter>("all");
   const [type, setType] = useState<TypeFilter>("all");
   const [status, setStatus] = useState<StatusFilter>("all");
   const [selectedUnit, setSelectedUnit] = useState<Unit | null>(null);
+  const [compareIds, setCompareIds] = useState<string[]>([]);
+  const [showCompare, setShowCompare] = useState(false);
 
   const floors = useMemo(
     () => Array.from(new Set(units.map((u) => u.floor))).sort((a, b) => a - b),
@@ -45,6 +51,16 @@ export function UnitFinder({ units, floorPlans }: UnitFinderProps) {
   );
 
   const availableInFiltered = filtered.filter((u) => u.status === "available").length;
+
+  function toggleCompare(id: string) {
+    setCompareIds((prev) => {
+      if (prev.includes(id)) return prev.filter((x) => x !== id);
+      if (prev.length >= MAX_COMPARE) return prev;
+      return [...prev, id];
+    });
+  }
+
+  const compareUnits = units.filter((u) => compareIds.includes(u._id));
 
   return (
     <div>
@@ -115,6 +131,7 @@ export function UnitFinder({ units, floorPlans }: UnitFinderProps) {
         <table className={styles.table}>
           <thead>
             <tr>
+              <th className={styles.checkboxCol}></th>
               <th>Unit</th>
               <th>Floor</th>
               <th>Type</th>
@@ -125,43 +142,70 @@ export function UnitFinder({ units, floorPlans }: UnitFinderProps) {
             </tr>
           </thead>
           <tbody>
-            {filtered.map((u) => (
-              <tr key={u._id}>
-                <td>{u.unitNumber}</td>
-                <td>{u.floor}</td>
-                <td>{u.bedroomType}</td>
-                <td>{u.areaSqm} sqm</td>
-                <td className={styles.price}>{formatUSD(u.priceUSD)}</td>
-                <td>
-                  <StatusBadge status={u.status} />
-                </td>
-                <td>
-                  <button className={styles.planLink} onClick={() => setSelectedUnit(u)}>
-                    Floor Plan
-                  </button>
-                </td>
-              </tr>
-            ))}
+            {filtered.map((u) => {
+              const checked = compareIds.includes(u._id);
+              return (
+                <tr key={u._id}>
+                  <td className={styles.checkboxCol}>
+                    <input
+                      type="checkbox"
+                      className={styles.compareCheckbox}
+                      checked={checked}
+                      onChange={() => toggleCompare(u._id)}
+                      disabled={!checked && compareIds.length >= MAX_COMPARE}
+                      aria-label={`Add ${u.unitNumber} to compare`}
+                    />
+                  </td>
+                  <td>{u.unitNumber}</td>
+                  <td>{u.floor}</td>
+                  <td>{u.bedroomType}</td>
+                  <td>{u.areaSqm} sqm</td>
+                  <td className={styles.price}>{formatUSD(u.priceUSD)}</td>
+                  <td>
+                    <StatusBadge status={u.status} />
+                  </td>
+                  <td>
+                    <button className={styles.planLink} onClick={() => setSelectedUnit(u)}>
+                      Floor Plan
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
 
       <div className={styles.cards}>
-        {filtered.map((u) => (
-          <div className={styles.card} key={u._id}>
-            <div className={styles.cardHead}>
-              <span className={styles.cardUnit}>{u.unitNumber}</span>
-              <StatusBadge status={u.status} />
+        {filtered.map((u) => {
+          const checked = compareIds.includes(u._id);
+          return (
+            <div className={styles.card} key={u._id}>
+              <div className={styles.cardHead}>
+                <span className={styles.cardUnit}>{u.unitNumber}</span>
+                <StatusBadge status={u.status} />
+              </div>
+              <div className={styles.cardMeta}>
+                Floor {u.floor} · {u.bedroomType} · {u.areaSqm} sqm
+              </div>
+              <div className={styles.cardPrice}>{formatUSD(u.priceUSD)}</div>
+              <div className={styles.cardActions}>
+                <button className={styles.planLink} onClick={() => setSelectedUnit(u)}>
+                  View Floor Plan &amp; Location
+                </button>
+                <label className={styles.compareLabel}>
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => toggleCompare(u._id)}
+                    disabled={!checked && compareIds.length >= MAX_COMPARE}
+                  />
+                  Compare
+                </label>
+              </div>
             </div>
-            <div className={styles.cardMeta}>
-              Floor {u.floor} · {u.bedroomType} · {u.areaSqm} sqm
-            </div>
-            <div className={styles.cardPrice}>{formatUSD(u.priceUSD)}</div>
-            <button className={styles.planLink} onClick={() => setSelectedUnit(u)}>
-              View Floor Plan &amp; Location
-            </button>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {filtered.length === 0 && (
@@ -172,8 +216,33 @@ export function UnitFinder({ units, floorPlans }: UnitFinderProps) {
         <UnitDetailModal
           unit={selectedUnit}
           floorPlans={floorPlans[selectedUnit.bedroomType]}
+          locationPlan={locationPlanByUnit[selectedUnit.unitNumber]}
           onClose={() => setSelectedUnit(null)}
         />
+      )}
+
+      {compareUnits.length > 0 && (
+        <div className={styles.compareBar}>
+          <span className={styles.compareBarCount}>
+            {compareUnits.length} of {MAX_COMPARE} selected — {compareUnits.map((u) => u.unitNumber).join(", ")}
+          </span>
+          <div className={styles.compareBarActions}>
+            <button className={styles.compareBarClear} onClick={() => setCompareIds([])}>
+              Clear
+            </button>
+            <button
+              className={styles.compareBarButton}
+              disabled={compareUnits.length < 2}
+              onClick={() => setShowCompare(true)}
+            >
+              Compare {compareUnits.length > 1 ? `(${compareUnits.length})` : ""}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showCompare && compareUnits.length > 0 && (
+        <CompareModal units={compareUnits} onClose={() => setShowCompare(false)} />
       )}
     </div>
   );

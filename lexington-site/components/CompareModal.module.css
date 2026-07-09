@@ -1,0 +1,76 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(10, 11, 12, 0.94);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6);
+}
+
+.panel {
+  background: var(--paper);
+  border-radius: var(--radius);
+  max-width: 920px;
+  width: 100%;
+  max-height: 88vh;
+  overflow-y: auto;
+  padding: var(--space-7);
+  position: relative;
+}
+
+.close {
+  position: absolute;
+  top: var(--space-5);
+  right: var(--space-5);
+  font-size: 28px;
+  line-height: 1;
+  color: var(--ink);
+}
+
+.title {
+  font-family: var(--font-serif);
+  font-size: 26px;
+  padding-right: 40px;
+}
+
+.tableWrap {
+  margin-top: var(--space-6);
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(21, 24, 26, 0.14);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.unitHead {
+  font-family: var(--font-serif);
+  font-size: 20px;
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.rowLabel {
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--brass);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.table td {
+  font-size: 15px;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}

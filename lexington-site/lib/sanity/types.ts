@@ -101,3 +101,10 @@ export interface SiteSettings {
   aboutIntro: PageIntroContent;
   contactIntro: PageIntroContent;
 }
+
+export interface UnitLocationPlan {
+  _id: string;
+  floor: number;
+  units: string[];
+  image: Image;
+}
