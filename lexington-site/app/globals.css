@@ -57,8 +57,10 @@
   --content-texture-size: 180px 180px;
   --content-texture-repeat: repeat;
 
-  /* Status */
-  --status-available: var(--sky-lt);
+  /* Status — all three now only ever appear on light backgrounds
+     (unit table, unit cards, unit detail modal), so each needs to be
+     dark/saturated enough for reliable contrast on paper/stone. */
+  --status-available: #2f5068;
   --status-reserved: var(--brass);
   --status-sold: var(--clay);
 
@@ -211,6 +213,10 @@ h4 {
 
 .sectionAlt {
   background: var(--paper-dim);
+}
+
+.sectionStone {
+  background: var(--stone);
 }
 
 .eyebrow {

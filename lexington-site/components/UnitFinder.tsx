@@ -14,7 +14,7 @@ type StatusFilter = UnitStatus | "all";
 
 interface UnitFinderProps {
   units: Unit[];
-  floorPlans: Record<BedroomType, GalleryImage | undefined>;
+  floorPlans: Record<BedroomType, GalleryImage[]>;
 }
 
 export function UnitFinder({ units, floorPlans }: UnitFinderProps) {
@@ -171,7 +171,7 @@ export function UnitFinder({ units, floorPlans }: UnitFinderProps) {
       {selectedUnit && (
         <UnitDetailModal
           unit={selectedUnit}
-          floorPlan={floorPlans[selectedUnit.bedroomType]}
+          floorPlans={floorPlans[selectedUnit.bedroomType]}
           onClose={() => setSelectedUnit(null)}
         />
       )}

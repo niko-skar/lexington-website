@@ -13,11 +13,20 @@ import styles from "./UnitDetailModal.module.css";
 
 interface UnitDetailModalProps {
   unit: Unit;
-  floorPlan?: GalleryImage;
+  floorPlans: GalleryImage[];
   onClose: () => void;
 }
 
-export function UnitDetailModal({ unit, floorPlan, onClose }: UnitDetailModalProps) {
+// Duplex penthouse floor plans are captioned "... — lower floor" / "...
+// upper floor (rooftop level)" — pull the part after the dash as a label
+// whenever there's more than one plan to show for a unit.
+function planLabel(alt: string) {
+  const label = alt.split("—")[1]?.trim();
+  if (!label) return null;
+  return label.replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+export function UnitDetailModal({ unit, floorPlans, onClose }: UnitDetailModalProps) {
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
@@ -44,15 +53,24 @@ export function UnitDetailModal({ unit, floorPlan, onClose }: UnitDetailModalPro
           <StatusBadge status={unit.status} />
         </div>
 
-        {floorPlan ? (
-          <div className={styles.imageWrap}>
-            <Image
-              src={urlFor(floorPlan.image).width(900).url()}
-              alt={floorPlan.alt}
-              width={900}
-              height={900}
-              sizes="(max-width: 720px) 100vw, 720px"
-            />
+        {floorPlans.length > 0 ? (
+          <div className={styles.plans}>
+            {floorPlans.map((plan) => (
+              <div key={plan._id}>
+                {floorPlans.length > 1 && (
+                  <div className={styles.planLabel}>{planLabel(plan.alt)}</div>
+                )}
+                <div className={styles.imageWrap}>
+                  <Image
+                    src={urlFor(plan.image).width(900).url()}
+                    alt={plan.alt}
+                    width={900}
+                    height={900}
+                    sizes="(max-width: 720px) 100vw, 720px"
+                  />
+                </div>
+              </div>
+            ))}
           </div>
         ) : (
           <p className={styles.noPlan}>

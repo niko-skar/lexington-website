@@ -73,7 +73,10 @@ const galleryEntries: GalleryEntry[] = [
 
   { id: "floorplan-one-bedroom", file: "floorplan-one-bedroom.png", alt: "Sample one-bedroom floor plan", category: "floorplan" },
   { id: "floorplan-two-bedroom", file: "floorplan-two-bedroom.png", alt: "Sample two-bedroom floor plan", category: "floorplan" },
-  { id: "floorplan-duplex-penthouse", file: "floorplan-duplex-penthouse.png", alt: "Sample duplex penthouse floor plan", category: "floorplan" },
+  // The 3BR duplex penthouses span two levels — lower floor (living areas)
+  // plus the upper/rooftop floor — so two plans are shown per unit, not one.
+  { id: "floorplan-duplex-lower", file: "floorplan-duplex-lower.png", alt: "Sample duplex penthouse floor plan — lower floor", category: "floorplan" },
+  { id: "floorplan-duplex-upper", file: "floorplan-duplex-upper.png", alt: "Sample duplex penthouse floor plan — upper floor (rooftop level)", category: "floorplan" },
 ];
 
 // Docs from the old (broken/duplicate) curation that no longer have a
@@ -87,6 +90,7 @@ const STALE_GALLERY_IDS = [
   "gallery-gallery-3",
   "gallery-gallery-5",
   "gallery-gallery-8",
+  "gallery-floorplan-duplex-penthouse",
 ];
 
 type UnitSeed = {

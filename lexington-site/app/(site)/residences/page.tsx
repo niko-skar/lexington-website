@@ -32,17 +32,19 @@ export default async function ResidencesPage() {
   const floorplanImages = images.filter((i) => i.category === "floorplan");
   const floorplanImage = floorplanImages[0];
 
-  const floorPlansByType: Record<BedroomType, GalleryImage | undefined> = {
-    "One Bedroom": floorplanImages.find((i) => i.alt.toLowerCase().includes("one-bedroom")),
-    "Two Bedroom": floorplanImages.find((i) => i.alt.toLowerCase().includes("two-bedroom")),
-    "3BR Duplex Penthouse": floorplanImages.find((i) => i.alt.toLowerCase().includes("duplex")),
+  // Duplex penthouses span two levels, so they have two floor plans (lower
+  // + upper/rooftop) that both need to be viewable — everything else has one.
+  const floorPlansByType: Record<BedroomType, GalleryImage[]> = {
+    "One Bedroom": floorplanImages.filter((i) => i.alt.toLowerCase().includes("one-bedroom")),
+    "Two Bedroom": floorplanImages.filter((i) => i.alt.toLowerCase().includes("two-bedroom")),
+    "3BR Duplex Penthouse": floorplanImages.filter((i) => i.alt.toLowerCase().includes("duplex")),
   };
 
   return (
     <>
       <PageIntro {...siteSettings.residencesIntro} />
 
-      <section className="section sectionDark" style={{ paddingTop: "clamp(32px, 4vw, 56px)" }}>
+      <section className="section sectionStone" style={{ paddingTop: "clamp(32px, 4vw, 56px)" }}>
         <div className="wrap">
           <UnitFinder units={units} floorPlans={floorPlansByType} />
         </div>
