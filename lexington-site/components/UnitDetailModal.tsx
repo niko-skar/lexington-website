@@ -14,11 +14,10 @@ import styles from "./UnitDetailModal.module.css";
 interface UnitDetailModalProps {
   unit: Unit;
   floorPlan?: GalleryImage;
-  officeAddress: string;
   onClose: () => void;
 }
 
-export function UnitDetailModal({ unit, floorPlan, officeAddress, onClose }: UnitDetailModalProps) {
+export function UnitDetailModal({ unit, floorPlan, onClose }: UnitDetailModalProps) {
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
@@ -66,7 +65,7 @@ export function UnitDetailModal({ unit, floorPlan, officeAddress, onClose }: Uni
             Shiashie, East Legon, Accra
           </span>
           <a
-            href={googleMapsUrl(officeAddress)}
+            href={googleMapsUrl()}
             target="_blank"
             rel="noopener noreferrer"
             className={`${buttonStyles.btn} ${buttonStyles.outlineDark}`}

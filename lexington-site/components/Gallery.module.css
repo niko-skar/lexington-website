@@ -1,17 +1,17 @@
 .filters {
   display: flex;
   flex-wrap: wrap;
-  gap: 20px;
-  margin-bottom: var(--space-8);
+  gap: 12px;
+  margin-bottom: var(--space-6);
 }
 
 .chip,
 .chipActive {
-  padding: 10px 24px;
+  padding: 8px 18px;
   border-radius: 20px;
   font-size: 13px;
   font-weight: 500;
-  border: 1px solid var(--ink-line);
+  border: 1px solid rgba(21, 24, 26, 0.16);
   color: var(--stone);
   transition: all 0.2s var(--ease);
 }

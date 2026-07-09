@@ -22,7 +22,7 @@ export default async function GalleryPage() {
     <>
       <PageIntro {...siteSettings.galleryIntro} />
 
-      <section style={{ paddingTop: "clamp(40px, 5vw, 64px)" }}>
+      <section style={{ paddingTop: "clamp(24px, 3vw, 40px)" }}>
         <div className="wrap">
           <Gallery images={images} />
         </div>

@@ -38,7 +38,7 @@ export async function SiteFooter() {
         </div>
         <div className={styles.bottom}>
           <span>© {new Date().getFullYear()} Skarlatos &amp; Son. All rights reserved.</span>
-          <a href={googleMapsUrl(siteSettings.officeAddress)} target="_blank" rel="noopener noreferrer">
+          <a href={googleMapsUrl()} target="_blank" rel="noopener noreferrer">
             {siteSettings.officeAddress}
           </a>
         </div>

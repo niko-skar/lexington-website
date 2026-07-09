@@ -77,6 +77,24 @@ export default async function HomePage() {
         </div>
       </Hero>
 
+      <SplitSection
+        imageUrl={urlFor(residencesImage.image).width(800).height(1000).url()}
+        imageAlt={residencesImage.alt}
+        eyebrow="Residences"
+        title="One, two and three-bedroom duplex penthouses."
+        style={{ paddingTop: "clamp(48px, 6vw, 80px)" }}
+      >
+        <p>
+          Every floor plan is drawn to let daily life move naturally — from
+          high-speed elevators and natural stone flooring to a back-up
+          generator and water supply that never leave you waiting. Prices
+          from {formatUSD(startingPrice)}.
+        </p>
+        <Button href="/residences" variant="outline-dark">
+          Explore Floor Plans
+        </Button>
+      </SplitSection>
+
       <section className="section sectionDark">
         <div className="wrap">
           <Reveal>
@@ -95,23 +113,6 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
-
-      <SplitSection
-        imageUrl={urlFor(residencesImage.image).width(800).height(1000).url()}
-        imageAlt={residencesImage.alt}
-        eyebrow="Residences"
-        title="One, two and three-bedroom duplex penthouses."
-      >
-        <p>
-          Every floor plan is drawn to let daily life move naturally — from
-          high-speed elevators and natural stone flooring to a back-up
-          generator and water supply that never leave you waiting. Prices
-          from {formatUSD(startingPrice)}.
-        </p>
-        <Button href="/residences" variant="outline-dark">
-          Explore Floor Plans
-        </Button>
-      </SplitSection>
 
       <section className="section sectionAlt">
         <div className="wrap">

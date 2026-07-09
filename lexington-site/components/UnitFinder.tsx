@@ -15,10 +15,9 @@ type StatusFilter = UnitStatus | "all";
 interface UnitFinderProps {
   units: Unit[];
   floorPlans: Record<BedroomType, GalleryImage | undefined>;
-  officeAddress: string;
 }
 
-export function UnitFinder({ units, floorPlans, officeAddress }: UnitFinderProps) {
+export function UnitFinder({ units, floorPlans }: UnitFinderProps) {
   const [floor, setFloor] = useState<FloorFilter>("all");
   const [type, setType] = useState<TypeFilter>("all");
   const [status, setStatus] = useState<StatusFilter>("all");
@@ -173,7 +172,6 @@ export function UnitFinder({ units, floorPlans, officeAddress }: UnitFinderProps
         <UnitDetailModal
           unit={selectedUnit}
           floorPlan={floorPlans[selectedUnit.bedroomType]}
-          officeAddress={officeAddress}
           onClose={() => setSelectedUnit(null)}
         />
       )}

@@ -40,20 +40,23 @@
   text-transform: uppercase;
   color: var(--brass-lt);
   margin-bottom: 20px;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.55);
 }
 
 .content h1 {
   font-size: var(--fs-800);
   color: var(--paper);
   max-width: 16ch;
+  text-shadow: 0 2px 16px rgba(0, 0, 0, 0.35);
 }
 
 .content p.lede {
-  margin-top: 22px;
+  margin-top: clamp(28px, 4vw, 40px);
   max-width: 46ch;
   font-size: var(--fs-400);
   color: var(--paper-dim);
   font-weight: 400;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.4);
 }
 
 .content .actions {
@@ -63,31 +66,3 @@
   flex-wrap: wrap;
 }
 
-.scrollHint {
-  position: absolute;
-  right: var(--edge-pad);
-  bottom: 40px;
-  z-index: 1;
-  writing-mode: vertical-rl;
-  color: var(--paper-dim);
-  font-size: 11px;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.scrollHint::after {
-  content: "";
-  width: 1px;
-  height: 52px;
-  background: var(--brass);
-  display: block;
-}
-
-@media (max-width: 640px) {
-  .scrollHint {
-    display: none;
-  }
-}

@@ -42,9 +42,9 @@ export default async function ResidencesPage() {
     <>
       <PageIntro {...siteSettings.residencesIntro} />
 
-      <section className="section sectionDark" style={{ paddingTop: 0 }}>
+      <section className="section sectionDark" style={{ paddingTop: "clamp(32px, 4vw, 56px)" }}>
         <div className="wrap">
-          <UnitFinder units={units} floorPlans={floorPlansByType} officeAddress={siteSettings.officeAddress} />
+          <UnitFinder units={units} floorPlans={floorPlansByType} />
         </div>
       </section>
 

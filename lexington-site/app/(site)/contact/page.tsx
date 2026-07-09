@@ -42,7 +42,7 @@ export default async function ContactPage() {
                 <div className={styles.key}>Office</div>
                 <div className={styles.value}>
                   <a
-                    href={googleMapsUrl(siteSettings.officeAddress)}
+                    href={googleMapsUrl()}
                     target="_blank"
                     rel="noopener noreferrer"
                   >
