@@ -9,7 +9,7 @@ export function PaymentStepper({ rows }: { rows: SelfFinanceRow[] }) {
         <Reveal key={row.milestone} delay={i * 60} className={styles.step}>
           <div className={styles.milestone}>{row.milestone}</div>
           <div className={styles.timeframe}>{row.timeframe}</div>
-          <span className={styles.discount}>{row.discount} discount</span>
+          <span className={styles.discount}>{row.option1} due</span>
         </Reveal>
       ))}
     </div>

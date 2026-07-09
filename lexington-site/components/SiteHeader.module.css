@@ -11,7 +11,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 78px;
+  height: 100px;
 }
 
 .brand {
@@ -37,7 +37,7 @@
 .nav {
   display: flex;
   align-items: center;
-  gap: 34px;
+  gap: 44px;
 }
 
 .nav a {
@@ -112,7 +112,7 @@
 @media (max-width: 880px) {
   .nav {
     position: fixed;
-    inset: 78px 0 0 0;
+    inset: 100px 0 0 0;
     background: var(--ink);
     flex-direction: column;
     justify-content: flex-start;

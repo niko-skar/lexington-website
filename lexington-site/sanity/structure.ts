@@ -31,4 +31,10 @@ export const structure: StructureResolver = (S) =>
         .child(
           S.document().schemaType("financingPlan").documentId("financingPlan")
         ),
+      S.listItem()
+        .title("Site settings")
+        .id("siteSettings")
+        .child(
+          S.document().schemaType("siteSettings").documentId("siteSettings")
+        ),
     ]);

@@ -3,6 +3,7 @@ import { galleryImage } from "./galleryImage";
 import { amenity } from "./amenity";
 import { familyMember } from "./familyMember";
 import { financingPlan } from "./financingPlan";
+import { siteSettings } from "./siteSettings";
 
 export const schemaTypes = [
   unit,
@@ -10,4 +11,5 @@ export const schemaTypes = [
   amenity,
   familyMember,
   financingPlan,
+  siteSettings,
 ];

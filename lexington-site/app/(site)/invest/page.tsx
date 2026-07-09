@@ -1,7 +1,7 @@
 import { client } from "@/lib/sanity/client";
 import { urlFor } from "@/lib/sanity/image";
-import { financingPlanQuery, galleryImagesQuery } from "@/lib/sanity/queries";
-import type { FinancingPlan, GalleryImage } from "@/lib/sanity/types";
+import { financingPlanQuery, galleryImagesQuery, siteSettingsQuery } from "@/lib/sanity/queries";
+import type { FinancingPlan, GalleryImage, SiteSettings } from "@/lib/sanity/types";
 
 import { PageIntro } from "@/components/PageIntro";
 import { PaymentStepper } from "@/components/PaymentStepper";
@@ -17,22 +17,17 @@ export const metadata = {
 };
 
 export default async function InvestPage() {
-  const [financingPlan, images] = await Promise.all([
+  const [financingPlan, images, siteSettings] = await Promise.all([
     client.fetch<FinancingPlan>(financingPlanQuery),
     client.fetch<GalleryImage[]>(galleryImagesQuery),
+    client.fetch<SiteSettings>(siteSettingsQuery),
   ]);
 
-  const rentalImage = images.find((i) =>
-    i.alt.toLowerCase().includes("rental")
-  );
+  const rentalImage = images.find((i) => i.category === "interior");
 
   return (
     <>
-      <PageIntro
-        eyebrow="Why Invest"
-        title="A legacy asset, not just a purchase."
-        lede="Situated in a prime and highly desirable location, The Lexington offers an exceptional investment opportunity with the potential for consistent demand and a foundation for strong, long-term returns."
-      />
+      <PageIntro {...siteSettings.investIntro} />
 
       <section className="section sectionDark" style={{ paddingTop: 0 }}>
         <div className="wrap">
@@ -59,8 +54,6 @@ export default async function InvestPage() {
                   <th>Timeframe</th>
                   <th>Option 1</th>
                   <th>Option 2</th>
-                  <th>Upfront Payment</th>
-                  <th>Discount</th>
                 </tr>
               </thead>
               <tbody>
@@ -70,8 +63,6 @@ export default async function InvestPage() {
                     <td>{row.timeframe}</td>
                     <td>{row.option1}</td>
                     <td>{row.option2 || "—"}</td>
-                    <td>{row.upfrontPayment}</td>
-                    <td className={planTableStyles.discount}>{row.discount}</td>
                   </tr>
                 ))}
               </tbody>
@@ -96,6 +87,33 @@ export default async function InvestPage() {
                     <td>{row.milestone}</td>
                     <td>{row.timeframe}</td>
                     <td>{row.option1}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="eyebrow" style={{ marginTop: 56 }}>
+            Pay Upfront, Save More
+          </div>
+          <p style={{ marginTop: 12, color: "var(--stone)", maxWidth: 620, fontSize: 15 }}>
+            These discounts apply only to buyers paying a percentage of the
+            total price upfront in cash — separate from the self-finance and
+            mortgage installment schedules above.
+          </p>
+          <div className={planTableStyles.tableScroll} style={{ marginTop: 20 }}>
+            <table className={planTableStyles.table}>
+              <thead>
+                <tr>
+                  <th>Upfront Cash Payment</th>
+                  <th>Discount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {financingPlan.upfrontDiscountTiers.map((tier) => (
+                  <tr key={tier.upfrontPayment}>
+                    <td>{tier.upfrontPayment}</td>
+                    <td className={planTableStyles.discount}>{tier.discount}</td>
                   </tr>
                 ))}
               </tbody>

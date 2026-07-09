@@ -24,12 +24,12 @@
 .pills {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 12px;
 }
 
 .pill,
 .pillActive {
-  padding: 8px 16px;
+  padding: 9px 18px;
   border-radius: 20px;
   font-size: 13px;
   font-weight: 500;
@@ -106,6 +106,20 @@
   color: var(--stone);
 }
 
+.planLink {
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--brass-lt);
+  white-space: nowrap;
+  transition: color 0.2s var(--ease);
+}
+
+.planLink:hover {
+  color: var(--brass);
+}
+
 @media (max-width: 720px) {
   .tableWrap {
     display: none;
@@ -146,5 +160,10 @@
     font-size: 19px;
     font-weight: 600;
     color: var(--paper);
+  }
+
+  .card .planLink {
+    display: inline-block;
+    margin-top: 14px;
   }
 }

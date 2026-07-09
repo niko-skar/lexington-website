@@ -15,9 +15,12 @@ export const amenity = defineType({
       name: "category",
       title: "Category",
       type: "string",
+      description:
+        'Only mark "Rooftop" for amenities actually located on the roof (e.g. the Rooftop Garden) — most signature amenities (pool, gym, etc.) don\'t have a confirmed floor location.',
       options: {
         list: [
           { title: "Rooftop", value: "rooftop" },
+          { title: "Signature", value: "signature" },
           { title: "Building feature", value: "building feature" },
         ],
       },

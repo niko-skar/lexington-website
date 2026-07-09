@@ -1,7 +1,7 @@
 import { client } from "@/lib/sanity/client";
 import { urlFor } from "@/lib/sanity/image";
-import { galleryImagesQuery, unitsQuery } from "@/lib/sanity/queries";
-import type { GalleryImage, Unit } from "@/lib/sanity/types";
+import { galleryImagesQuery, siteSettingsQuery, unitsQuery } from "@/lib/sanity/queries";
+import type { BedroomType, GalleryImage, SiteSettings, Unit } from "@/lib/sanity/types";
 
 import { PageIntro } from "@/components/PageIntro";
 import { UnitFinder } from "@/components/UnitFinder";
@@ -23,24 +23,28 @@ const extras = [
 ];
 
 export default async function ResidencesPage() {
-  const [units, images] = await Promise.all([
+  const [units, images, siteSettings] = await Promise.all([
     client.fetch<Unit[]>(unitsQuery),
     client.fetch<GalleryImage[]>(galleryImagesQuery),
+    client.fetch<SiteSettings>(siteSettingsQuery),
   ]);
 
-  const floorplanImage = images.find((i) => i.category === "floorplan");
+  const floorplanImages = images.filter((i) => i.category === "floorplan");
+  const floorplanImage = floorplanImages[0];
+
+  const floorPlansByType: Record<BedroomType, GalleryImage | undefined> = {
+    "One Bedroom": floorplanImages.find((i) => i.alt.toLowerCase().includes("one-bedroom")),
+    "Two Bedroom": floorplanImages.find((i) => i.alt.toLowerCase().includes("two-bedroom")),
+    "3BR Duplex Penthouse": floorplanImages.find((i) => i.alt.toLowerCase().includes("duplex")),
+  };
 
   return (
     <>
-      <PageIntro
-        eyebrow="Residences"
-        title="Every floor, priced and available in real time."
-        lede="Filter by floor, bedroom type or availability — updated the moment a unit is reserved or sold."
-      />
+      <PageIntro {...siteSettings.residencesIntro} />
 
       <section className="section sectionDark" style={{ paddingTop: 0 }}>
         <div className="wrap">
-          <UnitFinder units={units} />
+          <UnitFinder units={units} floorPlans={floorPlansByType} officeAddress={siteSettings.officeAddress} />
         </div>
       </section>
 

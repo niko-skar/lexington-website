@@ -1,6 +1,6 @@
 import { client } from "@/lib/sanity/client";
-import { galleryImagesQuery } from "@/lib/sanity/queries";
-import type { GalleryImage } from "@/lib/sanity/types";
+import { galleryImagesQuery, siteSettingsQuery } from "@/lib/sanity/queries";
+import type { GalleryImage, SiteSettings } from "@/lib/sanity/types";
 
 import { PageIntro } from "@/components/PageIntro";
 import { Gallery } from "@/components/Gallery";
@@ -13,15 +13,14 @@ export const metadata = {
 };
 
 export default async function GalleryPage() {
-  const images = await client.fetch<GalleryImage[]>(galleryImagesQuery);
+  const [images, siteSettings] = await Promise.all([
+    client.fetch<GalleryImage[]>(galleryImagesQuery),
+    client.fetch<SiteSettings>(siteSettingsQuery),
+  ]);
 
   return (
     <>
-      <PageIntro
-        eyebrow="Gallery"
-        title="A closer look."
-        lede="All images are illustrative renders and may not reflect the final product."
-      />
+      <PageIntro {...siteSettings.galleryIntro} />
 
       <section style={{ paddingTop: 0 }}>
         <div className="wrap">

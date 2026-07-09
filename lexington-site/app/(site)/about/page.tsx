@@ -1,11 +1,12 @@
 import { client } from "@/lib/sanity/client";
 import { urlFor } from "@/lib/sanity/image";
-import { familyMembersQuery, galleryImagesQuery } from "@/lib/sanity/queries";
-import type { FamilyMember, GalleryImage } from "@/lib/sanity/types";
+import { familyMembersQuery, galleryImagesQuery, siteSettingsQuery } from "@/lib/sanity/queries";
+import type { FamilyMember, GalleryImage, SiteSettings } from "@/lib/sanity/types";
 
 import { PageIntro } from "@/components/PageIntro";
 import { LegacyTimeline } from "@/components/LegacyTimeline";
 import { SplitSection } from "@/components/SplitSection";
+import { PhotoTriptych } from "@/components/PhotoTriptych";
 import { Button } from "@/components/Button";
 
 export const revalidate = 60;
@@ -15,23 +16,32 @@ export const metadata = {
 };
 
 export default async function AboutPage() {
-  const [members, images] = await Promise.all([
+  const [members, images, siteSettings] = await Promise.all([
     client.fetch<FamilyMember[]>(familyMembersQuery),
     client.fetch<GalleryImage[]>(galleryImagesQuery),
+    client.fetch<SiteSettings>(siteSettingsQuery),
   ]);
 
-  const exteriorImage = images.find((i) => i.category === "exterior" && i.order > 0);
+  const exteriorImages = images.filter((i) => i.category === "exterior");
+  const exteriorImage = exteriorImages.find((i) => i.order > 0);
+  const triptychImages = exteriorImages.slice(2, 5);
 
   return (
     <>
-      <PageIntro
-        eyebrow="Skarlatos & Son"
-        title="Three generations shaping Ghana's landscape."
-      />
+      <PageIntro {...siteSettings.aboutIntro} />
 
       <section className="section sectionDark" style={{ paddingTop: 0 }}>
         <div className="wrap">
           <LegacyTimeline members={members} />
+        </div>
+      </section>
+
+      <section className="section">
+        <div className="wrap">
+          <PhotoTriptych
+            images={triptychImages}
+            caption="The Lexington, Shiashie — the latest work carrying the family name."
+          />
         </div>
       </section>
 

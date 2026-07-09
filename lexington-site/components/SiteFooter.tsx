@@ -1,8 +1,15 @@
 import Link from "next/link";
 
+import { client } from "@/lib/sanity/client";
+import { siteSettingsQuery } from "@/lib/sanity/queries";
+import type { SiteSettings } from "@/lib/sanity/types";
+import { googleMapsUrl } from "@/lib/maps";
+import { phoneHref } from "@/lib/format";
 import styles from "./SiteFooter.module.css";
 
-export function SiteFooter() {
+export async function SiteFooter() {
+  const siteSettings = await client.fetch<SiteSettings>(siteSettingsQuery);
+
   return (
     <footer className={styles.footer}>
       <div className="wrap">
@@ -23,15 +30,17 @@ export function SiteFooter() {
             </div>
             <div>
               <h4>Contact</h4>
-              <a href="tel:+233244305262">+233 (0)244 30 5262</a>
-              <a href="mailto:sales@lexington.com.gh">sales@lexington.com.gh</a>
+              <a href={phoneHref(siteSettings.contactPhone)}>{siteSettings.contactPhone}</a>
+              <a href={`mailto:${siteSettings.contactEmail}`}>{siteSettings.contactEmail}</a>
               <Link href="/contact">Reserve a Unit</Link>
             </div>
           </div>
         </div>
         <div className={styles.bottom}>
           <span>© {new Date().getFullYear()} Skarlatos &amp; Son. All rights reserved.</span>
-          <span>Duala Close — Opposite Orchid Hotel, Shiashie, East Legon</span>
+          <a href={googleMapsUrl(siteSettings.officeAddress)} target="_blank" rel="noopener noreferrer">
+            {siteSettings.officeAddress}
+          </a>
         </div>
       </div>
     </footer>

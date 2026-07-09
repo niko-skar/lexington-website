@@ -1,41 +1,53 @@
+import { client } from "@/lib/sanity/client";
+import { siteSettingsQuery } from "@/lib/sanity/queries";
+import type { SiteSettings } from "@/lib/sanity/types";
+
 import { PageIntro } from "@/components/PageIntro";
 import { ContactForm } from "@/components/ContactForm";
+import { googleMapsUrl } from "@/lib/maps";
+import { phoneHref } from "@/lib/format";
 import buttonStyles from "@/components/Button.module.css";
 import styles from "./contact.module.css";
+
+export const revalidate = 60;
 
 export const metadata = {
   title: "Contact & Reserve | The Lexington",
 };
 
-export default function ContactPage() {
+export default async function ContactPage() {
+  const siteSettings = await client.fetch<SiteSettings>(siteSettingsQuery);
+
   return (
     <>
-      <PageIntro
-        eyebrow="Contact"
-        title="Let's talk about your residence."
-        lede="Reach us directly, or send your details below and we'll follow up with availability and a custom payment plan."
-      />
+      <PageIntro {...siteSettings.contactIntro} />
 
-      <section style={{ paddingTop: 0 }}>
+      <section className="sectionDark" style={{ paddingTop: 0 }}>
         <div className="wrap">
           <div className={styles.grid}>
             <div>
               <div className={styles.detail}>
                 <div className={styles.key}>Phone</div>
                 <div className={styles.value}>
-                  <a href="tel:+233244305262">+233 (0)244 30 5262</a>
+                  <a href={phoneHref(siteSettings.contactPhone)}>{siteSettings.contactPhone}</a>
                 </div>
               </div>
               <div className={styles.detail}>
                 <div className={styles.key}>Email</div>
                 <div className={styles.value}>
-                  <a href="mailto:sales@lexington.com.gh">sales@lexington.com.gh</a>
+                  <a href={`mailto:${siteSettings.contactEmail}`}>{siteSettings.contactEmail}</a>
                 </div>
               </div>
               <div className={styles.detail}>
                 <div className={styles.key}>Office</div>
                 <div className={styles.value}>
-                  Duala Close — Opposite Orchid Hotel, Shiashie
+                  <a
+                    href={googleMapsUrl(siteSettings.officeAddress)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {siteSettings.officeAddress}
+                  </a>
                 </div>
               </div>
 
@@ -46,7 +58,7 @@ export default function ContactPage() {
                   and bank-transfer deposit options are available on request.
                 </p>
                 <a
-                  href="mailto:sales@lexington.com.gh?subject=Reservation%20Enquiry%20-%20The%20Lexington"
+                  href={`mailto:${siteSettings.contactEmail}?subject=Reservation%20Enquiry%20-%20The%20Lexington`}
                   className={`${buttonStyles.btn} ${buttonStyles.brass}`}
                   style={{ marginTop: 18 }}
                 >
@@ -62,11 +74,7 @@ export default function ContactPage() {
 
       <section className="section sectionAlt">
         <div className="wrap">
-          <p className="disclaimer">
-            All images displayed are for illustrative purposes only and may
-            not reflect the final product. All prices are subject to change
-            without notice.
-          </p>
+          <p className="disclaimer">{siteSettings.disclaimer}</p>
         </div>
       </section>
     </>

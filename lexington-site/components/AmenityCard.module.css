@@ -6,27 +6,42 @@
 }
 
 .card {
-  border: 1px solid var(--ink-line);
+  position: relative;
   border-radius: var(--radius);
-  padding: var(--space-6) var(--space-5);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-5);
-  transition: border-color 0.2s var(--ease), transform 0.2s var(--ease);
-  height: 100%;
+  overflow: hidden;
+  aspect-ratio: 4 / 5;
+  transition: transform 0.25s var(--ease);
 }
 
 .card:hover {
-  border-color: var(--brass);
-  transform: translateY(-3px);
+  transform: translateY(-4px);
 }
 
-.iconWrap {
-  color: var(--brass);
+.card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.4s var(--ease);
+}
+
+.card:hover img {
+  transform: scale(1.05);
+}
+
+.card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(21, 24, 26, 0) 45%, rgba(21, 24, 26, 0.85) 100%);
 }
 
 .name {
+  position: absolute;
+  left: var(--space-5);
+  right: var(--space-5);
+  bottom: var(--space-4);
+  z-index: 1;
   font-family: var(--font-serif);
-  font-size: 19px;
+  font-size: 20px;
   color: var(--paper);
 }

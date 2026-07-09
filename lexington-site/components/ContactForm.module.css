@@ -44,3 +44,15 @@
   color: var(--stone);
   margin-top: 18px;
 }
+
+.success {
+  margin-top: 16px;
+  font-size: 14px;
+  color: var(--sky);
+}
+
+.error {
+  margin-top: 16px;
+  font-size: 14px;
+  color: var(--clay);
+}

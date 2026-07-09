@@ -4,9 +4,10 @@ import {
   amenitiesQuery,
   financingPlanQuery,
   galleryImagesQuery,
+  siteSettingsQuery,
   unitsQuery,
 } from "@/lib/sanity/queries";
-import type { Amenity, FinancingPlan, GalleryImage, Unit } from "@/lib/sanity/types";
+import type { Amenity, FinancingPlan, GalleryImage, SiteSettings, Unit } from "@/lib/sanity/types";
 import { formatUSD } from "@/lib/format";
 
 import { Hero } from "@/components/Hero";
@@ -19,11 +20,12 @@ import { Reveal } from "@/components/Reveal";
 export const revalidate = 60;
 
 export default async function HomePage() {
-  const [units, images, amenities, financingPlan] = await Promise.all([
+  const [units, images, amenities, financingPlan, siteSettings] = await Promise.all([
     client.fetch<Unit[]>(unitsQuery),
     client.fetch<GalleryImage[]>(galleryImagesQuery),
     client.fetch<Amenity[]>(amenitiesQuery),
     client.fetch<FinancingPlan>(financingPlanQuery),
+    client.fetch<SiteSettings>(siteSettingsQuery),
   ]);
 
   const availableUnits = units.filter((u) => u.status === "available");
@@ -37,8 +39,8 @@ export default async function HomePage() {
   const residencesImage = interiorImages[1] ?? interiorImages[0];
   const familyImage = familyImages[0];
 
-  const rooftopAmenities = amenities
-    .filter((a) => a.category === "rooftop")
+  const featuredAmenities = amenities
+    .filter((a) => a.category === "signature" || a.category === "rooftop")
     .sort((a, b) => a.order - b.order);
 
   const reservationAmount =
@@ -50,14 +52,10 @@ export default async function HomePage() {
       <Hero
         imageUrl={urlFor(heroImage.image).width(1920).height(1280).url()}
         imageAlt={heroImage.alt}
-        eyebrow="Shiashie · East Legon · Accra"
+        eyebrow={siteSettings.heroEyebrow}
       >
-        <h1>Seven storeys, one address worth arriving at.</h1>
-        <p className="lede">
-          One, two and three-bedroom duplex penthouse residences, built for a
-          family whose name has shaped Ghana&rsquo;s skyline for three
-          generations.
-        </p>
+        <h1>{siteSettings.heroTitle}</h1>
+        <p className="lede">{siteSettings.heroLede}</p>
         <div className="actions">
           <Button href="/residences" variant="clay">
             View Residences
@@ -109,11 +107,11 @@ export default async function HomePage() {
           <Reveal>
             <div className="eyebrow">Amenities</div>
             <h2 style={{ fontSize: "var(--fs-600)", marginTop: 14 }}>
-              A rooftop, and everything on it.
+              World-class amenities, every day.
             </h2>
             <p style={{ marginTop: 16, color: "#555", maxWidth: 560 }}>
-              The Lexington&rsquo;s private resident&rsquo;s rooftop is built
-              for a full day — not a quick visit.
+              A private rooftop garden, a full lap pool, gym, sauna and more —
+              built for a full day, not a quick visit.
             </p>
           </Reveal>
           <Reveal delay={100}>
@@ -125,7 +123,7 @@ export default async function HomePage() {
                 marginTop: 40,
               }}
             >
-              {rooftopAmenities.map((a) => (
+              {featuredAmenities.map((a) => (
                 <li
                   key={a._id}
                   style={{

@@ -25,3 +25,7 @@ export const familyMembersQuery = defineQuery(`
 export const financingPlanQuery = defineQuery(`
   *[_type == "financingPlan"][0]
 `);
+
+export const siteSettingsQuery = defineQuery(`
+  *[_type == "siteSettings"][0]
+`);

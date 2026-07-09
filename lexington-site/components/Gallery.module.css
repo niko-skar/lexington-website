@@ -1,13 +1,13 @@
 .filters {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: var(--space-7);
+  gap: 14px;
+  margin-bottom: var(--space-8);
 }
 
 .chip,
 .chipActive {
-  padding: 9px 18px;
+  padding: 10px 22px;
   border-radius: 20px;
   font-size: 13px;
   font-weight: 500;
