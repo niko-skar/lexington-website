@@ -1,22 +1,22 @@
 .row {
   display: grid;
-  grid-template-columns: 88px 120px 1fr;
+  grid-template-columns: 112px 120px 1fr;
   gap: var(--space-6);
   align-items: center;
   padding: var(--space-7) 0;
-  border-top: 1px solid var(--ink-line);
+  border-top: 1px solid rgba(21, 24, 26, 0.14);
 }
 
 .row:last-child {
-  border-bottom: 1px solid var(--ink-line);
+  border-bottom: 1px solid rgba(21, 24, 26, 0.14);
 }
 
 .photo {
-  width: 88px;
-  height: 88px;
+  width: 112px;
+  height: 112px;
   border-radius: 50%;
   overflow: hidden;
-  background: var(--ink-soft);
+  background: var(--stone-lt);
   flex: none;
 }
 
@@ -29,31 +29,31 @@
 .years {
   font-family: var(--font-serif);
   font-style: italic;
-  color: var(--brass-lt);
+  color: var(--brass);
   font-size: 16px;
 }
 
 .row h3 {
   font-size: 22px;
-  color: var(--paper);
+  color: var(--ink);
   font-weight: 500;
 }
 
 .row p {
   margin-top: 10px;
-  color: var(--stone);
+  color: #555;
   max-width: 60ch;
 }
 
 @media (max-width: 640px) {
   .row {
-    grid-template-columns: 64px 1fr;
+    grid-template-columns: 80px 1fr;
     gap: var(--space-4);
   }
 
   .photo {
-    width: 64px;
-    height: 64px;
+    width: 80px;
+    height: 80px;
   }
 
   .years {
