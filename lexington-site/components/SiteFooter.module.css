@@ -1,5 +1,8 @@
 .footer {
-  background: var(--ink);
+  background-color: var(--navy);
+  background-image: var(--navy-texture-image);
+  background-size: var(--navy-texture-size);
+  background-repeat: var(--navy-texture-repeat);
   color: var(--stone);
   padding: 56px 0 32px;
 }

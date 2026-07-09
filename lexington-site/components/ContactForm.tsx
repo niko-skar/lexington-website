@@ -1,33 +1,32 @@
 "use client";
 
-import { useRef } from "react";
+import { useActionState } from "react";
+import { useFormStatus } from "react-dom";
+
+import { sendEnquiry, type ContactFormState } from "@/lib/actions/contact";
 import styles from "./ContactForm.module.css";
 import buttonStyles from "./Button.module.css";
 
-const CONTACT_EMAIL = "sales@lexington.com.gh";
+const initialState: ContactFormState = { status: "idle", message: "" };
+
+function SubmitButton() {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className={`${buttonStyles.btn} ${buttonStyles.clay} ${styles.submit}`}
+    >
+      {pending ? "Sending…" : "Send Enquiry"}
+    </button>
+  );
+}
 
 export function ContactForm() {
-  const formRef = useRef<HTMLFormElement>(null);
-
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const form = formRef.current;
-    if (!form) return;
-
-    const name = (form.elements.namedItem("name") as HTMLInputElement).value;
-    const email = (form.elements.namedItem("email") as HTMLInputElement).value;
-    const phone = (form.elements.namedItem("phone") as HTMLInputElement).value;
-    const unit = (form.elements.namedItem("unit") as HTMLSelectElement).value;
-    const message = (form.elements.namedItem("message") as HTMLTextAreaElement).value;
-
-    const body = `Name: ${name}\nEmail: ${email}\nPhone: ${phone}\nInterested in: ${unit}\n\n${message}`;
-    window.location.href = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(
-      "Enquiry - The Lexington"
-    )}&body=${encodeURIComponent(body)}`;
-  }
+  const [state, formAction] = useActionState(sendEnquiry, initialState);
 
   return (
-    <form ref={formRef} onSubmit={handleSubmit}>
+    <form action={formAction}>
       <div className={styles.field}>
         <label htmlFor="name">Full name</label>
         <input type="text" id="name" name="name" required />
@@ -57,12 +56,11 @@ export function ContactForm() {
           placeholder="Tell us about your timeline and financing preference."
         />
       </div>
-      <button type="submit" className={`${buttonStyles.btn} ${buttonStyles.clay} ${styles.submit}`}>
-        Send Enquiry
-      </button>
+      <SubmitButton />
+      {state.status === "success" && <p className={styles.success}>{state.message}</p>}
+      {state.status === "error" && <p className={styles.error}>{state.message}</p>}
       <p className={styles.note}>
-        This opens your email client addressed to Skarlatos &amp; Son with
-        your details pre-filled.
+        Your enquiry is sent directly to Skarlatos &amp; Son.
       </p>
     </form>
   );

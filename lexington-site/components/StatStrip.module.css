@@ -9,16 +9,20 @@
   padding-top: var(--space-4);
 }
 
+.stat:nth-child(even) {
+  border-top-color: var(--clay);
+}
+
 .stat b {
   font-family: var(--font-serif);
   font-size: var(--fs-600);
   display: block;
-  color: var(--paper);
+  color: var(--ink);
   font-weight: 500;
   font-variant-numeric: tabular-nums;
 }
 
 .stat span {
   font-size: 13px;
-  color: var(--stone);
+  color: #555;
 }

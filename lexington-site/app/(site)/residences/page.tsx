@@ -1,7 +1,7 @@
 import { client } from "@/lib/sanity/client";
 import { urlFor } from "@/lib/sanity/image";
-import { galleryImagesQuery, unitsQuery } from "@/lib/sanity/queries";
-import type { GalleryImage, Unit } from "@/lib/sanity/types";
+import { galleryImagesQuery, siteSettingsQuery, unitsQuery } from "@/lib/sanity/queries";
+import type { BedroomType, GalleryImage, SiteSettings, Unit } from "@/lib/sanity/types";
 
 import { PageIntro } from "@/components/PageIntro";
 import { UnitFinder } from "@/components/UnitFinder";
@@ -23,24 +23,30 @@ const extras = [
 ];
 
 export default async function ResidencesPage() {
-  const [units, images] = await Promise.all([
+  const [units, images, siteSettings] = await Promise.all([
     client.fetch<Unit[]>(unitsQuery),
     client.fetch<GalleryImage[]>(galleryImagesQuery),
+    client.fetch<SiteSettings>(siteSettingsQuery),
   ]);
 
-  const floorplanImage = images.find((i) => i.category === "floorplan");
+  const floorplanImages = images.filter((i) => i.category === "floorplan");
+  const floorplanImage = floorplanImages[0];
+
+  // Duplex penthouses span two levels, so they have two floor plans (lower
+  // + upper/rooftop) that both need to be viewable — everything else has one.
+  const floorPlansByType: Record<BedroomType, GalleryImage[]> = {
+    "One Bedroom": floorplanImages.filter((i) => i.alt.toLowerCase().includes("one-bedroom")),
+    "Two Bedroom": floorplanImages.filter((i) => i.alt.toLowerCase().includes("two-bedroom")),
+    "3BR Duplex Penthouse": floorplanImages.filter((i) => i.alt.toLowerCase().includes("duplex")),
+  };
 
   return (
     <>
-      <PageIntro
-        eyebrow="Residences"
-        title="Every floor, priced and available in real time."
-        lede="Filter by floor, bedroom type or availability — updated the moment a unit is reserved or sold."
-      />
+      <PageIntro {...siteSettings.residencesIntro} />
 
-      <section className="section sectionDark" style={{ paddingTop: 0 }}>
+      <section className="section sectionStone" style={{ paddingTop: "clamp(32px, 4vw, 56px)" }}>
         <div className="wrap">
-          <UnitFinder units={units} />
+          <UnitFinder units={units} floorPlans={floorPlansByType} />
         </div>
       </section>
 
@@ -50,6 +56,7 @@ export default async function ResidencesPage() {
           imageAlt={floorplanImage.alt}
           eyebrow="Floor Plans"
           title="Drawn for how you actually live."
+          style={{ background: "var(--stone-lt)" }}
         >
           <p>
             Every unit type is designed around natural light, cross

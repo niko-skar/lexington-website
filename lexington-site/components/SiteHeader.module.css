@@ -2,16 +2,34 @@
   position: sticky;
   top: 0;
   z-index: 100;
-  background: rgba(21, 24, 26, 0.92);
-  backdrop-filter: blur(10px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/*
+ * The blur lives on a pseudo-element rather than .header itself.
+ * backdrop-filter (or filter/transform) on an element creates a CSS
+ * containing block for any position:fixed descendants — since .nav
+ * becomes a full-screen fixed overlay on mobile, that would clip it to
+ * .header's own ~100px box instead of the viewport. A pseudo-element
+ * doesn't have DOM children, so it can't cause that for .nav.
+ */
+.header::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-color: rgba(var(--navy-rgb), 0.92);
+  background-image: var(--navy-texture-image);
+  background-size: var(--navy-texture-size);
+  background-repeat: var(--navy-texture-repeat);
+  backdrop-filter: blur(10px);
 }
 
 .bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 78px;
+  height: 100px;
 }
 
 .brand {
@@ -37,7 +55,7 @@
 .nav {
   display: flex;
   align-items: center;
-  gap: 34px;
+  gap: 44px;
 }
 
 .nav a {
@@ -112,8 +130,11 @@
 @media (max-width: 880px) {
   .nav {
     position: fixed;
-    inset: 78px 0 0 0;
-    background: var(--ink);
+    inset: 100px 0 0 0;
+    background-color: var(--navy);
+    background-image: var(--navy-texture-image);
+    background-size: var(--navy-texture-size);
+    background-repeat: var(--navy-texture-repeat);
     flex-direction: column;
     justify-content: flex-start;
     align-items: flex-start;

@@ -7,25 +7,68 @@
 :root {
   /* Palette */
   --ink: #15181a;
-  --ink-soft: #21262a;
-  --ink-line: #383e42;
+  --ink-soft: #4c6d86;
+  --ink-line: rgba(255, 255, 255, 0.14);
   --paper: #f7f4ec;
   --paper-dim: #ede7d8;
   --stone: #c9c2b2;
+  /* Lighter than --stone (which stays as-is for muted text elsewhere) —
+     used only as the .sectionStone background fill. */
+  --stone-lt: #e4dfd3;
   --brass: #b08d57;
   --brass-lt: #d9c29a;
   --clay: #8b4a34;
   --clay-lt: #b26a4e;
   --sage: #67735f;
   --sage-lt: #8b9a80;
+  --sky: #6f93ac;
+  --sky-lt: #a8c3d6;
 
-  /* Status */
-  --status-available: var(--sage);
+  /* Dark-section theme: the slate blue from the brochure's info slides,
+     used as the background for every dark section (sectionDark, header,
+     footer, proximity grid), not as body text color — --ink keeps that
+     job everywhere else. */
+  --navy-rgb: 62, 89, 108;
+  --navy: rgb(var(--navy-rgb));
+  --navy-dim: #283b4a;
+  /* Header/footer keep --navy. Page-title bands (the "secondary header")
+     use a deeper, moodier tone so they read as distinct from the header
+     directly above them; the actual content sections below use a
+     lighter tone so a page doesn't read as one solid wall of blue. */
+  --navy-deep: #263a48;
+  /* Lighter and cooler than --navy so it reads as clearly distinct even
+     at a glance, not just measurably different in a color picker. */
+  --navy-light: #7195ab;
+  --grain-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch' result='t'/%3E%3CfeColorMatrix in='t' type='matrix' values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  /* Vignette + grain, for short, fixed-height bands (header, footer,
+     PageIntro, mobile nav) where a "cover"-sized radial gradient looks
+     intentional. */
+  --navy-texture-image: radial-gradient(
+      130% 100% at 50% -20%,
+      rgba(255, 255, 255, 0.05),
+      transparent 55%
+    ),
+    radial-gradient(130% 100% at 50% 120%, var(--navy-dim), transparent 60%),
+    var(--grain-image);
+  --navy-texture-size: cover, cover, 180px 180px;
+  --navy-texture-repeat: no-repeat, no-repeat, repeat;
+  /* Grain only, no vignette — content sections (tables, timelines) can
+     be much taller than the viewport, and a "cover"-sized radial
+     gradient stretched over a tall element re-darkens most of it back
+     toward --navy-dim, undoing the lighter content tone. */
+  --content-texture-image: var(--grain-image);
+  --content-texture-size: 180px 180px;
+  --content-texture-repeat: repeat;
+
+  /* Status — all three now only ever appear on light backgrounds
+     (unit table, unit cards, unit detail modal), so each needs to be
+     dark/saturated enough for reliable contrast on paper/stone. */
+  --status-available: #2f5068;
   --status-reserved: var(--brass);
   --status-sold: var(--clay);
 
   /* Type */
-  --font-serif: var(--font-fraunces), Georgia, serif;
+  --font-serif: var(--font-display), Georgia, serif;
   --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont,
     "Segoe UI", sans-serif;
 
@@ -36,7 +79,12 @@
   --fs-500: clamp(1.375rem, 1.2rem + 0.9vw, 1.75rem);
   --fs-600: clamp(1.75rem, 1.35rem + 2vw, 2.75rem);
   --fs-700: clamp(2.25rem, 1.5rem + 3.5vw, 4rem);
-  --fs-800: clamp(2.75rem, 1.4rem + 6.5vw, 6.5rem);
+  /* Previously maxed out (6.5rem/104px) by ~1280px viewport width — on
+     typical laptop screens (1280–1440 wide, ~800–900 tall) that made the
+     3-line hero heading tall enough to push the bottom-anchored content
+     block up against the header. Gentler vw coefficient reaches the same
+     max only on genuinely wide displays. */
+  --fs-800: clamp(2.75rem, 1.6rem + 4.25vw, 6.5rem);
 
   /* Spacing (8px base) */
   --space-1: 0.25rem;
@@ -164,12 +212,29 @@ h4 {
 }
 
 .sectionDark {
-  background: var(--ink);
   color: var(--paper);
+  background-color: var(--navy-light);
+  background-image: var(--content-texture-image);
+  background-size: var(--content-texture-size);
+  background-repeat: var(--content-texture-repeat);
 }
 
 .sectionAlt {
   background: var(--paper-dim);
+}
+
+.sectionStone {
+  background: var(--paper);
+}
+
+/* Padding (not margin) doesn't collapse — two consecutive sections that
+   are both plain/uncolored (no visual break between them) would
+   otherwise stack their full top+bottom padding into a ~240px gap.
+   Drop the second one's top padding so they read as one continuous
+   flow with a single section-pad's worth of space between them. */
+.section:not(.sectionDark):not(.sectionAlt):not(.sectionStone)
+  + .section:not(.sectionDark):not(.sectionAlt):not(.sectionStone) {
+  padding-top: 0;
 }
 
 .eyebrow {

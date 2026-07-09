@@ -41,6 +41,18 @@
 
 .note {
   font-size: 13px;
-  color: var(--stone);
+  color: #555;
   margin-top: 18px;
+}
+
+.success {
+  margin-top: 16px;
+  font-size: 14px;
+  color: var(--sage);
+}
+
+.error {
+  margin-top: 16px;
+  font-size: 14px;
+  color: var(--clay);
 }

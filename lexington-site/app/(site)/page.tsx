@@ -2,11 +2,20 @@ import { client } from "@/lib/sanity/client";
 import { urlFor } from "@/lib/sanity/image";
 import {
   amenitiesQuery,
+  familyMembersQuery,
   financingPlanQuery,
   galleryImagesQuery,
+  siteSettingsQuery,
   unitsQuery,
 } from "@/lib/sanity/queries";
-import type { Amenity, FinancingPlan, GalleryImage, Unit } from "@/lib/sanity/types";
+import type {
+  Amenity,
+  FamilyMember,
+  FinancingPlan,
+  GalleryImage,
+  SiteSettings,
+  Unit,
+} from "@/lib/sanity/types";
 import { formatUSD } from "@/lib/format";
 
 import { Hero } from "@/components/Hero";
@@ -19,11 +28,13 @@ import { Reveal } from "@/components/Reveal";
 export const revalidate = 60;
 
 export default async function HomePage() {
-  const [units, images, amenities, financingPlan] = await Promise.all([
+  const [units, images, amenities, financingPlan, siteSettings, familyMembers] = await Promise.all([
     client.fetch<Unit[]>(unitsQuery),
     client.fetch<GalleryImage[]>(galleryImagesQuery),
     client.fetch<Amenity[]>(amenitiesQuery),
     client.fetch<FinancingPlan>(financingPlanQuery),
+    client.fetch<SiteSettings>(siteSettingsQuery),
+    client.fetch<FamilyMember[]>(familyMembersQuery),
   ]);
 
   const availableUnits = units.filter((u) => u.status === "available");
@@ -31,14 +42,16 @@ export default async function HomePage() {
 
   const exteriorImages = images.filter((i) => i.category === "exterior");
   const interiorImages = images.filter((i) => i.category === "interior");
-  const familyImages = images.filter((i) => i.category === "family");
 
   const heroImage = exteriorImages[0];
   const residencesImage = interiorImages[1] ?? interiorImages[0];
-  const familyImage = familyImages[0];
+  // Niko is the generation actively developing The Lexington — his photo
+  // is the most relevant single portrait for this teaser.
+  const familyPhotoMember =
+    familyMembers.find((m) => m.name.includes("Niko")) ?? familyMembers[0];
 
-  const rooftopAmenities = amenities
-    .filter((a) => a.category === "rooftop")
+  const featuredAmenities = amenities
+    .filter((a) => a.category === "signature" || a.category === "rooftop")
     .sort((a, b) => a.order - b.order);
 
   const reservationAmount =
@@ -50,14 +63,10 @@ export default async function HomePage() {
       <Hero
         imageUrl={urlFor(heroImage.image).width(1920).height(1280).url()}
         imageAlt={heroImage.alt}
-        eyebrow="Shiashie · East Legon · Accra"
+        eyebrow={siteSettings.heroEyebrow}
       >
-        <h1>Seven storeys, one address worth arriving at.</h1>
-        <p className="lede">
-          One, two and three-bedroom duplex penthouse residences, built for a
-          family whose name has shaped Ghana&rsquo;s skyline for three
-          generations.
-        </p>
+        <h1>{siteSettings.heroTitle}</h1>
+        <p className="lede">{siteSettings.heroLede}</p>
         <div className="actions">
           <Button href="/residences" variant="clay">
             View Residences
@@ -68,22 +77,18 @@ export default async function HomePage() {
         </div>
       </Hero>
 
-      <section className="section sectionDark">
+      <section className="section sectionStone" style={{ background: "var(--stone)", paddingTop: "clamp(48px, 6vw, 80px)" }}>
         <div className="wrap">
           <Reveal>
-            <div className="eyebrow">Location</div>
-            <h2 style={{ fontSize: "var(--fs-600)", marginTop: 14 }}>
-              Everything, close at hand.
-            </h2>
-            <p style={{ marginTop: 16, color: "var(--stone)", maxWidth: 640 }}>
-              Shiashie sits at the quiet centre of East Legon — near enough to
-              the city&rsquo;s schools, malls and airport to make the daily
-              commute disappear.
-            </p>
+            <StatStrip
+              stats={[
+                { value: availableUnits.length, suffix: ` of ${units.length}`, label: "Units available" },
+                { value: startingPrice, prefix: "$", label: "Starting from" },
+                { value: projectedYield, suffix: "%", label: "Projected rental yield" },
+                { value: 7, label: "Storeys, Shiashie skyline" },
+              ]}
+            />
           </Reveal>
-          <div style={{ marginTop: 56 }}>
-            <ProximityGrid />
-          </div>
         </div>
       </section>
 
@@ -92,6 +97,7 @@ export default async function HomePage() {
         imageAlt={residencesImage.alt}
         eyebrow="Residences"
         title="One, two and three-bedroom duplex penthouses."
+        style={{ paddingTop: "clamp(48px, 6vw, 80px)" }}
       >
         <p>
           Every floor plan is drawn to let daily life move naturally — from
@@ -104,16 +110,35 @@ export default async function HomePage() {
         </Button>
       </SplitSection>
 
+      <section className="section sectionStone" style={{ background: "var(--stone)" }}>
+        <div className="wrap">
+          <Reveal>
+            <div className="eyebrow">Location</div>
+            <h2 style={{ fontSize: "var(--fs-600)", marginTop: 14 }}>
+              Everything, close at hand.
+            </h2>
+            <p style={{ marginTop: 16, color: "#555", maxWidth: 640 }}>
+              Shiashie sits at the quiet centre of East Legon — near enough to
+              the city&rsquo;s schools, malls and airport to make the daily
+              commute disappear.
+            </p>
+          </Reveal>
+          <div style={{ marginTop: 56 }}>
+            <ProximityGrid />
+          </div>
+        </div>
+      </section>
+
       <section className="section sectionAlt">
         <div className="wrap">
           <Reveal>
             <div className="eyebrow">Amenities</div>
             <h2 style={{ fontSize: "var(--fs-600)", marginTop: 14 }}>
-              A rooftop, and everything on it.
+              World-class amenities, every day.
             </h2>
             <p style={{ marginTop: 16, color: "#555", maxWidth: 560 }}>
-              The Lexington&rsquo;s private resident&rsquo;s rooftop is built
-              for a full day — not a quick visit.
+              A private rooftop garden, a full lap pool, gym, sauna and more —
+              built for a full day, not a quick visit.
             </p>
           </Reveal>
           <Reveal delay={100}>
@@ -125,7 +150,7 @@ export default async function HomePage() {
                 marginTop: 40,
               }}
             >
-              {rooftopAmenities.map((a) => (
+              {featuredAmenities.map((a) => (
                 <li
                   key={a._id}
                   style={{
@@ -159,25 +184,10 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <section className="section sectionDark">
-        <div className="wrap">
-          <Reveal>
-            <StatStrip
-              stats={[
-                { value: availableUnits.length, suffix: ` of ${units.length}`, label: "Units available" },
-                { value: startingPrice, prefix: "$", label: "Starting from" },
-                { value: projectedYield, suffix: "%", label: "Projected rental yield" },
-                { value: 7, label: "Storeys, Shiashie skyline" },
-              ]}
-            />
-          </Reveal>
-        </div>
-      </section>
-
-      {familyImage && (
+      {familyPhotoMember?.photo && (
         <SplitSection
-          imageUrl={urlFor(familyImage.image).width(800).height(1000).url()}
-          imageAlt={familyImage.alt}
+          imageUrl={urlFor(familyPhotoMember.photo).width(800).height(1000).url()}
+          imageAlt={familyPhotoMember.name}
           reverse
           eyebrow="Skarlatos & Son"
           title="Three generations shaping Ghana's landscape."

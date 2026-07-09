@@ -9,15 +9,27 @@ const selfFinanceRow = {
     defineField({ name: "timeframe", title: "Timeframe", type: "string" }),
     defineField({ name: "option1", title: "Option 1", type: "string" }),
     defineField({ name: "option2", title: "Option 2", type: "string" }),
+  ],
+  preview: {
+    select: { title: "milestone", subtitle: "timeframe" },
+  },
+};
+
+const upfrontDiscountTier = {
+  name: "upfrontDiscountTier",
+  title: "Upfront discount tier",
+  type: "object",
+  fields: [
     defineField({
       name: "upfrontPayment",
-      title: "Upfront payment",
+      title: "Upfront cash payment",
+      description: 'Percentage of the total price paid upfront in cash, e.g. "100%"',
       type: "string",
     }),
     defineField({ name: "discount", title: "Discount", type: "string" }),
   ],
   preview: {
-    select: { title: "milestone", subtitle: "timeframe" },
+    select: { title: "upfrontPayment", subtitle: "discount" },
   },
 };
 
@@ -45,6 +57,14 @@ export const financingPlan = defineType({
       title: "Self-finance plan",
       type: "array",
       of: [defineArrayMember(selfFinanceRow)],
+    }),
+    defineField({
+      name: "upfrontDiscountTiers",
+      title: "Upfront cash payment discounts",
+      description:
+        "Applies only to buyers paying a percentage of the total price upfront in cash — not tied to the self-finance installment schedule.",
+      type: "array",
+      of: [defineArrayMember(upfrontDiscountTier)],
     }),
     defineField({
       name: "mortgageRows",

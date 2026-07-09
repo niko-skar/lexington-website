@@ -2,19 +2,26 @@
 
 import { useMemo, useState } from "react";
 
-import type { BedroomType, Unit, UnitStatus } from "@/lib/sanity/types";
+import type { BedroomType, GalleryImage, Unit, UnitStatus } from "@/lib/sanity/types";
 import { formatUSD } from "@/lib/format";
 import { StatusBadge } from "./StatusBadge";
+import { UnitDetailModal } from "./UnitDetailModal";
 import styles from "./UnitFinder.module.css";
 
 type FloorFilter = number | "all";
 type TypeFilter = BedroomType | "all";
 type StatusFilter = UnitStatus | "all";
 
-export function UnitFinder({ units }: { units: Unit[] }) {
+interface UnitFinderProps {
+  units: Unit[];
+  floorPlans: Record<BedroomType, GalleryImage[]>;
+}
+
+export function UnitFinder({ units, floorPlans }: UnitFinderProps) {
   const [floor, setFloor] = useState<FloorFilter>("all");
   const [type, setType] = useState<TypeFilter>("all");
   const [status, setStatus] = useState<StatusFilter>("all");
+  const [selectedUnit, setSelectedUnit] = useState<Unit | null>(null);
 
   const floors = useMemo(
     () => Array.from(new Set(units.map((u) => u.floor))).sort((a, b) => a - b),
@@ -114,6 +121,7 @@ export function UnitFinder({ units }: { units: Unit[] }) {
               <th>Area</th>
               <th>Price</th>
               <th>Status</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
@@ -126,6 +134,11 @@ export function UnitFinder({ units }: { units: Unit[] }) {
                 <td className={styles.price}>{formatUSD(u.priceUSD)}</td>
                 <td>
                   <StatusBadge status={u.status} />
+                </td>
+                <td>
+                  <button className={styles.planLink} onClick={() => setSelectedUnit(u)}>
+                    Floor Plan
+                  </button>
                 </td>
               </tr>
             ))}
@@ -144,12 +157,23 @@ export function UnitFinder({ units }: { units: Unit[] }) {
               Floor {u.floor} · {u.bedroomType} · {u.areaSqm} sqm
             </div>
             <div className={styles.cardPrice}>{formatUSD(u.priceUSD)}</div>
+            <button className={styles.planLink} onClick={() => setSelectedUnit(u)}>
+              View Floor Plan &amp; Location
+            </button>
           </div>
         ))}
       </div>
 
       {filtered.length === 0 && (
         <p className={styles.empty}>No units match these filters.</p>
+      )}
+
+      {selectedUnit && (
+        <UnitDetailModal
+          unit={selectedUnit}
+          floorPlans={floorPlans[selectedUnit.bedroomType]}
+          onClose={() => setSelectedUnit(null)}
+        />
       )}
     </div>
   );

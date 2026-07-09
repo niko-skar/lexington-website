@@ -3,7 +3,7 @@
   flex-wrap: wrap;
   gap: var(--space-6);
   padding-bottom: var(--space-6);
-  border-bottom: 1px solid var(--ink-line);
+  border-bottom: 1px solid rgba(21, 24, 26, 0.14);
   margin-bottom: var(--space-5);
 }
 
@@ -17,30 +17,30 @@
   font-size: 11px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--brass-lt);
+  color: var(--brass);
   font-weight: 600;
 }
 
 .pills {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 18px;
 }
 
 .pill,
 .pillActive {
-  padding: 8px 16px;
+  padding: 9px 18px;
   border-radius: 20px;
   font-size: 13px;
   font-weight: 500;
-  border: 1px solid var(--ink-line);
-  color: var(--stone);
+  border: 1px solid rgba(21, 24, 26, 0.18);
+  color: var(--ink);
   transition: all 0.2s var(--ease);
 }
 
 .pill:hover {
   border-color: var(--brass);
-  color: var(--paper);
+  color: var(--clay);
 }
 
 .pillActive {
@@ -52,7 +52,7 @@
 
 .count {
   font-size: 13.5px;
-  color: var(--brass-lt);
+  color: var(--brass);
   margin-bottom: var(--space-5);
   font-variant-numeric: tabular-nums;
 }
@@ -70,7 +70,7 @@
 .table td {
   padding: 14px 16px;
   text-align: left;
-  border-bottom: 1px solid var(--ink-line);
+  border-bottom: 1px solid rgba(21, 24, 26, 0.14);
   font-variant-numeric: tabular-nums;
 }
 
@@ -78,13 +78,13 @@
   font-size: 11px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--brass-lt);
+  color: var(--brass);
   font-weight: 600;
 }
 
 .table td {
   font-size: 15px;
-  color: var(--paper);
+  color: var(--ink);
 }
 
 .price {
@@ -94,7 +94,7 @@
 }
 
 .table tr:hover td {
-  background: rgba(176, 141, 87, 0.06);
+  background: rgba(176, 141, 87, 0.1);
 }
 
 .cards {
@@ -103,7 +103,21 @@
 
 .empty {
   padding: var(--space-6) 0;
-  color: var(--stone);
+  color: #6b6355;
+}
+
+.planLink {
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--brass);
+  white-space: nowrap;
+  transition: color 0.2s var(--ease);
+}
+
+.planLink:hover {
+  color: var(--clay);
 }
 
 @media (max-width: 720px) {
@@ -117,9 +131,10 @@
   }
 
   .card {
-    border: 1px solid var(--ink-line);
+    border: 1px solid rgba(21, 24, 26, 0.16);
     border-radius: var(--radius);
     padding: var(--space-5);
+    background: var(--paper);
   }
 
   .cardHead {
@@ -131,13 +146,13 @@
   .cardUnit {
     font-family: var(--font-serif);
     font-size: 20px;
-    color: var(--paper);
+    color: var(--ink);
   }
 
   .cardMeta {
     margin-top: 8px;
     font-size: 13px;
-    color: var(--stone);
+    color: #6b6355;
   }
 
   .cardPrice {
@@ -145,6 +160,11 @@
     font-family: var(--font-serif);
     font-size: 19px;
     font-weight: 600;
-    color: var(--paper);
+    color: var(--ink);
+  }
+
+  .card .planLink {
+    display: inline-block;
+    margin-top: 14px;
   }
 }

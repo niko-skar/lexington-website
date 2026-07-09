@@ -21,7 +21,7 @@
 
 .available {
   color: var(--status-available);
-  background: rgba(103, 115, 95, 0.14);
+  background: rgba(111, 147, 172, 0.16);
 }
 
 .reserved {

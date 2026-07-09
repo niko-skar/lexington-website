@@ -1,5 +1,5 @@
 import Image from "next/image";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
 import { Reveal } from "./Reveal";
 import styles from "./SplitSection.module.css";
@@ -11,6 +11,7 @@ interface SplitSectionProps {
   eyebrow: string;
   title: string;
   children: ReactNode;
+  style?: CSSProperties;
 }
 
 export function SplitSection({
@@ -20,9 +21,10 @@ export function SplitSection({
   eyebrow,
   title,
   children,
+  style,
 }: SplitSectionProps) {
   return (
-    <section className="section">
+    <section className="section" style={style}>
       <div className={`wrap ${styles.split} ${reverse ? styles.reverse : ""}`}>
         <Reveal className={styles.media}>
           <Image

@@ -1,7 +1,7 @@
 import { client } from "@/lib/sanity/client";
 import { urlFor } from "@/lib/sanity/image";
-import { amenitiesQuery, galleryImagesQuery } from "@/lib/sanity/queries";
-import type { Amenity, GalleryImage } from "@/lib/sanity/types";
+import { amenitiesQuery, galleryImagesQuery, siteSettingsQuery } from "@/lib/sanity/queries";
+import type { Amenity, GalleryImage, SiteSettings } from "@/lib/sanity/types";
 
 import { PageIntro } from "@/components/PageIntro";
 import { AmenityCardGrid } from "@/components/AmenityCard";
@@ -16,11 +16,15 @@ export const metadata = {
 };
 
 export default async function AmenitiesPage() {
-  const [amenities, images] = await Promise.all([
+  const [amenities, images, siteSettings] = await Promise.all([
     client.fetch<Amenity[]>(amenitiesQuery),
     client.fetch<GalleryImage[]>(galleryImagesQuery),
+    client.fetch<SiteSettings>(siteSettingsQuery),
   ]);
 
+  const signature = amenities
+    .filter((a) => a.category === "signature")
+    .sort((a, b) => a.order - b.order);
   const rooftop = amenities
     .filter((a) => a.category === "rooftop")
     .sort((a, b) => a.order - b.order);
@@ -30,24 +34,26 @@ export default async function AmenitiesPage() {
     .map((a) => ({ key: a._id, label: "Building", title: a.name }));
 
   const amenityImages = images.filter((i) => i.category === "amenity");
-  const heroImage = amenityImages[0];
-  const poolImage = amenityImages[1] ?? amenityImages[0];
-  const loungeImage = amenityImages[2] ?? amenityImages[0];
+  const findImage = (needle: string) =>
+    amenityImages.find((i) => i.alt.toLowerCase().includes(needle));
+
+  const poolImage = findImage("pool") ?? amenityImages[0];
+  const gardenImage = findImage("rooftop terrace") ?? findImage("rooftop") ?? amenityImages[0];
+  const loungeImage = findImage("café") ?? amenityImages[0];
 
   return (
     <>
-      <PageIntro
-        eyebrow="Amenities"
-        title="A rooftop built for a full day."
-        lede="Every resident's amenity sits seven storeys above Shiashie, with the building features to match below."
-      />
+      <PageIntro {...siteSettings.amenitiesIntro} />
 
-      {heroImage && (
-        <section className="section" style={{ paddingTop: 0 }}>
+      {signature.length > 0 && (
+        <section className="section" style={{ paddingTop: "clamp(32px, 4vw, 56px)" }}>
           <div className="wrap">
             <Reveal>
-              <AmenityCardGrid amenities={rooftop} />
+              <div className="eyebrow">Signature Amenities</div>
             </Reveal>
+            <div style={{ marginTop: 24 }}>
+              <AmenityCardGrid amenities={signature} images={amenityImages} />
+            </div>
           </div>
         </section>
       )}
@@ -56,13 +62,28 @@ export default async function AmenitiesPage() {
         <SplitSection
           imageUrl={urlFor(poolImage.image).width(800).height(1000).url()}
           imageAlt={poolImage.alt}
-          eyebrow="Rooftop"
-          title="Pool, gym and everything after."
+          eyebrow="Signature"
+          title="Pool, gym, and everything after."
         >
           <p>
-            The rooftop level is built as a genuine amenity floor, not an
-            afterthought — a full lap pool, a fitted gym, sauna, jacuzzi and
-            ice bath, all with skyline views over Shiashie.
+            A full lap pool, a fitted gym, sauna, jacuzzi and ice bath —
+            everything residents need for a full day, without leaving the
+            building.
+          </p>
+        </SplitSection>
+      )}
+
+      {rooftop.length > 0 && gardenImage && (
+        <SplitSection
+          imageUrl={urlFor(gardenImage.image).width(800).height(1000).url()}
+          imageAlt={gardenImage.alt}
+          reverse
+          eyebrow="Rooftop"
+          title="A private garden, above it all."
+        >
+          <p>
+            The Private Resident&rsquo;s Rooftop Garden sits at the very top
+            of the building — a quiet, planted space reserved for residents.
           </p>
         </SplitSection>
       )}
@@ -70,10 +91,9 @@ export default async function AmenitiesPage() {
       {loungeImage && (
         <SplitSection
           imageUrl={urlFor(loungeImage.image).width(800).height(1000).url()}
-          imageAlt={loungeImage.alt}
-          reverse
           eyebrow="Café & Lounge"
-          title="A rooftop café for residents."
+          title="A café built for residents."
+          imageAlt={loungeImage.alt}
         >
           <p>
             A private café and lounge area for residents and guests, built for

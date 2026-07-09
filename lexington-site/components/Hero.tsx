@@ -48,7 +48,6 @@ export function Hero({ imageUrl, imageAlt, eyebrow, children }: HeroProps) {
         <div className={styles.eyebrow}>{eyebrow}</div>
         {children}
       </div>
-      <div className={styles.scrollHint}>Scroll</div>
     </section>
   );
 }

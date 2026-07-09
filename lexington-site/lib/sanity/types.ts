@@ -30,7 +30,7 @@ export interface GalleryImage {
   order: number;
 }
 
-export type AmenityCategory = "rooftop" | "building feature";
+export type AmenityCategory = "rooftop" | "signature" | "building feature";
 
 export interface Amenity {
   _id: string;
@@ -44,6 +44,7 @@ export interface FamilyMember {
   name: string;
   years: string;
   bio: string;
+  photo?: Image;
   order: number;
 }
 
@@ -52,6 +53,9 @@ export interface SelfFinanceRow {
   timeframe: string;
   option1: string;
   option2?: string;
+}
+
+export interface UpfrontDiscountTier {
   upfrontPayment: string;
   discount: string;
 }
@@ -65,10 +69,35 @@ export interface MortgageRow {
 export interface FinancingPlan {
   _id: string;
   selfFinanceRows: SelfFinanceRow[];
+  upfrontDiscountTiers: UpfrontDiscountTier[];
   mortgageRows: MortgageRow[];
   buyToRent: {
     oneBedroomRange: string;
     twoBedroomRange: string;
     projectedYieldPct: number;
   };
+}
+
+export interface PageIntroContent {
+  eyebrow: string;
+  title: string;
+  lede?: string;
+}
+
+export interface SiteSettings {
+  _id: string;
+  contactPhone: string;
+  contactEmail: string;
+  notificationEmail: string;
+  officeAddress: string;
+  disclaimer: string;
+  heroEyebrow: string;
+  heroTitle: string;
+  heroLede: string;
+  residencesIntro: PageIntroContent;
+  amenitiesIntro: PageIntroContent;
+  galleryIntro: PageIntroContent;
+  investIntro: PageIntroContent;
+  aboutIntro: PageIntroContent;
+  contactIntro: PageIntroContent;
 }

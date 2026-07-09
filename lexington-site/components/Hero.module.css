@@ -29,7 +29,12 @@
 .content {
   position: relative;
   z-index: 1;
-  padding-bottom: clamp(48px, 7vw, 104px);
+  /* Content is bottom-anchored inside a min-height hero (align-items:
+     flex-end on .hero) — this padding is part of the content block's
+     own height, so a smaller value here also means more clearance
+     above the eyebrow on shorter viewports, not just less space below
+     the buttons. */
+  padding-bottom: clamp(32px, 4vw, 72px);
   width: 100%;
 }
 
@@ -40,54 +45,34 @@
   text-transform: uppercase;
   color: var(--brass-lt);
   margin-bottom: 20px;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.55);
 }
 
 .content h1 {
   font-size: var(--fs-800);
   color: var(--paper);
   max-width: 16ch;
+  line-height: 1.18;
+  text-shadow: 0 2px 16px rgba(0, 0, 0, 0.35);
 }
 
-.content p.lede {
-  margin-top: 22px;
+/* "lede" and "actions" are plain global classNames set by the calling
+   page (Hero's children), not styles.* tokens — :global() is required
+   or these never match, since CSS Modules hashes bare class selectors
+   by default. */
+.content p:global(.lede) {
+  margin-top: clamp(40px, 4.5vw, 72px);
   max-width: 46ch;
   font-size: var(--fs-400);
   color: var(--paper-dim);
   font-weight: 400;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.4);
 }
 
-.content .actions {
+.content :global(.actions) {
   margin-top: 36px;
   display: flex;
   gap: 16px;
   flex-wrap: wrap;
 }
 
-.scrollHint {
-  position: absolute;
-  right: var(--edge-pad);
-  bottom: 40px;
-  z-index: 1;
-  writing-mode: vertical-rl;
-  color: var(--paper-dim);
-  font-size: 11px;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.scrollHint::after {
-  content: "";
-  width: 1px;
-  height: 52px;
-  background: var(--brass);
-  display: block;
-}
-
-@media (max-width: 640px) {
-  .scrollHint {
-    display: none;
-  }
-}
