@@ -166,8 +166,15 @@ h4 {
 }
 
 .sectionDark {
-  background: var(--ink);
   color: var(--paper);
+  background-color: var(--ink);
+  /* A faint glass-grid texture, referencing the blue-tinted balcony
+     glazing in the brochure renders — a hairline lattice rather than a
+     flat tint, so it reads as texture, not just a color swap. */
+  background-image:
+    linear-gradient(rgba(111, 147, 172, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(111, 147, 172, 0.05) 1px, transparent 1px);
+  background-size: 64px 64px;
 }
 
 .sectionAlt {

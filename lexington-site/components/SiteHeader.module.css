@@ -2,9 +2,28 @@
   position: sticky;
   top: 0;
   z-index: 100;
-  background: rgba(21, 24, 26, 0.92);
-  backdrop-filter: blur(10px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/*
+ * The blur lives on a pseudo-element rather than .header itself.
+ * backdrop-filter (or filter/transform) on an element creates a CSS
+ * containing block for any position:fixed descendants — since .nav
+ * becomes a full-screen fixed overlay on mobile, that would clip it to
+ * .header's own ~100px box instead of the viewport. A pseudo-element
+ * doesn't have DOM children, so it can't cause that for .nav.
+ */
+.header::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-color: rgba(21, 24, 26, 0.92);
+  background-image:
+    linear-gradient(rgba(111, 147, 172, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(111, 147, 172, 0.06) 1px, transparent 1px);
+  background-size: 64px 64px;
+  backdrop-filter: blur(10px);
 }
 
 .bar {

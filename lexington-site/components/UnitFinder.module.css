@@ -24,7 +24,7 @@
 .pills {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 18px;
 }
 
 .pill,

@@ -9,6 +9,10 @@
   padding-top: var(--space-4);
 }
 
+.stat:nth-child(even) {
+  border-top-color: var(--sky);
+}
+
 .stat b {
   font-family: var(--font-serif);
   font-size: var(--fs-600);

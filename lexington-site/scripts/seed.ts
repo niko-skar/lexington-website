@@ -174,6 +174,9 @@ const familyMembers = [
     years: "1992 – Present",
     bio: "Developed multiple world-class showrooms in London, Accra, and Abidjan; completed a six-bedroom residence in Shiashie, East Legon.",
     photoFile: "family-niko.jpg",
+    // Source photo is a tall portrait with his face near the top — a
+    // default center-crop to a square/4:5 thumbnail cuts his head off.
+    photoHotspot: { x: 0.5, y: 0.17, width: 0.55, height: 0.3 },
   },
 ];
 
@@ -232,7 +235,9 @@ async function seedAmenities() {
 async function seedFamilyMembers() {
   console.log(`Seeding ${familyMembers.length} family members...`);
   for (let i = 0; i < familyMembers.length; i++) {
-    const { photoFile, ...m } = familyMembers[i];
+    const { photoFile, photoHotspot, ...m } = familyMembers[i] as (typeof familyMembers)[number] & {
+      photoHotspot?: { x: number; y: number; width: number; height: number };
+    };
     const id = `family-${slugify(m.name)}`;
 
     const existing = await client.fetch<{ photo?: { asset?: { _ref: string } } } | null>(
@@ -249,6 +254,9 @@ async function seedFamilyMembers() {
       photo: {
         _type: "image",
         asset: { _type: "reference", _ref: assetId },
+        ...(photoHotspot && {
+          hotspot: { _type: "sanity.imageHotspot", ...photoHotspot },
+        }),
       },
     });
   }

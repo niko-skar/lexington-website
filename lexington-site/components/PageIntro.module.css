@@ -1,4 +1,5 @@
 .intro {
+  padding-top: clamp(56px, 7vw, 96px);
   padding-bottom: 48px;
 }
 
