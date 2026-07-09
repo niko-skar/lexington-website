@@ -79,7 +79,12 @@
   --fs-500: clamp(1.375rem, 1.2rem + 0.9vw, 1.75rem);
   --fs-600: clamp(1.75rem, 1.35rem + 2vw, 2.75rem);
   --fs-700: clamp(2.25rem, 1.5rem + 3.5vw, 4rem);
-  --fs-800: clamp(2.75rem, 1.4rem + 6.5vw, 6.5rem);
+  /* Previously maxed out (6.5rem/104px) by ~1280px viewport width — on
+     typical laptop screens (1280–1440 wide, ~800–900 tall) that made the
+     3-line hero heading tall enough to push the bottom-anchored content
+     block up against the header. Gentler vw coefficient reaches the same
+     max only on genuinely wide displays. */
+  --fs-800: clamp(2.75rem, 1.6rem + 4.25vw, 6.5rem);
 
   /* Spacing (8px base) */
   --space-1: 0.25rem;
@@ -220,6 +225,16 @@ h4 {
 
 .sectionStone {
   background: var(--paper);
+}
+
+/* Padding (not margin) doesn't collapse — two consecutive sections that
+   are both plain/uncolored (no visual break between them) would
+   otherwise stack their full top+bottom padding into a ~240px gap.
+   Drop the second one's top padding so they read as one continuous
+   flow with a single section-pad's worth of space between them. */
+.section:not(.sectionDark):not(.sectionAlt):not(.sectionStone)
+  + .section:not(.sectionDark):not(.sectionAlt):not(.sectionStone) {
+  padding-top: 0;
 }
 
 .eyebrow {

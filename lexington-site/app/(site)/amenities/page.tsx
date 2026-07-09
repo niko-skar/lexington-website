@@ -46,7 +46,7 @@ export default async function AmenitiesPage() {
       <PageIntro {...siteSettings.amenitiesIntro} />
 
       {signature.length > 0 && (
-        <section className="section" style={{ paddingTop: 0 }}>
+        <section className="section" style={{ paddingTop: "clamp(32px, 4vw, 56px)" }}>
           <div className="wrap">
             <Reveal>
               <div className="eyebrow">Signature Amenities</div>

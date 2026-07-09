@@ -30,7 +30,7 @@ export default async function AboutPage() {
     <>
       <PageIntro {...siteSettings.aboutIntro} />
 
-      <section className="section sectionDark" style={{ paddingTop: 0 }}>
+      <section className="section sectionDark" style={{ paddingTop: "clamp(32px, 4vw, 56px)" }}>
         <div className="wrap">
           <LegacyTimeline members={members} />
         </div>

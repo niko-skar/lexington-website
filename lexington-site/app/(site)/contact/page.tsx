@@ -22,7 +22,7 @@ export default async function ContactPage() {
     <>
       <PageIntro {...siteSettings.contactIntro} />
 
-      <section className="sectionDark" style={{ paddingTop: 0 }}>
+      <section className="section sectionDark" style={{ paddingTop: "clamp(32px, 4vw, 56px)" }}>
         <div className="wrap">
           <div className={styles.grid}>
             <div>

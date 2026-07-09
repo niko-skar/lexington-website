@@ -29,7 +29,7 @@ export default async function InvestPage() {
     <>
       <PageIntro {...siteSettings.investIntro} />
 
-      <section className="section sectionDark" style={{ paddingTop: 0 }}>
+      <section className="section sectionDark" style={{ paddingTop: "clamp(32px, 4vw, 56px)" }}>
         <div className="wrap">
           <Reveal>
             <div className="eyebrow">Financing Options</div>
