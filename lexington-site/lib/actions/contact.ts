@@ -48,7 +48,7 @@ export async function sendEnquiry(
 
   try {
     const result = await resend.emails.send({
-      from: "The Lexington Website <onboarding@resend.dev>",
+      from: "The Lexington Website <sales@lexington.com.gh>",
       to: siteSettings.notificationEmail,
       replyTo: email,
       subject: `Enquiry - The Lexington (${name})`,

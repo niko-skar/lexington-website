@@ -26,6 +26,12 @@ export const familyMember = defineType({
       validation: (Rule) => Rule.required(),
     }),
     defineField({
+      name: "photo",
+      title: "Photo",
+      type: "image",
+      options: { hotspot: true },
+    }),
+    defineField({
       name: "order",
       title: "Order",
       type: "number",
@@ -40,6 +46,6 @@ export const familyMember = defineType({
     },
   ],
   preview: {
-    select: { title: "name", subtitle: "years" },
+    select: { title: "name", subtitle: "years", media: "photo" },
   },
 });

@@ -1,13 +1,29 @@
 .row {
   display: grid;
-  grid-template-columns: 140px 1fr;
+  grid-template-columns: 88px 120px 1fr;
   gap: var(--space-6);
+  align-items: center;
   padding: var(--space-7) 0;
   border-top: 1px solid var(--ink-line);
 }
 
 .row:last-child {
   border-bottom: 1px solid var(--ink-line);
+}
+
+.photo {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--ink-soft);
+  flex: none;
+}
+
+.photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .years {
@@ -31,7 +47,21 @@
 
 @media (max-width: 640px) {
   .row {
-    grid-template-columns: 1fr;
-    gap: 8px;
+    grid-template-columns: 64px 1fr;
+    gap: var(--space-4);
+  }
+
+  .photo {
+    width: 64px;
+    height: 64px;
+  }
+
+  .years {
+    grid-column: 2;
+  }
+
+  .row > div:last-child {
+    grid-column: 1 / -1;
+    margin-top: 8px;
   }
 }

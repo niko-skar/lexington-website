@@ -44,6 +44,7 @@ export interface FamilyMember {
   name: string;
   years: string;
   bio: string;
+  photo?: Image;
   order: number;
 }
 

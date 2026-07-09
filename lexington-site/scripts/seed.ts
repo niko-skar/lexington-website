@@ -161,16 +161,19 @@ const familyMembers = [
     name: "Mikhail Skarlatos",
     years: "1922 – Present",
     bio: "Senior Executive at Doxiades & Associates for 60+ years, responsible for city-wide planning and development of Tema from the ground up in the 1960s.",
+    photoFile: "family-mikhail.jpg",
   },
   {
     name: "Leo Skarlatos",
     years: "1962 – Present",
     bio: "Designed the MTN Headquarters in Accra as CFO of MTN. Designed and financed the Silver Mountain Resort & Spa in Brasov, Romania.",
+    photoFile: "family-leo.jpg",
   },
   {
     name: "Niko Skarlatos",
     years: "1992 – Present",
     bio: "Developed multiple world-class showrooms in London, Accra, and Abidjan; completed a six-bedroom residence in Shiashie, East Legon.",
+    photoFile: "family-niko.jpg",
   },
 ];
 
@@ -229,9 +232,25 @@ async function seedAmenities() {
 async function seedFamilyMembers() {
   console.log(`Seeding ${familyMembers.length} family members...`);
   for (let i = 0; i < familyMembers.length; i++) {
-    const m = familyMembers[i];
+    const { photoFile, ...m } = familyMembers[i];
     const id = `family-${slugify(m.name)}`;
-    await client.createOrReplace({ _id: id, _type: "familyMember", ...m, order: i });
+
+    const existing = await client.fetch<{ photo?: { asset?: { _ref: string } } } | null>(
+      `*[_id == $id][0]{photo}`,
+      { id }
+    );
+    const assetId = existing?.photo?.asset?._ref ?? (await uploadImage(photoFile));
+
+    await client.createOrReplace({
+      _id: id,
+      _type: "familyMember",
+      ...m,
+      order: i,
+      photo: {
+        _type: "image",
+        asset: { _type: "reference", _ref: assetId },
+      },
+    });
   }
 }
 
@@ -310,7 +329,7 @@ async function seedSiteSettings() {
     _type: "siteSettings",
     contactPhone: "+233 (0)244 30 5262",
     contactEmail: "sales@lexington.com.gh",
-    notificationEmail: "niko.skarlatos@gmail.com",
+    notificationEmail: "sales@lexington.com.gh",
     officeAddress: "Duala Close — Opposite Orchid Hotel, Shiashie",
     disclaimer:
       "All images displayed are for illustrative purposes only and may not reflect the final product. All prices are subject to change without notice.",

@@ -2,12 +2,20 @@ import { client } from "@/lib/sanity/client";
 import { urlFor } from "@/lib/sanity/image";
 import {
   amenitiesQuery,
+  familyMembersQuery,
   financingPlanQuery,
   galleryImagesQuery,
   siteSettingsQuery,
   unitsQuery,
 } from "@/lib/sanity/queries";
-import type { Amenity, FinancingPlan, GalleryImage, SiteSettings, Unit } from "@/lib/sanity/types";
+import type {
+  Amenity,
+  FamilyMember,
+  FinancingPlan,
+  GalleryImage,
+  SiteSettings,
+  Unit,
+} from "@/lib/sanity/types";
 import { formatUSD } from "@/lib/format";
 
 import { Hero } from "@/components/Hero";
@@ -20,12 +28,13 @@ import { Reveal } from "@/components/Reveal";
 export const revalidate = 60;
 
 export default async function HomePage() {
-  const [units, images, amenities, financingPlan, siteSettings] = await Promise.all([
+  const [units, images, amenities, financingPlan, siteSettings, familyMembers] = await Promise.all([
     client.fetch<Unit[]>(unitsQuery),
     client.fetch<GalleryImage[]>(galleryImagesQuery),
     client.fetch<Amenity[]>(amenitiesQuery),
     client.fetch<FinancingPlan>(financingPlanQuery),
     client.fetch<SiteSettings>(siteSettingsQuery),
+    client.fetch<FamilyMember[]>(familyMembersQuery),
   ]);
 
   const availableUnits = units.filter((u) => u.status === "available");
@@ -33,11 +42,13 @@ export default async function HomePage() {
 
   const exteriorImages = images.filter((i) => i.category === "exterior");
   const interiorImages = images.filter((i) => i.category === "interior");
-  const familyImages = images.filter((i) => i.category === "family");
 
   const heroImage = exteriorImages[0];
   const residencesImage = interiorImages[1] ?? interiorImages[0];
-  const familyImage = familyImages[0];
+  // Niko is the generation actively developing The Lexington — his photo
+  // is the most relevant single portrait for this teaser.
+  const familyPhotoMember =
+    familyMembers.find((m) => m.name.includes("Niko")) ?? familyMembers[0];
 
   const featuredAmenities = amenities
     .filter((a) => a.category === "signature" || a.category === "rooftop")
@@ -172,10 +183,10 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {familyImage && (
+      {familyPhotoMember?.photo && (
         <SplitSection
-          imageUrl={urlFor(familyImage.image).width(800).height(1000).url()}
-          imageAlt={familyImage.alt}
+          imageUrl={urlFor(familyPhotoMember.photo).width(800).height(1000).url()}
+          imageAlt={familyPhotoMember.name}
           reverse
           eyebrow="Skarlatos & Son"
           title="Three generations shaping Ghana's landscape."
