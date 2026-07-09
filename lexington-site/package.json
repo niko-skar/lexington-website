@@ -1,0 +1,37 @@
+{
+  "name": "lexington-website",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "seed": "tsx --env-file=.env.local scripts/seed.ts"
+  },
+  "dependencies": {
+    "@sanity/client": "^7.23.0",
+    "@sanity/image-url": "^2.1.1",
+    "@sanity/vision": "^6.4.0",
+    "next": "16.2.10",
+    "next-sanity": "^13.1.1",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "sanity": "^6.4.0",
+    "server-only": "^0.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.10",
+    "tsx": "^4.23.0",
+    "typescript": "^5"
+  },
+  "allowScripts": {
+    "esbuild@0.28.1": true,
+    "sharp@0.34.5": true,
+    "unrs-resolver@1.12.2": true
+  }
+}

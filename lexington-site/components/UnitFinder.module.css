@@ -1,0 +1,150 @@
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-6);
+  padding-bottom: var(--space-6);
+  border-bottom: 1px solid var(--ink-line);
+  margin-bottom: var(--space-5);
+}
+
+.filterGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.filterLabel {
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--brass-lt);
+  font-weight: 600;
+}
+
+.pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pill,
+.pillActive {
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid var(--ink-line);
+  color: var(--stone);
+  transition: all 0.2s var(--ease);
+}
+
+.pill:hover {
+  border-color: var(--brass);
+  color: var(--paper);
+}
+
+.pillActive {
+  background: var(--brass);
+  border-color: var(--brass);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.count {
+  font-size: 13.5px;
+  color: var(--brass-lt);
+  margin-bottom: var(--space-5);
+  font-variant-numeric: tabular-nums;
+}
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  padding: 14px 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--ink-line);
+  font-variant-numeric: tabular-nums;
+}
+
+.table th {
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--brass-lt);
+  font-weight: 600;
+}
+
+.table td {
+  font-size: 15px;
+  color: var(--paper);
+}
+
+.price {
+  font-family: var(--font-serif);
+  font-weight: 600;
+  font-size: 16.5px;
+}
+
+.table tr:hover td {
+  background: rgba(176, 141, 87, 0.06);
+}
+
+.cards {
+  display: none;
+}
+
+.empty {
+  padding: var(--space-6) 0;
+  color: var(--stone);
+}
+
+@media (max-width: 720px) {
+  .tableWrap {
+    display: none;
+  }
+
+  .cards {
+    display: grid;
+    gap: var(--space-4);
+  }
+
+  .card {
+    border: 1px solid var(--ink-line);
+    border-radius: var(--radius);
+    padding: var(--space-5);
+  }
+
+  .cardHead {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .cardUnit {
+    font-family: var(--font-serif);
+    font-size: 20px;
+    color: var(--paper);
+  }
+
+  .cardMeta {
+    margin-top: 8px;
+    font-size: 13px;
+    color: var(--stone);
+  }
+
+  .cardPrice {
+    margin-top: 10px;
+    font-family: var(--font-serif);
+    font-size: 19px;
+    font-weight: 600;
+    color: var(--paper);
+  }
+}

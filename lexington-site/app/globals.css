@@ -1,0 +1,188 @@
+/* ==========================================================================
+   The Lexington — design tokens
+   Charcoal ground, travertine paper, aged brass, deep clay, sage.
+   Fraunces (display serif) + Inter (body/data), loaded via next/font.
+   ========================================================================== */
+
+:root {
+  /* Palette */
+  --ink: #15181a;
+  --ink-soft: #21262a;
+  --ink-line: #383e42;
+  --paper: #f7f4ec;
+  --paper-dim: #ede7d8;
+  --stone: #c9c2b2;
+  --brass: #b08d57;
+  --brass-lt: #d9c29a;
+  --clay: #8b4a34;
+  --clay-lt: #b26a4e;
+  --sage: #67735f;
+  --sage-lt: #8b9a80;
+
+  /* Status */
+  --status-available: var(--sage);
+  --status-reserved: var(--brass);
+  --status-sold: var(--clay);
+
+  /* Type */
+  --font-serif: var(--font-fraunces), Georgia, serif;
+  --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+
+  --fs-100: 0.8125rem; /* 13px — eyebrow/micro */
+  --fs-200: 0.875rem; /* 14px — small */
+  --fs-300: 1rem; /* 16px — body */
+  --fs-400: 1.125rem; /* 18px — lede */
+  --fs-500: clamp(1.375rem, 1.2rem + 0.9vw, 1.75rem);
+  --fs-600: clamp(1.75rem, 1.35rem + 2vw, 2.75rem);
+  --fs-700: clamp(2.25rem, 1.5rem + 3.5vw, 4rem);
+  --fs-800: clamp(2.75rem, 1.4rem + 6.5vw, 6.5rem);
+
+  /* Spacing (8px base) */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4rem;
+  --space-9: 6rem;
+  --space-10: 8rem;
+
+  --section-pad: clamp(5rem, 4rem + 4vw, 8.75rem);
+  --edge-pad: clamp(1.25rem, 1rem + 3vw, 4.5rem);
+  --max: 1320px;
+
+  --ease: cubic-bezier(0.22, 0.7, 0.24, 1);
+  --radius: 3px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+  color-scheme: light;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: var(--fs-300);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+img,
+svg {
+  max-width: 100%;
+  display: block;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+ul,
+ol {
+  list-style: none;
+}
+
+button {
+  font-family: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+table {
+  border-collapse: collapse;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+:focus-visible {
+  outline: 2px solid var(--brass);
+  outline-offset: 3px;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  line-height: 1.08;
+  letter-spacing: -0.01em;
+}
+
+.wrap {
+  max-width: var(--max);
+  margin-inline: auto;
+  padding-inline: var(--edge-pad);
+}
+
+.section {
+  padding-block: var(--section-pad);
+}
+
+.sectionDark {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.sectionAlt {
+  background: var(--paper-dim);
+}
+
+.eyebrow {
+  font-family: var(--font-sans);
+  font-size: var(--fs-100);
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--brass);
+}
+
+.disclaimer {
+  font-size: var(--fs-200);
+  color: #7c8489;
+  max-width: 70ch;
+}

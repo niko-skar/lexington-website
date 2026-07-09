@@ -1,0 +1,16 @@
+.intro {
+  padding-bottom: 48px;
+}
+
+.title {
+  font-size: var(--fs-700);
+  color: var(--paper);
+  margin-top: 14px;
+}
+
+.lede {
+  margin-top: 14px;
+  color: var(--stone);
+  max-width: 56ch;
+  font-size: 16.5px;
+}

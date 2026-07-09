@@ -1,49 +1,58 @@
 # The Lexington — Website
 
-A static site (plain HTML/CSS/JS, no build step) for The Lexington, built from the property brochure.
+Next.js (App Router) marketing site for The Lexington, Shiashie, East Legon,
+backed by a Sanity CMS embedded at `/studio`.
 
 ## Structure
+
 ```
-index.html        Home
-residences.html   Unit listings by floor (interactive floor selector) + pricing
-amenities.html    Features & amenities
-gallery.html      Photo gallery
-invest.html       Financing plans, payment schedule, buy-to-rent
-about.html        Skarlatos & Son family history
-contact.html      Contact details + enquiry form (opens email client)
-css/style.css     All styling
-js/main.js        Mobile nav + floor selector interactivity
-images/           Photos extracted from the brochure, optimized for web
+app/(site)/        Marketing pages (Home, Residences, Amenities, Gallery, Invest, About, Contact)
+app/studio/        Embedded Sanity Studio
+components/        Shared UI components
+lib/sanity/        Sanity client, GROQ queries, TypeScript types
+sanity/            Sanity schema types + Studio structure/config
+scripts/seed.ts    One-time seed script (units, amenities, family, financing plan, gallery images)
 ```
 
-## Deploy to Vercel via GitHub
+## Content model
 
-1. **Push to GitHub**
-   - Create a new repo (or use your existing one).
-   - Copy all files in this folder into the repo root — keep the folder structure exactly as-is.
-   - Commit and push:
-     ```
-     git add .
-     git commit -m "Lexington website"
-     git push
-     ```
+Managed in Sanity Studio (`/studio`):
 
-2. **Connect to Vercel**
-   - In Vercel: New Project → Import your GitHub repo.
-   - Framework preset: choose **Other** (this is a static site, no build command needed).
-   - Leave Build Command and Output Directory blank — Vercel will serve the files as-is.
-   - Click Deploy.
+- **Unit** — unit number, floor, bedroom type, area, price, status (available/reserved/sold)
+- **Gallery image** — image, alt text, category (exterior/interior/amenity/floorplan/family)
+- **Amenity** — name, category (rooftop/building feature)
+- **Family member** — name, years, bio (About page timeline)
+- **Financing plan** — singleton: self-finance rows, mortgage rows, buy-to-rent rates
 
-3. **Point your domain**
-   - In the Vercel project: Settings → Domains → add `lexington.com.gh`.
-   - Vercel will show the exact A/CNAME records to set — update them in your DNS panel the same way you did for the Shopify connection.
-   - Once DNS propagates, remove/replace the old Shopify A and www CNAME records so the domain resolves here instead.
+Everything else (contact details, disclaimer, location list, extras pricing) is static copy in the page components.
 
-## Editing content later
-- Unit prices/floors: edit the tables directly in `residences.html`.
-- Photos: replace files in `images/` (keep the same filenames) or add new `<img>` tags where needed.
-- Contact details, phone numbers, financing tables: plain text in each `.html` file — no CMS, just edit and re-push to GitHub, Vercel redeploys automatically.
+## Local development
 
-## Known placeholders
-- The enquiry form on `contact.html` currently opens the visitor's email client with a pre-filled message (no backend). If you want submissions to go to a database or trigger notifications, that needs a small backend (e.g. a Vercel serverless function) — happy to add this next.
-- No payment integration yet. When ready to accept the $10,000 reservation deposit by card, we can wire in Paystack on the "Reserve" button.
+Requires Node.js and the three env vars below in `.env.local`:
+
+```
+NEXT_PUBLIC_SANITY_PROJECT_ID=2p1ef4hj
+NEXT_PUBLIC_SANITY_DATASET=production
+SANITY_API_TOKEN=<a token with read access; Editor token also works>
+```
+
+```bash
+npm install
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) for the site, `/studio` for the CMS.
+
+### Re-seeding content
+
+`scripts/seed-images/` holds the source JPEGs used by the seed script. Re-running is idempotent (documents use deterministic `_id`s):
+
+```bash
+npm run seed
+```
+
+## Deploy
+
+Deploys to Vercel from this repo's `lexington-site/` directory (set as the project's Root Directory). Add the same three env vars in Vercel → Project Settings → Environment Variables.
+
+The embedded Studio needs its origin allow-listed in Sanity: manage.sanity.io → project → API → CORS Origins → add `http://localhost:3000` for local dev and the site's production/preview domains.
