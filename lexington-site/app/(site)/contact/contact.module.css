@@ -14,25 +14,25 @@
 
 .detail {
   padding: 22px 0;
-  border-top: 1px solid var(--ink-line);
+  border-top: 1px solid rgba(21, 24, 26, 0.14);
 }
 
 .detail:last-of-type {
-  border-bottom: 1px solid var(--ink-line);
+  border-bottom: 1px solid rgba(21, 24, 26, 0.14);
 }
 
 .key {
   font-size: 11px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--brass-lt);
+  color: var(--brass);
 }
 
 .value {
   font-family: var(--font-serif);
   font-size: 19px;
   margin-top: 6px;
-  color: var(--paper);
+  color: var(--ink);
 }
 
 .reserveBox {
@@ -43,7 +43,7 @@
 }
 
 .reserveBox p {
-  color: var(--stone);
+  color: #555;
   margin-top: 10px;
   font-size: 14.5px;
 }

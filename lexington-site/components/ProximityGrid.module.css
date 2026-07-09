@@ -2,12 +2,12 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 1px;
-  background: var(--ink-line);
-  border: 1px solid var(--ink-line);
+  background: var(--stone);
+  border: 1px solid var(--stone);
 }
 
 .item {
-  background: var(--navy);
+  background: var(--paper);
   padding: 26px 24px;
   display: flex;
   justify-content: space-between;
@@ -17,18 +17,18 @@
 }
 
 .item:hover {
-  background: var(--ink-soft);
+  background: rgba(176, 141, 87, 0.08);
 }
 
 .place {
   font-family: var(--font-serif);
   font-size: 17px;
-  color: var(--paper);
+  color: var(--ink);
 }
 
 .time {
   font-size: 13px;
-  color: var(--brass-lt);
+  color: var(--brass);
   white-space: nowrap;
   font-weight: 600;
 }

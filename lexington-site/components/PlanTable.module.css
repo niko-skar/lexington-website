@@ -10,7 +10,7 @@
 .table th,
 .table td {
   padding: 16px 18px;
-  border-bottom: 1px solid var(--ink-line);
+  border-bottom: 1px solid rgba(21, 24, 26, 0.14);
   text-align: left;
   white-space: nowrap;
 }
@@ -19,18 +19,18 @@
   font-size: 11px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--brass-lt);
+  color: var(--brass);
   border-bottom: 2px solid var(--brass);
 }
 
 .table td {
   font-variant-numeric: tabular-nums;
   font-size: 15px;
-  color: var(--paper);
+  color: var(--ink);
 }
 
 .discount {
-  color: var(--clay-lt);
+  color: var(--clay);
   font-weight: 600;
   font-family: var(--font-serif);
 }

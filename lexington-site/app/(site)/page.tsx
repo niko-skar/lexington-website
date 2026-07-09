@@ -95,14 +95,14 @@ export default async function HomePage() {
         </Button>
       </SplitSection>
 
-      <section className="section sectionDark">
+      <section className="section sectionStone" style={{ background: "var(--stone)" }}>
         <div className="wrap">
           <Reveal>
             <div className="eyebrow">Location</div>
             <h2 style={{ fontSize: "var(--fs-600)", marginTop: 14 }}>
               Everything, close at hand.
             </h2>
-            <p style={{ marginTop: 16, color: "var(--stone)", maxWidth: 640 }}>
+            <p style={{ marginTop: 16, color: "#555", maxWidth: 640 }}>
               Shiashie sits at the quiet centre of East Legon — near enough to
               the city&rsquo;s schools, malls and airport to make the daily
               commute disappear.
@@ -169,7 +169,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <section className="section sectionDark">
+      <section className="section sectionStone" style={{ background: "var(--stone)" }}>
         <div className="wrap">
           <Reveal>
             <StatStrip

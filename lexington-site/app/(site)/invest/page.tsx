@@ -29,14 +29,14 @@ export default async function InvestPage() {
     <>
       <PageIntro {...siteSettings.investIntro} />
 
-      <section className="section sectionDark" style={{ paddingTop: "clamp(32px, 4vw, 56px)" }}>
+      <section className="section sectionStone" style={{ paddingTop: "clamp(32px, 4vw, 56px)" }}>
         <div className="wrap">
           <Reveal>
             <div className="eyebrow">Financing Options</div>
             <h2 style={{ fontSize: "var(--fs-600)", marginTop: 14 }}>
               Self-finance payment plans.
             </h2>
-            <p style={{ marginTop: 16, color: "var(--stone)", maxWidth: 640 }}>
+            <p style={{ marginTop: 16, color: "#555", maxWidth: 640 }}>
               All financing options are flexible with the exception of a
               minimum $10,000 reservation — contact us for a custom package.
             </p>
@@ -96,7 +96,7 @@ export default async function InvestPage() {
           <div className="eyebrow" style={{ marginTop: 56 }}>
             Pay Upfront, Save More
           </div>
-          <p style={{ marginTop: 12, color: "var(--stone)", maxWidth: 620, fontSize: 15 }}>
+          <p style={{ marginTop: 12, color: "#555", maxWidth: 620, fontSize: 15 }}>
             These discounts apply only to buyers paying a percentage of the
             total price upfront in cash — separate from the self-finance and
             mortgage installment schedules above.
@@ -160,16 +160,16 @@ export default async function InvestPage() {
         </SplitSection>
       )}
 
-      <section className="section sectionDark" style={{ textAlign: "center" }}>
+      <section className="section sectionStone" style={{ textAlign: "center", background: "var(--stone)" }}>
         <div className="wrap">
           <Reveal>
             <div className="eyebrow" style={{ justifyContent: "center", display: "flex" }}>
               Next Step
             </div>
-            <h2 style={{ marginTop: 14, color: "var(--paper)", fontSize: "var(--fs-600)" }}>
+            <h2 style={{ marginTop: 14, fontSize: "var(--fs-600)" }}>
               Discuss your custom package.
             </h2>
-            <p style={{ maxWidth: 560, margin: "18px auto 0", color: "var(--stone)", fontSize: 16.5 }}>
+            <p style={{ maxWidth: 560, margin: "18px auto 0", color: "#555", fontSize: 16.5 }}>
               Every financing option is flexible beyond the minimum $10,000
               reservation. Tell us what you need.
             </p>
