@@ -56,6 +56,7 @@ export default async function ResidencesPage() {
           imageAlt={floorplanImage.alt}
           eyebrow="Floor Plans"
           title="Drawn for how you actually live."
+          style={{ background: "var(--stone-lt)" }}
         >
           <p>
             Every unit type is designed around natural light, cross
