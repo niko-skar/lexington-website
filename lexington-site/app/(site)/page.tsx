@@ -77,6 +77,21 @@ export default async function HomePage() {
         </div>
       </Hero>
 
+      <section className="section sectionStone" style={{ background: "var(--stone)", paddingTop: "clamp(48px, 6vw, 80px)" }}>
+        <div className="wrap">
+          <Reveal>
+            <StatStrip
+              stats={[
+                { value: availableUnits.length, suffix: ` of ${units.length}`, label: "Units available" },
+                { value: startingPrice, prefix: "$", label: "Starting from" },
+                { value: projectedYield, suffix: "%", label: "Projected rental yield" },
+                { value: 7, label: "Storeys, Shiashie skyline" },
+              ]}
+            />
+          </Reveal>
+        </div>
+      </section>
+
       <SplitSection
         imageUrl={urlFor(residencesImage.image).width(800).height(1000).url()}
         imageAlt={residencesImage.alt}
@@ -165,21 +180,6 @@ export default async function HomePage() {
                 See All Amenities
               </Button>
             </div>
-          </Reveal>
-        </div>
-      </section>
-
-      <section className="section sectionStone" style={{ background: "var(--stone)" }}>
-        <div className="wrap">
-          <Reveal>
-            <StatStrip
-              stats={[
-                { value: availableUnits.length, suffix: ` of ${units.length}`, label: "Units available" },
-                { value: startingPrice, prefix: "$", label: "Starting from" },
-                { value: projectedYield, suffix: "%", label: "Projected rental yield" },
-                { value: 7, label: "Storeys, Shiashie skyline" },
-              ]}
-            />
           </Reveal>
         </div>
       </section>
