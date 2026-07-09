@@ -28,6 +28,12 @@
   --navy-rgb: 62, 89, 108;
   --navy: rgb(var(--navy-rgb));
   --navy-dim: #283b4a;
+  /* Header/footer keep --navy. Page-title bands (the "secondary header")
+     use a deeper, moodier tone so they read as distinct from the header
+     directly above them; the actual content sections below use a
+     lighter tone so a page doesn't read as one solid wall of blue. */
+  --navy-deep: #263a48;
+  --navy-light: #587489;
   --navy-texture-image: radial-gradient(
       130% 100% at 50% -20%,
       rgba(255, 255, 255, 0.05),
@@ -39,7 +45,7 @@
   --navy-texture-repeat: no-repeat, no-repeat, repeat;
 
   /* Status */
-  --status-available: var(--sky);
+  --status-available: var(--sky-lt);
   --status-reserved: var(--brass);
   --status-sold: var(--clay);
 
@@ -184,7 +190,7 @@ h4 {
 
 .sectionDark {
   color: var(--paper);
-  background-color: var(--navy);
+  background-color: var(--navy-light);
   background-image: var(--navy-texture-image);
   background-size: var(--navy-texture-size);
   background-repeat: var(--navy-texture-repeat);

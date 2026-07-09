@@ -1,3 +1,9 @@
+/* Compound selector (two classes) so this reliably beats the global
+   .sectionDark background-color regardless of stylesheet load order. */
+:global(.sectionDark).intro {
+  background-color: var(--navy-deep);
+}
+
 .intro {
   padding-top: clamp(56px, 7vw, 96px);
   padding-bottom: 48px;
