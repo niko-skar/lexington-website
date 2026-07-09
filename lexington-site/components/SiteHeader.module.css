@@ -18,11 +18,10 @@
   position: absolute;
   inset: 0;
   z-index: -1;
-  background-color: rgba(21, 24, 26, 0.92);
-  background-image:
-    linear-gradient(rgba(111, 147, 172, 0.06) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(111, 147, 172, 0.06) 1px, transparent 1px);
-  background-size: 64px 64px;
+  background-color: rgba(var(--navy-rgb), 0.92);
+  background-image: var(--navy-texture-image);
+  background-size: var(--navy-texture-size);
+  background-repeat: var(--navy-texture-repeat);
   backdrop-filter: blur(10px);
 }
 
@@ -132,7 +131,10 @@
   .nav {
     position: fixed;
     inset: 100px 0 0 0;
-    background: var(--ink);
+    background-color: var(--navy);
+    background-image: var(--navy-texture-image);
+    background-size: var(--navy-texture-size);
+    background-repeat: var(--navy-texture-repeat);
     flex-direction: column;
     justify-content: flex-start;
     align-items: flex-start;

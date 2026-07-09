@@ -7,7 +7,7 @@
 }
 
 .item {
-  background: var(--ink);
+  background: var(--navy);
   padding: 26px 24px;
   display: flex;
   justify-content: space-between;

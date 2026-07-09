@@ -7,8 +7,8 @@
 :root {
   /* Palette */
   --ink: #15181a;
-  --ink-soft: #21262a;
-  --ink-line: #383e42;
+  --ink-soft: #4c6d86;
+  --ink-line: rgba(255, 255, 255, 0.14);
   --paper: #f7f4ec;
   --paper-dim: #ede7d8;
   --stone: #c9c2b2;
@@ -20,6 +20,23 @@
   --sage-lt: #8b9a80;
   --sky: #6f93ac;
   --sky-lt: #a8c3d6;
+
+  /* Dark-section theme: the slate blue from the brochure's info slides,
+     used as the background for every dark section (sectionDark, header,
+     footer, proximity grid), not as body text color — --ink keeps that
+     job everywhere else. */
+  --navy-rgb: 62, 89, 108;
+  --navy: rgb(var(--navy-rgb));
+  --navy-dim: #283b4a;
+  --navy-texture-image: radial-gradient(
+      130% 100% at 50% -20%,
+      rgba(255, 255, 255, 0.05),
+      transparent 55%
+    ),
+    radial-gradient(130% 100% at 50% 120%, var(--navy-dim), transparent 60%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch' result='t'/%3E%3CfeColorMatrix in='t' type='matrix' values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --navy-texture-size: cover, cover, 180px 180px;
+  --navy-texture-repeat: no-repeat, no-repeat, repeat;
 
   /* Status */
   --status-available: var(--sky);
@@ -167,14 +184,10 @@ h4 {
 
 .sectionDark {
   color: var(--paper);
-  background-color: var(--ink);
-  /* A faint glass-grid texture, referencing the blue-tinted balcony
-     glazing in the brochure renders — a hairline lattice rather than a
-     flat tint, so it reads as texture, not just a color swap. */
-  background-image:
-    linear-gradient(rgba(111, 147, 172, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(111, 147, 172, 0.05) 1px, transparent 1px);
-  background-size: 64px 64px;
+  background-color: var(--navy);
+  background-image: var(--navy-texture-image);
+  background-size: var(--navy-texture-size);
+  background-repeat: var(--navy-texture-repeat);
 }
 
 .sectionAlt {
