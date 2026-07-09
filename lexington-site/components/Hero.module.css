@@ -47,11 +47,16 @@
   font-size: var(--fs-800);
   color: var(--paper);
   max-width: 16ch;
+  line-height: 1.18;
   text-shadow: 0 2px 16px rgba(0, 0, 0, 0.35);
 }
 
-.content p.lede {
-  margin-top: clamp(28px, 4vw, 40px);
+/* "lede" and "actions" are plain global classNames set by the calling
+   page (Hero's children), not styles.* tokens — :global() is required
+   or these never match, since CSS Modules hashes bare class selectors
+   by default. */
+.content p:global(.lede) {
+  margin-top: clamp(48px, 7vw, 88px);
   max-width: 46ch;
   font-size: var(--fs-400);
   color: var(--paper-dim);
@@ -59,7 +64,7 @@
   text-shadow: 0 1px 8px rgba(0, 0, 0, 0.4);
 }
 
-.content .actions {
+.content :global(.actions) {
   margin-top: 36px;
   display: flex;
   gap: 16px;

@@ -33,16 +33,29 @@
      directly above them; the actual content sections below use a
      lighter tone so a page doesn't read as one solid wall of blue. */
   --navy-deep: #263a48;
-  --navy-light: #587489;
+  /* Lighter and cooler than --navy so it reads as clearly distinct even
+     at a glance, not just measurably different in a color picker. */
+  --navy-light: #7195ab;
+  --grain-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch' result='t'/%3E%3CfeColorMatrix in='t' type='matrix' values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  /* Vignette + grain, for short, fixed-height bands (header, footer,
+     PageIntro, mobile nav) where a "cover"-sized radial gradient looks
+     intentional. */
   --navy-texture-image: radial-gradient(
       130% 100% at 50% -20%,
       rgba(255, 255, 255, 0.05),
       transparent 55%
     ),
     radial-gradient(130% 100% at 50% 120%, var(--navy-dim), transparent 60%),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch' result='t'/%3E%3CfeColorMatrix in='t' type='matrix' values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    var(--grain-image);
   --navy-texture-size: cover, cover, 180px 180px;
   --navy-texture-repeat: no-repeat, no-repeat, repeat;
+  /* Grain only, no vignette — content sections (tables, timelines) can
+     be much taller than the viewport, and a "cover"-sized radial
+     gradient stretched over a tall element re-darkens most of it back
+     toward --navy-dim, undoing the lighter content tone. */
+  --content-texture-image: var(--grain-image);
+  --content-texture-size: 180px 180px;
+  --content-texture-repeat: repeat;
 
   /* Status */
   --status-available: var(--sky-lt);
@@ -191,9 +204,9 @@ h4 {
 .sectionDark {
   color: var(--paper);
   background-color: var(--navy-light);
-  background-image: var(--navy-texture-image);
-  background-size: var(--navy-texture-size);
-  background-repeat: var(--navy-texture-repeat);
+  background-image: var(--content-texture-image);
+  background-size: var(--content-texture-size);
+  background-repeat: var(--content-texture-repeat);
 }
 
 .sectionAlt {

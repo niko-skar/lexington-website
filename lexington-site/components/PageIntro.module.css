@@ -1,7 +1,12 @@
 /* Compound selector (two classes) so this reliably beats the global
-   .sectionDark background-color regardless of stylesheet load order. */
+   .sectionDark background rules regardless of stylesheet load order.
+   PageIntro is a short, fixed-height band, so (unlike the tall content
+   sections that share .sectionDark) it keeps the vignette texture. */
 :global(.sectionDark).intro {
   background-color: var(--navy-deep);
+  background-image: var(--navy-texture-image);
+  background-size: var(--navy-texture-size);
+  background-repeat: var(--navy-texture-repeat);
 }
 
 .intro {
