@@ -12,6 +12,9 @@
   --paper: #f7f4ec;
   --paper-dim: #ede7d8;
   --stone: #c9c2b2;
+  /* Lighter than --stone (which stays as-is for muted text elsewhere) —
+     used only as the .sectionStone background fill. */
+  --stone-lt: #e4dfd3;
   --brass: #b08d57;
   --brass-lt: #d9c29a;
   --clay: #8b4a34;
@@ -216,7 +219,7 @@ h4 {
 }
 
 .sectionStone {
-  background: var(--stone);
+  background: var(--stone-lt);
 }
 
 .eyebrow {
