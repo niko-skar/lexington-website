@@ -12,8 +12,14 @@ import styles from "./UnitFinder.module.css";
 type FloorFilter = number | "all";
 type TypeFilter = BedroomType | "all";
 type StatusFilter = UnitStatus | "all";
+type SortColumn = "floor" | "type" | "area" | "price" | "status";
+type SortDir = "asc" | "desc";
 
 const MAX_COMPARE = 4;
+
+// Alphabetical order happens to already read available < reserved < sold,
+// but spelling it out keeps that from being an accident future edits break.
+const STATUS_ORDER: Record<UnitStatus, number> = { available: 0, reserved: 1, sold: 2 };
 
 interface UnitFinderProps {
   units: Unit[];
@@ -28,6 +34,10 @@ export function UnitFinder({ units, floorPlans, locationPlanByUnit }: UnitFinder
   const [selectedUnit, setSelectedUnit] = useState<Unit | null>(null);
   const [compareIds, setCompareIds] = useState<string[]>([]);
   const [showCompare, setShowCompare] = useState(false);
+  // null sortColumn means "default order" — whatever seed/floor order the
+  // units arrived in, unchanged until someone clicks a header.
+  const [sortColumn, setSortColumn] = useState<SortColumn | null>(null);
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
 
   const floors = useMemo(
     () => Array.from(new Set(units.map((u) => u.floor))).sort((a, b) => a - b),
@@ -50,7 +60,40 @@ export function UnitFinder({ units, floorPlans, locationPlanByUnit }: UnitFinder
     [units, floor, type, status]
   );
 
+  const sorted = useMemo(() => {
+    if (!sortColumn) return filtered;
+    const dir = sortDir === "asc" ? 1 : -1;
+    return [...filtered].sort((a, b) => {
+      switch (sortColumn) {
+        case "floor":
+          return (a.floor - b.floor) * dir;
+        case "type":
+          return a.bedroomType.localeCompare(b.bedroomType) * dir;
+        case "area":
+          return (a.areaSqm - b.areaSqm) * dir;
+        case "price":
+          return (a.priceUSD - b.priceUSD) * dir;
+        case "status":
+          return (STATUS_ORDER[a.status] - STATUS_ORDER[b.status]) * dir;
+      }
+    });
+  }, [filtered, sortColumn, sortDir]);
+
   const availableInFiltered = filtered.filter((u) => u.status === "available").length;
+
+  function handleSort(column: SortColumn) {
+    if (sortColumn === column) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortColumn(column);
+      setSortDir("asc");
+    }
+  }
+
+  function sortIndicator(column: SortColumn) {
+    if (sortColumn !== column) return null;
+    return <span aria-hidden="true">{sortDir === "asc" ? " ▲" : " ▼"}</span>;
+  }
 
   function toggleCompare(id: string) {
     setCompareIds((prev) => {
@@ -133,16 +176,36 @@ export function UnitFinder({ units, floorPlans, locationPlanByUnit }: UnitFinder
             <tr>
               <th className={styles.checkboxCol}>Compare</th>
               <th>Unit</th>
-              <th>Floor</th>
-              <th>Type</th>
-              <th>Area</th>
-              <th>Price</th>
-              <th>Status</th>
+              <th aria-sort={sortColumn === "floor" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}>
+                <button className={styles.sortButton} onClick={() => handleSort("floor")}>
+                  Floor{sortIndicator("floor")}
+                </button>
+              </th>
+              <th aria-sort={sortColumn === "type" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}>
+                <button className={styles.sortButton} onClick={() => handleSort("type")}>
+                  Type{sortIndicator("type")}
+                </button>
+              </th>
+              <th aria-sort={sortColumn === "area" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}>
+                <button className={styles.sortButton} onClick={() => handleSort("area")}>
+                  Area{sortIndicator("area")}
+                </button>
+              </th>
+              <th aria-sort={sortColumn === "price" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}>
+                <button className={styles.sortButton} onClick={() => handleSort("price")}>
+                  Price{sortIndicator("price")}
+                </button>
+              </th>
+              <th aria-sort={sortColumn === "status" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}>
+                <button className={styles.sortButton} onClick={() => handleSort("status")}>
+                  Status{sortIndicator("status")}
+                </button>
+              </th>
               <th></th>
             </tr>
           </thead>
           <tbody>
-            {filtered.map((u) => {
+            {sorted.map((u) => {
               const checked = compareIds.includes(u._id);
               return (
                 <tr key={u._id}>
@@ -177,7 +240,7 @@ export function UnitFinder({ units, floorPlans, locationPlanByUnit }: UnitFinder
       </div>
 
       <div className={styles.cards}>
-        {filtered.map((u) => {
+        {sorted.map((u) => {
           const checked = compareIds.includes(u._id);
           return (
             <div className={styles.card} key={u._id}>
