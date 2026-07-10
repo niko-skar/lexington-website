@@ -56,7 +56,7 @@ export function InteractiveMap() {
 
         const map = new window.google.maps.Map(mapRef.current, {
           center: LEXINGTON_COORDS,
-          zoom: 16,
+          zoom: 14,
           mapTypeControl: true,
           streetViewControl: true,
           fullscreenControl: true,
