@@ -38,6 +38,8 @@ export interface Amenity {
   name: string;
   category: AmenityCategory;
   order: number;
+  image?: Image;
+  caption?: string;
 }
 
 export interface FamilyMember {

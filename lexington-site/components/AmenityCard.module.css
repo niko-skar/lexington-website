@@ -45,3 +45,25 @@
   font-size: 20px;
   color: var(--paper);
 }
+
+.caption {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-5);
+  text-align: center;
+  background: rgba(21, 24, 26, 0.86);
+  color: var(--paper-dim);
+  font-size: 14px;
+  line-height: 1.5;
+  opacity: 0;
+  transition: opacity 0.25s var(--ease);
+  pointer-events: none;
+}
+
+.card:hover .caption {
+  opacity: 1;
+}

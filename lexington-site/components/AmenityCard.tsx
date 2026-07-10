@@ -28,19 +28,22 @@ export function AmenityCardGrid({
   return (
     <div className={styles.grid}>
       {amenities.map((a, i) => {
-        const image = pickImage(a.name, images);
+        // A dedicated photo set in Studio always wins; otherwise fall back
+        // to guessing one from the Gallery by matching the amenity's name.
+        const fallback = a.image ? null : pickImage(a.name, images);
+        const imageSrc = a.image
+          ? urlFor(a.image).width(480).height(600).url()
+          : fallback
+            ? urlFor(fallback.image).width(480).height(600).url()
+            : null;
+        const imageAlt = a.image ? a.name : fallback?.alt;
+
         return (
           <Reveal key={a._id} delay={i * 40}>
             <div className={styles.card}>
-              {image && (
-                <Image
-                  src={urlFor(image.image).width(480).height(600).url()}
-                  alt={image.alt}
-                  width={480}
-                  height={600}
-                />
-              )}
+              {imageSrc && <Image src={imageSrc} alt={imageAlt ?? a.name} width={480} height={600} />}
               <span className={styles.name}>{a.name}</span>
+              {a.caption && <div className={styles.caption}>{a.caption}</div>}
             </div>
           </Reveal>
         );

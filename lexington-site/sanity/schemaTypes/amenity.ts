@@ -32,6 +32,20 @@ export const amenity = defineType({
       type: "number",
       initialValue: 0,
     }),
+    defineField({
+      name: "image",
+      title: "Photo",
+      type: "image",
+      options: { hotspot: true },
+      description:
+        "Optional — if left empty, the site falls back to guessing a photo from the Gallery by matching this amenity's name.",
+    }),
+    defineField({
+      name: "caption",
+      title: "Caption",
+      type: "string",
+      description: "Short description shown when hovering over this amenity's photo.",
+    }),
   ],
   orderings: [
     {
@@ -41,6 +55,6 @@ export const amenity = defineType({
     },
   ],
   preview: {
-    select: { title: "name", subtitle: "category" },
+    select: { title: "name", subtitle: "category", media: "image" },
   },
 });
