@@ -32,7 +32,16 @@ export function Gallery({ images }: { images: GalleryImage[] }) {
     () =>
       images
         .filter((i) => i.category !== "family")
-        .filter((i) => filter === "all" || i.category === filter),
+        .filter((i) => filter === "all" || i.category === filter)
+        // Progress (construction) photos always sort after every other
+        // category in the "All" view — there are far more of them than
+        // building/interior shots, so left to `order` alone they'd bury
+        // the finished-building photos the gallery exists to showcase.
+        .sort((a, b) => {
+          const aLast = a.category === "progress" ? 1 : 0;
+          const bLast = b.category === "progress" ? 1 : 0;
+          return aLast !== bLast ? aLast - bLast : a.order - b.order;
+        }),
     [images, filter]
   );
 
