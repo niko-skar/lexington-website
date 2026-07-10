@@ -36,7 +36,10 @@ export default async function ResidencesPage() {
   ]);
 
   const floorplanImages = images.filter((i) => i.category === "floorplan");
-  const floorplanImage = floorplanImages[0];
+  // The rendered penthouse plan (not the flat rooftop diagram) makes for a
+  // nicer showcase image than the one-bedroom plan that used to sit here.
+  const floorplanImage =
+    floorplanImages.find((i) => i.alt.toLowerCase().includes("duplex")) ?? floorplanImages[0];
 
   // Duplex penthouses span two levels, so they have two floor plans (lower
   // + upper/rooftop) that both need to be viewable — everything else has one.
