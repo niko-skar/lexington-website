@@ -121,7 +121,8 @@
 }
 
 .checkboxCol {
-  width: 20px;
+  width: 90px;
+  white-space: nowrap;
 }
 
 .compareCheckbox {

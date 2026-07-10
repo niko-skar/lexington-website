@@ -131,7 +131,7 @@ export function UnitFinder({ units, floorPlans, locationPlanByUnit }: UnitFinder
         <table className={styles.table}>
           <thead>
             <tr>
-              <th className={styles.checkboxCol}></th>
+              <th className={styles.checkboxCol}>Compare</th>
               <th>Unit</th>
               <th>Floor</th>
               <th>Type</th>
