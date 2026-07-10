@@ -5,7 +5,7 @@ import Image from "next/image";
 
 import type { GalleryImage, Unit, UnitLocationPlan } from "@/lib/sanity/types";
 import { urlFor } from "@/lib/sanity/image";
-import { formatUSD } from "@/lib/format";
+import { formatFloor, formatUSD } from "@/lib/format";
 import { StatusBadge } from "./StatusBadge";
 import styles from "./UnitDetailModal.module.css";
 
@@ -45,7 +45,7 @@ export function UnitDetailModal({ unit, floorPlans, locationPlan, onClose }: Uni
           <div>
             <div className={styles.unitNumber}>{unit.unitNumber}</div>
             <div className={styles.meta}>
-              Floor {unit.floor} · {unit.bedroomType} · {unit.areaSqm} sqm
+              Floor {formatFloor(unit.floor)} · {unit.bedroomType} · {unit.areaSqm} sqm
             </div>
             <div className={styles.price}>{formatUSD(unit.priceUSD)}</div>
           </div>
@@ -83,7 +83,7 @@ export function UnitDetailModal({ unit, floorPlans, locationPlan, onClose }: Uni
             <div className={styles.imageWrap}>
               <Image
                 src={urlFor(locationPlan.image).width(900).url()}
-                alt={`Floor ${locationPlan.floor} location plan showing unit ${unit.unitNumber}`}
+                alt={`Floor ${formatFloor(locationPlan.floor)} location plan showing unit ${unit.unitNumber}`}
                 width={900}
                 height={900}
                 sizes="(max-width: 720px) 100vw, 720px"

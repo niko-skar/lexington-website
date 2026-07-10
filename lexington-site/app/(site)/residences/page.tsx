@@ -44,6 +44,9 @@ export default async function ResidencesPage() {
   // Duplex penthouses span two levels, so they have two floor plans (lower
   // + upper/rooftop) that both need to be viewable — everything else has one.
   const floorPlansByType: Record<BedroomType, GalleryImage[]> = {
+    // No studio floor plan render exists yet — UnitDetailModal already
+    // falls back to "available on request" when this is empty.
+    Studio: floorplanImages.filter((i) => i.alt.toLowerCase().includes("studio")),
     "One Bedroom": floorplanImages.filter((i) => i.alt.toLowerCase().includes("one-bedroom")),
     "Two Bedroom": floorplanImages.filter((i) => i.alt.toLowerCase().includes("two-bedroom")),
     "3BR Duplex Penthouse": floorplanImages.filter((i) => i.alt.toLowerCase().includes("duplex")),

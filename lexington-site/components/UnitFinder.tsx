@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 
 import type { BedroomType, GalleryImage, Unit, UnitLocationPlan, UnitStatus } from "@/lib/sanity/types";
-import { formatUSD } from "@/lib/format";
+import { formatFloor, formatUSD } from "@/lib/format";
 import { StatusBadge } from "./StatusBadge";
 import { UnitDetailModal } from "./UnitDetailModal";
 import { CompareModal } from "./CompareModal";
@@ -80,7 +80,7 @@ export function UnitFinder({ units, floorPlans, locationPlanByUnit }: UnitFinder
                 className={floor === f ? styles.pillActive : styles.pill}
                 onClick={() => setFloor(f)}
               >
-                {f}
+                {formatFloor(f)}
               </button>
             ))}
           </div>
@@ -157,7 +157,7 @@ export function UnitFinder({ units, floorPlans, locationPlanByUnit }: UnitFinder
                     />
                   </td>
                   <td>{u.unitNumber}</td>
-                  <td>{u.floor}</td>
+                  <td>{formatFloor(u.floor)}</td>
                   <td>{u.bedroomType}</td>
                   <td>{u.areaSqm} sqm</td>
                   <td className={styles.price}>{formatUSD(u.priceUSD)}</td>
@@ -186,7 +186,7 @@ export function UnitFinder({ units, floorPlans, locationPlanByUnit }: UnitFinder
                 <StatusBadge status={u.status} />
               </div>
               <div className={styles.cardMeta}>
-                Floor {u.floor} · {u.bedroomType} · {u.areaSqm} sqm
+                Floor {formatFloor(u.floor)} · {u.bedroomType} · {u.areaSqm} sqm
               </div>
               <div className={styles.cardPrice}>{formatUSD(u.priceUSD)}</div>
               <div className={styles.cardActions}>

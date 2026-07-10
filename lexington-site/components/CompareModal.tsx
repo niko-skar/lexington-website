@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import type { ReactNode } from "react";
 
 import type { Unit } from "@/lib/sanity/types";
-import { formatUSD } from "@/lib/format";
+import { formatFloor, formatUSD } from "@/lib/format";
 import { StatusBadge } from "./StatusBadge";
 import styles from "./CompareModal.module.css";
 
@@ -14,7 +14,7 @@ interface CompareModalProps {
 }
 
 const rows: { label: string; render: (u: Unit) => ReactNode }[] = [
-  { label: "Floor", render: (u) => u.floor },
+  { label: "Floor", render: (u) => formatFloor(u.floor) },
   { label: "Type", render: (u) => u.bedroomType },
   { label: "Area", render: (u) => `${u.areaSqm} sqm` },
   { label: "Price", render: (u) => formatUSD(u.priceUSD) },

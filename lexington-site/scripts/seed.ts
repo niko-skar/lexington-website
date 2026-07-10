@@ -138,12 +138,15 @@ const units: UnitSeed[] = [
   { unitNumber: "405B", floor: 4, bedroomType: "Two Bedroom", areaSqm: 138, priceUSD: 317000 },
   { unitNumber: "401A", floor: 4, bedroomType: "Two Bedroom", areaSqm: 149, priceUSD: 342700 },
 
-  { unitNumber: "501A", floor: 5, bedroomType: "One Bedroom", areaSqm: 85, priceUSD: 212000 },
-  { unitNumber: "502B", floor: 5, bedroomType: "One Bedroom", areaSqm: 88, priceUSD: 221000 },
-  { unitNumber: "503B", floor: 5, bedroomType: "One Bedroom", areaSqm: 79, priceUSD: 198000 },
+  // A new floor was added above the old top floor (6) — these units (the
+  // old 5th floor and the penthouses) both shift up by one to make room,
+  // leaving floor 5 open for future units.
+  { unitNumber: "501A", floor: 6, bedroomType: "One Bedroom", areaSqm: 85, priceUSD: 212000 },
+  { unitNumber: "502B", floor: 6, bedroomType: "One Bedroom", areaSqm: 88, priceUSD: 221000 },
+  { unitNumber: "503B", floor: 6, bedroomType: "One Bedroom", areaSqm: 79, priceUSD: 198000 },
 
-  { unitNumber: "PH1a", floor: 6, bedroomType: "3BR Duplex Penthouse", areaSqm: 327, priceUSD: 817500 },
-  { unitNumber: "PH2b", floor: 6, bedroomType: "3BR Duplex Penthouse", areaSqm: 375, priceUSD: 937500 },
+  { unitNumber: "PH1a", floor: 7, bedroomType: "3BR Duplex Penthouse", areaSqm: 327, priceUSD: 817500 },
+  { unitNumber: "PH2b", floor: 7, bedroomType: "3BR Duplex Penthouse", areaSqm: 375, priceUSD: 937500 },
 ];
 
 // Only the Garden is confirmed rooftop in the brochure; the rest are
@@ -208,7 +211,7 @@ const unitLocationPlans = [
   { id: "floor3", floor: 3, units: ["301A", "302A", "303B", "304B", "305B"], file: "location-floor3.png" },
   { id: "floor4-a", floor: 4, units: ["402A", "403B", "404B"], file: "location-floor4-a.png" },
   { id: "floor4-b", floor: 4, units: ["401A", "405B"], file: "location-floor4-b.png" },
-  { id: "floor5", floor: 5, units: ["501A", "502B", "503B"], file: "location-floor5.png" },
+  { id: "floor5", floor: 6, units: ["501A", "502B", "503B"], file: "location-floor5.png" },
 ];
 
 // Real site photos, not brochure renders. The user organizes these into
@@ -329,11 +332,17 @@ async function seedUnits() {
   console.log(`Seeding ${units.length} units...`);
   for (const unit of units) {
     const id = `unit-${slugify(unit.unitNumber)}`;
+    // A real reserved/sold status set in Studio must survive re-seeding —
+    // only brand-new units default to "available".
+    const existing = await client.fetch<{ status?: string } | null>(
+      `*[_id == $id][0]{status}`,
+      { id }
+    );
     await client.createOrReplace({
       _id: id,
       _type: "unit",
       ...unit,
-      status: "available",
+      status: existing?.status ?? "available",
     });
   }
 }
