@@ -28,7 +28,7 @@ export const constructionUpdate = defineType({
       title: "Construction stage",
       type: "string",
       description:
-        'E.g. "Groundbreaking", "Earthworks", "Foundation", "Ground Floor Structure" — free text so new stages can be added later without a code change.',
+        'E.g. "Groundbreaking", "Earthworks", "Foundations", "Ground Floor", "First Floor" — free text so new stages can be added later without a code change.',
       validation: (Rule) => Rule.required(),
     }),
     defineField({

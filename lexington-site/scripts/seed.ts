@@ -30,11 +30,24 @@ async function uploadImage(filename: string) {
   return asset._id;
 }
 
+// Construction photos are seeded into both `constructionUpdate` and
+// `galleryImage` docs (progress category) from the same source files. This
+// cache makes each file upload at most once per run — the second doc type
+// to reference a given file reuses the asset id the first one uploaded.
+const uploadedAssetCache = new Map<string, string>();
+async function getOrUploadAsset(file: string, existingAssetRef?: string) {
+  const cached = uploadedAssetCache.get(file);
+  if (cached) return cached;
+  const id = existingAssetRef ?? (await uploadImage(file));
+  uploadedAssetCache.set(file, id);
+  return id;
+}
+
 type GalleryEntry = {
   id: string;
   file: string;
   alt: string;
-  category: "exterior" | "interior" | "amenity" | "floorplan" | "family";
+  category: "exterior" | "interior" | "amenity" | "floorplan" | "family" | "progress";
   // Set when the file behind an existing id was replaced (e.g. a mislabeled
   // source image) — forces a fresh upload instead of reusing the old asset.
   forceReupload?: boolean;
@@ -45,7 +58,7 @@ type GalleryEntry = {
 // unrelated stock photos (a Google Maps screenshot, London/Athens/Accra
 // skylines). Broken ones were removed or replaced; real-but-miscategorized
 // ones were relabeled to match what they actually show.
-const galleryEntries: GalleryEntry[] = [
+const curatedGalleryEntries: GalleryEntry[] = [
   { id: "hero-exterior-1", file: "hero-exterior-1.png", alt: "The Lexington exterior, Shiashie, East Legon", category: "exterior" },
   { id: "hero-exterior-2", file: "hero-exterior-2.jpg", alt: "The Lexington exterior", category: "exterior" },
   { id: "exterior-3", file: "exterior-3.jpg", alt: "The Lexington exterior facade", category: "exterior" },
@@ -198,39 +211,111 @@ const unitLocationPlans = [
   { id: "floor5", floor: 5, units: ["501A", "502B", "503B"], file: "location-floor5.png" },
 ];
 
-// Real site photos, not brochure renders. No EXIF/capture dates were
-// available, so these are ordered and staged from a visual read of each
-// photo (excavation depth, rebar vs. poured concrete, etc.) rather than
-// timestamps. Construction hasn't reached upper floors yet — only the
-// first four stages exist so far.
+// Real site photos, not brochure renders. The user organizes these into
+// stage folders themselves (Groundbreaking/Earthworks/Foundations/Ground
+// Floor/First Floor) — that folder placement is the source of truth for
+// `stage`, not a visual guess from this script. "Concrete Pour" was
+// previously its own stage here; those photos now live in the user's
+// "Foundations" folder, so they're folded into that stage instead.
 const constructionUpdates = [
-  { file: "progress-01-groundbreaking.jpg", stage: "Groundbreaking", alt: "Niko and Leo Skarlatos breaking ground on The Lexington" },
+  { file: "progress-groundbreaking-01.jpg", stage: "Groundbreaking", alt: "Niko and Leo Skarlatos breaking ground on The Lexington" },
 
-  { file: "progress-02-earthworks-excavation.jpg", stage: "Earthworks", alt: "Excavator digging the foundation pit" },
-  { file: "progress-03-earthworks-site-clearance.jpg", stage: "Earthworks", alt: "Site clearance and earth-moving equipment on site" },
-  { file: "progress-04-earthworks-trench.jpg", stage: "Earthworks", alt: "Excavator digging the foundation trench" },
-  { file: "progress-05-earthworks-hardcore.jpg", stage: "Earthworks", alt: "Excavator laying hardcore stone base in the foundation trench" },
-  { file: "progress-06-earthworks-trench-wide.jpg", stage: "Earthworks", alt: "Wide view of the foundation trench excavation" },
+  { file: "progress-earthworks-01.jpg", stage: "Earthworks", alt: "Excavator digging the foundation pit" },
+  { file: "progress-earthworks-02.jpg", stage: "Earthworks", alt: "Site clearance and earth-moving equipment on site" },
+  { file: "progress-earthworks-03.jpg", stage: "Earthworks", alt: "Excavator digging the foundation trench" },
+  { file: "progress-earthworks-04.jpg", stage: "Earthworks", alt: "Excavator laying a hardcore stone base in the trench" },
+  { file: "progress-earthworks-05.jpg", stage: "Earthworks", alt: "Wide view of the foundation trench excavation" },
+  { file: "progress-earthworks-06.jpg", stage: "Earthworks", alt: "Hardcore stone fill being placed ahead of the foundation pour" },
 
-  { file: "progress-07-foundation-rebar-mat.jpg", stage: "Foundation", alt: "Close-up of the foundation slab rebar mat" },
-  { file: "progress-08-foundation-column-cages.jpg", stage: "Foundation", alt: "Foundation column reinforcement cages in the excavated pit" },
-  { file: "progress-09-foundation-slab-rebar.jpg", stage: "Foundation", alt: "Workers tying foundation slab reinforcement and formwork" },
-  { file: "progress-10-foundation-slab-rebar-wide.jpg", stage: "Foundation", alt: "Foundation slab rebar mat spanning the building footprint" },
-  { file: "progress-11-foundation-slab-rebar-full.jpg", stage: "Foundation", alt: "Full-width view of the foundation reinforcement" },
-  { file: "progress-12-foundation-grounding-detail.jpg", stage: "Foundation", alt: "Electrical grounding strap detail within the foundation rebar" },
-  { file: "progress-13-foundation-hardcore-fill.jpg", stage: "Foundation", alt: "Excavator placing hardcore fill for the foundation base" },
-  { file: "progress-14-foundation-slab-prep.jpg", stage: "Foundation", alt: "Foundation slab preparation alongside the site boundary wall" },
-  { file: "progress-15-foundation-site-visit.jpg", stage: "Foundation", alt: "Niko Skarlatos on site during the foundation stage" },
+  { file: "progress-foundations-01.jpg", stage: "Foundations", alt: "Niko directing the team as they tie a foundation column rebar cage" },
+  { file: "progress-foundations-02.jpg", stage: "Foundations", alt: "Foundation slab rebar mat tied and ready for the pour" },
+  { file: "progress-foundations-03.jpg", stage: "Foundations", alt: "Column reinforcement cages rising from the foundation slab" },
+  { file: "progress-foundations-04.jpg", stage: "Foundations", alt: "Foundation column rebar cages set across the site" },
+  { file: "progress-foundations-05.jpg", stage: "Foundations", alt: "Workers tying reinforcement on a foundation column cage" },
+  { file: "progress-foundations-06.jpg", stage: "Foundations", alt: "Night-time concrete pour into the foundation column formwork" },
+  { file: "progress-foundations-07.jpg", stage: "Foundations", alt: "Hardcore stone base laid ahead of the foundation slab pour" },
+  { file: "progress-foundations-08.jpg", stage: "Foundations", alt: "Foundation slab rebar mat with column starter bars" },
+  { file: "progress-foundations-09.jpg", stage: "Foundations", alt: "Wide view of the foundation slab reinforcement" },
+  { file: "progress-foundations-10.jpg", stage: "Foundations", alt: "Close-up of a grounding strap tied into the foundation rebar" },
+  { file: "progress-foundations-11.jpg", stage: "Foundations", alt: "Night-time concrete pour into the foundation formwork" },
+  { file: "progress-foundations-12.jpg", stage: "Foundations", alt: "Concrete pump truck pouring the foundation by day" },
+  { file: "progress-foundations-13.jpg", stage: "Foundations", alt: "Wide view of the foundation concrete pour" },
+  { file: "progress-foundations-14.jpg", stage: "Foundations", alt: "Column formwork going up on the foundation" },
+  { file: "progress-foundations-15.jpg", stage: "Foundations", alt: "Rebar cages tied for the foundation columns" },
+  { file: "progress-foundations-16.jpg", stage: "Foundations", alt: "Niko on site during the foundation stage" },
+  { file: "progress-foundations-17.jpg", stage: "Foundations", alt: "Foundation slab preparation along the site boundary wall" },
 
-  { file: "progress-16-concrete-pour-night.jpg", stage: "Concrete Pour", alt: "Night-time concrete pour with pump truck" },
-  { file: "progress-17-concrete-pour-day.jpg", stage: "Concrete Pour", alt: "Daytime concrete pour with the site's tower crane in the background" },
-  { file: "progress-18-concrete-pour-wide.jpg", stage: "Concrete Pour", alt: "Multiple concrete pump trucks pouring the ground floor slab" },
+  { file: "progress-ground-floor-01.jpg", stage: "Ground Floor", alt: "Column rebar cage tied on site scaffolding" },
+  { file: "progress-ground-floor-02.jpg", stage: "Ground Floor", alt: "Niko watching the team prepare a concrete mix on site" },
+  { file: "progress-ground-floor-03.jpg", stage: "Ground Floor", alt: "Concrete mixer truck pouring into a wheelbarrow" },
+  { file: "progress-ground-floor-04.jpg", stage: "Ground Floor", alt: "Niko walking the site past a concrete pump truck" },
+  { file: "progress-ground-floor-05.jpg", stage: "Ground Floor", alt: "Workers screeding a freshly poured ground floor slab" },
+  { file: "progress-ground-floor-06.jpg", stage: "Ground Floor", alt: "Niko reviewing column formwork with the site team" },
+  { file: "progress-ground-floor-07.jpg", stage: "Ground Floor", alt: "Compacting a wet concrete pour beside the rising columns" },
+  { file: "progress-ground-floor-08.jpg", stage: "Ground Floor", alt: "Ground floor column cage ready for concrete" },
+  { file: "progress-ground-floor-09.jpg", stage: "Ground Floor", alt: "Ground floor slab rebar mesh laid across the site" },
+  { file: "progress-ground-floor-10.jpg", stage: "Ground Floor", alt: "Wide view of the ground floor slab reinforcement" },
+  { file: "progress-ground-floor-11.jpg", stage: "Ground Floor", alt: "Column rebar cages rising from the ground floor slab" },
+  { file: "progress-ground-floor-12.jpg", stage: "Ground Floor", alt: "Ground floor slab rebar mat, aerial view" },
+  { file: "progress-ground-floor-13.jpg", stage: "Ground Floor", alt: "Ground floor reinforcement mesh spanning the site" },
+  { file: "progress-ground-floor-14.jpg", stage: "Ground Floor", alt: "Workers building formwork between the ground floor columns" },
+  { file: "progress-ground-floor-15.jpg", stage: "Ground Floor", alt: "Workers finishing formwork inside a recessed column base" },
+  { file: "progress-ground-floor-16.jpg", stage: "Ground Floor", alt: "Pouring a ground floor column with plywood formwork" },
+  { file: "progress-ground-floor-17.jpg", stage: "Ground Floor", alt: "Workers assembling formwork ahead of the next pour" },
+  { file: "progress-ground-floor-18.jpg", stage: "Ground Floor", alt: "Niko reviewing concrete work with the site team" },
+  { file: "progress-ground-floor-19.jpg", stage: "Ground Floor", alt: "Mixing mortar on site with Niko and the team" },
 
-  { file: "progress-19-ground-floor-columns.jpg", stage: "Ground Floor Structure", alt: "Workers pouring concrete into ground floor column formwork" },
-  { file: "progress-20-ground-floor-columns-detail.jpg", stage: "Ground Floor Structure", alt: "Workers on the ground floor column formwork" },
-  { file: "progress-21-ground-floor-column-formwork.jpg", stage: "Ground Floor Structure", alt: "Ground floor column reinforcement and formwork" },
-  { file: "progress-22-ground-floor-column-formwork-2.jpg", stage: "Ground Floor Structure", alt: "Ground floor column cage ready for concrete" },
-  { file: "progress-23-ground-floor-rebar-cage.jpg", stage: "Ground Floor Structure", alt: "Close-up of a tied ground floor column reinforcement cage" },
+  { file: "progress-first-floor-01.jpg", stage: "First Floor", alt: "Steel props shoring up the first floor slab formwork" },
+  { file: "progress-first-floor-02.jpg", stage: "First Floor", alt: "Column rebar dowels rising from the first floor slab edge" },
+  { file: "progress-first-floor-03.jpg", stage: "First Floor", alt: "Workers tying a column rebar cage on elevated scaffolding" },
+  { file: "progress-first-floor-04.jpg", stage: "First Floor", alt: "First floor slab formwork shuttering laid across the site" },
+  { file: "progress-first-floor-05.jpg", stage: "First Floor", alt: "Workers building column formwork high on the scaffolding" },
+  { file: "progress-first-floor-06.jpg", stage: "First Floor", alt: "Wide view of first floor rebar columns rising across the site" },
+  { file: "progress-first-floor-07.jpg", stage: "First Floor", alt: "Detail of column and beam reinforcement tying into the slab" },
+  { file: "progress-first-floor-08.jpg", stage: "First Floor", alt: "First floor slab rebar mesh being tied" },
+  { file: "progress-first-floor-09.jpg", stage: "First Floor", alt: "Worker screeding the first floor slab" },
+  { file: "progress-first-floor-10.jpg", stage: "First Floor", alt: "Workers gathered on the first floor slab as columns rise" },
+];
+
+// The same construction photos also appear in the main Gallery under a
+// "Progress" filter — reusing the alt text above rather than duplicating it.
+const galleryEntries: GalleryEntry[] = [
+  ...curatedGalleryEntries,
+  ...constructionUpdates.map((u) => ({
+    id: `progress-${slugify(u.file.replace(/\.[^.]+$/, ""))}`,
+    file: u.file,
+    alt: u.alt,
+    category: "progress" as const,
+  })),
+];
+
+// The previous (pre-reorganization) construction-photo file names — no
+// longer produced by the mapping above, so their docs would otherwise
+// linger in the dataset under stale ids.
+const STALE_CONSTRUCTION_IDS = [
+  "construction-progress-01-groundbreaking",
+  "construction-progress-02-earthworks-excavation",
+  "construction-progress-03-earthworks-site-clearance",
+  "construction-progress-04-earthworks-trench",
+  "construction-progress-05-earthworks-hardcore",
+  "construction-progress-06-earthworks-trench-wide",
+  "construction-progress-07-foundation-rebar-mat",
+  "construction-progress-08-foundation-column-cages",
+  "construction-progress-09-foundation-slab-rebar",
+  "construction-progress-10-foundation-slab-rebar-wide",
+  "construction-progress-11-foundation-slab-rebar-full",
+  "construction-progress-12-foundation-grounding-detail",
+  "construction-progress-13-foundation-hardcore-fill",
+  "construction-progress-14-foundation-slab-prep",
+  "construction-progress-15-foundation-site-visit",
+  "construction-progress-16-concrete-pour-night",
+  "construction-progress-17-concrete-pour-day",
+  "construction-progress-18-concrete-pour-wide",
+  "construction-progress-19-ground-floor-columns",
+  "construction-progress-20-ground-floor-columns-detail",
+  "construction-progress-21-ground-floor-column-formwork",
+  "construction-progress-22-ground-floor-column-formwork-2",
+  "construction-progress-23-ground-floor-rebar-cage",
 ];
 
 function slugify(input: string) {
@@ -361,7 +446,7 @@ async function seedGallery() {
           `*[_id == $id][0]{image}`,
           { id }
         );
-    const assetId = existing?.image?.asset?._ref ?? (await uploadImage(entry.file));
+    const assetId = await getOrUploadAsset(entry.file, existing?.image?.asset?._ref);
 
     await client.createOrReplace({
       _id: id,
@@ -414,7 +499,7 @@ async function seedConstructionUpdates() {
       `*[_id == $id][0]{image}`,
       { id }
     );
-    const assetId = existing?.image?.asset?._ref ?? (await uploadImage(entry.file));
+    const assetId = await getOrUploadAsset(entry.file, existing?.image?.asset?._ref);
     await client.createOrReplace({
       _id: id,
       _type: "constructionUpdate",
@@ -426,6 +511,11 @@ async function seedConstructionUpdates() {
         asset: { _type: "reference", _ref: assetId },
       },
     });
+  }
+
+  if (STALE_CONSTRUCTION_IDS.length > 0) {
+    await client.delete({ query: `*[_id in $ids]`, params: { ids: STALE_CONSTRUCTION_IDS } });
+    console.log(`  removed ${STALE_CONSTRUCTION_IDS.length} stale construction update docs`);
   }
 }
 

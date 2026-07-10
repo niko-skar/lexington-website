@@ -29,6 +29,7 @@ export const galleryImage = defineType({
           { title: "Amenity", value: "amenity" },
           { title: "Floorplan", value: "floorplan" },
           { title: "Family", value: "family" },
+          { title: "Progress", value: "progress" },
         ],
       },
       validation: (Rule) => Rule.required(),

@@ -13,6 +13,7 @@ const CATEGORY_LABEL: Record<GalleryCategory, string> = {
   amenity: "Amenity",
   floorplan: "Floorplan",
   family: "Family",
+  progress: "Progress",
 };
 
 export function Gallery({ images }: { images: GalleryImage[] }) {

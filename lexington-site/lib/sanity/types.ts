@@ -20,7 +20,8 @@ export type GalleryCategory =
   | "interior"
   | "amenity"
   | "floorplan"
-  | "family";
+  | "family"
+  | "progress";
 
 export interface GalleryImage {
   _id: string;
