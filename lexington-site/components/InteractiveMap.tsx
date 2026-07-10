@@ -41,7 +41,14 @@ function loadMapsScript(apiKey: string): Promise<void> {
   return mapsScriptPromise;
 }
 
-export function InteractiveMap() {
+interface InteractiveMapProps {
+  // Breaks the map out of the page's centered `.wrap` container so it
+  // spans the full viewport width, edge to edge, instead of staying
+  // inside the normal content column.
+  fullBleed?: boolean;
+}
+
+export function InteractiveMap({ fullBleed }: InteractiveMapProps = {}) {
   const mapRef = useRef<HTMLDivElement>(null);
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
   const [status, setStatus] = useState<"loading" | "ready" | "error">(apiKey ? "loading" : "error");
@@ -80,7 +87,7 @@ export function InteractiveMap() {
   if (status === "error") {
     return (
       <a
-        className={styles.fallback}
+        className={`${styles.fallback} ${fullBleed ? styles.fullBleed : ""}`}
         href="https://maps.app.goo.gl/uJrGXZyWzEhxBKRD6"
         target="_blank"
         rel="noopener noreferrer"
@@ -90,5 +97,11 @@ export function InteractiveMap() {
     );
   }
 
-  return <div ref={mapRef} className={styles.map} aria-label="Map showing The Lexington's location in Shiashie, East Legon" />;
+  return (
+    <div
+      ref={mapRef}
+      className={`${styles.map} ${fullBleed ? styles.fullBleed : ""}`}
+      aria-label="Map showing The Lexington's location in Shiashie, East Legon"
+    />
+  );
 }

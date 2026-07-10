@@ -125,11 +125,15 @@ export default async function HomePage() {
               commute disappear.
             </p>
           </Reveal>
-          <div style={{ marginTop: 56 }}>
-            <ProximityGrid />
-          </div>
+        </div>
+
+        <div style={{ marginTop: "var(--space-8)" }}>
+          <InteractiveMap fullBleed />
+        </div>
+
+        <div className="wrap">
           <div style={{ marginTop: "var(--space-8)" }}>
-            <InteractiveMap />
+            <ProximityGrid />
           </div>
         </div>
       </section>

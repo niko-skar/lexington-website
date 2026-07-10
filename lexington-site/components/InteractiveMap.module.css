@@ -20,3 +20,14 @@
   letter-spacing: 0.03em;
   text-transform: uppercase;
 }
+
+/* Breaks out of the centered .wrap container to span the full viewport
+   width — the classic 100vw + negative-margin full-bleed trick, which
+   works regardless of the parent's own max-width/padding. */
+.fullBleed {
+  width: 100vw;
+  height: 520px;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  border-radius: 0;
+}
