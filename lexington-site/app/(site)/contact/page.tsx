@@ -4,6 +4,7 @@ import type { SiteSettings } from "@/lib/sanity/types";
 
 import { PageIntro } from "@/components/PageIntro";
 import { ContactForm } from "@/components/ContactForm";
+import { InteractiveMap } from "@/components/InteractiveMap";
 import { googleMapsUrl } from "@/lib/maps";
 import { phoneHref } from "@/lib/format";
 import buttonStyles from "@/components/Button.module.css";
@@ -68,6 +69,10 @@ export default async function ContactPage() {
             </div>
 
             <ContactForm />
+          </div>
+
+          <div style={{ marginTop: "var(--space-8)" }}>
+            <InteractiveMap />
           </div>
         </div>
       </section>
