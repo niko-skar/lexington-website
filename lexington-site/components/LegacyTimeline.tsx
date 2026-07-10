@@ -13,10 +13,10 @@ export function LegacyTimeline({ members }: { members: FamilyMember[] }) {
           {m.photo ? (
             <div className={styles.photo}>
               <Image
-                src={urlFor(m.photo).width(200).height(200).url()}
+                src={urlFor(m.photo).width(340).height(340).url()}
                 alt={m.name}
-                width={200}
-                height={200}
+                width={340}
+                height={340}
               />
             </div>
           ) : (
