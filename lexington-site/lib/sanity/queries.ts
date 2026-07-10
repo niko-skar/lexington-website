@@ -33,3 +33,7 @@ export const siteSettingsQuery = defineQuery(`
 export const unitLocationPlansQuery = defineQuery(`
   *[_type == "unitLocationPlan"]
 `);
+
+export const constructionUpdatesQuery = defineQuery(`
+  *[_type == "constructionUpdate"] | order(order asc)
+`);

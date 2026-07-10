@@ -11,6 +11,7 @@ const NAV_LINKS = [
   { href: "/residences", label: "Residences" },
   { href: "/amenities", label: "Amenities" },
   { href: "/gallery", label: "Gallery" },
+  { href: "/progress", label: "Progress" },
   { href: "/invest", label: "Invest" },
   { href: "/about", label: "Our Story" },
 ];

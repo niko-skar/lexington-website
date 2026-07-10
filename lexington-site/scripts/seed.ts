@@ -198,6 +198,41 @@ const unitLocationPlans = [
   { id: "floor5", floor: 5, units: ["501A", "502B", "503B"], file: "location-floor5.png" },
 ];
 
+// Real site photos, not brochure renders. No EXIF/capture dates were
+// available, so these are ordered and staged from a visual read of each
+// photo (excavation depth, rebar vs. poured concrete, etc.) rather than
+// timestamps. Construction hasn't reached upper floors yet — only the
+// first four stages exist so far.
+const constructionUpdates = [
+  { file: "progress-01-groundbreaking.jpg", stage: "Groundbreaking", alt: "Niko and Leo Skarlatos breaking ground on The Lexington" },
+
+  { file: "progress-02-earthworks-excavation.jpg", stage: "Earthworks", alt: "Excavator digging the foundation pit" },
+  { file: "progress-03-earthworks-site-clearance.jpg", stage: "Earthworks", alt: "Site clearance and earth-moving equipment on site" },
+  { file: "progress-04-earthworks-trench.jpg", stage: "Earthworks", alt: "Excavator digging the foundation trench" },
+  { file: "progress-05-earthworks-hardcore.jpg", stage: "Earthworks", alt: "Excavator laying hardcore stone base in the foundation trench" },
+  { file: "progress-06-earthworks-trench-wide.jpg", stage: "Earthworks", alt: "Wide view of the foundation trench excavation" },
+
+  { file: "progress-07-foundation-rebar-mat.jpg", stage: "Foundation", alt: "Close-up of the foundation slab rebar mat" },
+  { file: "progress-08-foundation-column-cages.jpg", stage: "Foundation", alt: "Foundation column reinforcement cages in the excavated pit" },
+  { file: "progress-09-foundation-slab-rebar.jpg", stage: "Foundation", alt: "Workers tying foundation slab reinforcement and formwork" },
+  { file: "progress-10-foundation-slab-rebar-wide.jpg", stage: "Foundation", alt: "Foundation slab rebar mat spanning the building footprint" },
+  { file: "progress-11-foundation-slab-rebar-full.jpg", stage: "Foundation", alt: "Full-width view of the foundation reinforcement" },
+  { file: "progress-12-foundation-grounding-detail.jpg", stage: "Foundation", alt: "Electrical grounding strap detail within the foundation rebar" },
+  { file: "progress-13-foundation-hardcore-fill.jpg", stage: "Foundation", alt: "Excavator placing hardcore fill for the foundation base" },
+  { file: "progress-14-foundation-slab-prep.jpg", stage: "Foundation", alt: "Foundation slab preparation alongside the site boundary wall" },
+  { file: "progress-15-foundation-site-visit.jpg", stage: "Foundation", alt: "Niko Skarlatos on site during the foundation stage" },
+
+  { file: "progress-16-concrete-pour-night.jpg", stage: "Concrete Pour", alt: "Night-time concrete pour with pump truck" },
+  { file: "progress-17-concrete-pour-day.jpg", stage: "Concrete Pour", alt: "Daytime concrete pour with the site's tower crane in the background" },
+  { file: "progress-18-concrete-pour-wide.jpg", stage: "Concrete Pour", alt: "Multiple concrete pump trucks pouring the ground floor slab" },
+
+  { file: "progress-19-ground-floor-columns.jpg", stage: "Ground Floor Structure", alt: "Workers pouring concrete into ground floor column formwork" },
+  { file: "progress-20-ground-floor-columns-detail.jpg", stage: "Ground Floor Structure", alt: "Workers on the ground floor column formwork" },
+  { file: "progress-21-ground-floor-column-formwork.jpg", stage: "Ground Floor Structure", alt: "Ground floor column reinforcement and formwork" },
+  { file: "progress-22-ground-floor-column-formwork-2.jpg", stage: "Ground Floor Structure", alt: "Ground floor column cage ready for concrete" },
+  { file: "progress-23-ground-floor-rebar-cage.jpg", stage: "Ground Floor Structure", alt: "Close-up of a tied ground floor column reinforcement cage" },
+];
+
 function slugify(input: string) {
   return input
     .toLowerCase()
@@ -370,6 +405,30 @@ async function seedUnitLocationPlans() {
   }
 }
 
+async function seedConstructionUpdates() {
+  console.log(`Seeding ${constructionUpdates.length} construction updates...`);
+  for (let i = 0; i < constructionUpdates.length; i++) {
+    const entry = constructionUpdates[i];
+    const id = `construction-${slugify(entry.file.replace(/\.[^.]+$/, ""))}`;
+    const existing = await client.fetch<{ image?: { asset?: { _ref: string } } } | null>(
+      `*[_id == $id][0]{image}`,
+      { id }
+    );
+    const assetId = existing?.image?.asset?._ref ?? (await uploadImage(entry.file));
+    await client.createOrReplace({
+      _id: id,
+      _type: "constructionUpdate",
+      alt: entry.alt,
+      stage: entry.stage,
+      order: i,
+      image: {
+        _type: "image",
+        asset: { _type: "reference", _ref: assetId },
+      },
+    });
+  }
+}
+
 async function seedSiteSettings() {
   console.log("Seeding site settings...");
   await client.createIfNotExists({
@@ -400,6 +459,11 @@ async function seedSiteSettings() {
       title: "A closer look.",
       lede: "All images are illustrative renders and may not reflect the final product.",
     },
+    progressIntro: {
+      eyebrow: "Progress",
+      title: "Building The Lexington.",
+      lede: "Real photos from the site, updated as construction moves from the ground up.",
+    },
     investIntro: {
       eyebrow: "Why Invest",
       title: "A legacy asset, not just a purchase.",
@@ -416,6 +480,22 @@ async function seedSiteSettings() {
       lede: "Reach us directly, or send your details below and we'll follow up with availability and a custom payment plan.",
     },
   });
+
+  // createIfNotExists only creates — it doesn't patch fields onto a
+  // siteSettings doc that already exists (which it does, in every real
+  // environment this seed script runs against). Backfill just the new
+  // field via setIfMissing so it never clobbers a value already edited
+  // in Studio.
+  await client
+    .patch("siteSettings")
+    .setIfMissing({
+      progressIntro: {
+        eyebrow: "Progress",
+        title: "Building The Lexington.",
+        lede: "Real photos from the site, updated as construction moves from the ground up.",
+      },
+    })
+    .commit();
 }
 
 async function main() {
@@ -425,6 +505,7 @@ async function main() {
   await seedFinancingPlan();
   await seedGallery();
   await seedUnitLocationPlans();
+  await seedConstructionUpdates();
   await seedSiteSettings();
   console.log("Seed complete.");
 }

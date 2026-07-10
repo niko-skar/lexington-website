@@ -36,6 +36,7 @@ export const siteSettings = defineType({
     defineField({ name: "residencesIntro", title: "Residences intro", type: "object", fields: pageIntroFields, group: "pages" }),
     defineField({ name: "amenitiesIntro", title: "Amenities intro", type: "object", fields: pageIntroFields, group: "pages" }),
     defineField({ name: "galleryIntro", title: "Gallery intro", type: "object", fields: pageIntroFields, group: "pages" }),
+    defineField({ name: "progressIntro", title: "Progress intro", type: "object", fields: pageIntroFields, group: "pages" }),
     defineField({ name: "investIntro", title: "Invest intro", type: "object", fields: pageIntroFields, group: "pages" }),
     defineField({ name: "aboutIntro", title: "About intro", type: "object", fields: pageIntroFields, group: "pages" }),
     defineField({ name: "contactIntro", title: "Contact intro", type: "object", fields: pageIntroFields, group: "pages" }),

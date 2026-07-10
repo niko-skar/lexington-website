@@ -97,6 +97,7 @@ export interface SiteSettings {
   residencesIntro: PageIntroContent;
   amenitiesIntro: PageIntroContent;
   galleryIntro: PageIntroContent;
+  progressIntro: PageIntroContent;
   investIntro: PageIntroContent;
   aboutIntro: PageIntroContent;
   contactIntro: PageIntroContent;
@@ -107,4 +108,12 @@ export interface UnitLocationPlan {
   floor: number;
   units: string[];
   image: Image;
+}
+
+export interface ConstructionUpdate {
+  _id: string;
+  image: Image;
+  alt: string;
+  stage: string;
+  order: number;
 }

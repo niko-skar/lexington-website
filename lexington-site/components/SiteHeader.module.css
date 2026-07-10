@@ -55,7 +55,7 @@
 .nav {
   display: flex;
   align-items: center;
-  gap: 44px;
+  gap: 30px;
 }
 
 .nav a {
@@ -127,7 +127,7 @@
   top: 7px;
 }
 
-@media (max-width: 880px) {
+@media (max-width: 1040px) {
   .nav {
     position: fixed;
     inset: 100px 0 0 0;
