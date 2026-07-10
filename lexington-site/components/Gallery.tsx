@@ -76,6 +76,16 @@ export function Gallery({ images }: { images: GalleryImage[] }) {
 
   const active = lightboxIndex !== null ? filtered[lightboxIndex] : null;
 
+  // `filtered` already sorts progress after everything else, but the grid
+  // below is a CSS multi-column layout that balances by height across all
+  // 3 columns — with far more progress photos than curated ones, that
+  // balancing puts progress photos at the *top* of columns 2 and 3, right
+  // next to row 1. Rendering progress as a second, separate grid forces a
+  // hard break so it only appears once every curated photo has scrolled by.
+  const progressSplit = filtered.findIndex((img) => img.category === "progress");
+  const curatedShots = progressSplit === -1 ? filtered : filtered.slice(0, progressSplit);
+  const progressShots = progressSplit === -1 ? [] : filtered.slice(progressSplit);
+
   return (
     <>
       <div className={styles.filters}>
@@ -97,7 +107,7 @@ export function Gallery({ images }: { images: GalleryImage[] }) {
       </div>
 
       <div className={styles.grid}>
-        {filtered.map((img, i) => (
+        {curatedShots.map((img, i) => (
           <figure
             className={styles.figure}
             key={img._id}
@@ -113,6 +123,26 @@ export function Gallery({ images }: { images: GalleryImage[] }) {
           </figure>
         ))}
       </div>
+
+      {progressShots.length > 0 && (
+        <div className={styles.grid} style={{ marginTop: curatedShots.length > 0 ? "var(--space-6)" : 0 }}>
+          {progressShots.map((img, i) => (
+            <figure
+              className={styles.figure}
+              key={img._id}
+              onClick={() => setLightboxIndex(curatedShots.length + i)}
+            >
+              <Image
+                src={urlFor(img.image).width(640).url()}
+                alt={img.alt}
+                width={640}
+                height={480}
+                sizes="(max-width: 640px) 50vw, 33vw"
+              />
+            </figure>
+          ))}
+        </div>
+      )}
 
       {active && (
         <div
