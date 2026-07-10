@@ -71,11 +71,12 @@ export default async function ResidencesPage() {
 
       {floorplanImage && (
         <SplitSection
-          imageUrl={urlFor(floorplanImage.image).width(800).height(1000).url()}
+          imageUrl={urlFor(floorplanImage.image).width(1000).fit("max").url()}
           imageAlt={floorplanImage.alt}
           eyebrow="Floor Plans"
           title="Drawn for how you actually live."
           style={{ background: "var(--stone-lt)" }}
+          fit="contain"
         >
           <p>
             Every unit type is designed around natural light, cross

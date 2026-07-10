@@ -12,6 +12,10 @@ interface SplitSectionProps {
   title: string;
   children: ReactNode;
   style?: CSSProperties;
+  // Photos want a cropped 4:5 fill ("cover"); diagrams like floor plans
+  // need the whole image visible, letterboxed within the same box instead
+  // of cropped ("contain").
+  fit?: "cover" | "contain";
 }
 
 export function SplitSection({
@@ -22,11 +26,12 @@ export function SplitSection({
   title,
   children,
   style,
+  fit = "cover",
 }: SplitSectionProps) {
   return (
     <section className="section" style={style}>
       <div className={`wrap ${styles.split} ${reverse ? styles.reverse : ""}`}>
-        <Reveal className={styles.media}>
+        <Reveal className={`${styles.media} ${fit === "contain" ? styles.mediaContain : ""}`}>
           <Image
             src={imageUrl}
             alt={imageAlt}
