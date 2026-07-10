@@ -30,11 +30,24 @@ async function uploadImage(filename: string) {
   return asset._id;
 }
 
+// Construction photos are seeded into both `constructionUpdate` and
+// `galleryImage` docs (progress category) from the same source files. This
+// cache makes each file upload at most once per run — the second doc type
+// to reference a given file reuses the asset id the first one uploaded.
+const uploadedAssetCache = new Map<string, string>();
+async function getOrUploadAsset(file: string, existingAssetRef?: string) {
+  const cached = uploadedAssetCache.get(file);
+  if (cached) return cached;
+  const id = existingAssetRef ?? (await uploadImage(file));
+  uploadedAssetCache.set(file, id);
+  return id;
+}
+
 type GalleryEntry = {
   id: string;
   file: string;
   alt: string;
-  category: "exterior" | "interior" | "amenity" | "floorplan" | "family";
+  category: "exterior" | "interior" | "amenity" | "floorplan" | "family" | "progress";
   // Set when the file behind an existing id was replaced (e.g. a mislabeled
   // source image) — forces a fresh upload instead of reusing the old asset.
   forceReupload?: boolean;
@@ -45,7 +58,7 @@ type GalleryEntry = {
 // unrelated stock photos (a Google Maps screenshot, London/Athens/Accra
 // skylines). Broken ones were removed or replaced; real-but-miscategorized
 // ones were relabeled to match what they actually show.
-const galleryEntries: GalleryEntry[] = [
+const curatedGalleryEntries: GalleryEntry[] = [
   { id: "hero-exterior-1", file: "hero-exterior-1.png", alt: "The Lexington exterior, Shiashie, East Legon", category: "exterior" },
   { id: "hero-exterior-2", file: "hero-exterior-2.jpg", alt: "The Lexington exterior", category: "exterior" },
   { id: "exterior-3", file: "exterior-3.jpg", alt: "The Lexington exterior facade", category: "exterior" },
@@ -125,12 +138,15 @@ const units: UnitSeed[] = [
   { unitNumber: "405B", floor: 4, bedroomType: "Two Bedroom", areaSqm: 138, priceUSD: 317000 },
   { unitNumber: "401A", floor: 4, bedroomType: "Two Bedroom", areaSqm: 149, priceUSD: 342700 },
 
-  { unitNumber: "501A", floor: 5, bedroomType: "One Bedroom", areaSqm: 85, priceUSD: 212000 },
-  { unitNumber: "502B", floor: 5, bedroomType: "One Bedroom", areaSqm: 88, priceUSD: 221000 },
-  { unitNumber: "503B", floor: 5, bedroomType: "One Bedroom", areaSqm: 79, priceUSD: 198000 },
+  // A new floor was added above the old top floor (6) — these units (the
+  // old 5th floor and the penthouses) both shift up by one to make room,
+  // leaving floor 5 open for future units.
+  { unitNumber: "501A", floor: 6, bedroomType: "One Bedroom", areaSqm: 85, priceUSD: 212000 },
+  { unitNumber: "502B", floor: 6, bedroomType: "One Bedroom", areaSqm: 88, priceUSD: 221000 },
+  { unitNumber: "503B", floor: 6, bedroomType: "One Bedroom", areaSqm: 79, priceUSD: 198000 },
 
-  { unitNumber: "PH1a", floor: 6, bedroomType: "3BR Duplex Penthouse", areaSqm: 327, priceUSD: 817500 },
-  { unitNumber: "PH2b", floor: 6, bedroomType: "3BR Duplex Penthouse", areaSqm: 375, priceUSD: 937500 },
+  { unitNumber: "PH1a", floor: 7, bedroomType: "3BR Duplex Penthouse", areaSqm: 327, priceUSD: 817500 },
+  { unitNumber: "PH2b", floor: 7, bedroomType: "3BR Duplex Penthouse", areaSqm: 375, priceUSD: 937500 },
 ];
 
 // Only the Garden is confirmed rooftop in the brochure; the rest are
@@ -184,6 +200,127 @@ const familyMembers = [
   },
 ];
 
+// Each floor's brochure diagram splits its units across one or two
+// images (not every unit fits in a single render) — floors 3 and 5 are
+// the exception, where one image already covers every unit.
+const unitLocationPlans = [
+  { id: "floor1-a", floor: 1, units: ["101A", "102B", "103B"], file: "location-floor1-a.png" },
+  { id: "floor1-b", floor: 1, units: ["104B"], file: "location-floor1-b.png" },
+  { id: "floor2-a", floor: 2, units: ["202A", "203B", "204B"], file: "location-floor2-a.png" },
+  { id: "floor2-b", floor: 2, units: ["201A", "205B"], file: "location-floor2-b.png" },
+  { id: "floor3", floor: 3, units: ["301A", "302A", "303B", "304B", "305B"], file: "location-floor3.png" },
+  { id: "floor4-a", floor: 4, units: ["402A", "403B", "404B"], file: "location-floor4-a.png" },
+  { id: "floor4-b", floor: 4, units: ["401A", "405B"], file: "location-floor4-b.png" },
+  { id: "floor5", floor: 6, units: ["501A", "502B", "503B"], file: "location-floor5.png" },
+];
+
+// Real site photos, not brochure renders. The user organizes these into
+// stage folders themselves (Groundbreaking/Earthworks/Foundations/Ground
+// Floor/First Floor) — that folder placement is the source of truth for
+// `stage`, not a visual guess from this script. "Concrete Pour" was
+// previously its own stage here; those photos now live in the user's
+// "Foundations" folder, so they're folded into that stage instead.
+const constructionUpdates = [
+  { file: "progress-groundbreaking-01.jpg", stage: "Groundbreaking", alt: "Niko and Leo Skarlatos breaking ground on The Lexington" },
+
+  { file: "progress-earthworks-01.jpg", stage: "Earthworks", alt: "Excavator digging the foundation pit" },
+  { file: "progress-earthworks-02.jpg", stage: "Earthworks", alt: "Site clearance and earth-moving equipment on site" },
+  { file: "progress-earthworks-03.jpg", stage: "Earthworks", alt: "Excavator digging the foundation trench" },
+  { file: "progress-earthworks-04.jpg", stage: "Earthworks", alt: "Excavator laying a hardcore stone base in the trench" },
+  { file: "progress-earthworks-05.jpg", stage: "Earthworks", alt: "Wide view of the foundation trench excavation" },
+  { file: "progress-earthworks-06.jpg", stage: "Earthworks", alt: "Hardcore stone fill being placed ahead of the foundation pour" },
+
+  { file: "progress-foundations-01.jpg", stage: "Foundations", alt: "Niko directing the team as they tie a foundation column rebar cage" },
+  { file: "progress-foundations-02.jpg", stage: "Foundations", alt: "Foundation slab rebar mat tied and ready for the pour" },
+  { file: "progress-foundations-03.jpg", stage: "Foundations", alt: "Column reinforcement cages rising from the foundation slab" },
+  { file: "progress-foundations-04.jpg", stage: "Foundations", alt: "Foundation column rebar cages set across the site" },
+  { file: "progress-foundations-05.jpg", stage: "Foundations", alt: "Workers tying reinforcement on a foundation column cage" },
+  { file: "progress-foundations-06.jpg", stage: "Foundations", alt: "Night-time concrete pour into the foundation column formwork" },
+  { file: "progress-foundations-07.jpg", stage: "Foundations", alt: "Hardcore stone base laid ahead of the foundation slab pour" },
+  { file: "progress-foundations-08.jpg", stage: "Foundations", alt: "Foundation slab rebar mat with column starter bars" },
+  { file: "progress-foundations-09.jpg", stage: "Foundations", alt: "Wide view of the foundation slab reinforcement" },
+  { file: "progress-foundations-10.jpg", stage: "Foundations", alt: "Close-up of a grounding strap tied into the foundation rebar" },
+  { file: "progress-foundations-11.jpg", stage: "Foundations", alt: "Night-time concrete pour into the foundation formwork" },
+  { file: "progress-foundations-12.jpg", stage: "Foundations", alt: "Concrete pump truck pouring the foundation by day" },
+  { file: "progress-foundations-13.jpg", stage: "Foundations", alt: "Wide view of the foundation concrete pour" },
+  { file: "progress-foundations-14.jpg", stage: "Foundations", alt: "Column formwork going up on the foundation" },
+  { file: "progress-foundations-15.jpg", stage: "Foundations", alt: "Rebar cages tied for the foundation columns" },
+  { file: "progress-foundations-16.jpg", stage: "Foundations", alt: "Niko on site during the foundation stage" },
+  { file: "progress-foundations-17.jpg", stage: "Foundations", alt: "Foundation slab preparation along the site boundary wall" },
+
+  { file: "progress-ground-floor-01.jpg", stage: "Ground Floor", alt: "Column rebar cage tied on site scaffolding" },
+  { file: "progress-ground-floor-02.jpg", stage: "Ground Floor", alt: "Niko watching the team prepare a concrete mix on site" },
+  { file: "progress-ground-floor-03.jpg", stage: "Ground Floor", alt: "Concrete mixer truck pouring into a wheelbarrow" },
+  { file: "progress-ground-floor-04.jpg", stage: "Ground Floor", alt: "Niko walking the site past a concrete pump truck" },
+  { file: "progress-ground-floor-05.jpg", stage: "Ground Floor", alt: "Workers screeding a freshly poured ground floor slab" },
+  { file: "progress-ground-floor-06.jpg", stage: "Ground Floor", alt: "Niko reviewing column formwork with the site team" },
+  { file: "progress-ground-floor-07.jpg", stage: "Ground Floor", alt: "Compacting a wet concrete pour beside the rising columns" },
+  { file: "progress-ground-floor-08.jpg", stage: "Ground Floor", alt: "Ground floor column cage ready for concrete" },
+  { file: "progress-ground-floor-09.jpg", stage: "Ground Floor", alt: "Ground floor slab rebar mesh laid across the site" },
+  { file: "progress-ground-floor-10.jpg", stage: "Ground Floor", alt: "Wide view of the ground floor slab reinforcement" },
+  { file: "progress-ground-floor-11.jpg", stage: "Ground Floor", alt: "Column rebar cages rising from the ground floor slab" },
+  { file: "progress-ground-floor-12.jpg", stage: "Ground Floor", alt: "Ground floor slab rebar mat, aerial view" },
+  { file: "progress-ground-floor-13.jpg", stage: "Ground Floor", alt: "Ground floor reinforcement mesh spanning the site" },
+  { file: "progress-ground-floor-14.jpg", stage: "Ground Floor", alt: "Workers building formwork between the ground floor columns" },
+  { file: "progress-ground-floor-15.jpg", stage: "Ground Floor", alt: "Workers finishing formwork inside a recessed column base" },
+  { file: "progress-ground-floor-16.jpg", stage: "Ground Floor", alt: "Pouring a ground floor column with plywood formwork" },
+  { file: "progress-ground-floor-17.jpg", stage: "Ground Floor", alt: "Workers assembling formwork ahead of the next pour" },
+  { file: "progress-ground-floor-18.jpg", stage: "Ground Floor", alt: "Niko reviewing concrete work with the site team" },
+  { file: "progress-ground-floor-19.jpg", stage: "Ground Floor", alt: "Mixing mortar on site with Niko and the team" },
+
+  { file: "progress-first-floor-01.jpg", stage: "First Floor", alt: "Steel props shoring up the first floor slab formwork" },
+  { file: "progress-first-floor-02.jpg", stage: "First Floor", alt: "Column rebar dowels rising from the first floor slab edge" },
+  { file: "progress-first-floor-03.jpg", stage: "First Floor", alt: "Workers tying a column rebar cage on elevated scaffolding" },
+  { file: "progress-first-floor-04.jpg", stage: "First Floor", alt: "First floor slab formwork shuttering laid across the site" },
+  { file: "progress-first-floor-05.jpg", stage: "First Floor", alt: "Workers building column formwork high on the scaffolding" },
+  { file: "progress-first-floor-06.jpg", stage: "First Floor", alt: "Wide view of first floor rebar columns rising across the site" },
+  { file: "progress-first-floor-07.jpg", stage: "First Floor", alt: "Detail of column and beam reinforcement tying into the slab" },
+  { file: "progress-first-floor-08.jpg", stage: "First Floor", alt: "First floor slab rebar mesh being tied" },
+  { file: "progress-first-floor-09.jpg", stage: "First Floor", alt: "Worker screeding the first floor slab" },
+  { file: "progress-first-floor-10.jpg", stage: "First Floor", alt: "Workers gathered on the first floor slab as columns rise" },
+];
+
+// The same construction photos also appear in the main Gallery under a
+// "Progress" filter — reusing the alt text above rather than duplicating it.
+const galleryEntries: GalleryEntry[] = [
+  ...curatedGalleryEntries,
+  ...constructionUpdates.map((u) => ({
+    id: `progress-${slugify(u.file.replace(/\.[^.]+$/, ""))}`,
+    file: u.file,
+    alt: u.alt,
+    category: "progress" as const,
+  })),
+];
+
+// The previous (pre-reorganization) construction-photo file names — no
+// longer produced by the mapping above, so their docs would otherwise
+// linger in the dataset under stale ids.
+const STALE_CONSTRUCTION_IDS = [
+  "construction-progress-01-groundbreaking",
+  "construction-progress-02-earthworks-excavation",
+  "construction-progress-03-earthworks-site-clearance",
+  "construction-progress-04-earthworks-trench",
+  "construction-progress-05-earthworks-hardcore",
+  "construction-progress-06-earthworks-trench-wide",
+  "construction-progress-07-foundation-rebar-mat",
+  "construction-progress-08-foundation-column-cages",
+  "construction-progress-09-foundation-slab-rebar",
+  "construction-progress-10-foundation-slab-rebar-wide",
+  "construction-progress-11-foundation-slab-rebar-full",
+  "construction-progress-12-foundation-grounding-detail",
+  "construction-progress-13-foundation-hardcore-fill",
+  "construction-progress-14-foundation-slab-prep",
+  "construction-progress-15-foundation-site-visit",
+  "construction-progress-16-concrete-pour-night",
+  "construction-progress-17-concrete-pour-day",
+  "construction-progress-18-concrete-pour-wide",
+  "construction-progress-19-ground-floor-columns",
+  "construction-progress-20-ground-floor-columns-detail",
+  "construction-progress-21-ground-floor-column-formwork",
+  "construction-progress-22-ground-floor-column-formwork-2",
+  "construction-progress-23-ground-floor-rebar-cage",
+];
+
 function slugify(input: string) {
   return input
     .toLowerCase()
@@ -195,11 +332,17 @@ async function seedUnits() {
   console.log(`Seeding ${units.length} units...`);
   for (const unit of units) {
     const id = `unit-${slugify(unit.unitNumber)}`;
+    // A real reserved/sold status set in Studio must survive re-seeding —
+    // only brand-new units default to "available".
+    const existing = await client.fetch<{ status?: string } | null>(
+      `*[_id == $id][0]{status}`,
+      { id }
+    );
     await client.createOrReplace({
       _id: id,
       _type: "unit",
       ...unit,
-      status: "available",
+      status: existing?.status ?? "available",
     });
   }
 }
@@ -312,7 +455,7 @@ async function seedGallery() {
           `*[_id == $id][0]{image}`,
           { id }
         );
-    const assetId = existing?.image?.asset?._ref ?? (await uploadImage(entry.file));
+    const assetId = await getOrUploadAsset(entry.file, existing?.image?.asset?._ref);
 
     await client.createOrReplace({
       _id: id,
@@ -334,6 +477,57 @@ async function seedGallery() {
   }
 }
 
+async function seedUnitLocationPlans() {
+  console.log(`Seeding ${unitLocationPlans.length} unit location plans...`);
+  for (const p of unitLocationPlans) {
+    const id = `unit-location-${p.id}`;
+    const existing = await client.fetch<{ image?: { asset?: { _ref: string } } } | null>(
+      `*[_id == $id][0]{image}`,
+      { id }
+    );
+    const assetId = existing?.image?.asset?._ref ?? (await uploadImage(p.file));
+    await client.createOrReplace({
+      _id: id,
+      _type: "unitLocationPlan",
+      floor: p.floor,
+      units: p.units,
+      image: {
+        _type: "image",
+        asset: { _type: "reference", _ref: assetId },
+      },
+    });
+  }
+}
+
+async function seedConstructionUpdates() {
+  console.log(`Seeding ${constructionUpdates.length} construction updates...`);
+  for (let i = 0; i < constructionUpdates.length; i++) {
+    const entry = constructionUpdates[i];
+    const id = `construction-${slugify(entry.file.replace(/\.[^.]+$/, ""))}`;
+    const existing = await client.fetch<{ image?: { asset?: { _ref: string } } } | null>(
+      `*[_id == $id][0]{image}`,
+      { id }
+    );
+    const assetId = await getOrUploadAsset(entry.file, existing?.image?.asset?._ref);
+    await client.createOrReplace({
+      _id: id,
+      _type: "constructionUpdate",
+      alt: entry.alt,
+      stage: entry.stage,
+      order: i,
+      image: {
+        _type: "image",
+        asset: { _type: "reference", _ref: assetId },
+      },
+    });
+  }
+
+  if (STALE_CONSTRUCTION_IDS.length > 0) {
+    await client.delete({ query: `*[_id in $ids]`, params: { ids: STALE_CONSTRUCTION_IDS } });
+    console.log(`  removed ${STALE_CONSTRUCTION_IDS.length} stale construction update docs`);
+  }
+}
+
 async function seedSiteSettings() {
   console.log("Seeding site settings...");
   await client.createIfNotExists({
@@ -346,7 +540,7 @@ async function seedSiteSettings() {
     disclaimer:
       "All images displayed are for illustrative purposes only and may not reflect the final product. All prices are subject to change without notice.",
     heroEyebrow: "Shiashie · East Legon · Accra",
-    heroTitle: "Seven storeys, one address worth arriving at.",
+    heroTitle: "Eight storeys, one address worth arriving at.",
     heroLede:
       "One, two and three-bedroom duplex penthouse residences, built for a family whose name has shaped Ghana's skyline for three generations.",
     residencesIntro: {
@@ -364,6 +558,11 @@ async function seedSiteSettings() {
       title: "A closer look.",
       lede: "All images are illustrative renders and may not reflect the final product.",
     },
+    progressIntro: {
+      eyebrow: "Progress",
+      title: "Building The Lexington.",
+      lede: "Real photos from the site, updated as construction moves from the ground up. Estimated completion: December 2027.",
+    },
     investIntro: {
       eyebrow: "Why Invest",
       title: "A legacy asset, not just a purchase.",
@@ -380,6 +579,22 @@ async function seedSiteSettings() {
       lede: "Reach us directly, or send your details below and we'll follow up with availability and a custom payment plan.",
     },
   });
+
+  // createIfNotExists only creates — it doesn't patch fields onto a
+  // siteSettings doc that already exists (which it does, in every real
+  // environment this seed script runs against). Backfill just the new
+  // field via setIfMissing so it never clobbers a value already edited
+  // in Studio.
+  await client
+    .patch("siteSettings")
+    .setIfMissing({
+      progressIntro: {
+        eyebrow: "Progress",
+        title: "Building The Lexington.",
+        lede: "Real photos from the site, updated as construction moves from the ground up.",
+      },
+    })
+    .commit();
 }
 
 async function main() {
@@ -388,6 +603,8 @@ async function main() {
   await seedFamilyMembers();
   await seedFinancingPlan();
   await seedGallery();
+  await seedUnitLocationPlans();
+  await seedConstructionUpdates();
   await seedSiteSettings();
   console.log("Seed complete.");
 }

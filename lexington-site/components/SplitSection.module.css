@@ -25,6 +25,14 @@
   object-fit: cover;
 }
 
+.mediaContain {
+  background: var(--paper);
+}
+
+.mediaContain img {
+  object-fit: contain;
+}
+
 .title {
   font-size: var(--fs-600);
   margin-top: var(--space-4);

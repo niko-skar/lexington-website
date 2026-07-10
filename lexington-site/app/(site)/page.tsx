@@ -85,7 +85,8 @@ export default async function HomePage() {
                 { value: availableUnits.length, suffix: ` of ${units.length}`, label: "Units available" },
                 { value: startingPrice, prefix: "$", label: "Starting from" },
                 { value: projectedYield, suffix: "%", label: "Projected rental yield" },
-                { value: 7, label: "Storeys, Shiashie skyline" },
+                { value: 8, label: "Storeys, Shiashie skyline" },
+                { value: 2027, prefix: "Dec ", label: "Estimated completion", noGrouping: true },
               ]}
             />
           </Reveal>

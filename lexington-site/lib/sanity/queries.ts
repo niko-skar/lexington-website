@@ -29,3 +29,11 @@ export const financingPlanQuery = defineQuery(`
 export const siteSettingsQuery = defineQuery(`
   *[_type == "siteSettings"][0]
 `);
+
+export const unitLocationPlansQuery = defineQuery(`
+  *[_type == "unitLocationPlan"]
+`);
+
+export const constructionUpdatesQuery = defineQuery(`
+  *[_type == "constructionUpdate"] | order(order asc)
+`);

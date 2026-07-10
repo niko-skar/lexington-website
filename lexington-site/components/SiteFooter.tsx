@@ -26,6 +26,7 @@ export async function SiteFooter() {
               <Link href="/residences">Residences</Link>
               <Link href="/amenities">Amenities</Link>
               <Link href="/gallery">Gallery</Link>
+              <Link href="/progress">Progress</Link>
               <Link href="/invest">Invest</Link>
             </div>
             <div>

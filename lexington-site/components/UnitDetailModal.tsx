@@ -3,17 +3,16 @@
 import { useEffect } from "react";
 import Image from "next/image";
 
-import type { GalleryImage, Unit } from "@/lib/sanity/types";
+import type { GalleryImage, Unit, UnitLocationPlan } from "@/lib/sanity/types";
 import { urlFor } from "@/lib/sanity/image";
-import { formatUSD } from "@/lib/format";
-import { googleMapsUrl } from "@/lib/maps";
+import { formatFloor, formatUSD } from "@/lib/format";
 import { StatusBadge } from "./StatusBadge";
-import buttonStyles from "./Button.module.css";
 import styles from "./UnitDetailModal.module.css";
 
 interface UnitDetailModalProps {
   unit: Unit;
   floorPlans: GalleryImage[];
+  locationPlan?: UnitLocationPlan;
   onClose: () => void;
 }
 
@@ -26,7 +25,7 @@ function planLabel(alt: string) {
   return label.replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-export function UnitDetailModal({ unit, floorPlans, onClose }: UnitDetailModalProps) {
+export function UnitDetailModal({ unit, floorPlans, locationPlan, onClose }: UnitDetailModalProps) {
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
@@ -46,7 +45,7 @@ export function UnitDetailModal({ unit, floorPlans, onClose }: UnitDetailModalPr
           <div>
             <div className={styles.unitNumber}>{unit.unitNumber}</div>
             <div className={styles.meta}>
-              Floor {unit.floor} · {unit.bedroomType} · {unit.areaSqm} sqm
+              Floor {formatFloor(unit.floor)} · {unit.bedroomType} · {unit.areaSqm} sqm
             </div>
             <div className={styles.price}>{formatUSD(unit.priceUSD)}</div>
           </div>
@@ -78,19 +77,20 @@ export function UnitDetailModal({ unit, floorPlans, onClose }: UnitDetailModalPr
           </p>
         )}
 
-        <div className={styles.locationRow}>
-          <span className={styles.locationText}>
-            Shiashie, East Legon, Accra
-          </span>
-          <a
-            href={googleMapsUrl()}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={`${buttonStyles.btn} ${buttonStyles.outlineDark}`}
-          >
-            View on Google Maps
-          </a>
-        </div>
+        {locationPlan && (
+          <>
+            <div className={styles.planLabel}>Location in Building</div>
+            <div className={styles.imageWrap}>
+              <Image
+                src={urlFor(locationPlan.image).width(900).url()}
+                alt={`Floor ${formatFloor(locationPlan.floor)} location plan showing unit ${unit.unitNumber}`}
+                width={900}
+                height={900}
+                sizes="(max-width: 720px) 100vw, 720px"
+              />
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

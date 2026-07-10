@@ -57,7 +57,7 @@ export default async function AboutPage() {
             The Lexington is the latest chapter in a family history written
             across Tema&rsquo;s master plan, MTN&rsquo;s headquarters, and a
             resort in the Carpathians. It carries the same standard forward —
-            into seven storeys in Shiashie, East Legon.
+            into eight storeys in Shiashie, East Legon.
           </p>
           <Button href="/residences" variant="outline-dark">
             View Residences

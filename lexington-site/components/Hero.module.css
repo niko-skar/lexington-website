@@ -7,6 +7,21 @@
   overflow: hidden;
 }
 
+/* Windows display scaling (125%/150%, the default on most high-DPI
+   laptop screens) shrinks the browser's *effective* CSS viewport height
+   well below what the physical screen resolution suggests. On a short
+   enough effective viewport, the hero content (eyebrow+heading+lede+
+   buttons) becomes taller than the 92vh box itself — at that point the
+   box just grows to fit it, and the "gap" above the eyebrow disappears
+   entirely no matter how the internal padding is tuned. A pixel floor
+   guarantees real breathing room regardless of scaling. Scoped to
+   min-width so phones (already fine on pure vh) are untouched. */
+@media (min-width: 700px) {
+  .hero {
+    min-height: max(720px, 92vh);
+  }
+}
+
 .media {
   position: absolute;
   inset: -5% 0 -5%;

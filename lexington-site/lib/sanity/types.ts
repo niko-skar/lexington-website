@@ -2,7 +2,7 @@ import type { Image } from "sanity";
 
 export type UnitStatus = "available" | "reserved" | "sold";
 
-export type BedroomType = "One Bedroom" | "Two Bedroom" | "3BR Duplex Penthouse";
+export type BedroomType = "Studio" | "One Bedroom" | "Two Bedroom" | "3BR Duplex Penthouse";
 
 export interface Unit {
   _id: string;
@@ -20,7 +20,8 @@ export type GalleryCategory =
   | "interior"
   | "amenity"
   | "floorplan"
-  | "family";
+  | "family"
+  | "progress";
 
 export interface GalleryImage {
   _id: string;
@@ -97,7 +98,23 @@ export interface SiteSettings {
   residencesIntro: PageIntroContent;
   amenitiesIntro: PageIntroContent;
   galleryIntro: PageIntroContent;
+  progressIntro: PageIntroContent;
   investIntro: PageIntroContent;
   aboutIntro: PageIntroContent;
   contactIntro: PageIntroContent;
+}
+
+export interface UnitLocationPlan {
+  _id: string;
+  floor: number;
+  units: string[];
+  image: Image;
+}
+
+export interface ConstructionUpdate {
+  _id: string;
+  image: Image;
+  alt: string;
+  stage: string;
+  order: number;
 }

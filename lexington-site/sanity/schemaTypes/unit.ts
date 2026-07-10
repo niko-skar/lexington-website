@@ -16,8 +16,8 @@ export const unit = defineType({
       title: "Floor",
       type: "number",
       description:
-        "Use 6 for the duplex penthouse tier (shown as its own group in the Unit Finder).",
-      validation: (Rule) => Rule.required().integer().positive(),
+        "Use 0 for the ground floor, 7 for the duplex penthouse tier (shown as its own group in the Unit Finder).",
+      validation: (Rule) => Rule.required().integer().min(0),
     }),
     defineField({
       name: "bedroomType",
@@ -25,6 +25,7 @@ export const unit = defineType({
       type: "string",
       options: {
         list: [
+          { title: "Studio", value: "Studio" },
           { title: "One Bedroom", value: "One Bedroom" },
           { title: "Two Bedroom", value: "Two Bedroom" },
           { title: "3BR Duplex Penthouse", value: "3BR Duplex Penthouse" },
@@ -85,7 +86,7 @@ export const unit = defineType({
     },
     prepare({ title, floor, status, price }) {
       return {
-        title: `${title} — Floor ${floor}`,
+        title: `${title} — Floor ${floor === 0 ? "Ground" : floor}`,
         subtitle: `${status} · $${price?.toLocaleString()}`,
       };
     },

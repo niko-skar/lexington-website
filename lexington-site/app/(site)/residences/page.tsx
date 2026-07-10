@@ -1,7 +1,12 @@
 import { client } from "@/lib/sanity/client";
 import { urlFor } from "@/lib/sanity/image";
-import { galleryImagesQuery, siteSettingsQuery, unitsQuery } from "@/lib/sanity/queries";
-import type { BedroomType, GalleryImage, SiteSettings, Unit } from "@/lib/sanity/types";
+import {
+  galleryImagesQuery,
+  siteSettingsQuery,
+  unitLocationPlansQuery,
+  unitsQuery,
+} from "@/lib/sanity/queries";
+import type { BedroomType, GalleryImage, SiteSettings, Unit, UnitLocationPlan } from "@/lib/sanity/types";
 
 import { PageIntro } from "@/components/PageIntro";
 import { UnitFinder } from "@/components/UnitFinder";
@@ -23,22 +28,39 @@ const extras = [
 ];
 
 export default async function ResidencesPage() {
-  const [units, images, siteSettings] = await Promise.all([
+  const [units, images, siteSettings, unitLocationPlans] = await Promise.all([
     client.fetch<Unit[]>(unitsQuery),
     client.fetch<GalleryImage[]>(galleryImagesQuery),
     client.fetch<SiteSettings>(siteSettingsQuery),
+    client.fetch<UnitLocationPlan[]>(unitLocationPlansQuery),
   ]);
 
   const floorplanImages = images.filter((i) => i.category === "floorplan");
-  const floorplanImage = floorplanImages[0];
+  // The rendered penthouse plan (not the flat rooftop diagram) makes for a
+  // nicer showcase image than the one-bedroom plan that used to sit here.
+  const floorplanImage =
+    floorplanImages.find((i) => i.alt.toLowerCase().includes("duplex")) ?? floorplanImages[0];
 
   // Duplex penthouses span two levels, so they have two floor plans (lower
   // + upper/rooftop) that both need to be viewable — everything else has one.
   const floorPlansByType: Record<BedroomType, GalleryImage[]> = {
+    // No studio floor plan render exists yet — UnitDetailModal already
+    // falls back to "available on request" when this is empty.
+    Studio: floorplanImages.filter((i) => i.alt.toLowerCase().includes("studio")),
     "One Bedroom": floorplanImages.filter((i) => i.alt.toLowerCase().includes("one-bedroom")),
     "Two Bedroom": floorplanImages.filter((i) => i.alt.toLowerCase().includes("two-bedroom")),
     "3BR Duplex Penthouse": floorplanImages.filter((i) => i.alt.toLowerCase().includes("duplex")),
   };
+
+  // A floor's units are sometimes split across two location diagrams (not
+  // every unit fits in one render), so look up by unit number rather than
+  // by floor alone.
+  const locationPlanByUnit: Record<string, UnitLocationPlan> = {};
+  for (const plan of unitLocationPlans) {
+    for (const unitNumber of plan.units) {
+      locationPlanByUnit[unitNumber] = plan;
+    }
+  }
 
   return (
     <>
@@ -46,17 +68,18 @@ export default async function ResidencesPage() {
 
       <section className="section sectionStone" style={{ paddingTop: "clamp(32px, 4vw, 56px)" }}>
         <div className="wrap">
-          <UnitFinder units={units} floorPlans={floorPlansByType} />
+          <UnitFinder units={units} floorPlans={floorPlansByType} locationPlanByUnit={locationPlanByUnit} />
         </div>
       </section>
 
       {floorplanImage && (
         <SplitSection
-          imageUrl={urlFor(floorplanImage.image).width(800).height(1000).url()}
+          imageUrl={urlFor(floorplanImage.image).width(1000).fit("max").url()}
           imageAlt={floorplanImage.alt}
           eyebrow="Floor Plans"
           title="Drawn for how you actually live."
           style={{ background: "var(--stone-lt)" }}
+          fit="contain"
         >
           <p>
             Every unit type is designed around natural light, cross
