@@ -24,6 +24,7 @@ import { ProximityGrid } from "@/components/ProximityGrid";
 import { SplitSection } from "@/components/SplitSection";
 import { StatStrip } from "@/components/StatStrip";
 import { Reveal } from "@/components/Reveal";
+import { InteractiveMap } from "@/components/InteractiveMap";
 
 export const revalidate = 60;
 
@@ -126,6 +127,9 @@ export default async function HomePage() {
           </Reveal>
           <div style={{ marginTop: 56 }}>
             <ProximityGrid />
+          </div>
+          <div style={{ marginTop: "var(--space-8)" }}>
+            <InteractiveMap />
           </div>
         </div>
       </section>
