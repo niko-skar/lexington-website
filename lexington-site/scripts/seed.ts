@@ -531,7 +531,7 @@ async function seedSiteSettings() {
     disclaimer:
       "All images displayed are for illustrative purposes only and may not reflect the final product. All prices are subject to change without notice.",
     heroEyebrow: "Shiashie · East Legon · Accra",
-    heroTitle: "Seven storeys, one address worth arriving at.",
+    heroTitle: "Eight storeys, one address worth arriving at.",
     heroLede:
       "One, two and three-bedroom duplex penthouse residences, built for a family whose name has shaped Ghana's skyline for three generations.",
     residencesIntro: {

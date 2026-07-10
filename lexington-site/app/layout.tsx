@@ -18,7 +18,7 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "The Lexington — Shiashie, East Legon | A Skarlatos & Son Development",
   description:
-    "The Lexington: seven storeys of one, two and three-bedroom penthouse residences in Shiashie, East Legon. A development by Skarlatos & Son.",
+    "The Lexington: eight storeys of one, two and three-bedroom penthouse residences in Shiashie, East Legon. A development by Skarlatos & Son.",
   icons: {
     icon: "/favicon.svg",
   },
