@@ -42,6 +42,7 @@ export function ContactForm() {
       <div className={styles.field}>
         <label htmlFor="unit">Interested in</label>
         <select id="unit" name="unit" defaultValue="One Bedroom Apartment">
+          <option>Studio Apartment</option>
           <option>One Bedroom Apartment</option>
           <option>Two Bedroom Apartment</option>
           <option>Three Bedroom Duplex Penthouse</option>
