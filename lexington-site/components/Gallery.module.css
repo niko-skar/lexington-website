@@ -18,6 +18,7 @@
 
 .chip:hover {
   border-color: var(--brass);
+  background: var(--ink);
   color: var(--paper);
 }
 

@@ -86,6 +86,7 @@ export default async function HomePage() {
                 { value: startingPrice, prefix: "$", label: "Starting from" },
                 { value: projectedYield, suffix: "%", label: "Projected rental yield" },
                 { value: 7, label: "Storeys, Shiashie skyline" },
+                { value: 2027, prefix: "Dec ", label: "Estimated completion", noGrouping: true },
               ]}
             />
           </Reveal>

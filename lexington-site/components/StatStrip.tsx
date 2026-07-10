@@ -9,9 +9,12 @@ export interface Stat {
   prefix?: string;
   suffix?: string;
   label: string;
+  // Years (e.g. 2027) shouldn't get thousands-grouping — toLocaleString()
+  // would render one as "2,027".
+  noGrouping?: boolean;
 }
 
-function AnimatedStat({ value, prefix = "", suffix = "", label }: Stat) {
+function AnimatedStat({ value, prefix = "", suffix = "", label, noGrouping }: Stat) {
   const ref = useRef<HTMLDivElement>(null);
   const [display, setDisplay] = useState(0);
 
@@ -54,7 +57,7 @@ function AnimatedStat({ value, prefix = "", suffix = "", label }: Stat) {
     <div className={styles.stat} ref={ref}>
       <b>
         {prefix}
-        {display.toLocaleString()}
+        {display.toLocaleString(undefined, noGrouping ? { useGrouping: false } : undefined)}
         {suffix}
       </b>
       <span>{label}</span>

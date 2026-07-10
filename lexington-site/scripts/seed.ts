@@ -552,7 +552,7 @@ async function seedSiteSettings() {
     progressIntro: {
       eyebrow: "Progress",
       title: "Building The Lexington.",
-      lede: "Real photos from the site, updated as construction moves from the ground up.",
+      lede: "Real photos from the site, updated as construction moves from the ground up. Estimated completion: December 2027.",
     },
     investIntro: {
       eyebrow: "Why Invest",
