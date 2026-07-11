@@ -42,8 +42,24 @@ export const unit = defineType({
     defineField({
       name: "priceUSD",
       title: "Price (USD)",
+      description: "Price at this unit's minimum package tier (see below) — Standard for most units.",
       type: "number",
       validation: (Rule) => Rule.required().positive(),
+    }),
+    defineField({
+      name: "minPackageTier",
+      title: "Minimum package tier",
+      description:
+        'Leave as Standard for most units. Set to Premium for units (e.g. penthouses) that never drop below that finish — "Price (USD)" above is then read as the Premium price, and Standard won\'t be offered for this unit.',
+      type: "string",
+      options: {
+        list: [
+          { title: "Standard", value: "standard" },
+          { title: "Premium", value: "premium" },
+          { title: "Premium Plus", value: "premiumplus" },
+        ],
+      },
+      initialValue: "standard",
     }),
     defineField({
       name: "status",

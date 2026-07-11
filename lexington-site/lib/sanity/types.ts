@@ -4,6 +4,8 @@ export type UnitStatus = "available" | "reserved" | "sold";
 
 export type BedroomType = "Studio" | "One Bedroom" | "Two Bedroom" | "3BR Duplex Penthouse";
 
+export type PackageTierKey = "standard" | "premium" | "premiumplus";
+
 export interface Unit {
   _id: string;
   unitNumber: string;
@@ -13,6 +15,24 @@ export interface Unit {
   priceUSD: number;
   status: UnitStatus;
   notes?: string;
+  // Absent means "standard" — most units. Penthouses set this to
+  // "premium" since they never drop to the Standard finish.
+  minPackageTier?: PackageTierKey;
+}
+
+export interface PackageTier {
+  key: PackageTierKey;
+  name: string;
+  ratePerSqm: number;
+  badge?: string;
+  description?: string;
+  features: string[];
+  note?: string;
+}
+
+export interface PackageTiers {
+  _id: string;
+  tiers: PackageTier[];
 }
 
 export type GalleryCategory =

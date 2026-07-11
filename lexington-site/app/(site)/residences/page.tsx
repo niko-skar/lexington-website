@@ -2,11 +2,19 @@ import { client } from "@/lib/sanity/client";
 import { urlFor } from "@/lib/sanity/image";
 import {
   galleryImagesQuery,
+  packageTiersQuery,
   siteSettingsQuery,
   unitLocationPlansQuery,
   unitsQuery,
 } from "@/lib/sanity/queries";
-import type { BedroomType, GalleryImage, SiteSettings, Unit, UnitLocationPlan } from "@/lib/sanity/types";
+import type {
+  BedroomType,
+  GalleryImage,
+  PackageTiers,
+  SiteSettings,
+  Unit,
+  UnitLocationPlan,
+} from "@/lib/sanity/types";
 
 import { PageIntro } from "@/components/PageIntro";
 import { UnitFinder } from "@/components/UnitFinder";
@@ -28,12 +36,15 @@ const extras = [
 ];
 
 export default async function ResidencesPage() {
-  const [units, images, siteSettings, unitLocationPlans] = await Promise.all([
+  const [units, images, siteSettings, unitLocationPlans, packageTiers] = await Promise.all([
     client.fetch<Unit[]>(unitsQuery),
     client.fetch<GalleryImage[]>(galleryImagesQuery),
     client.fetch<SiteSettings>(siteSettingsQuery),
     client.fetch<UnitLocationPlan[]>(unitLocationPlansQuery),
+    client.fetch<PackageTiers | null>(packageTiersQuery),
   ]);
+
+  const tiers = packageTiers?.tiers ?? [];
 
   const floorplanImages = images.filter((i) => i.category === "floorplan");
   // The rendered penthouse plan (not the flat rooftop diagram) makes for a
@@ -68,7 +79,12 @@ export default async function ResidencesPage() {
 
       <section className="section sectionStone" style={{ paddingTop: "clamp(32px, 4vw, 56px)" }}>
         <div className="wrap">
-          <UnitFinder units={units} floorPlans={floorPlansByType} locationPlanByUnit={locationPlanByUnit} />
+          <UnitFinder
+            units={units}
+            floorPlans={floorPlansByType}
+            locationPlanByUnit={locationPlanByUnit}
+            tiers={tiers}
+          />
         </div>
       </section>
 

@@ -55,6 +55,15 @@
   font-weight: 600;
 }
 
+.priceNote {
+  display: block;
+  margin-top: 2px;
+  font-family: var(--font-sans);
+  font-weight: 400;
+  font-size: 11px;
+  color: var(--clay);
+}
+
 .plans {
   display: grid;
   gap: var(--space-6);

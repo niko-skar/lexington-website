@@ -2,11 +2,21 @@
 
 import { useMemo, useState } from "react";
 
-import type { BedroomType, GalleryImage, Unit, UnitLocationPlan, UnitStatus } from "@/lib/sanity/types";
+import type {
+  BedroomType,
+  GalleryImage,
+  PackageTier,
+  PackageTierKey,
+  Unit,
+  UnitLocationPlan,
+  UnitStatus,
+} from "@/lib/sanity/types";
 import { formatFloor, formatUSD } from "@/lib/format";
+import { floorTierName, isTierClamped, priceAtTier } from "@/lib/pricing";
 import { StatusBadge } from "./StatusBadge";
 import { UnitDetailModal } from "./UnitDetailModal";
 import { CompareModal } from "./CompareModal";
+import { PackageTiers } from "./PackageTiers";
 import styles from "./UnitFinder.module.css";
 
 type FloorFilter = number | "all";
@@ -25,15 +35,17 @@ interface UnitFinderProps {
   units: Unit[];
   floorPlans: Record<BedroomType, GalleryImage[]>;
   locationPlanByUnit: Record<string, UnitLocationPlan>;
+  tiers: PackageTier[];
 }
 
-export function UnitFinder({ units, floorPlans, locationPlanByUnit }: UnitFinderProps) {
+export function UnitFinder({ units, floorPlans, locationPlanByUnit, tiers }: UnitFinderProps) {
   const [floor, setFloor] = useState<FloorFilter>("all");
   const [type, setType] = useState<TypeFilter>("all");
   const [status, setStatus] = useState<StatusFilter>("all");
   const [selectedUnit, setSelectedUnit] = useState<Unit | null>(null);
   const [compareIds, setCompareIds] = useState<string[]>([]);
   const [showCompare, setShowCompare] = useState(false);
+  const [selectedTier, setSelectedTier] = useState<PackageTierKey>("standard");
   // null sortColumn means "default order" — whatever seed/floor order the
   // units arrived in, unchanged until someone clicks a header.
   const [sortColumn, setSortColumn] = useState<SortColumn | null>(null);
@@ -72,12 +84,12 @@ export function UnitFinder({ units, floorPlans, locationPlanByUnit }: UnitFinder
         case "area":
           return (a.areaSqm - b.areaSqm) * dir;
         case "price":
-          return (a.priceUSD - b.priceUSD) * dir;
+          return (priceAtTier(a, selectedTier, tiers) - priceAtTier(b, selectedTier, tiers)) * dir;
         case "status":
           return (STATUS_ORDER[a.status] - STATUS_ORDER[b.status]) * dir;
       }
     });
-  }, [filtered, sortColumn, sortDir]);
+  }, [filtered, sortColumn, sortDir, selectedTier, tiers]);
 
   const availableInFiltered = filtered.filter((u) => u.status === "available").length;
 
@@ -107,6 +119,10 @@ export function UnitFinder({ units, floorPlans, locationPlanByUnit }: UnitFinder
 
   return (
     <div>
+      <div className={styles.packages}>
+        <PackageTiers tiers={tiers} selected={selectedTier} onSelect={setSelectedTier} />
+      </div>
+
       <div className={styles.filters}>
         <div className={styles.filterGroup}>
           <span className={styles.filterLabel}>Floor</span>
@@ -207,6 +223,7 @@ export function UnitFinder({ units, floorPlans, locationPlanByUnit }: UnitFinder
           <tbody>
             {sorted.map((u) => {
               const checked = compareIds.includes(u._id);
+              const clamped = isTierClamped(u, selectedTier, tiers);
               return (
                 <tr
                   key={u._id}
@@ -234,7 +251,12 @@ export function UnitFinder({ units, floorPlans, locationPlanByUnit }: UnitFinder
                   <td>{formatFloor(u.floor)}</td>
                   <td>{u.bedroomType}</td>
                   <td>{u.areaSqm} sqm</td>
-                  <td className={styles.price}>{formatUSD(u.priceUSD)}</td>
+                  <td className={styles.price}>
+                    {formatUSD(priceAtTier(u, selectedTier, tiers))}
+                    {clamped && (
+                      <span className={styles.priceNote}>{floorTierName(u, tiers)} included as standard</span>
+                    )}
+                  </td>
                   <td>
                     <StatusBadge status={u.status} />
                   </td>
@@ -271,7 +293,12 @@ export function UnitFinder({ units, floorPlans, locationPlanByUnit }: UnitFinder
               <div className={styles.cardMeta}>
                 Floor {formatFloor(u.floor)} · {u.bedroomType} · {u.areaSqm} sqm
               </div>
-              <div className={styles.cardPrice}>{formatUSD(u.priceUSD)}</div>
+              <div className={styles.cardPrice}>
+                {formatUSD(priceAtTier(u, selectedTier, tiers))}
+                {isTierClamped(u, selectedTier, tiers) && (
+                  <span className={styles.priceNote}>{floorTierName(u, tiers)} included as standard</span>
+                )}
+              </div>
               <div className={styles.cardActions}>
                 <span className={styles.planLink}>View Floor Plan &amp; Location</span>
                 <label className={styles.compareLabel} onClick={(e) => e.stopPropagation()}>
@@ -298,6 +325,8 @@ export function UnitFinder({ units, floorPlans, locationPlanByUnit }: UnitFinder
           unit={selectedUnit}
           floorPlans={floorPlans[selectedUnit.bedroomType]}
           locationPlan={locationPlanByUnit[selectedUnit.unitNumber]}
+          tiers={tiers}
+          selectedTier={selectedTier}
           onClose={() => setSelectedUnit(null)}
         />
       )}
@@ -323,7 +352,7 @@ export function UnitFinder({ units, floorPlans, locationPlanByUnit }: UnitFinder
       )}
 
       {showCompare && compareUnits.length > 0 && (
-        <CompareModal units={compareUnits} onClose={() => setShowCompare(false)} />
+        <CompareModal units={compareUnits} tiers={tiers} onClose={() => setShowCompare(false)} />
       )}
     </div>
   );

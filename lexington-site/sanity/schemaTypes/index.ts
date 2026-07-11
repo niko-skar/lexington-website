@@ -6,6 +6,7 @@ import { financingPlan } from "./financingPlan";
 import { siteSettings } from "./siteSettings";
 import { unitLocationPlan } from "./unitLocationPlan";
 import { constructionUpdate } from "./constructionUpdate";
+import { packageTiers } from "./packageTiers";
 
 export const schemaTypes = [
   unit,
@@ -16,4 +17,5 @@ export const schemaTypes = [
   siteSettings,
   unitLocationPlan,
   constructionUpdate,
+  packageTiers,
 ];
