@@ -26,6 +26,12 @@ export const structure: StructureResolver = (S) =>
         .child(S.documentTypeList("familyMember").title("Family members")),
       S.divider(),
       S.listItem()
+        .title("Apartment packages")
+        .id("packageTiers")
+        .child(
+          S.document().schemaType("packageTiers").documentId("packageTiers")
+        ),
+      S.listItem()
         .title("Financing plan")
         .id("financingPlan")
         .child(

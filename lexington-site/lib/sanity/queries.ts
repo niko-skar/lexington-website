@@ -37,3 +37,7 @@ export const unitLocationPlansQuery = defineQuery(`
 export const constructionUpdatesQuery = defineQuery(`
   *[_type == "constructionUpdate"] | order(order asc)
 `);
+
+export const packageTiersQuery = defineQuery(`
+  *[_type == "packageTiers"][0]
+`);

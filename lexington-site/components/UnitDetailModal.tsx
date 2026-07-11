@@ -3,9 +3,10 @@
 import { useEffect } from "react";
 import Image from "next/image";
 
-import type { GalleryImage, Unit, UnitLocationPlan } from "@/lib/sanity/types";
+import type { GalleryImage, PackageTier, PackageTierKey, Unit, UnitLocationPlan } from "@/lib/sanity/types";
 import { urlFor } from "@/lib/sanity/image";
 import { formatFloor, formatUSD } from "@/lib/format";
+import { floorTierName, isTierClamped, priceAtTier } from "@/lib/pricing";
 import { StatusBadge } from "./StatusBadge";
 import styles from "./UnitDetailModal.module.css";
 
@@ -13,6 +14,8 @@ interface UnitDetailModalProps {
   unit: Unit;
   floorPlans: GalleryImage[];
   locationPlan?: UnitLocationPlan;
+  tiers: PackageTier[];
+  selectedTier: PackageTierKey;
   onClose: () => void;
 }
 
@@ -25,7 +28,14 @@ function planLabel(alt: string) {
   return label.replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-export function UnitDetailModal({ unit, floorPlans, locationPlan, onClose }: UnitDetailModalProps) {
+export function UnitDetailModal({
+  unit,
+  floorPlans,
+  locationPlan,
+  tiers,
+  selectedTier,
+  onClose,
+}: UnitDetailModalProps) {
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
@@ -47,7 +57,12 @@ export function UnitDetailModal({ unit, floorPlans, locationPlan, onClose }: Uni
             <div className={styles.meta}>
               Floor {formatFloor(unit.floor)} · {unit.bedroomType} · {unit.areaSqm} sqm
             </div>
-            <div className={styles.price}>{formatUSD(unit.priceUSD)}</div>
+            <div className={styles.price}>
+              {formatUSD(priceAtTier(unit, selectedTier, tiers))}
+              {isTierClamped(unit, selectedTier, tiers) && (
+                <span className={styles.priceNote}>{floorTierName(unit, tiers)} included as standard</span>
+              )}
+            </div>
           </div>
           <StatusBadge status={unit.status} />
         </div>

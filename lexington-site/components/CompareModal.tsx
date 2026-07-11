@@ -3,25 +3,26 @@
 import { useEffect } from "react";
 import type { ReactNode } from "react";
 
-import type { Unit } from "@/lib/sanity/types";
+import type { PackageTier, Unit } from "@/lib/sanity/types";
 import { formatFloor, formatUSD } from "@/lib/format";
+import { floorTierName, isTierClamped, priceAtTier } from "@/lib/pricing";
 import { StatusBadge } from "./StatusBadge";
 import styles from "./CompareModal.module.css";
 
 interface CompareModalProps {
   units: Unit[];
+  tiers: PackageTier[];
   onClose: () => void;
 }
 
-const rows: { label: string; render: (u: Unit) => ReactNode }[] = [
+const baseRows: { label: string; render: (u: Unit) => ReactNode }[] = [
   { label: "Floor", render: (u) => formatFloor(u.floor) },
   { label: "Type", render: (u) => u.bedroomType },
   { label: "Area", render: (u) => `${u.areaSqm} sqm` },
-  { label: "Price", render: (u) => formatUSD(u.priceUSD) },
   { label: "Status", render: (u) => <StatusBadge status={u.status} /> },
 ];
 
-export function CompareModal({ units, onClose }: CompareModalProps) {
+export function CompareModal({ units, tiers, onClose }: CompareModalProps) {
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
@@ -52,7 +53,33 @@ export function CompareModal({ units, onClose }: CompareModalProps) {
               </tr>
             </thead>
             <tbody>
-              {rows.map((row) => (
+              {baseRows.slice(0, 3).map((row) => (
+                <tr key={row.label}>
+                  <td className={styles.rowLabel}>{row.label}</td>
+                  {units.map((u) => (
+                    <td key={u._id}>{row.render(u)}</td>
+                  ))}
+                </tr>
+              ))}
+              {tiers.map((tier) => (
+                <tr key={tier.key}>
+                  <td className={styles.rowLabel}>{tier.name} price</td>
+                  {units.map((u) => {
+                    const clamped = isTierClamped(u, tier.key, tiers);
+                    return (
+                      <td key={u._id}>
+                        {formatUSD(priceAtTier(u, tier.key, tiers))}
+                        {clamped && (
+                          <span className={styles.priceNote}>
+                            {floorTierName(u, tiers)} included as standard
+                          </span>
+                        )}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+              {baseRows.slice(3).map((row) => (
                 <tr key={row.label}>
                   <td className={styles.rowLabel}>{row.label}</td>
                   {units.map((u) => (

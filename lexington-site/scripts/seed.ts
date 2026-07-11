@@ -113,6 +113,10 @@ type UnitSeed = {
   bedroomType: "One Bedroom" | "Two Bedroom" | "3BR Duplex Penthouse";
   areaSqm: number;
   priceUSD: number;
+  // Absent means "standard" — most units. Penthouses set this to "premium"
+  // since they never drop to the Standard finish (priceUSD above is their
+  // Premium price).
+  minPackageTier?: "standard" | "premium" | "premiumplus";
 };
 
 const units: UnitSeed[] = [
@@ -146,8 +150,8 @@ const units: UnitSeed[] = [
   { unitNumber: "502B", floor: 6, bedroomType: "One Bedroom", areaSqm: 88, priceUSD: 221000 },
   { unitNumber: "503B", floor: 6, bedroomType: "One Bedroom", areaSqm: 79, priceUSD: 198000 },
 
-  { unitNumber: "PH1a", floor: 7, bedroomType: "3BR Duplex Penthouse", areaSqm: 327, priceUSD: 817500 },
-  { unitNumber: "PH2b", floor: 7, bedroomType: "3BR Duplex Penthouse", areaSqm: 375, priceUSD: 937500 },
+  { unitNumber: "PH1a", floor: 7, bedroomType: "3BR Duplex Penthouse", areaSqm: 327, priceUSD: 817500, minPackageTier: "premium" },
+  { unitNumber: "PH2b", floor: 7, bedroomType: "3BR Duplex Penthouse", areaSqm: 375, priceUSD: 937500, minPackageTier: "premium" },
 ];
 
 // Only the Garden is confirmed rooftop in the brochure; the rest are
@@ -444,6 +448,62 @@ async function seedFinancingPlan() {
   });
 }
 
+async function seedPackageTiers() {
+  console.log("Seeding package tiers...");
+  await client.createOrReplace({
+    _id: "packageTiers",
+    _type: "packageTiers",
+    tiers: [
+      {
+        _key: "standard",
+        key: "standard",
+        name: "Standard",
+        ratePerSqm: 0,
+        description: "The finish every residence ships with.",
+        features: [
+          "Basic tiles and white walls",
+          "Base kitchen with laminate countertop",
+          "Base bathroom fittings",
+          "Base lights and ceiling works",
+          "Base glass",
+        ],
+      },
+      {
+        _key: "premium",
+        key: "premium",
+        name: "Premium",
+        ratePerSqm: 150,
+        badge: "Popular",
+        description: "Natural stone finishes, upgraded fittings and soundproofed glass.",
+        features: [
+          "Black natural stone and skirting",
+          "Premium kitchen with stone or granite countertop",
+          "Upgraded bathroom fittings",
+          "Paint colour of your choice",
+          "Hidden lights and ceiling works, plus dimmable switches",
+          "10mm thick window glass, laminated and tempered for soundproofing",
+        ],
+        note: "Included as standard on penthouses.",
+      },
+      {
+        _key: "premiumplus",
+        key: "premiumplus",
+        name: "Premium Plus",
+        ratePerSqm: 300,
+        badge: "Smart Home",
+        description: "Fully smart-home enabled, with advanced sound and burglarproofing.",
+        features: [
+          "Curtains",
+          "Upgraded kitchen appliances",
+          "Smart home enabled — control everything from your phone",
+          "16mm thick window glass",
+          "Advanced soundproofing and burglarproofing",
+        ],
+      },
+    ],
+  });
+}
+
 async function seedGallery() {
   console.log(`Seeding ${galleryEntries.length} gallery images (skipping re-upload if already present)...`);
   for (let i = 0; i < galleryEntries.length; i++) {
@@ -603,6 +663,7 @@ async function main() {
   await seedAmenities();
   await seedFamilyMembers();
   await seedFinancingPlan();
+  await seedPackageTiers();
   await seedGallery();
   await seedUnitLocationPlans();
   await seedConstructionUpdates();

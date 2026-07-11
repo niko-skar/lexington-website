@@ -74,3 +74,11 @@
   color: var(--ink);
   font-variant-numeric: tabular-nums;
 }
+
+.priceNote {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--clay);
+  white-space: normal;
+}
