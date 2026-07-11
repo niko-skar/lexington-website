@@ -84,6 +84,7 @@ const curatedGalleryEntries: GalleryEntry[] = [
   { id: "gallery-13", file: "gallery-13.jpg", alt: "Café and lounge terrace", category: "amenity" },
   { id: "gallery-14", file: "gallery-14.jpg", alt: "Pool deck", category: "amenity" },
 
+  { id: "floorplan-studio", file: "floorplan-studio.png", alt: "Sample studio floor plan", category: "floorplan" },
   { id: "floorplan-one-bedroom", file: "floorplan-one-bedroom.png", alt: "Sample one-bedroom floor plan", category: "floorplan" },
   { id: "floorplan-two-bedroom", file: "floorplan-two-bedroom.png", alt: "Sample two-bedroom floor plan", category: "floorplan" },
   // The 3BR duplex penthouses span two levels — lower floor (living areas)
