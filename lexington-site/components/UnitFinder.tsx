@@ -208,8 +208,19 @@ export function UnitFinder({ units, floorPlans, locationPlanByUnit }: UnitFinder
             {sorted.map((u) => {
               const checked = compareIds.includes(u._id);
               return (
-                <tr key={u._id}>
-                  <td className={styles.checkboxCol}>
+                <tr
+                  key={u._id}
+                  className={styles.clickableRow}
+                  tabIndex={0}
+                  onClick={() => setSelectedUnit(u)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setSelectedUnit(u);
+                    }
+                  }}
+                >
+                  <td className={styles.checkboxCol} onClick={(e) => e.stopPropagation()}>
                     <input
                       type="checkbox"
                       className={styles.compareCheckbox}
@@ -228,9 +239,7 @@ export function UnitFinder({ units, floorPlans, locationPlanByUnit }: UnitFinder
                     <StatusBadge status={u.status} />
                   </td>
                   <td>
-                    <button className={styles.planLink} onClick={() => setSelectedUnit(u)}>
-                      Floor Plan
-                    </button>
+                    <span className={styles.planLink}>Floor Plan</span>
                   </td>
                 </tr>
               );
@@ -243,7 +252,18 @@ export function UnitFinder({ units, floorPlans, locationPlanByUnit }: UnitFinder
         {sorted.map((u) => {
           const checked = compareIds.includes(u._id);
           return (
-            <div className={styles.card} key={u._id}>
+            <div
+              className={`${styles.card} ${styles.clickableRow}`}
+              key={u._id}
+              tabIndex={0}
+              onClick={() => setSelectedUnit(u)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  setSelectedUnit(u);
+                }
+              }}
+            >
               <div className={styles.cardHead}>
                 <span className={styles.cardUnit}>{u.unitNumber}</span>
                 <StatusBadge status={u.status} />
@@ -253,10 +273,8 @@ export function UnitFinder({ units, floorPlans, locationPlanByUnit }: UnitFinder
               </div>
               <div className={styles.cardPrice}>{formatUSD(u.priceUSD)}</div>
               <div className={styles.cardActions}>
-                <button className={styles.planLink} onClick={() => setSelectedUnit(u)}>
-                  View Floor Plan &amp; Location
-                </button>
-                <label className={styles.compareLabel}>
+                <span className={styles.planLink}>View Floor Plan &amp; Location</span>
+                <label className={styles.compareLabel} onClick={(e) => e.stopPropagation()}>
                   <input
                     type="checkbox"
                     checked={checked}
