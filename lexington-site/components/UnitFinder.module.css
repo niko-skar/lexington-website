@@ -47,7 +47,11 @@
   background: var(--brass);
   border-color: var(--brass);
   color: var(--ink);
-  font-weight: 600;
+  /* Looks bolder without actually switching font-weight — a real weight
+     change widens long labels (e.g. "3BR Duplex Penthouse") just enough
+     to wrap the filter row onto a second line, which shifted the whole
+     table down only when that specific chip was active. */
+  text-shadow: 0 0 0.6px currentColor, 0 0 0.6px currentColor;
 }
 
 .count {
