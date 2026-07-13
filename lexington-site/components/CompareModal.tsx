@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 
 import type { PackageTier, Unit } from "@/lib/sanity/types";
 import { formatFloor, formatUSD } from "@/lib/format";
-import { floorTierName, isTierClamped, priceAtTier } from "@/lib/pricing";
+import { floorTierName, isTierClamped, priceAtTier, tierAddon } from "@/lib/pricing";
 import { StatusBadge } from "./StatusBadge";
 import styles from "./CompareModal.module.css";
 
@@ -66,13 +66,20 @@ export function CompareModal({ units, tiers, onClose }: CompareModalProps) {
                   <td className={styles.rowLabel}>{tier.name} price</td>
                   {units.map((u) => {
                     const clamped = isTierClamped(u, tier.key, tiers);
+                    const addon = tierAddon(u, tier.key, tiers);
                     return (
                       <td key={u._id}>
                         {formatUSD(priceAtTier(u, tier.key, tiers))}
-                        {clamped && (
+                        {clamped ? (
                           <span className={styles.priceNote}>
                             {floorTierName(u, tiers)} included as standard
                           </span>
+                        ) : (
+                          addon > 0 && (
+                            <span className={styles.priceBreakdown}>
+                              {formatUSD(u.priceUSD)} + {formatUSD(addon)}
+                            </span>
+                          )
                         )}
                       </td>
                     );

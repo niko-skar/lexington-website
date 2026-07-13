@@ -12,7 +12,7 @@ import type {
   UnitStatus,
 } from "@/lib/sanity/types";
 import { formatFloor, formatUSD } from "@/lib/format";
-import { floorTierName, isTierClamped, priceAtTier } from "@/lib/pricing";
+import { floorTierName, isTierClamped, priceAtTier, tierAddon } from "@/lib/pricing";
 import { StatusBadge } from "./StatusBadge";
 import { UnitDetailModal } from "./UnitDetailModal";
 import { CompareModal } from "./CompareModal";
@@ -224,6 +224,7 @@ export function UnitFinder({ units, floorPlans, locationPlanByUnit, tiers }: Uni
             {sorted.map((u) => {
               const checked = compareIds.includes(u._id);
               const clamped = isTierClamped(u, selectedTier, tiers);
+              const addon = tierAddon(u, selectedTier, tiers);
               return (
                 <tr
                   key={u._id}
@@ -253,8 +254,14 @@ export function UnitFinder({ units, floorPlans, locationPlanByUnit, tiers }: Uni
                   <td>{u.areaSqm} sqm</td>
                   <td className={styles.price}>
                     {formatUSD(priceAtTier(u, selectedTier, tiers))}
-                    {clamped && (
+                    {clamped ? (
                       <span className={styles.priceNote}>{floorTierName(u, tiers)} included as standard</span>
+                    ) : (
+                      addon > 0 && (
+                        <span className={styles.priceBreakdown}>
+                          {formatUSD(u.priceUSD)} + {formatUSD(addon)}
+                        </span>
+                      )
                     )}
                   </td>
                   <td>
@@ -273,6 +280,8 @@ export function UnitFinder({ units, floorPlans, locationPlanByUnit, tiers }: Uni
       <div className={styles.cards}>
         {sorted.map((u) => {
           const checked = compareIds.includes(u._id);
+          const clamped = isTierClamped(u, selectedTier, tiers);
+          const addon = tierAddon(u, selectedTier, tiers);
           return (
             <div
               className={`${styles.card} ${styles.clickableRow}`}
@@ -295,8 +304,14 @@ export function UnitFinder({ units, floorPlans, locationPlanByUnit, tiers }: Uni
               </div>
               <div className={styles.cardPrice}>
                 {formatUSD(priceAtTier(u, selectedTier, tiers))}
-                {isTierClamped(u, selectedTier, tiers) && (
+                {clamped ? (
                   <span className={styles.priceNote}>{floorTierName(u, tiers)} included as standard</span>
+                ) : (
+                  addon > 0 && (
+                    <span className={styles.priceBreakdown}>
+                      {formatUSD(u.priceUSD)} + {formatUSD(addon)}
+                    </span>
+                  )
                 )}
               </div>
               <div className={styles.cardActions}>

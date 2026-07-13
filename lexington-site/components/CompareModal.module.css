@@ -82,3 +82,11 @@
   color: var(--clay);
   white-space: normal;
 }
+
+.priceBreakdown {
+  display: block;
+  margin-top: 2px;
+  font-size: 11.5px;
+  color: var(--brass);
+  white-space: normal;
+}

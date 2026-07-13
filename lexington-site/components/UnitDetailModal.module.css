@@ -64,6 +64,16 @@
   color: var(--clay);
 }
 
+.priceBreakdown {
+  display: block;
+  margin-top: 2px;
+  font-family: var(--font-sans);
+  font-weight: 400;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--brass);
+}
+
 .plans {
   display: grid;
   gap: var(--space-6);

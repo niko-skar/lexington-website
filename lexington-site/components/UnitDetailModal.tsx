@@ -6,7 +6,7 @@ import Image from "next/image";
 import type { GalleryImage, PackageTier, PackageTierKey, Unit, UnitLocationPlan } from "@/lib/sanity/types";
 import { urlFor } from "@/lib/sanity/image";
 import { formatFloor, formatUSD } from "@/lib/format";
-import { floorTierName, isTierClamped, priceAtTier } from "@/lib/pricing";
+import { floorTierName, isTierClamped, priceAtTier, tierAddon } from "@/lib/pricing";
 import { StatusBadge } from "./StatusBadge";
 import styles from "./UnitDetailModal.module.css";
 
@@ -44,6 +44,9 @@ export function UnitDetailModal({
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
+  const clamped = isTierClamped(unit, selectedTier, tiers);
+  const addon = tierAddon(unit, selectedTier, tiers);
+
   return (
     <div className={styles.overlay} onClick={onClose} role="dialog" aria-modal="true">
       <div className={styles.panel} onClick={(e) => e.stopPropagation()}>
@@ -59,8 +62,14 @@ export function UnitDetailModal({
             </div>
             <div className={styles.price}>
               {formatUSD(priceAtTier(unit, selectedTier, tiers))}
-              {isTierClamped(unit, selectedTier, tiers) && (
+              {clamped ? (
                 <span className={styles.priceNote}>{floorTierName(unit, tiers)} included as standard</span>
+              ) : (
+                addon > 0 && (
+                  <span className={styles.priceBreakdown}>
+                    {formatUSD(unit.priceUSD)} + {formatUSD(addon)}
+                  </span>
+                )
               )}
             </div>
           </div>
