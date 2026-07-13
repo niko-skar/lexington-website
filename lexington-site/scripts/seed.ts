@@ -440,6 +440,7 @@ async function seedFinancingPlan() {
       { _key: "downpayment", milestone: "Downpayment", timeframe: "30 Days", option1: "30%" },
       { _key: "final", milestone: "Final", timeframe: "Completion", option1: "70%" },
     ],
+    mortgageNote: "Unit prices for mortgage financing are 5% higher across the board.",
     buyToRent: {
       oneBedroomRange: "$1,300–$2,100/mo",
       twoBedroomRange: "$1,900–$2,900/mo",

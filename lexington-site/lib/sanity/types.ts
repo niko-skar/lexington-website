@@ -94,6 +94,7 @@ export interface FinancingPlan {
   selfFinanceRows: SelfFinanceRow[];
   upfrontDiscountTiers: UpfrontDiscountTier[];
   mortgageRows: MortgageRow[];
+  mortgageNote: string;
   buyToRent: {
     oneBedroomRange: string;
     twoBedroomRange: string;

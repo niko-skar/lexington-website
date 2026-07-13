@@ -73,6 +73,12 @@ export const financingPlan = defineType({
       of: [defineArrayMember(mortgageRow)],
     }),
     defineField({
+      name: "mortgageNote",
+      title: "Mortgage financing note",
+      description: 'e.g. "Unit prices for mortgage financing are 5% higher across the board."',
+      type: "text",
+    }),
+    defineField({
       name: "buyToRent",
       title: "Buy to rent",
       type: "object",

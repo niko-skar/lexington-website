@@ -67,6 +67,9 @@ export default async function InvestPage() {
           <div className="eyebrow" style={{ marginTop: 56 }}>
             Mortgage Financing
           </div>
+          <p style={{ marginTop: 12, color: "#555", maxWidth: 620, fontSize: 15 }}>
+            {financingPlan.mortgageNote}
+          </p>
           <div className={planTableStyles.tableScroll} style={{ marginTop: 20 }}>
             <table className={planTableStyles.table}>
               <thead>
