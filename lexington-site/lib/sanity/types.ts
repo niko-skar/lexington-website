@@ -99,6 +99,11 @@ export interface FinancingPlan {
     twoBedroomRange: string;
     projectedYieldPct: number;
   };
+  serviceCharge: {
+    description: string;
+    coveredItems: string[];
+    note: string;
+  };
 }
 
 export interface PageIntroContent {

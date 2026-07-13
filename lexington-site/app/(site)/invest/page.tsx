@@ -122,6 +122,65 @@ export default async function InvestPage() {
         </div>
       </section>
 
+      <section className="section sectionStone" style={{ background: "var(--stone-lt)" }}>
+        <div className="wrap">
+          <Reveal>
+            <div className="eyebrow">Ongoing Costs</div>
+            <h2 style={{ fontSize: "var(--fs-600)", marginTop: 14 }}>
+              A monthly building management fee.
+            </h2>
+            <p style={{ marginTop: 16, color: "#555", maxWidth: 620 }}>
+              {financingPlan.serviceCharge.description}
+            </p>
+          </Reveal>
+
+          <div
+            style={{
+              marginTop: 40,
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+              gap: "12px 40px",
+              maxWidth: 620,
+            }}
+          >
+            {financingPlan.serviceCharge.coveredItems.map((item) => (
+              <div key={item} style={{ display: "flex", alignItems: "flex-start", gap: 9, fontSize: 15 }}>
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  style={{ flex: "none", marginTop: 4, color: "var(--brass)" }}
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M3 8.5L6.2 11.5L13 4.5"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+                {item}
+              </div>
+            ))}
+          </div>
+
+          <p
+            className="disclaimer"
+            style={{
+              marginTop: 28,
+              maxWidth: 620,
+              borderLeft: "2px solid var(--clay)",
+              paddingLeft: 14,
+              color: "var(--clay)",
+            }}
+          >
+            {financingPlan.serviceCharge.note}
+          </p>
+        </div>
+      </section>
+
       {rentalImage && (
         <SplitSection
           imageUrl={urlFor(rentalImage.image).width(800).height(1000).url()}

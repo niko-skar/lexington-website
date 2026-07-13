@@ -94,6 +94,22 @@ export const financingPlan = defineType({
         }),
       ],
     }),
+    defineField({
+      name: "serviceCharge",
+      title: "Building management fee",
+      description: "The Invest page's \"Ongoing Costs\" section, shown before Buy to Rent.",
+      type: "object",
+      fields: [
+        defineField({ name: "description", title: "Description", type: "text" }),
+        defineField({
+          name: "coveredItems",
+          title: "What it covers",
+          type: "array",
+          of: [defineArrayMember({ type: "string" })],
+        }),
+        defineField({ name: "note", title: "Note", type: "text" }),
+      ],
+    }),
   ],
   preview: {
     prepare() {

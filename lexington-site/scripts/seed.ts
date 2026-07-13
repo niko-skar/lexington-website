@@ -445,6 +445,20 @@ async function seedFinancingPlan() {
       twoBedroomRange: "$1,900–$2,900/mo",
       projectedYieldPct: 11,
     },
+    serviceCharge: {
+      description:
+        "Every residence carries a monthly building management fee covering the upkeep of shared spaces and amenities. The fee is set each year against The Lexington's approved operating budget and reserve fund — not a flat, arbitrary charge.",
+      coveredItems: [
+        "Swimming pool & gym",
+        "Elevators",
+        "Common-area lighting",
+        "Security",
+        "Generator servicing",
+        "Water, common areas",
+        "Electricity, common areas",
+      ],
+      note: "Fee amount is confirmed annually alongside the approved operating budget and reserve fund — contact us for the current schedule. This covers shared spaces only, separate from the electricity and water metered to your own unit.",
+    },
   });
 }
 
