@@ -177,11 +177,25 @@
 .checkboxCol {
   width: 90px;
   white-space: nowrap;
+  padding: 0 !important;
+}
+
+/* Fills the whole cell (not just the 17px checkbox) so a near-miss click
+   still toggles compare instead of falling through to the row's onClick
+   and opening the floor plan modal. */
+.compareCellLabel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 90px;
+  height: 100%;
+  min-height: 48px;
+  cursor: pointer;
 }
 
 .compareCheckbox {
-  width: 17px;
-  height: 17px;
+  width: 19px;
+  height: 19px;
   accent-color: var(--brass);
   cursor: pointer;
 }
@@ -198,6 +212,10 @@
   margin-top: 0;
 }
 
+/* Padding + matching negative margin grows the tappable area without
+   shifting the label's visible position — a near-miss tap still hits the
+   label (and its stopPropagation) instead of falling through to the card
+   and opening the floor plan modal. */
 .compareLabel {
   display: flex;
   align-items: center;
@@ -207,11 +225,14 @@
   letter-spacing: 0.03em;
   text-transform: uppercase;
   color: #6b6355;
+  padding: 10px 8px;
+  margin: -10px -8px;
+  cursor: pointer;
 }
 
 .compareLabel input {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   accent-color: var(--brass);
   cursor: pointer;
 }

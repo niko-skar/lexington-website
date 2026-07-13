@@ -238,15 +238,17 @@ export function UnitFinder({ units, floorPlans, locationPlanByUnit, tiers }: Uni
                     }
                   }}
                 >
-                  <td className={styles.checkboxCol} onClick={(e) => e.stopPropagation()}>
-                    <input
-                      type="checkbox"
-                      className={styles.compareCheckbox}
-                      checked={checked}
-                      onChange={() => toggleCompare(u._id)}
-                      disabled={!checked && compareIds.length >= MAX_COMPARE}
-                      aria-label={`Add ${u.unitNumber} to compare`}
-                    />
+                  <td className={styles.checkboxCol}>
+                    <label className={styles.compareCellLabel} onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        className={styles.compareCheckbox}
+                        checked={checked}
+                        onChange={() => toggleCompare(u._id)}
+                        disabled={!checked && compareIds.length >= MAX_COMPARE}
+                        aria-label={`Add ${u.unitNumber} to compare`}
+                      />
+                    </label>
                   </td>
                   <td>{u.unitNumber}</td>
                   <td>{formatFloor(u.floor)}</td>
