@@ -375,7 +375,19 @@ async function seedAmenities() {
   console.log(`Seeding ${all.length} amenities...`);
   for (const a of all) {
     const id = `amenity-${AMENITY_ID_PREFIX[a.category]}-${slugify(a.name)}`;
-    await client.createOrReplace({ _id: id, _type: "amenity", ...a });
+    // image/caption are set in Studio, not by this script — preserve
+    // whatever's already there instead of overwriting it with nothing.
+    const existing = await client.fetch<{ image?: object; caption?: string } | null>(
+      `*[_id == $id][0]{image, caption}`,
+      { id }
+    );
+    await client.createOrReplace({
+      _id: id,
+      _type: "amenity",
+      ...a,
+      ...(existing?.image && { image: existing.image }),
+      ...(existing?.caption && { caption: existing.caption }),
+    });
   }
 
   // These 6 amenities moved from "rooftop" to "signature" (location not
