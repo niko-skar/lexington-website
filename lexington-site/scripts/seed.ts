@@ -73,15 +73,17 @@ const curatedGalleryEntries: GalleryEntry[] = [
   { id: "gallery-4", file: "gallery-4.jpg", alt: "Open-plan dining and kitchen area", category: "interior" },
   { id: "gallery-7", file: "gallery-7.jpg", alt: "Bedroom interior", category: "interior" },
 
-  { id: "interior-1", file: "interior-1.jpg", alt: "Indoor pool and gym area", category: "amenity" },
-  { id: "interior-2", file: "interior-2.jpg", alt: "Indoor pool and gym area", category: "amenity" },
-  { id: "interior-3", file: "interior-3.jpg", alt: "Jacuzzi and fitness area", category: "amenity" },
-  { id: "interior-4", file: "interior-4.jpg", alt: "Jacuzzi and fitness area", category: "amenity" },
+  // AI-redesigned (MeltFlex) from the original architectural CGI renders —
+  // same room/layout, but styled as a finished, photorealistic amenity
+  // space instead of an unfurnished showroom render.
+  { id: "interior-1", file: "pool-redesigned.jpg", alt: "Indoor pool and gym area", category: "amenity" },
+  { id: "interior-3", file: "jacuzzi-redesigned.jpg", alt: "Jacuzzi and spa lounge", category: "amenity" },
+  { id: "interior-4", file: "sauna-redesigned.jpg", alt: "Sauna", category: "amenity" },
+  { id: "icebath-1", file: "icebath-redesigned.jpg", alt: "Ice bath", category: "amenity" },
   { id: "gallery-9", file: "gallery-9.jpg", alt: "Rooftop lounge with fire feature", category: "amenity" },
   { id: "gallery-10", file: "gallery-10.jpg", alt: "Rooftop terrace view", category: "amenity" },
-  { id: "gallery-11", file: "gallery-11.jpg", alt: "Gym and fitness area", category: "amenity" },
-  { id: "gallery-12", file: "gallery-12.jpg", alt: "Indoor pool and gym", category: "amenity" },
-  { id: "gallery-13", file: "gallery-13.jpg", alt: "Café and lounge terrace", category: "amenity" },
+  { id: "gallery-11", file: "gym-redesigned.jpg", alt: "Gym and fitness area", category: "amenity" },
+  { id: "gallery-13", file: "cafe-redesigned.jpg", alt: "Café and lounge terrace", category: "amenity" },
   { id: "gallery-14", file: "gallery-14.jpg", alt: "Pool deck", category: "amenity" },
 
   { id: "floorplan-studio", file: "floorplan-studio.png", alt: "Sample studio floor plan", category: "floorplan" },
@@ -105,6 +107,10 @@ const STALE_GALLERY_IDS = [
   "gallery-gallery-5",
   "gallery-gallery-8",
   "gallery-floorplan-duplex-penthouse",
+  // Duplicate pool/jacuzzi renders — the same rooms are now covered by the
+  // single redesigned photo for each (interior-1, interior-3, interior-4).
+  "gallery-interior-2",
+  "gallery-gallery-12",
 ];
 
 type UnitSeed = {
