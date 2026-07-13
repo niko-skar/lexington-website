@@ -4,7 +4,6 @@ import { financingPlanQuery, galleryImagesQuery, siteSettingsQuery } from "@/lib
 import type { FinancingPlan, GalleryImage, SiteSettings } from "@/lib/sanity/types";
 
 import { PageIntro } from "@/components/PageIntro";
-import { PaymentStepper } from "@/components/PaymentStepper";
 import { SplitSection } from "@/components/SplitSection";
 import { Button } from "@/components/Button";
 import { Reveal } from "@/components/Reveal";
@@ -42,11 +41,7 @@ export default async function InvestPage() {
             </p>
           </Reveal>
 
-          <div style={{ marginTop: 48 }}>
-            <PaymentStepper rows={financingPlan.selfFinanceRows} />
-          </div>
-
-          <div className={planTableStyles.tableScroll}>
+          <div className={planTableStyles.tableScroll} style={{ marginTop: 40 }}>
             <table className={planTableStyles.table}>
               <thead>
                 <tr>
