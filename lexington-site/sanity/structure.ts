@@ -16,6 +16,21 @@ export const structure: StructureResolver = (S) =>
             ])
         ),
       S.listItem()
+        .title("Floor plans")
+        .child(
+          S.documentTypeList("galleryImage")
+            .title("Floor plans")
+            .filter('_type == "galleryImage" && category == "floorplan"')
+            .defaultOrdering([{ field: "order", direction: "asc" }])
+        ),
+      S.listItem()
+        .title("Unit location plans")
+        .child(
+          S.documentTypeList("unitLocationPlan")
+            .title("Unit location plans")
+            .defaultOrdering([{ field: "floor", direction: "asc" }])
+        ),
+      S.listItem()
         .title("Gallery images")
         .child(S.documentTypeList("galleryImage").title("Gallery images")),
       S.listItem()
