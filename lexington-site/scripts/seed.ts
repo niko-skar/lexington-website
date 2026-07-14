@@ -192,7 +192,7 @@ const familyMembers = [
     name: "Mikhail Skarlatos",
     years: "1922 – Present",
     bio: "Senior Executive at Doxiades & Associates for 60+ years, responsible for city-wide planning and development of Tema from the ground up in the 1960s.",
-    photoFile: "family-mikhail.jpg",
+    photoFile: "family-mikhail-2.jpg",
   },
   {
     name: "Leo Skarlatos",

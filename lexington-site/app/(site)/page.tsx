@@ -46,10 +46,10 @@ export default async function HomePage() {
 
   const heroImage = exteriorImages[0];
   const residencesImage = interiorImages[1] ?? interiorImages[0];
-  // Niko is the generation actively developing The Lexington — his photo
-  // is the most relevant single portrait for this teaser.
+  // Mikhail founded the family's development legacy in 1960s Tema — his
+  // portrait anchors the "three generations" teaser on the home page.
   const familyPhotoMember =
-    familyMembers.find((m) => m.name.includes("Niko")) ?? familyMembers[0];
+    familyMembers.find((m) => m.name.includes("Mikhail")) ?? familyMembers[0];
 
   const featuredAmenities = amenities
     .filter((a) => a.category === "signature" || a.category === "rooftop")
