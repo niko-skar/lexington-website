@@ -34,12 +34,11 @@
 
 .mapThumb {
   display: block;
-  flex: none;
   width: 200px;
+  margin-top: 20px;
   border-radius: var(--radius);
   overflow: hidden;
   border: 1px solid var(--ink-line);
-  align-self: flex-start;
   transition: border-color 0.2s var(--ease);
 }
 

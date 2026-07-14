@@ -22,7 +22,7 @@ function footerMapUrl() {
   const { lat, lng } = LEXINGTON_COORDS;
   const params = [
     `center=${lat},${lng}`,
-    "zoom=15",
+    "zoom=12",
     "size=280x160",
     "scale=2",
     `markers=color:0xb08d57%7C${lat},${lng}`,
@@ -44,17 +44,17 @@ export async function SiteFooter() {
               The Lexington
               <small>A Skarlatos &amp; Son Development</small>
             </div>
+            <a
+              className={styles.mapThumb}
+              href={googleMapsUrl()}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="View The Lexington's location on Google Maps"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={footerMapUrl()} alt="Map showing The Lexington's location in Shiashie, East Legon" width={280} height={160} />
+            </a>
           </div>
-          <a
-            className={styles.mapThumb}
-            href={googleMapsUrl()}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="View The Lexington's location on Google Maps"
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={footerMapUrl()} alt="Map showing The Lexington's location in Shiashie, East Legon" width={280} height={160} />
-          </a>
           <div className={styles.links}>
             <div>
               <h4>Explore</h4>
