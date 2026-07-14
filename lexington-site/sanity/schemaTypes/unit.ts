@@ -1,4 +1,4 @@
-import { defineField, defineType } from "sanity";
+import { defineArrayMember, defineField, defineType } from "sanity";
 
 export const unit = defineType({
   name: "unit",
@@ -81,6 +81,28 @@ export const unit = defineType({
       title: "Notes",
       type: "text",
       rows: 3,
+    }),
+    defineField({
+      name: "floorPlans",
+      title: "Floor plan(s)",
+      description:
+        "Pick this unit's floor plan image(s) from the Gallery's floor-plan photos. Duplex penthouses usually need two (lower + upper level). Leave empty to fall back to the shared plan for this unit's bedroom type.",
+      type: "array",
+      of: [
+        defineArrayMember({
+          type: "reference",
+          to: [{ type: "galleryImage" }],
+          options: { filter: 'category == "floorplan"' },
+        }),
+      ],
+    }),
+    defineField({
+      name: "locationPlan",
+      title: "Location plan",
+      description:
+        "Which building-location diagram shows where this unit sits (usually shared by every unit on the same part of the floor). Leave empty to fall back to the diagram matched by floor.",
+      type: "reference",
+      to: [{ type: "unitLocationPlan" }],
     }),
   ],
   orderings: [

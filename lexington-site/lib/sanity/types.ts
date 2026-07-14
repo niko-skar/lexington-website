@@ -18,6 +18,11 @@ export interface Unit {
   // Absent means "standard" — most units. Penthouses set this to
   // "premium" since they never drop to the Standard finish.
   minPackageTier?: PackageTierKey;
+  // Per-unit overrides, editable in Studio. Absent means "fall back to
+  // the shared plan matched by bedroom type / floor" — see lib logic
+  // in the residences page and UnitFinder.
+  floorPlans?: GalleryImage[];
+  locationPlan?: UnitLocationPlan;
 }
 
 export interface PackageTier {

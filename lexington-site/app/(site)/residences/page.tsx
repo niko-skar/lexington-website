@@ -52,8 +52,11 @@ export default async function ResidencesPage() {
   const floorplanImage =
     floorplanImages.find((i) => i.alt.toLowerCase().includes("duplex")) ?? floorplanImages[0];
 
-  // Duplex penthouses span two levels, so they have two floor plans (lower
-  // + upper/rooftop) that both need to be viewable — everything else has one.
+  // Fallback only — most units now carry their own `floorPlans`/
+  // `locationPlan` reference(s), set directly on the unit in Studio (see
+  // sanity/schemaTypes/unit.ts). This by-type/by-floor matching only
+  // kicks in for a unit that hasn't been assigned one yet (e.g. a
+  // brand-new unit added straight in Studio).
   const floorPlansByType: Record<BedroomType, GalleryImage[]> = {
     // No studio floor plan render exists yet — UnitDetailModal already
     // falls back to "available on request" when this is empty.
@@ -63,9 +66,7 @@ export default async function ResidencesPage() {
     "3BR Duplex Penthouse": floorplanImages.filter((i) => i.alt.toLowerCase().includes("duplex")),
   };
 
-  // A floor's units are sometimes split across two location diagrams (not
-  // every unit fits in one render), so look up by unit number rather than
-  // by floor alone.
+  // Fallback only, same reasoning as floorPlansByType above.
   const locationPlanByUnit: Record<string, UnitLocationPlan> = {};
   for (const plan of unitLocationPlans) {
     for (const unitNumber of plan.units) {

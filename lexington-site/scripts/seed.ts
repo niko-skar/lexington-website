@@ -95,6 +95,17 @@ const curatedGalleryEntries: GalleryEntry[] = [
   { id: "floorplan-duplex-upper", file: "floorplan-duplex-upper.png", alt: "Sample duplex penthouse floor plan — upper floor (rooftop level)", category: "floorplan" },
 ];
 
+// Default floor-plan doc(s) per bedroom type, referenced onto each unit's
+// own `floorPlans` field at seed time (see seedUnits) so Studio shows a
+// real, editable relationship instead of a hidden alt-text match. No
+// studio render exists yet, so that one resolves to nothing.
+const FLOORPLAN_IDS_BY_TYPE: Record<string, string[]> = {
+  Studio: [],
+  "One Bedroom": ["gallery-floorplan-one-bedroom"],
+  "Two Bedroom": ["gallery-floorplan-two-bedroom"],
+  "3BR Duplex Penthouse": ["gallery-floorplan-duplex-lower", "gallery-floorplan-duplex-upper"],
+};
+
 // Docs from the old (broken/duplicate) curation that no longer have a
 // corresponding entry above — deleted so they don't linger in the dataset.
 const STALE_GALLERY_IDS = [
@@ -225,6 +236,17 @@ const unitLocationPlans = [
   { id: "floor5", floor: 6, units: ["501A", "502B", "503B"], file: "location-floor5.png" },
 ];
 
+// Default location-plan doc per unit number, referenced onto each unit's
+// own `locationPlan` field at seed time (see seedUnits). Units with no
+// entry here (the two penthouses) have no location diagram — matches
+// current behaviour, UnitDetailModal already skips the section when unset.
+const LOCATION_PLAN_ID_BY_UNIT: Record<string, string> = {};
+for (const plan of unitLocationPlans) {
+  for (const unitNumber of plan.units) {
+    LOCATION_PLAN_ID_BY_UNIT[unitNumber] = `unit-location-${plan.id}`;
+  }
+}
+
 // Real site photos, not brochure renders. The user organizes these into
 // stage folders themselves (Groundbreaking/Earthworks/Foundations/Ground
 // Floor/First Floor) — that folder placement is the source of truth for
@@ -344,17 +366,33 @@ async function seedUnits() {
   console.log(`Seeding ${units.length} units...`);
   for (const unit of units) {
     const id = `unit-${slugify(unit.unitNumber)}`;
-    // A real reserved/sold status set in Studio must survive re-seeding —
-    // only brand-new units default to "available".
-    const existing = await client.fetch<{ status?: string } | null>(
-      `*[_id == $id][0]{status}`,
-      { id }
-    );
+    // A real reserved/sold status, or a floor plan/location plan reassigned
+    // in Studio, must survive re-seeding — only a brand-new unit gets the
+    // computed defaults below.
+    const existing = await client.fetch<{
+      status?: string;
+      floorPlans?: { _ref: string }[];
+      locationPlan?: { _ref: string };
+    } | null>(`*[_id == $id][0]{status, floorPlans, locationPlan}`, { id });
+
+    const defaultFloorPlans = (FLOORPLAN_IDS_BY_TYPE[unit.bedroomType] ?? []).map((refId) => ({
+      _type: "reference" as const,
+      _key: refId,
+      _ref: refId,
+    }));
+    const defaultLocationPlanId = LOCATION_PLAN_ID_BY_UNIT[unit.unitNumber];
+
     await client.createOrReplace({
       _id: id,
       _type: "unit",
       ...unit,
       status: existing?.status ?? "available",
+      floorPlans: existing?.floorPlans?.length ? existing.floorPlans : defaultFloorPlans,
+      ...(existing?.locationPlan
+        ? { locationPlan: existing.locationPlan }
+        : defaultLocationPlanId
+          ? { locationPlan: { _type: "reference" as const, _ref: defaultLocationPlanId } }
+          : {}),
     });
   }
 }
@@ -699,13 +737,16 @@ async function seedSiteSettings() {
 }
 
 async function main() {
+  // Gallery images and location plans first — seedUnits references their
+  // doc ids directly (floorPlans/locationPlan), so those docs need to
+  // already exist for the references to resolve.
+  await seedGallery();
+  await seedUnitLocationPlans();
   await seedUnits();
   await seedAmenities();
   await seedFamilyMembers();
   await seedFinancingPlan();
   await seedPackageTiers();
-  await seedGallery();
-  await seedUnitLocationPlans();
   await seedConstructionUpdates();
   await seedSiteSettings();
   console.log("Seed complete.");

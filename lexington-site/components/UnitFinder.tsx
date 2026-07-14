@@ -340,8 +340,12 @@ export function UnitFinder({ units, floorPlans, locationPlanByUnit, tiers }: Uni
       {selectedUnit && (
         <UnitDetailModal
           unit={selectedUnit}
-          floorPlans={floorPlans[selectedUnit.bedroomType]}
-          locationPlan={locationPlanByUnit[selectedUnit.unitNumber]}
+          floorPlans={
+            selectedUnit.floorPlans?.length
+              ? selectedUnit.floorPlans
+              : floorPlans[selectedUnit.bedroomType]
+          }
+          locationPlan={selectedUnit.locationPlan ?? locationPlanByUnit[selectedUnit.unitNumber]}
           tiers={tiers}
           selectedTier={selectedTier}
           onClose={() => setSelectedUnit(null)}

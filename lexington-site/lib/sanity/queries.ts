@@ -1,7 +1,11 @@
 import { defineQuery } from "next-sanity";
 
 export const unitsQuery = defineQuery(`
-  *[_type == "unit"] | order(floor asc, unitNumber asc)
+  *[_type == "unit"] | order(floor asc, unitNumber asc) {
+    ...,
+    floorPlans[]->{_id, image, alt, category, order},
+    locationPlan->{_id, floor, units, image}
+  }
 `);
 
 export const galleryImagesQuery = defineQuery(`
