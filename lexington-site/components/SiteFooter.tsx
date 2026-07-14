@@ -22,7 +22,7 @@ function footerMapUrl() {
   const { lat, lng } = LEXINGTON_COORDS;
   const params = [
     `center=${lat},${lng}`,
-    "zoom=14",
+    "zoom=13",
     "size=280x160",
     "scale=2",
     `markers=color:0xb08d57%7C${lat},${lng}`,
