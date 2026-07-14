@@ -233,6 +233,7 @@ const unitLocationPlans = [
 // "Foundations" folder, so they're folded into that stage instead.
 const constructionUpdates = [
   { file: "progress-groundbreaking-01.jpg", stage: "Groundbreaking", alt: "Niko and Leo Skarlatos breaking ground on The Lexington" },
+  { file: "progress-groundbreaking-02.jpg", stage: "Groundbreaking", alt: "Niko and Leo Skarlatos breaking ground on The Lexington at dusk" },
 
   { file: "progress-earthworks-01.jpg", stage: "Earthworks", alt: "Excavator digging the foundation pit" },
   { file: "progress-earthworks-02.jpg", stage: "Earthworks", alt: "Site clearance and earth-moving equipment on site" },
