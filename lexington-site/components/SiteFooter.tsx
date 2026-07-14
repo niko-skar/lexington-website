@@ -3,9 +3,34 @@ import Link from "next/link";
 import { client } from "@/lib/sanity/client";
 import { siteSettingsQuery } from "@/lib/sanity/queries";
 import type { SiteSettings } from "@/lib/sanity/types";
-import { googleMapsUrl } from "@/lib/maps";
+import { googleMapsUrl, LEXINGTON_COORDS } from "@/lib/maps";
 import { phoneHref } from "@/lib/format";
 import styles from "./SiteFooter.module.css";
+
+// Muted, desaturated theme so the map thumbnail sits quietly in the dark
+// footer instead of clashing with Google's default bright red/green style.
+const MAP_STYLE = [
+  "feature:all|element:geometry|saturation:-65|lightness:-8",
+  "feature:water|element:geometry|color:0x263a48",
+  "feature:all|element:labels|visibility:off",
+  "feature:road|element:geometry|saturation:-70|lightness:15",
+  "feature:poi|visibility:off",
+].map((rule) => `style=${encodeURIComponent(rule)}`);
+
+function footerMapUrl() {
+  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+  const { lat, lng } = LEXINGTON_COORDS;
+  const params = [
+    `center=${lat},${lng}`,
+    "zoom=15",
+    "size=280x160",
+    "scale=2",
+    `markers=color:0xb08d57%7C${lat},${lng}`,
+    ...MAP_STYLE,
+    `key=${apiKey}`,
+  ];
+  return `https://maps.googleapis.com/maps/api/staticmap?${params.join("&")}`;
+}
 
 export async function SiteFooter() {
   const siteSettings = await client.fetch<SiteSettings>(siteSettingsQuery);
@@ -20,6 +45,16 @@ export async function SiteFooter() {
               <small>A Skarlatos &amp; Son Development</small>
             </div>
           </div>
+          <a
+            className={styles.mapThumb}
+            href={googleMapsUrl()}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="View The Lexington's location on Google Maps"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={footerMapUrl()} alt="Map showing The Lexington's location in Shiashie, East Legon" width={280} height={160} />
+          </a>
           <div className={styles.links}>
             <div>
               <h4>Explore</h4>

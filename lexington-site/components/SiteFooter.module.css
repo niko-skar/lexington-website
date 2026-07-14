@@ -32,6 +32,27 @@
   margin-top: 6px;
 }
 
+.mapThumb {
+  display: block;
+  flex: none;
+  width: 200px;
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 1px solid var(--ink-line);
+  align-self: flex-start;
+  transition: border-color 0.2s var(--ease);
+}
+
+.mapThumb:hover {
+  border-color: var(--brass);
+}
+
+.mapThumb img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
 .links {
   display: flex;
   gap: 48px;

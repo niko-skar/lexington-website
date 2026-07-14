@@ -2,11 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { LEXINGTON_COORDS } from "@/lib/maps";
 import styles from "./InteractiveMap.module.css";
-
-// Resolved from the office's Google Maps pin (maps.app.goo.gl/uJrGXZyWzEhxBKRD6)
-// so the marker matches exactly where that link points.
-const LEXINGTON_COORDS = { lat: 5.63276, lng: -0.1754212 };
 
 // Minimal shape for the one script-tag-loaded global we use — avoids
 // pulling in @types/google.maps for a single small component.
