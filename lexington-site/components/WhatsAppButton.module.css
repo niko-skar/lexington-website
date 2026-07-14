@@ -1,0 +1,29 @@
+.button {
+  display: none;
+}
+
+@media (max-width: 720px) {
+  .button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    right: 16px;
+    bottom: 16px;
+    /* Above the residences page's compare bar (z-index 150) so it stays
+       reachable in the rare case both are visible at once on mobile. */
+    z-index: 160;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: #25d366;
+    color: #fff;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.28);
+    transition: transform 0.2s var(--ease);
+  }
+
+  .button:hover,
+  .button:active {
+    transform: scale(1.06);
+  }
+}

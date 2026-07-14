@@ -4,7 +4,7 @@ import { client } from "@/lib/sanity/client";
 import { siteSettingsQuery } from "@/lib/sanity/queries";
 import type { SiteSettings } from "@/lib/sanity/types";
 import { googleMapsUrl, LEXINGTON_COORDS } from "@/lib/maps";
-import { phoneHref } from "@/lib/format";
+import { phoneHref, whatsappUrl } from "@/lib/format";
 import styles from "./SiteFooter.module.css";
 
 // Muted, desaturated theme so the map thumbnail sits quietly in the dark
@@ -67,6 +67,13 @@ export async function SiteFooter() {
             <div>
               <h4>Contact</h4>
               <a href={phoneHref(siteSettings.contactPhone)}>{siteSettings.contactPhone}</a>
+              <a
+                href={whatsappUrl(siteSettings.contactPhone, "Hi, I'm interested in The Lexington.")}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Message on WhatsApp
+              </a>
               <a href={`mailto:${siteSettings.contactEmail}`}>{siteSettings.contactEmail}</a>
               <Link href="/contact">Reserve a Unit</Link>
             </div>

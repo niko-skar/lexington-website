@@ -6,7 +6,7 @@ import { PageIntro } from "@/components/PageIntro";
 import { ContactForm } from "@/components/ContactForm";
 import { InteractiveMap } from "@/components/InteractiveMap";
 import { googleMapsUrl } from "@/lib/maps";
-import { phoneHref } from "@/lib/format";
+import { phoneHref, whatsappUrl } from "@/lib/format";
 import buttonStyles from "@/components/Button.module.css";
 import styles from "./contact.module.css";
 
@@ -31,6 +31,14 @@ export default async function ContactPage() {
                 <div className={styles.key}>Phone</div>
                 <div className={styles.value}>
                   <a href={phoneHref(siteSettings.contactPhone)}>{siteSettings.contactPhone}</a>
+                  <a
+                    className={styles.whatsapp}
+                    href={whatsappUrl(siteSettings.contactPhone, "Hi, I'm interested in The Lexington.")}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Message on WhatsApp
+                  </a>
                 </div>
               </div>
               <div className={styles.detail}>

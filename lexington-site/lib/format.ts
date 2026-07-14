@@ -14,3 +14,10 @@ export function formatFloor(floor: number) {
 export function phoneHref(phone: string) {
   return `tel:${phone.replace(/\(0\)/g, "").replace(/[^\d+]/g, "")}`;
 }
+
+// wa.me needs the full international number as bare digits — no "+", no
+// "(0)" trunk prefix, same handling as phoneHref above.
+export function whatsappUrl(phone: string, message?: string) {
+  const digits = phone.replace(/\(0\)/g, "").replace(/\D/g, "");
+  return `https://wa.me/${digits}${message ? `?text=${encodeURIComponent(message)}` : ""}`;
+}
