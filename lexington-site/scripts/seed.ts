@@ -435,7 +435,11 @@ async function seedFamilyMembers() {
 
 async function seedFinancingPlan() {
   console.log("Seeding financing plan...");
-  await client.createOrReplace({
+  // Entirely Studio-editable copy — createIfNotExists so a later reseed
+  // never clobbers rows/notes someone has since edited (same reasoning
+  // as seedSiteSettings). A newly added field needs its own setIfMissing
+  // backfill patch, same as siteSettings' progressIntro.
+  await client.createIfNotExists({
     _id: "financingPlan",
     _type: "financingPlan",
     selfFinanceRows: [
@@ -484,7 +488,9 @@ async function seedFinancingPlan() {
 
 async function seedPackageTiers() {
   console.log("Seeding package tiers...");
-  await client.createOrReplace({
+  // Entirely Studio-editable copy — same createIfNotExists reasoning as
+  // seedFinancingPlan above.
+  await client.createIfNotExists({
     _id: "packageTiers",
     _type: "packageTiers",
     tiers: [
