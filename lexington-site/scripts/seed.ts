@@ -134,6 +134,11 @@ type UnitSeed = {
   // since they never drop to the Standard finish (priceUSD above is their
   // Premium price).
   minPackageTier?: "standard" | "premium" | "premiumplus";
+  // Override the doc id derived from unitNumber — needed when a unit
+  // number was reused after an earlier renumbering (the old doc id is
+  // already taken, since Sanity ids don't change when a field is
+  // renamed in Studio; see the floor-5 units below).
+  id?: string;
 };
 
 const units: UnitSeed[] = [
@@ -160,12 +165,24 @@ const units: UnitSeed[] = [
   { unitNumber: "405B", floor: 4, bedroomType: "Two Bedroom", areaSqm: 138, priceUSD: 317000 },
   { unitNumber: "401A", floor: 4, bedroomType: "Two Bedroom", areaSqm: 149, priceUSD: 342700 },
 
-  // A new floor was added above the old top floor (6) — these units (the
-  // old 5th floor and the penthouses) both shift up by one to make room,
-  // leaving floor 5 open for future units.
-  { unitNumber: "501A", floor: 6, bedroomType: "One Bedroom", areaSqm: 85, priceUSD: 212000 },
-  { unitNumber: "502B", floor: 6, bedroomType: "One Bedroom", areaSqm: 88, priceUSD: 221000 },
-  { unitNumber: "503B", floor: 6, bedroomType: "One Bedroom", areaSqm: 79, priceUSD: 198000 },
+  // Floor 5 sat empty until these 5 units were added — their numbers
+  // (501A, 503B) collide with floor 6's ORIGINAL numbering (renamed in
+  // Studio to 601A/602B/603B when the floor above was added, but a
+  // Sanity doc id doesn't change when you rename a field), so those two
+  // need an explicit `id` override to avoid overwriting the floor-6 docs.
+  { unitNumber: "501A", floor: 5, bedroomType: "Two Bedroom", areaSqm: 149, priceUSD: 372500, id: "501a-f5" },
+  { unitNumber: "502A", floor: 5, bedroomType: "One Bedroom", areaSqm: 80, priceUSD: 200000 },
+  { unitNumber: "503B", floor: 5, bedroomType: "One Bedroom", areaSqm: 76, priceUSD: 190000, id: "503b-f5" },
+  { unitNumber: "504B", floor: 5, bedroomType: "One Bedroom", areaSqm: 70, priceUSD: 175000 },
+  { unitNumber: "505B", floor: 5, bedroomType: "Two Bedroom", areaSqm: 138, priceUSD: 345000 },
+
+  // Renamed in Studio from 501A/502B/503B to 601A/602B/603B when floor 5
+  // (above) was added — kept here (unitNumber updated) so a reseed
+  // doesn't revert the rename; `id` is left at its original derivation
+  // so it still matches the existing doc.
+  { unitNumber: "601A", floor: 6, bedroomType: "One Bedroom", areaSqm: 85, priceUSD: 212000, id: "501a" },
+  { unitNumber: "602B", floor: 6, bedroomType: "One Bedroom", areaSqm: 88, priceUSD: 221000, id: "502b" },
+  { unitNumber: "603B", floor: 6, bedroomType: "One Bedroom", areaSqm: 79, priceUSD: 198000, id: "503b" },
 
   { unitNumber: "PH1a", floor: 7, bedroomType: "3BR Duplex Penthouse", areaSqm: 327, priceUSD: 817500, minPackageTier: "premium" },
   { unitNumber: "PH2b", floor: 7, bedroomType: "3BR Duplex Penthouse", areaSqm: 375, priceUSD: 937500, minPackageTier: "premium" },
@@ -364,16 +381,18 @@ function slugify(input: string) {
 
 async function seedUnits() {
   console.log(`Seeding ${units.length} units...`);
-  for (const unit of units) {
-    const id = `unit-${slugify(unit.unitNumber)}`;
-    // A real reserved/sold status, or a floor plan/location plan reassigned
-    // in Studio, must survive re-seeding — only a brand-new unit gets the
-    // computed defaults below.
+  for (const { id: idOverride, ...unit } of units) {
+    const id = `unit-${idOverride ?? slugify(unit.unitNumber)}`;
+    // A real reserved/sold status, a unit number renamed in Studio (a doc
+    // id doesn't change when you rename a field), or a floor plan/location
+    // plan reassigned in Studio, must survive re-seeding — only a
+    // brand-new unit gets the computed defaults below.
     const existing = await client.fetch<{
       status?: string;
+      unitNumber?: string;
       floorPlans?: { _ref: string }[];
       locationPlan?: { _ref: string };
-    } | null>(`*[_id == $id][0]{status, floorPlans, locationPlan}`, { id });
+    } | null>(`*[_id == $id][0]{status, unitNumber, floorPlans, locationPlan}`, { id });
 
     const defaultFloorPlans = (FLOORPLAN_IDS_BY_TYPE[unit.bedroomType] ?? []).map((refId) => ({
       _type: "reference" as const,
@@ -386,6 +405,7 @@ async function seedUnits() {
       _id: id,
       _type: "unit",
       ...unit,
+      unitNumber: existing?.unitNumber ?? unit.unitNumber,
       status: existing?.status ?? "available",
       floorPlans: existing?.floorPlans?.length ? existing.floorPlans : defaultFloorPlans,
       ...(existing?.locationPlan
