@@ -4,17 +4,9 @@ import {
   galleryImagesQuery,
   packageTiersQuery,
   siteSettingsQuery,
-  unitLocationPlansQuery,
   unitsQuery,
 } from "@/lib/sanity/queries";
-import type {
-  BedroomType,
-  GalleryImage,
-  PackageTiers,
-  SiteSettings,
-  Unit,
-  UnitLocationPlan,
-} from "@/lib/sanity/types";
+import type { GalleryImage, PackageTiers, SiteSettings, Unit } from "@/lib/sanity/types";
 
 import { PageIntro } from "@/components/PageIntro";
 import { UnitFinder } from "@/components/UnitFinder";
@@ -36,11 +28,10 @@ const extras = [
 ];
 
 export default async function ResidencesPage() {
-  const [units, images, siteSettings, unitLocationPlans, packageTiers] = await Promise.all([
+  const [units, images, siteSettings, packageTiers] = await Promise.all([
     client.fetch<Unit[]>(unitsQuery),
     client.fetch<GalleryImage[]>(galleryImagesQuery),
     client.fetch<SiteSettings>(siteSettingsQuery),
-    client.fetch<UnitLocationPlan[]>(unitLocationPlansQuery),
     client.fetch<PackageTiers | null>(packageTiersQuery),
   ]);
 
@@ -52,40 +43,13 @@ export default async function ResidencesPage() {
   const floorplanImage =
     floorplanImages.find((i) => i.alt.toLowerCase().includes("duplex")) ?? floorplanImages[0];
 
-  // Fallback only — most units now carry their own `floorPlans`/
-  // `locationPlan` reference(s), set directly on the unit in Studio (see
-  // sanity/schemaTypes/unit.ts). This by-type/by-floor matching only
-  // kicks in for a unit that hasn't been assigned one yet (e.g. a
-  // brand-new unit added straight in Studio).
-  const floorPlansByType: Record<BedroomType, GalleryImage[]> = {
-    // No studio floor plan render exists yet — UnitDetailModal already
-    // falls back to "available on request" when this is empty.
-    Studio: floorplanImages.filter((i) => i.alt.toLowerCase().includes("studio")),
-    "One Bedroom": floorplanImages.filter((i) => i.alt.toLowerCase().includes("one-bedroom")),
-    "Two Bedroom": floorplanImages.filter((i) => i.alt.toLowerCase().includes("two-bedroom")),
-    "3BR Duplex Penthouse": floorplanImages.filter((i) => i.alt.toLowerCase().includes("duplex")),
-  };
-
-  // Fallback only, same reasoning as floorPlansByType above.
-  const locationPlanByUnit: Record<string, UnitLocationPlan> = {};
-  for (const plan of unitLocationPlans) {
-    for (const unitNumber of plan.units) {
-      locationPlanByUnit[unitNumber] = plan;
-    }
-  }
-
   return (
     <>
       <PageIntro {...siteSettings.residencesIntro} />
 
       <section className="section sectionStone" style={{ paddingTop: "clamp(32px, 4vw, 56px)" }}>
         <div className="wrap">
-          <UnitFinder
-            units={units}
-            floorPlans={floorPlansByType}
-            locationPlanByUnit={locationPlanByUnit}
-            tiers={tiers}
-          />
+          <UnitFinder units={units} tiers={tiers} />
         </div>
       </section>
 

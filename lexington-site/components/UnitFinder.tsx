@@ -4,11 +4,9 @@ import { useMemo, useState } from "react";
 
 import type {
   BedroomType,
-  GalleryImage,
   PackageTier,
   PackageTierKey,
   Unit,
-  UnitLocationPlan,
   UnitStatus,
 } from "@/lib/sanity/types";
 import { formatFloor, formatUSD } from "@/lib/format";
@@ -33,12 +31,10 @@ const STATUS_ORDER: Record<UnitStatus, number> = { available: 0, reserved: 1, so
 
 interface UnitFinderProps {
   units: Unit[];
-  floorPlans: Record<BedroomType, GalleryImage[]>;
-  locationPlanByUnit: Record<string, UnitLocationPlan>;
   tiers: PackageTier[];
 }
 
-export function UnitFinder({ units, floorPlans, locationPlanByUnit, tiers }: UnitFinderProps) {
+export function UnitFinder({ units, tiers }: UnitFinderProps) {
   const [floor, setFloor] = useState<FloorFilter>("all");
   const [type, setType] = useState<TypeFilter>("all");
   const [status, setStatus] = useState<StatusFilter>("all");
@@ -340,12 +336,8 @@ export function UnitFinder({ units, floorPlans, locationPlanByUnit, tiers }: Uni
       {selectedUnit && (
         <UnitDetailModal
           unit={selectedUnit}
-          floorPlans={
-            selectedUnit.floorPlans?.length
-              ? selectedUnit.floorPlans
-              : floorPlans[selectedUnit.bedroomType]
-          }
-          locationPlan={selectedUnit.locationPlan ?? locationPlanByUnit[selectedUnit.unitNumber]}
+          floorPlans={selectedUnit.floorPlans ?? []}
+          locationPlan={selectedUnit.locationPlan}
           tiers={tiers}
           selectedTier={selectedTier}
           onClose={() => setSelectedUnit(null)}
