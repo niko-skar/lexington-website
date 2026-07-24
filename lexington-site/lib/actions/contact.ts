@@ -2,6 +2,7 @@
 
 import { Resend } from "resend";
 
+import { confirmationEmail, notificationEmail } from "@/lib/email/templates";
 import { client } from "@/lib/sanity/client";
 import { siteSettingsQuery } from "@/lib/sanity/queries";
 import type { SiteSettings } from "@/lib/sanity/types";
@@ -9,15 +10,6 @@ import type { SiteSettings } from "@/lib/sanity/types";
 export interface ContactFormState {
   status: "idle" | "success" | "error";
   message: string;
-}
-
-function escapeHtml(value: string) {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
 }
 
 export async function sendEnquiry(
@@ -46,20 +38,15 @@ export async function sendEnquiry(
   const siteSettings = await client.fetch<SiteSettings>(siteSettingsQuery);
   const resend = new Resend(apiKey);
 
+  const notification = notificationEmail({ name, email, phone, unit, message, siteSettings });
+
   try {
     const result = await resend.emails.send({
       from: "The Lexington Website <sales@lexington.com.gh>",
       to: siteSettings.notificationEmail,
       replyTo: email,
-      subject: `Enquiry - The Lexington (${name})`,
-      html: `
-        <p><strong>Name:</strong> ${escapeHtml(name)}</p>
-        <p><strong>Email:</strong> ${escapeHtml(email)}</p>
-        <p><strong>Phone:</strong> ${escapeHtml(phone || "—")}</p>
-        <p><strong>Interested in:</strong> ${escapeHtml(unit || "—")}</p>
-        <p><strong>Message:</strong></p>
-        <p>${escapeHtml(message || "—").replace(/\n/g, "<br />")}</p>
-      `,
+      subject: notification.subject,
+      html: notification.html,
     });
 
     // The Resend SDK does not throw on API-level rejections — it returns
@@ -72,8 +59,6 @@ export async function sendEnquiry(
         message: "Something went wrong sending your enquiry. Please email us directly instead.",
       };
     }
-
-    return { status: "success", message: "Thanks — we'll be in touch shortly." };
   } catch (err) {
     console.error("Failed to send enquiry email:", err);
     return {
@@ -81,4 +66,25 @@ export async function sendEnquiry(
       message: "Something went wrong sending your enquiry. Please email us directly instead.",
     };
   }
+
+  // The enquiry already landed with the sales team above, so a failure on
+  // this customer-facing confirmation shouldn't surface as an error to the
+  // person who just submitted the form — just log it and move on.
+  try {
+    const confirmation = confirmationEmail({ name, unit, message, siteSettings });
+    const result = await resend.emails.send({
+      from: "The Lexington <sales@lexington.com.gh>",
+      to: email,
+      subject: confirmation.subject,
+      html: confirmation.html,
+    });
+
+    if (result.error) {
+      console.error("Resend rejected the confirmation email:", result.error);
+    }
+  } catch (err) {
+    console.error("Failed to send confirmation email:", err);
+  }
+
+  return { status: "success", message: "Thanks — we'll be in touch shortly." };
 }
