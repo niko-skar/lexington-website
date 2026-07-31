@@ -45,6 +45,7 @@ export function ContactForm() {
           <option>Studio Apartment</option>
           <option>One Bedroom Apartment</option>
           <option>Two Bedroom Apartment</option>
+          <option>Three Bedroom Apartment</option>
           <option>Three Bedroom Duplex Penthouse</option>
           <option>Not sure yet</option>
         </select>

@@ -2,7 +2,7 @@ import type { Image } from "sanity";
 
 export type UnitStatus = "available" | "reserved" | "sold";
 
-export type BedroomType = "Studio" | "One Bedroom" | "Two Bedroom" | "3BR Duplex Penthouse";
+export type BedroomType = "Studio" | "One Bedroom" | "Two Bedroom" | "Three Bedroom" | "3BR Duplex Penthouse";
 
 export type PackageTierKey = "standard" | "premium" | "premiumplus";
 

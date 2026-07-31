@@ -28,6 +28,7 @@ export const unit = defineType({
           { title: "Studio", value: "Studio" },
           { title: "One Bedroom", value: "One Bedroom" },
           { title: "Two Bedroom", value: "Two Bedroom" },
+          { title: "Three Bedroom", value: "Three Bedroom" },
           { title: "3BR Duplex Penthouse", value: "3BR Duplex Penthouse" },
         ],
       },

@@ -103,6 +103,7 @@ const FLOORPLAN_IDS_BY_TYPE: Record<string, string[]> = {
   Studio: [],
   "One Bedroom": ["gallery-floorplan-one-bedroom"],
   "Two Bedroom": ["gallery-floorplan-two-bedroom"],
+  "Three Bedroom": [],
   "3BR Duplex Penthouse": ["gallery-floorplan-duplex-lower", "gallery-floorplan-duplex-upper"],
 };
 
@@ -127,7 +128,7 @@ const STALE_GALLERY_IDS = [
 type UnitSeed = {
   unitNumber: string;
   floor: number;
-  bedroomType: "One Bedroom" | "Two Bedroom" | "3BR Duplex Penthouse";
+  bedroomType: "One Bedroom" | "Two Bedroom" | "Three Bedroom" | "3BR Duplex Penthouse";
   areaSqm: number;
   priceUSD: number;
   // Absent means "standard" — most units. Penthouses set this to "premium"
