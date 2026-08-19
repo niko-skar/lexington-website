@@ -3,6 +3,11 @@ import { Playfair_Display, Inter } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 
+import {
+  GoogleTagManager,
+  GoogleTagManagerNoScript,
+} from "@/components/analytics/GoogleTagManager";
+
 import { client } from "@/lib/sanity/client";
 import { urlFor } from "@/lib/sanity/image";
 import { galleryImagesQuery } from "@/lib/sanity/queries";
@@ -71,7 +76,9 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${playfairDisplay.variable} ${inter.variable}`}>
       <body>
+        <GoogleTagManagerNoScript />
         {children}
+        <GoogleTagManager />
         <Analytics />
         <SpeedInsights />
       </body>

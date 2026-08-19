@@ -10,6 +10,9 @@ import type { SiteSettings } from "@/lib/sanity/types";
 export interface ContactFormState {
   status: "idle" | "success" | "error";
   message: string;
+  /** Which residence the enquiry was for — surfaced so the client can attach
+   *  it to the analytics conversion event on success. */
+  unit?: string;
 }
 
 export async function sendEnquiry(
@@ -86,5 +89,5 @@ export async function sendEnquiry(
     console.error("Failed to send confirmation email:", err);
   }
 
-  return { status: "success", message: "Thanks — we'll be in touch shortly." };
+  return { status: "success", message: "Thanks — we'll be in touch shortly.", unit };
 }

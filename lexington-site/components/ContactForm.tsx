@@ -1,9 +1,10 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
 import { useFormStatus } from "react-dom";
 
 import { sendEnquiry, type ContactFormState } from "@/lib/actions/contact";
+import { trackLead } from "@/lib/analytics";
 import styles from "./ContactForm.module.css";
 import buttonStyles from "./Button.module.css";
 
@@ -24,6 +25,14 @@ function SubmitButton() {
 
 export function ContactForm() {
   const [state, formAction] = useActionState(sendEnquiry, initialState);
+
+  // Fire the lead conversion once the server action confirms success — the
+  // reliable success signal for a server-action form (no onSubmit needed).
+  useEffect(() => {
+    if (state.status === "success") {
+      trackLead({ unit: state.unit });
+    }
+  }, [state]);
 
   return (
     <form action={formAction}>
