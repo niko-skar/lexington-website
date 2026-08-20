@@ -124,13 +124,38 @@ async function postToFacebook(imageUrl: string, caption: string) {
   return result.post_id || result.id;
 }
 
-/** Instagram publishing is two calls: stage a container, then publish it. */
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Instagram publishing is three steps, not two: stage a container, wait for
+ * Instagram to finish downloading and processing the image, then publish.
+ * Publishing too early fails with "Media ID is not available" (code 9007),
+ * so poll status_code until it reports FINISHED.
+ */
+async function waitForContainer(containerId: string, attempts = 12) {
+  for (let i = 0; i < attempts; i++) {
+    const url = new URL(`${GRAPH}/${containerId}`);
+    url.searchParams.set("fields", "status_code,status");
+    url.searchParams.set("access_token", PAGE_TOKEN!);
+    const res = await fetch(url).then((r) => r.json());
+
+    if (res.status_code === "FINISHED") return;
+    if (res.status_code === "ERROR" || res.status_code === "EXPIRED") {
+      throw new Error(`Instagram rejected the image: ${res.status || res.status_code}`);
+    }
+    await sleep(2000);
+  }
+  throw new Error("Instagram container did not finish processing in time.");
+}
+
 async function postToInstagram(imageUrl: string, caption: string) {
   const container = await graphPost(`${IG_USER_ID}/media`, {
     image_url: normaliseForInstagram(imageUrl),
     caption,
     access_token: PAGE_TOKEN!,
   });
+
+  await waitForContainer(container.id);
 
   const published = await graphPost(`${IG_USER_ID}/media_publish`, {
     creation_id: container.id,
