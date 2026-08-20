@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "seed": "tsx --env-file=.env.local scripts/seed.ts"
+    "seed": "tsx --env-file=.env.local scripts/seed.ts",
+    "meta:setup": "tsx --env-file=.env.local scripts/meta-setup.ts",
+    "meta:post": "tsx --env-file=.env.local scripts/post-to-meta.ts"
   },
   "dependencies": {
     "@sanity/client": "^7.23.0",
