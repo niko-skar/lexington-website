@@ -1,3 +1,4 @@
+import { pageMetadata } from "@/lib/seo";
 import { client } from "@/lib/sanity/client";
 import { galleryImagesQuery, siteSettingsQuery } from "@/lib/sanity/queries";
 import type { GalleryImage, SiteSettings } from "@/lib/sanity/types";
@@ -8,9 +9,12 @@ import { Button } from "@/components/Button";
 
 export const revalidate = 60;
 
-export const metadata = {
+export const metadata = pageMetadata({
+  path: "/gallery",
   title: "Gallery | The Lexington",
-};
+  description:
+    "Interiors, exteriors and views of The Lexington — eight storeys of residences under construction in Shiashie, East Legon, Accra.",
+});
 
 export default async function GalleryPage() {
   const [images, siteSettings] = await Promise.all([

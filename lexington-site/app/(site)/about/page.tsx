@@ -1,3 +1,4 @@
+import { pageMetadata } from "@/lib/seo";
 import { client } from "@/lib/sanity/client";
 import { urlFor } from "@/lib/sanity/image";
 import { familyMembersQuery, galleryImagesQuery, siteSettingsQuery } from "@/lib/sanity/queries";
@@ -11,9 +12,12 @@ import { Button } from "@/components/Button";
 
 export const revalidate = 60;
 
-export const metadata = {
+export const metadata = pageMetadata({
+  path: "/about",
   title: "Our Story | The Lexington — Skarlatos & Son",
-};
+  description:
+    "Three generations of Skarlatos & Son shaping Ghana's landscape, and the thinking behind The Lexington in Shiashie, East Legon.",
+});
 
 export default async function AboutPage() {
   const [members, images, siteSettings] = await Promise.all([

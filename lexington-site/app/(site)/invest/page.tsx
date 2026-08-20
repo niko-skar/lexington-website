@@ -1,3 +1,4 @@
+import { pageMetadata } from "@/lib/seo";
 import { client } from "@/lib/sanity/client";
 import { urlFor } from "@/lib/sanity/image";
 import { financingPlanQuery, galleryImagesQuery, siteSettingsQuery } from "@/lib/sanity/queries";
@@ -11,9 +12,12 @@ import planTableStyles from "@/components/PlanTable.module.css";
 
 export const revalidate = 60;
 
-export const metadata = {
+export const metadata = pageMetadata({
+  path: "/invest",
   title: "Invest & Financing | The Lexington",
-};
+  description:
+    "Payment plans, reservation terms and finish packages for buyers at The Lexington in East Legon, Accra. Reserve your unit from $10,000.",
+});
 
 export default async function InvestPage() {
   const [financingPlan, images, siteSettings] = await Promise.all([

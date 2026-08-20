@@ -1,3 +1,4 @@
+import { pageMetadata } from "@/lib/seo";
 import { client } from "@/lib/sanity/client";
 import { siteSettingsQuery } from "@/lib/sanity/queries";
 import type { SiteSettings } from "@/lib/sanity/types";
@@ -12,9 +13,12 @@ import styles from "./contact.module.css";
 
 export const revalidate = 60;
 
-export const metadata = {
+export const metadata = pageMetadata({
+  path: "/contact",
   title: "Contact & Reserve | The Lexington",
-};
+  description:
+    "Arrange a viewing at The Lexington in Shiashie, East Legon, or ask about availability, pricing and payment plans. Reserve from $10,000.",
+});
 
 export default async function ContactPage() {
   const siteSettings = await client.fetch<SiteSettings>(siteSettingsQuery);

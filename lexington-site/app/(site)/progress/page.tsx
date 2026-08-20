@@ -1,3 +1,4 @@
+import { pageMetadata } from "@/lib/seo";
 import { client } from "@/lib/sanity/client";
 import { constructionUpdatesQuery, siteSettingsQuery } from "@/lib/sanity/queries";
 import type { ConstructionUpdate, SiteSettings } from "@/lib/sanity/types";
@@ -8,9 +9,12 @@ import { Button } from "@/components/Button";
 
 export const revalidate = 60;
 
-export const metadata = {
+export const metadata = pageMetadata({
+  path: "/progress",
   title: "Construction Progress | The Lexington",
-};
+  description:
+    "Site updates from Shiashie, East Legon — photographs and milestones as The Lexington's eight storeys go up, posted as work continues.",
+});
 
 export default async function ProgressPage() {
   const [updates, siteSettings] = await Promise.all([

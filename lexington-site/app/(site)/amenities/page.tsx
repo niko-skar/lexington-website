@@ -1,3 +1,4 @@
+import { pageMetadata } from "@/lib/seo";
 import { client } from "@/lib/sanity/client";
 import { urlFor } from "@/lib/sanity/image";
 import { amenitiesQuery, galleryImagesQuery, siteSettingsQuery } from "@/lib/sanity/queries";
@@ -11,9 +12,12 @@ import { Reveal } from "@/components/Reveal";
 
 export const revalidate = 60;
 
-export const metadata = {
+export const metadata = pageMetadata({
+  path: "/amenities",
   title: "Amenities & Specifications | The Lexington",
-};
+  description:
+    "Swimming pool, gym, sauna, rooftop garden and café, plus backup power, CCTV and high-speed lifts. The full specification for The Lexington, East Legon.",
+});
 
 export default async function AmenitiesPage() {
   const [amenities, images, siteSettings] = await Promise.all([
