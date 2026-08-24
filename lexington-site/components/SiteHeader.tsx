@@ -40,7 +40,7 @@ export function SiteHeader() {
             </Link>
           ))}
           <Link href="/contact" className={styles.cta} onClick={() => setOpen(false)}>
-            Reserve
+            Contact Us
           </Link>
         </nav>
 
