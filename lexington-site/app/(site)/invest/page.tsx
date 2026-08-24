@@ -10,7 +10,7 @@ import { Button } from "@/components/Button";
 import { Reveal } from "@/components/Reveal";
 import planTableStyles from "@/components/PlanTable.module.css";
 
-export const revalidate = 60;
+export const revalidate = 600;
 
 export const metadata = pageMetadata({
   path: "/invest",

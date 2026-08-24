@@ -7,7 +7,7 @@ import { PageIntro } from "@/components/PageIntro";
 import { ProgressGallery } from "@/components/ProgressGallery";
 import { Button } from "@/components/Button";
 
-export const revalidate = 60;
+export const revalidate = 600;
 
 export const metadata = pageMetadata({
   path: "/progress",

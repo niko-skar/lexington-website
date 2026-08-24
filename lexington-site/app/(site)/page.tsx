@@ -26,7 +26,7 @@ import { StatStrip } from "@/components/StatStrip";
 import { Reveal } from "@/components/Reveal";
 import { InteractiveMap } from "@/components/InteractiveMap";
 
-export const revalidate = 60;
+export const revalidate = 600;
 
 export default async function HomePage() {
   const [units, images, amenities, financingPlan, siteSettings, familyMembers] = await Promise.all([

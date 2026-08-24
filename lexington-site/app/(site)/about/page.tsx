@@ -10,7 +10,7 @@ import { SplitSection } from "@/components/SplitSection";
 import { PhotoTriptych } from "@/components/PhotoTriptych";
 import { Button } from "@/components/Button";
 
-export const revalidate = 60;
+export const revalidate = 600;
 
 export const metadata = pageMetadata({
   path: "/about",

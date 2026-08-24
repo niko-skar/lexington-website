@@ -11,7 +11,7 @@ import { phoneHref, whatsappUrl } from "@/lib/format";
 import buttonStyles from "@/components/Button.module.css";
 import styles from "./contact.module.css";
 
-export const revalidate = 60;
+export const revalidate = 600;
 
 export const metadata = pageMetadata({
   path: "/contact",

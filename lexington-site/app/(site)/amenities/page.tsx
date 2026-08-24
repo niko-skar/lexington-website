@@ -10,7 +10,7 @@ import { FeatureGrid } from "@/components/FeatureGrid";
 import { SplitSection } from "@/components/SplitSection";
 import { Reveal } from "@/components/Reveal";
 
-export const revalidate = 60;
+export const revalidate = 600;
 
 export const metadata = pageMetadata({
   path: "/amenities",
