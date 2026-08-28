@@ -67,6 +67,14 @@ export function ContactForm() {
           placeholder="Tell us about your timeline and financing preference."
         />
       </div>
+      {/* Honeypot — invisible to real visitors (off-screen, unreachable by
+          tab, hidden from screen readers), but a bot that blindly fills
+          every field will fill this one too, so the server action can
+          silently drop the submission. */}
+      <div style={{ position: "absolute", left: "-9999px", top: "auto" }} aria-hidden="true">
+        <label htmlFor="company">Company</label>
+        <input type="text" id="company" name="company" tabIndex={-1} autoComplete="off" />
+      </div>
       <SubmitButton />
       {state.status === "success" && <p className={styles.success}>{state.message}</p>}
       {state.status === "error" && <p className={styles.error}>{state.message}</p>}

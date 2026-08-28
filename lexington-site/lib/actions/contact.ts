@@ -25,6 +25,14 @@ export async function sendEnquiry(
   const unit = String(formData.get("unit") || "").trim();
   const message = String(formData.get("message") || "").trim();
 
+  // Honeypot — a real visitor never sees or fills this field (it's
+  // off-screen and unreachable by tab), so anything here means a bot.
+  // Report success without sending mail, so the bot has no signal to
+  // adapt its behavior.
+  if (String(formData.get("company") || "").trim()) {
+    return { status: "success", message: "Thanks — we'll be in touch shortly.", unit };
+  }
+
   if (!name || !email) {
     return { status: "error", message: "Please fill in your name and email." };
   }
