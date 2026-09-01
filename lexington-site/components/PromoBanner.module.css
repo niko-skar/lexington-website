@@ -1,0 +1,39 @@
+.banner {
+  background: var(--clay);
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.track {
+  display: inline-flex;
+  width: max-content;
+  animation: marquee 24s linear infinite;
+}
+
+.item {
+  flex: none;
+  padding: 11px 48px;
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--paper);
+}
+
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .track {
+    animation: none;
+  }
+  .banner {
+    overflow-x: auto;
+  }
+}

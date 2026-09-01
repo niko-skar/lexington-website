@@ -11,11 +11,24 @@ export const siteSettings = defineType({
   title: "Site Settings",
   type: "document",
   groups: [
+    { name: "banner", title: "Promo Banner" },
     { name: "contact", title: "Contact Info" },
     { name: "home", title: "Home Page" },
     { name: "pages", title: "Page Intros" },
   ],
   fields: [
+    defineField({
+      name: "promoBanner",
+      title: "Promo banner",
+      description: "A scrolling announcement bar shown site-wide, just below the header.",
+      type: "object",
+      group: "banner",
+      fields: [
+        defineField({ name: "enabled", title: "Show banner", type: "boolean", initialValue: true }),
+        defineField({ name: "message", title: "Message", type: "string" }),
+      ],
+    }),
+
     defineField({ name: "contactPhone", title: "Phone", type: "string", group: "contact" }),
     defineField({ name: "contactEmail", title: "Email", type: "string", group: "contact" }),
     defineField({
