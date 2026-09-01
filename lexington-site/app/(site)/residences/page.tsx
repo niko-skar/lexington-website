@@ -51,7 +51,7 @@ export default async function ResidencesPage() {
     <>
       <PageIntro {...siteSettings.residencesIntro} />
 
-      <section id="pricing" className="section sectionStone" style={{ paddingTop: "clamp(32px, 4vw, 56px)" }}>
+      <section className="section sectionStone" style={{ paddingTop: "clamp(32px, 4vw, 56px)" }}>
         <div className="wrap">
           <UnitFinder units={units} tiers={tiers} />
         </div>

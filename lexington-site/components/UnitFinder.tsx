@@ -119,7 +119,7 @@ export function UnitFinder({ units, tiers }: UnitFinderProps) {
         <PackageTiers tiers={tiers} selected={selectedTier} onSelect={setSelectedTier} />
       </div>
 
-      <div className={styles.filters}>
+      <div id="pricing" className={styles.filters}>
         <div className={styles.filterGroup}>
           <span className={styles.filterLabel}>Floor</span>
           <div className={styles.pills}>
