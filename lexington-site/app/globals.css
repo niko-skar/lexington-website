@@ -132,10 +132,19 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-html,
-body {
+html {
   max-width: 100vw;
   overflow-x: hidden;
+}
+
+body {
+  /* overflow-x lives on <html> only, not here -- body having its own
+     explicit overflow value makes it independently qualify as a
+     scrolling container, which breaks position: sticky for every
+     descendant (the header, and this page's promo banner) since their
+     "stick" offset then resolves against body's own (unconstrained,
+     content-height) box instead of the real viewport. */
+  max-width: 100vw;
 }
 
 img,

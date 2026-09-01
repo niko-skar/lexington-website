@@ -1,4 +1,9 @@
 .banner {
+  position: sticky;
+  /* Sits flush under the header's own sticky bar (.bar height in
+     SiteHeader.module.css) so the two stay pinned together as one unit. */
+  top: 100px;
+  z-index: 99;
   background: var(--clay);
   overflow: hidden;
   white-space: nowrap;
