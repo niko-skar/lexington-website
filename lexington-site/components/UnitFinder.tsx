@@ -119,7 +119,10 @@ export function UnitFinder({ units, tiers }: UnitFinderProps) {
         <PackageTiers tiers={tiers} selected={selectedTier} onSelect={setSelectedTier} />
       </div>
 
-      <div id="pricing" className={styles.filters}>
+      {/* scrollMarginTop clears the sticky header (100px) plus the promo
+          banner pinned beneath it, so #pricing lands right under them
+          instead of the browser's default flush-to-viewport-top jump. */}
+      <div id="pricing" className={styles.filters} style={{ scrollMarginTop: 140 }}>
         <div className={styles.filterGroup}>
           <span className={styles.filterLabel}>Floor</span>
           <div className={styles.pills}>
