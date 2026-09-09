@@ -8,6 +8,13 @@ export const unitsQuery = defineQuery(`
   }
 `);
 
+// Buyer dashboard looks up a single unit by number -- buyerAccount lives in
+// a separate dataset and can't hold a real Sanity reference across
+// datasets, so this is a plain string match instead.
+export const unitByNumberQuery = defineQuery(`
+  *[_type == "unit" && unitNumber == $unitNumber][0]
+`);
+
 export const galleryImagesQuery = defineQuery(`
   *[_type == "galleryImage"] | order(order asc) {
     _id,

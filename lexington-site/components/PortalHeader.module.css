@@ -1,0 +1,80 @@
+.header {
+  background: var(--navy);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.bar {
+  max-width: var(--max);
+  margin-inline: auto;
+  padding-inline: var(--edge-pad);
+  height: 84px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.brand {
+  font-family: var(--font-serif);
+  font-size: 18px;
+  color: var(--paper);
+  letter-spacing: 0.02em;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
+
+.brand small {
+  font-family: var(--font-sans);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--brass-lt);
+  margin-top: 3px;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex: 1;
+  justify-content: center;
+}
+
+.nav a {
+  color: var(--stone);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  transition: color 0.2s var(--ease);
+}
+
+.nav a:hover {
+  color: var(--paper);
+}
+
+.signOut {
+  background: none;
+  border: 1px solid rgba(247, 244, 236, 0.35);
+  color: var(--paper);
+  padding: 9px 18px;
+  border-radius: var(--radius);
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transition: all 0.2s var(--ease);
+}
+
+.signOut:hover {
+  border-color: var(--paper);
+  background: rgba(247, 244, 236, 0.08);
+}
+
+@media (max-width: 720px) {
+  .nav {
+    display: none;
+  }
+}

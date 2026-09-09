@@ -1,0 +1,41 @@
+.page {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--navy);
+  background-image: var(--navy-texture-image);
+  background-size: var(--navy-texture-size);
+  background-repeat: var(--navy-texture-repeat);
+  padding: var(--space-6);
+}
+
+.card {
+  width: 100%;
+  max-width: 420px;
+  background: var(--paper);
+  border-radius: var(--radius);
+  padding: var(--space-7) var(--space-6);
+}
+
+.brand {
+  display: block;
+  font-family: var(--font-serif);
+  font-size: 15px;
+  letter-spacing: 0.04em;
+  color: var(--sage);
+  margin-bottom: var(--space-5);
+}
+
+.title {
+  font-family: var(--font-serif);
+  font-size: var(--fs-500);
+  margin-bottom: 10px;
+}
+
+.lede {
+  font-size: var(--fs-200);
+  color: #555;
+  margin-bottom: var(--space-6);
+  line-height: 1.6;
+}
