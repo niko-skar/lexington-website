@@ -14,7 +14,6 @@ const NAV_LINKS = [
   { href: "/progress", label: "Progress" },
   { href: "/invest", label: "Invest" },
   { href: "/about", label: "Our Story" },
-  { href: "/login", label: "Buyer Portal" },
 ];
 
 export function SiteHeader() {
@@ -42,6 +41,13 @@ export function SiteHeader() {
           ))}
           <Link href="/contact" className={styles.cta} onClick={() => setOpen(false)}>
             Contact Us
+          </Link>
+          <Link
+            href="/login"
+            aria-current={pathname === "/login" ? "page" : undefined}
+            onClick={() => setOpen(false)}
+          >
+            Buyer Portal
           </Link>
         </nav>
 
