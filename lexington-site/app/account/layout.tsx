@@ -18,7 +18,7 @@ const NAV_LINKS = [
 export default function AccountLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
-      <PortalHeader homeHref="/account" navLinks={NAV_LINKS} signOutAction={logoutAction} />
+      <PortalHeader navLinks={NAV_LINKS} signOutAction={logoutAction} />
       {children}
     </>
   );

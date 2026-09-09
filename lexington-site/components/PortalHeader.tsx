@@ -3,16 +3,18 @@ import Link from "next/link";
 import styles from "./PortalHeader.module.css";
 
 interface PortalHeaderProps {
-  homeHref: string;
   navLinks?: { href: string; label: string }[];
   signOutAction?: () => Promise<void>;
 }
 
-export function PortalHeader({ homeHref, navLinks, signOutAction }: PortalHeaderProps) {
+export function PortalHeader({ navLinks, signOutAction }: PortalHeaderProps) {
   return (
     <header className={styles.header}>
       <div className={styles.bar}>
-        <Link href={homeHref} className={styles.brand}>
+        {/* Always the real site homepage, not a portal-specific "home" --
+            a logo going anywhere else reads as broken. The portal's own
+            nav links (Overview, etc.) cover in-portal navigation. */}
+        <Link href="/" className={styles.brand}>
           The Lexington
           <small>Skarlatos &amp; Son</small>
         </Link>

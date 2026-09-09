@@ -8,10 +8,12 @@ export const metadata = {
 // Auth-gated, always-fresh data -- never statically prerendered.
 export const dynamic = "force-dynamic";
 
+const NAV_LINKS = [{ href: "/admin", label: "Buyers" }];
+
 export default function AdminProtectedLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
-      <PortalHeader homeHref="/admin" signOutAction={adminLogoutAction} />
+      <PortalHeader navLinks={NAV_LINKS} signOutAction={adminLogoutAction} />
       {children}
     </>
   );
