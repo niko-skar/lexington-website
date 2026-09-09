@@ -23,6 +23,12 @@ export async function requireCurrentBuyer(): Promise<{ buyer: BuyerAccount; unit
     email: session.email,
   });
   if (!buyer) {
+    // The account behind this session no longer exists (e.g. deleted) --
+    // the cookie itself is still a validly-signed token. Cookies can only
+    // be written from a Server Action/Route Handler, not here, so this
+    // can't clear it -- see the matching existence check in
+    // app/login/page.tsx, which is what actually breaks the redirect loop
+    // this would otherwise cause.
     redirect("/login");
   }
 

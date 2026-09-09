@@ -67,6 +67,9 @@ export default async function AccountOverviewPage() {
             </div>
             <div className={styles.empty} style={{ marginTop: 8 }}>
               {mostRecent.date} {mostRecent.method && `· ${formatMethod(mostRecent.method)}`}
+              {mostRecent.currency !== "USD" &&
+                mostRecent.exchangeRate &&
+                ` · ₵${mostRecent.exchangeRate} / $1`}
             </div>
           </div>
         ) : (

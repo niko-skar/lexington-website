@@ -2,6 +2,9 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 
 import { getBuyerSession } from "@/lib/auth/session";
+import { getBuyersClient } from "@/lib/sanity/buyersClient";
+import { buyerAccountByEmailQuery } from "@/lib/sanity/buyersQueries";
+import type { BuyerAccount } from "@/lib/sanity/buyersTypes";
 import { LoginForm } from "@/components/LoginForm";
 import contactFormStyles from "@/components/ContactForm.module.css";
 import styles from "./login.module.css";
@@ -14,8 +17,27 @@ export const metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function LoginPage() {
-  if (await getBuyerSession()) {
-    redirect("/account");
+  const session = await getBuyerSession();
+  if (session) {
+    // Confirm the account behind this (still cryptographically valid)
+    // session actually still exists -- e.g. it was deleted after the
+    // cookie was issued -- before redirecting away. Skipping this check
+    // would bounce a visitor with a stale cookie straight back to
+    // /account, which bounces them right back here: an infinite loop
+    // neither side can break, since a Server Component render (this
+    // page) isn't allowed to clear the cookie itself.
+    let buyer: BuyerAccount | null = null;
+    try {
+      buyer = await getBuyersClient().fetch<BuyerAccount | null>(buyerAccountByEmailQuery, {
+        email: session.email,
+      });
+    } catch {
+      // Buyers dataset unreachable -- fall through to the login form
+      // rather than erroring the whole page.
+    }
+    if (buyer) {
+      redirect("/account");
+    }
   }
 
   return (

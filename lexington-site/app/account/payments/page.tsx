@@ -49,6 +49,7 @@ export default async function AccountPaymentsPage() {
             <tr>
               <th>Date</th>
               <th>Amount</th>
+              <th>Rate</th>
               <th>USD Equivalent</th>
               <th>Method</th>
               <th>Note</th>
@@ -57,12 +58,14 @@ export default async function AccountPaymentsPage() {
           <tbody>
             {payments.map((p, i) => {
               const usd = usdEquivalent(p);
+              const isGHS = p.currency !== "USD";
               return (
                 <tr key={i}>
                   <td>{p.date || "—"}</td>
-                  <td>{p.currency === "USD" ? formatUSD(p.amount) : formatGHS(p.amount)}</td>
+                  <td>{isGHS ? formatGHS(p.amount) : formatUSD(p.amount)}</td>
+                  <td>{isGHS ? (p.exchangeRate ? `₵${p.exchangeRate} / $1` : "missing") : "—"}</td>
                   <td>
-                    {p.currency === "USD" ? "—" : usd !== null ? formatUSD(Math.round(usd)) : "rate missing"}
+                    {isGHS ? (usd !== null ? formatUSD(Math.round(usd)) : "rate missing") : "—"}
                   </td>
                   <td>{formatMethod(p.method)}</td>
                   <td>{p.note || "—"}</td>
