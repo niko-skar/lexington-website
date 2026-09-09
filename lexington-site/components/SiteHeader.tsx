@@ -14,6 +14,7 @@ const NAV_LINKS = [
   { href: "/progress", label: "Progress" },
   { href: "/invest", label: "Invest" },
   { href: "/about", label: "Our Story" },
+  { href: "/login", label: "Buyer Portal" },
 ];
 
 export function SiteHeader() {
