@@ -30,7 +30,7 @@ export default async function AccountPaymentsPage() {
         </div>
         <div className={styles.card}>
           <div className={styles.cardLabel}>Balance Remaining</div>
-          <div className={balance > 0 ? styles.cardValueClay : styles.cardValue}>
+          <div className={balance > 0 ? styles.cardValueSage : styles.cardValue}>
             {formatUSD(Math.round(Math.max(balance, 0)))}
           </div>
         </div>

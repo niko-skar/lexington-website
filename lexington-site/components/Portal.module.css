@@ -46,9 +46,9 @@
   color: var(--ink);
 }
 
-.cardValueClay {
+.cardValueSage {
   composes: cardValue;
-  color: var(--clay);
+  color: var(--sage);
 }
 
 .section {
