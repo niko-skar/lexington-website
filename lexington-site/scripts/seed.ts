@@ -696,7 +696,7 @@ async function seedSiteSettings() {
     promoBanner: {
       enabled: true,
       message:
-        "⚡UPDATE⚡ Launch pricing ends 30th of September — 18% off with full payment or 10% off with flexible 12, 18 or 24-month payment plans.",
+        "⚡UPDATE⚡ Launch pricing ends 30th of September — 18% off with full payment or 10% off with flexible 12 or 18-month payment plans.",
     },
     contactPhone: "+233 (0)244 30 5262",
     contactEmail: "sales@lexington.com.gh",
@@ -761,7 +761,7 @@ async function seedSiteSettings() {
       promoBanner: {
         enabled: true,
         message:
-          "⚡UPDATE⚡ Launch pricing ends 30th of September — 18% off with full payment or 10% off with flexible 12, 18 or 24-month payment plans.",
+          "⚡UPDATE⚡ Launch pricing ends 30th of September — 18% off with full payment or 10% off with flexible 12 or 18-month payment plans.",
       },
     })
     .commit();
