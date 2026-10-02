@@ -8,6 +8,18 @@ export const unitsQuery = defineQuery(`
   }
 `);
 
+// Slim unit list for pickers (the CRM's "which unit" dropdown).
+export const unitOptionsQuery = defineQuery(`
+  *[_type == "unit"] | order(floor asc, unitNumber asc) {
+    unitNumber,
+    bedroomType,
+    floor,
+    areaSqm,
+    priceUSD,
+    status
+  }
+`);
+
 // Buyer dashboard looks up a single unit by number -- buyerAccount lives in
 // a separate dataset and can't hold a real Sanity reference across
 // datasets, so this is a plain string match instead.

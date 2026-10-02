@@ -14,6 +14,13 @@ export const buyersStructure: StructureResolver = (S) =>
             .title("Buyer accounts")
             .defaultOrdering([{ field: "email", direction: "asc" }])
         ),
+      S.listItem()
+        .title("Prospects (CRM backup view)")
+        .child(
+          S.documentTypeList("lead")
+            .title("Prospects")
+            .defaultOrdering([{ field: "_createdAt", direction: "desc" }])
+        ),
       S.divider(),
       S.listItem()
         .title("Standard agreements")

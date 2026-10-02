@@ -79,7 +79,8 @@ export function ContactForm() {
       {state.status === "success" && <p className={styles.success}>{state.message}</p>}
       {state.status === "error" && <p className={styles.error}>{state.message}</p>}
       <p className={styles.note}>
-        Your enquiry is sent directly to Skarlatos &amp; Son.
+        Your enquiry is sent directly to Skarlatos &amp; Son, and we keep your
+        details so we can follow up with you.
       </p>
     </form>
   );

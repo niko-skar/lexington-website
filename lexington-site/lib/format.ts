@@ -16,8 +16,20 @@ export function phoneHref(phone: string) {
 }
 
 // wa.me needs the full international number as bare digits — no "+", no
-// "(0)" trunk prefix, same handling as phoneHref above.
+// leading zeros. Numbers typed the local Ghana way ("024 430 5262") get the
+// 233 country code added; anything with an explicit "+" or "00" is already
+// international and is left alone.
+export function internationalDigits(phone: string) {
+  const cleaned = phone.replace(/\(0\)/g, "").trim();
+  const digits = cleaned.replace(/\D/g, "");
+  if (cleaned.startsWith("+")) return digits;
+  if (digits.startsWith("00")) return digits.slice(2);
+  if (digits.startsWith("233")) return digits;
+  if (digits.startsWith("0")) return `233${digits.slice(1)}`;
+  if (digits.length === 9) return `233${digits}`;
+  return digits;
+}
+
 export function whatsappUrl(phone: string, message?: string) {
-  const digits = phone.replace(/\(0\)/g, "").replace(/\D/g, "");
-  return `https://wa.me/${digits}${message ? `?text=${encodeURIComponent(message)}` : ""}`;
+  return `https://wa.me/${internationalDigits(phone)}${message ? `?text=${encodeURIComponent(message)}` : ""}`;
 }

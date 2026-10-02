@@ -1,0 +1,644 @@
+/* ---- header + tabs ---------------------------------------------------- */
+
+.head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: var(--space-5);
+}
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-bottom: var(--space-6);
+  border-bottom: 1px solid var(--stone-lt);
+}
+
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 14px;
+  margin-bottom: -1px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--sage);
+  border-bottom: 2px solid transparent;
+}
+
+.tab:hover {
+  color: var(--ink);
+}
+
+.tabActive {
+  color: var(--ink);
+  border-bottom-color: var(--clay);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--clay);
+  color: var(--paper);
+  font-size: 11px;
+  letter-spacing: 0;
+}
+
+.badgeMuted {
+  background: var(--stone);
+  color: var(--ink);
+}
+
+/* ---- sections + rows -------------------------------------------------- */
+
+.section {
+  margin-bottom: var(--space-7);
+}
+
+.sectionHead {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.sectionTitle {
+  font-family: var(--font-serif);
+  font-size: var(--fs-500);
+}
+
+.sectionHint {
+  font-size: var(--fs-200);
+  color: #777;
+}
+
+.empty {
+  padding: 18px;
+  border: 1px dashed var(--stone);
+  border-radius: var(--radius);
+  color: #777;
+  font-size: var(--fs-200);
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px 20px;
+  flex-wrap: wrap;
+  padding: 14px 16px;
+  background: var(--paper-dim);
+  border: 1px solid var(--stone-lt);
+  border-radius: var(--radius);
+}
+
+.rowOverdue {
+  border-left: 3px solid var(--clay);
+}
+
+.rowMain {
+  flex: 1 1 260px;
+  min-width: 0;
+}
+
+.rowTop {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.leadLink {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.leadLink:hover {
+  color: var(--clay);
+}
+
+.rowText {
+  margin-top: 4px;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.rowMeta {
+  margin-top: 4px;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 13px;
+  color: #777;
+}
+
+.actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.actions form {
+  display: inline-flex;
+}
+
+/* ---- due dates -------------------------------------------------------- */
+
+.dueOverdue {
+  color: var(--clay);
+  font-weight: 700;
+}
+
+.dueToday {
+  color: #7a5c28;
+  font-weight: 700;
+}
+
+.dueSoon {
+  color: var(--ink);
+}
+
+.dueLater,
+.dueNone {
+  color: #777;
+}
+
+/* ---- buttons ---------------------------------------------------------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--stone);
+  border-radius: var(--radius);
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color 0.15s var(--ease), background 0.15s var(--ease);
+}
+
+.btn:hover {
+  border-color: var(--ink);
+}
+
+.btnDone {
+  composes: btn;
+  background: var(--sage);
+  border-color: var(--sage);
+  color: var(--paper);
+}
+
+.btnDone:hover {
+  background: #566150;
+  border-color: #566150;
+}
+
+.btnPrimary {
+  composes: btn;
+  background: var(--clay);
+  border-color: var(--clay);
+  color: var(--paper);
+  padding: 0 18px;
+}
+
+.btnPrimary:hover {
+  background: var(--clay-lt);
+  border-color: var(--clay-lt);
+}
+
+.btnDanger {
+  composes: btn;
+  color: var(--clay);
+  border-color: var(--clay);
+}
+
+.btnDanger:hover {
+  background: var(--clay);
+  color: var(--paper);
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* ---- stage chips ------------------------------------------------------ */
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.chipAttention {
+  composes: chip;
+  background: #f3e1d8;
+  color: var(--clay);
+}
+
+.chipOpen {
+  composes: chip;
+  background: var(--stone-lt);
+  color: var(--ink);
+}
+
+.chipWon {
+  composes: chip;
+  background: #dfe6d8;
+  color: #3f4b38;
+}
+
+.chipDone {
+  composes: chip;
+  background: #cdd7c3;
+  color: #2e3a28;
+}
+
+.chipLost {
+  composes: chip;
+  background: #e8e2e0;
+  color: #6b6b6b;
+}
+
+/* ---- pipeline board --------------------------------------------------- */
+
+.board {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(220px, 1fr);
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 12px;
+  scroll-snap-type: x proximity;
+}
+
+.col {
+  scroll-snap-align: start;
+  min-height: 140px;
+  padding: 10px;
+  background: var(--paper-dim);
+  border: 1px solid var(--stone-lt);
+  border-radius: var(--radius);
+}
+
+.colHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--sage);
+}
+
+.cards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.card {
+  padding: 10px 12px;
+  background: var(--paper);
+  border: 1px solid var(--stone-lt);
+  border-radius: var(--radius);
+}
+
+.cardName {
+  font-weight: 600;
+  color: var(--ink);
+  display: block;
+}
+
+.cardName:hover {
+  color: var(--clay);
+}
+
+.cardSub {
+  margin-top: 2px;
+  font-size: 12.5px;
+  color: #777;
+}
+
+.cardTask {
+  margin-top: 6px;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.cardNav {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.cardNav form {
+  display: inline-flex;
+}
+
+.cardNav .btn {
+  min-height: 30px;
+  padding: 0 10px;
+}
+
+.lostLink {
+  display: inline-block;
+  margin-top: 4px;
+  font-size: 13px;
+  color: #777;
+  text-decoration: underline;
+}
+
+/* ---- search / filters ------------------------------------------------- */
+
+.filters {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  margin-bottom: var(--space-5);
+}
+
+.filters .field {
+  flex: 1 1 160px;
+}
+
+.filters .field:first-child {
+  flex: 2 1 220px;
+}
+
+/* ---- forms ------------------------------------------------------------ */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.field label {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sage);
+}
+
+.field input,
+.field select,
+.field textarea {
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid var(--stone);
+  border-radius: var(--radius);
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px;
+}
+
+.field textarea {
+  min-height: 84px;
+  resize: vertical;
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  outline: none;
+  border-color: var(--clay);
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.formMsgOk {
+  margin-top: 12px;
+  font-size: 14px;
+  color: var(--sage);
+}
+
+.formMsgErr {
+  margin-top: 12px;
+  font-size: 14px;
+  color: var(--clay);
+}
+
+.addBox {
+  margin-bottom: var(--space-6);
+  background: var(--paper-dim);
+  border: 1px solid var(--stone-lt);
+  border-radius: var(--radius);
+}
+
+.addBox summary {
+  padding: 14px 16px;
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+}
+
+.addBox summary::-webkit-details-marker {
+  display: none;
+}
+
+.addBox[open] summary {
+  border-bottom: 1px solid var(--stone-lt);
+}
+
+.addBoxBody {
+  padding: 16px;
+}
+
+/* ---- prospect page ---------------------------------------------------- */
+
+.back {
+  display: inline-block;
+  margin-bottom: 14px;
+  font-size: 13px;
+  color: var(--sage);
+}
+
+.back:hover {
+  color: var(--ink);
+}
+
+.detailGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 24px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .detailGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.panel {
+  margin-bottom: 24px;
+  padding: 18px;
+  background: var(--paper-dim);
+  border: 1px solid var(--stone-lt);
+  border-radius: var(--radius);
+}
+
+.panelTitle {
+  margin-bottom: 14px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sage);
+}
+
+.stageRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.stageRow form {
+  display: inline-flex;
+}
+
+.stagePill {
+  composes: btn;
+  min-height: 34px;
+}
+
+.stagePillActive {
+  composes: btn;
+  min-height: 34px;
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper);
+  cursor: default;
+}
+
+.lostForm {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: 12px;
+}
+
+.lostForm select {
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--stone);
+  border-radius: var(--radius);
+  background: var(--paper);
+  font: inherit;
+  font-size: 14px;
+}
+
+.contactRow {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 10px 0 0;
+}
+
+.noteList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.noteItem {
+  padding: 10px 12px;
+  background: var(--paper);
+  border: 1px solid var(--stone-lt);
+  border-radius: var(--radius);
+  font-size: 14px;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.noteMeta {
+  margin-bottom: 2px;
+  font-size: 11.5px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #888;
+}
+
+.noteSystem {
+  background: transparent;
+  border-style: dashed;
+  color: #666;
+}
+
+.doneList {
+  margin-top: 12px;
+  font-size: 14px;
+  color: #777;
+}
+
+.doneList summary {
+  cursor: pointer;
+}
+
+.doneItem {
+  margin-top: 6px;
+  text-decoration: line-through;
+}
+
+.secret {
+  display: inline-block;
+  padding: 2px 8px;
+  background: var(--paper);
+  border: 1px solid var(--stone);
+  border-radius: var(--radius);
+  font-family: var(--font-mono, monospace);
+  font-size: 15px;
+  user-select: all;
+}
+
+@media (max-width: 720px) {
+  .row {
+    padding: 12px;
+  }
+
+  .actions .btn {
+    min-height: 40px;
+  }
+}

@@ -130,6 +130,7 @@ export function notificationEmail({
   unit,
   message,
   siteSettings,
+  crmUrl,
 }: {
   name: string;
   email: string;
@@ -137,6 +138,8 @@ export function notificationEmail({
   unit: string;
   message: string;
   siteSettings: SiteSettings;
+  /** Link to this prospect in the admin CRM, when the enquiry was saved there. */
+  crmUrl?: string;
 }) {
   const fields: Array<[string, string]> = [
     ["Name", name],
@@ -180,6 +183,16 @@ export function notificationEmail({
         </table>
       </td>
     </tr>
+    ${
+      crmUrl
+        ? `
+    <tr>
+      <td style="padding:0 40px 24px;">
+        <a href="${escapeHtml(crmUrl)}" style="font-family:${FONT_SANS}; font-size:13px; color:#8b4a34; text-decoration:underline;">Open this prospect in your CRM &rarr;</a>
+      </td>
+    </tr>`
+        : ""
+    }
     ${ctaButton(`mailto:${encodeURIComponent(email)}`, `Reply to ${escapeHtml(name.split(/\s+/)[0] || name)}`)}`;
 
   return {

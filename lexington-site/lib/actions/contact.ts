@@ -2,7 +2,9 @@
 
 import { Resend } from "resend";
 
+import { saveWebsiteLead } from "@/lib/crmIntake";
 import { confirmationEmail, notificationEmail } from "@/lib/email/templates";
+import { SITE_URL } from "@/lib/seo";
 import { client } from "@/lib/sanity/client";
 import { siteSettingsQuery } from "@/lib/sanity/queries";
 import type { SiteSettings } from "@/lib/sanity/types";
@@ -37,6 +39,12 @@ export async function sendEnquiry(
     return { status: "error", message: "Please fill in your name and email." };
   }
 
+  // Save the enquiry as a prospect in the CRM before any email work, so it is
+  // captured even if the email provider is down. Never throws.
+  const leadId = email.includes("@")
+    ? await saveWebsiteLead({ name, email, phone, unit, message })
+    : null;
+
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
     console.error("RESEND_API_KEY is not set — cannot send enquiry email.");
@@ -49,7 +57,15 @@ export async function sendEnquiry(
   const siteSettings = await client.fetch<SiteSettings>(siteSettingsQuery);
   const resend = new Resend(apiKey);
 
-  const notification = notificationEmail({ name, email, phone, unit, message, siteSettings });
+  const notification = notificationEmail({
+    name,
+    email,
+    phone,
+    unit,
+    message,
+    siteSettings,
+    crmUrl: leadId ? `${SITE_URL}/admin/crm/${leadId}` : undefined,
+  });
 
   try {
     const result = await resend.emails.send({

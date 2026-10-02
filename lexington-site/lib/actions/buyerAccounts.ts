@@ -1,23 +1,17 @@
 "use server";
 
-import { randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
 
 import { getAdminSession } from "@/lib/auth/session";
 import { hashPassword } from "@/lib/auth/password";
+import { createBuyerAccountRecord, generatePassword } from "@/lib/auth/buyerAccountsCore";
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
-import { buyerAccountByEmailQuery } from "@/lib/sanity/buyersQueries";
-import type { BuyerAccount } from "@/lib/sanity/buyersTypes";
 
 export interface CreateBuyerState {
   status: "idle" | "success" | "error";
   message: string;
   /** Shown once so the admin can relay it to the buyer -- never stored, never logged. */
   generatedPassword?: string;
-}
-
-function generatePassword() {
-  return randomBytes(9).toString("base64url");
 }
 
 export async function createBuyerAccountAction(
@@ -42,32 +36,23 @@ export async function createBuyerAccountAction(
   }
 
   try {
-    const buyersClient = getBuyersClient();
-    const existing = await buyersClient.fetch<BuyerAccount | null>(buyerAccountByEmailQuery, { email });
-    if (existing) {
-      return { status: "error", message: "An account with this email already exists." };
-    }
-
-    const password = customPassword || generatePassword();
-    const passwordHash = await hashPassword(password);
-
-    await buyersClient.create({
-      _type: "buyerAccount",
+    const result = await createBuyerAccountRecord({
       email,
       name,
       unitNumber,
       contractPriceUSD,
-      passwordHash,
-      payments: [],
-      signedAgreements: [],
+      password: customPassword || undefined,
     });
+    if (!result.ok) {
+      return { status: "error", message: result.message };
+    }
 
     revalidatePath("/admin");
 
     return {
       status: "success",
       message: `Account created for ${email}.`,
-      generatedPassword: password,
+      generatedPassword: result.password,
     };
   } catch (err) {
     console.error("Failed to create buyer account:", err);

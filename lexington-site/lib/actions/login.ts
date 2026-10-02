@@ -47,5 +47,5 @@ export async function loginAction(
 
   const isAdmin = buyer.role === "admin";
   await createBuyerSession(buyer.email, isAdmin);
-  redirect(isAdmin ? "/admin" : "/account");
+  redirect(isAdmin ? "/admin/crm" : "/account");
 }

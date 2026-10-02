@@ -26,7 +26,7 @@ export async function adminLoginAction(
   }
 
   await createAdminSession();
-  redirect("/admin");
+  redirect("/admin/crm");
 }
 
 export async function adminLogoutAction() {
