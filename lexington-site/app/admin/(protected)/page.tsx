@@ -40,7 +40,7 @@ export default async function AdminPage() {
                 <tr key={b._id}>
                   <td>{b.email}</td>
                   <td>{b.name}</td>
-                  <td>{b.unitNumber}</td>
+                  <td>{b.role === "admin" ? "Admin account" : b.unitNumber}</td>
                   <td>
                     <Link href={`/admin/${b._id}`} style={{ color: "var(--clay)" }}>
                       Reset password

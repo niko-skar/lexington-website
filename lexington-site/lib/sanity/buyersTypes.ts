@@ -21,6 +21,9 @@ export interface BuyerAccount {
   email: string;
   passwordHash: string;
   name: string;
+  /** Absent means an ordinary buyer. "admin" accounts sign in at /login but land in /admin. */
+  role?: "buyer" | "admin";
+  /** Admin accounts have no unit or contract price. */
   unitNumber: string;
   contractPriceUSD: number;
   payments?: Payment[];
@@ -31,7 +34,8 @@ export interface BuyerAccountSummary {
   _id: string;
   email: string;
   name: string;
-  unitNumber: string;
+  role?: "buyer" | "admin";
+  unitNumber?: string;
 }
 
 export interface StandardAgreementDoc {

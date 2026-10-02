@@ -36,7 +36,7 @@ export default async function LoginPage() {
       // rather than erroring the whole page.
     }
     if (buyer) {
-      redirect("/account");
+      redirect(buyer.role === "admin" ? "/admin" : "/account");
     }
   }
 

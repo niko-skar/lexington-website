@@ -96,18 +96,41 @@ export const buyerAccount = defineType({
     }),
     defineField({ name: "name", title: "Name", type: "string", validation: (Rule) => Rule.required() }),
     defineField({
+      name: "role",
+      title: "Role",
+      description:
+        'Leave as Buyer for customers. "Admin" accounts sign in at the normal login page but land in the admin area (CRM) and have no unit or payments.',
+      type: "string",
+      options: {
+        list: [
+          { title: "Buyer", value: "buyer" },
+          { title: "Admin", value: "admin" },
+        ],
+        layout: "radio",
+      },
+      initialValue: "buyer",
+    }),
+    defineField({
       name: "unitNumber",
       title: "Unit number",
       type: "string",
       description: 'Must match a real unit\'s "Unit number" exactly, e.g. "302A". Not a reference — units live in a different dataset.',
-      validation: (Rule) => Rule.required(),
+      hidden: ({ document }) => document?.role === "admin",
+      validation: (Rule) =>
+        Rule.custom((value, context) => (context.document?.role === "admin" || value ? true : "Required for buyers")),
     }),
     defineField({
       name: "contractPriceUSD",
       title: "Contract price (USD)",
       description: "This buyer's actual agreed price, which may differ from the public list price. Balance is calculated as this minus the sum of payments below.",
       type: "number",
-      validation: (Rule) => Rule.required().positive(),
+      hidden: ({ document }) => document?.role === "admin",
+      validation: (Rule) =>
+        Rule.custom((value, context) =>
+          context.document?.role === "admin" || (typeof value === "number" && value > 0)
+            ? true
+            : "Required for buyers (must be positive)"
+        ),
     }),
     defineField({
       name: "payments",

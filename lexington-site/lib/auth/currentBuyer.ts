@@ -32,6 +32,11 @@ export async function requireCurrentBuyer(): Promise<{ buyer: BuyerAccount; unit
     redirect("/login");
   }
 
+  // Admin accounts have no unit or payments -- the buyer dashboard doesn't apply.
+  if (buyer.role === "admin") {
+    redirect("/admin");
+  }
+
   const unit = await client.fetch<Unit | null>(unitByNumberQuery, { unitNumber: buyer.unitNumber });
 
   return { buyer, unit };

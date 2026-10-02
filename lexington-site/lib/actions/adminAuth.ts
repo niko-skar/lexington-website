@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 
-import { createAdminSession, destroyAdminSession } from "@/lib/auth/session";
+import { createAdminSession, destroyAdminSession, destroyBuyerSession } from "@/lib/auth/session";
 
 export interface AdminLoginState {
   status: "idle" | "error";
@@ -31,5 +31,8 @@ export async function adminLoginAction(
 
 export async function adminLogoutAction() {
   await destroyAdminSession();
-  redirect("/admin/login");
+  // An admin account signed in through the buyer login holds admin access via
+  // that cookie too, so it has to go as well.
+  await destroyBuyerSession();
+  redirect("/login");
 }

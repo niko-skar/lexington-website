@@ -15,6 +15,7 @@ export const buyerAccountsQuery = defineQuery(`
     _id,
     email,
     name,
+    role,
     unitNumber
   }
 `);

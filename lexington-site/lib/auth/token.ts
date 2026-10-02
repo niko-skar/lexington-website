@@ -10,6 +10,9 @@ export type SessionRole = "buyer" | "admin";
 export interface SessionPayload {
   role: SessionRole;
   email?: string;
+  /** Set only at login, from the account's role in the buyers dataset -- lets a
+   *  buyer-portal login for an admin account also open /admin. */
+  isAdmin?: boolean;
 }
 
 function getSecretKey() {
@@ -32,7 +35,11 @@ export async function verifySessionToken(token: string): Promise<SessionPayload 
   try {
     const { payload } = await jwtVerify(token, getSecretKey());
     if (payload.role !== "buyer" && payload.role !== "admin") return null;
-    return { role: payload.role, email: typeof payload.email === "string" ? payload.email : undefined };
+    return {
+      role: payload.role,
+      email: typeof payload.email === "string" ? payload.email : undefined,
+      isAdmin: payload.isAdmin === true,
+    };
   } catch {
     // Expired, tampered, or malformed -- treat exactly like "not logged in"
     // rather than throwing, so a stale cookie never crashes a page.

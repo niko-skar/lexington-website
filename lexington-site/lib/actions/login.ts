@@ -45,6 +45,7 @@ export async function loginAction(
     return invalid;
   }
 
-  await createBuyerSession(buyer.email);
-  redirect("/account");
+  const isAdmin = buyer.role === "admin";
+  await createBuyerSession(buyer.email, isAdmin);
+  redirect(isAdmin ? "/admin" : "/account");
 }

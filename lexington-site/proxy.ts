@@ -15,9 +15,16 @@ export async function proxy(request: NextRequest) {
   }
 
   if (pathname.startsWith("/admin") && pathname !== "/admin/login") {
-    const token = request.cookies.get("admin_session")?.value;
-    const payload = token ? await verifySessionToken(token) : null;
-    if (!payload || payload.role !== "admin") {
+    const adminToken = request.cookies.get("admin_session")?.value;
+    const adminPayload = adminToken ? await verifySessionToken(adminToken) : null;
+    const hasAdminCookie = adminPayload?.role === "admin";
+
+    // Or a buyer-portal login for an account with the admin role.
+    const buyerToken = request.cookies.get("buyer_session")?.value;
+    const buyerPayload = buyerToken ? await verifySessionToken(buyerToken) : null;
+    const hasAdminAccount = buyerPayload?.role === "buyer" && buyerPayload.isAdmin === true;
+
+    if (!hasAdminCookie && !hasAdminAccount) {
       const loginUrl = new URL("/admin/login", request.url);
       return NextResponse.redirect(loginUrl);
     }
