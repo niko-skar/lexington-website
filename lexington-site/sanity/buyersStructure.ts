@@ -21,6 +21,13 @@ export const buyersStructure: StructureResolver = (S) =>
             .title("Prospects")
             .defaultOrdering([{ field: "_createdAt", direction: "desc" }])
         ),
+      S.listItem()
+        .title("Receipts issued")
+        .child(
+          S.documentTypeList("receipt")
+            .title("Receipts issued")
+            .defaultOrdering([{ field: "number", direction: "desc" }])
+        ),
       S.divider(),
       S.listItem()
         .title("Standard agreements")

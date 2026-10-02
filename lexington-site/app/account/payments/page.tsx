@@ -1,6 +1,7 @@
 import { requireCurrentBuyer, balanceFor } from "@/lib/auth/currentBuyer";
 import { formatUSD } from "@/lib/format";
 import { formatGHS, formatMethod, usdEquivalent } from "@/lib/currency";
+import { ensureReceiptNumbers } from "@/lib/receipts/issue";
 import styles from "@/components/Portal.module.css";
 
 export const metadata = {
@@ -13,6 +14,15 @@ export default async function AccountPaymentsPage() {
   const payments = [...(buyer.payments ?? [])].sort((a, b) =>
     (b.date ?? "").localeCompare(a.date ?? "")
   );
+
+  // Every payment gets its receipt number the first time it's looked at. If
+  // that fails the page still works: the download button numbers it instead.
+  let receiptNumbers = new Map<string, string>();
+  try {
+    receiptNumbers = await ensureReceiptNumbers(buyer._id, buyer.payments);
+  } catch (err) {
+    console.error("Couldn't issue receipt numbers:", err);
+  }
 
   return (
     <main className={styles.page}>
@@ -44,36 +54,56 @@ export default async function AccountPaymentsPage() {
       )}
 
       {payments.length > 0 ? (
-        <table className={styles.table}>
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Amount</th>
-              <th>Rate</th>
-              <th>USD Equivalent</th>
-              <th>Method</th>
-              <th>Note</th>
-            </tr>
-          </thead>
-          <tbody>
-            {payments.map((p, i) => {
-              const usd = usdEquivalent(p);
-              const isGHS = p.currency !== "USD";
-              return (
-                <tr key={i}>
-                  <td>{p.date || "—"}</td>
-                  <td>{isGHS ? formatGHS(p.amount) : formatUSD(p.amount)}</td>
-                  <td>{isGHS ? (p.exchangeRate ? `₵${p.exchangeRate} / $1` : "missing") : "—"}</td>
-                  <td>
-                    {isGHS ? (usd !== null ? formatUSD(Math.round(usd)) : "rate missing") : "—"}
-                  </td>
-                  <td>{formatMethod(p.method)}</td>
-                  <td>{p.note || "—"}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+        <div className={styles.tableWrap}>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Amount</th>
+                <th>Rate</th>
+                <th>USD Equivalent</th>
+                <th>Method</th>
+                <th>Note</th>
+                <th>Receipt</th>
+              </tr>
+            </thead>
+            <tbody>
+              {payments.map((p, i) => {
+                const usd = usdEquivalent(p);
+                const isGHS = p.currency !== "USD";
+                const number = p._key ? receiptNumbers.get(p._key) : undefined;
+                return (
+                  <tr key={p._key ?? i}>
+                    <td>{p.date || "—"}</td>
+                    <td>{isGHS ? formatGHS(p.amount) : formatUSD(p.amount)}</td>
+                    <td>{isGHS ? (p.exchangeRate ? `₵${p.exchangeRate} / $1` : "missing") : "—"}</td>
+                    <td>
+                      {isGHS ? (usd !== null ? formatUSD(Math.round(usd)) : "rate missing") : "—"}
+                    </td>
+                    <td>{formatMethod(p.method)}</td>
+                    <td>{p.note || "—"}</td>
+                    <td className={styles.receiptCell}>
+                      {p._key ? (
+                        <>
+                          {number && <span className={styles.receiptNumber}>{number}</span>}
+                          <a
+                            className={styles.receiptLink}
+                            href={`/account/payments/receipt/${p._key}`}
+                            download
+                          >
+                            Download receipt
+                          </a>
+                        </>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       ) : (
         <p className={styles.empty}>No payments recorded yet.</p>
       )}

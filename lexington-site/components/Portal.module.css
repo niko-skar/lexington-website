@@ -121,3 +121,41 @@
   color: #777;
   font-size: var(--fs-200);
 }
+
+/* ---- payment receipts -------------------------------------------------- */
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+.receiptCell {
+  white-space: nowrap;
+}
+
+.receiptLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--clay);
+  border-radius: var(--radius);
+  color: var(--clay);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transition: background 0.15s var(--ease), color 0.15s var(--ease);
+}
+
+.receiptLink:hover {
+  background: var(--clay);
+  color: var(--paper);
+}
+
+.receiptNumber {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--sage);
+}

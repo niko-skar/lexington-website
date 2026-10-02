@@ -71,6 +71,13 @@ export default async function AccountOverviewPage() {
                 mostRecent.exchangeRate &&
                 ` · ₵${mostRecent.exchangeRate} / $1`}
             </div>
+            {mostRecent._key && (
+              <p style={{ marginTop: 14 }}>
+                <a className={styles.receiptLink} href={`/account/payments/receipt/${mostRecent._key}`} download>
+                  Download receipt
+                </a>
+              </p>
+            )}
           </div>
         ) : (
           <p className={styles.empty}>No payments recorded yet.</p>

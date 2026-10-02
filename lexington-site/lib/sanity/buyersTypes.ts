@@ -2,6 +2,8 @@ export type PaymentCurrency = "GHS" | "USD";
 export type PaymentMethod = "cash" | "momo" | "bank-transfer";
 
 export interface Payment {
+  /** Sanity's id for this row of the payments list; what a receipt is tied to. */
+  _key?: string;
   amount: number;
   currency?: PaymentCurrency;
   /** GHS per USD on the day of payment. Only meaningful when currency is GHS. */
