@@ -159,3 +159,53 @@
   letter-spacing: 0.06em;
   color: var(--sage);
 }
+
+.receiptButton {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--stone);
+  border-radius: var(--radius);
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.receiptButton:hover:not(:disabled) {
+  border-color: var(--clay);
+  color: var(--clay);
+}
+
+.receiptButton:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.receiptStatus {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  color: #777;
+}
+
+.receiptOk {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--sage);
+}
+
+.receiptErr {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--clay);
+}
+
+.receiptActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-start;
+}

@@ -123,6 +123,81 @@ export function confirmationEmail({
   };
 }
 
+// Sent to the buyer when a payment of theirs has been recorded; the PDF
+// receipt travels as an attachment.
+export function receiptEmail({
+  name,
+  receiptNumber,
+  amountText,
+  dateText,
+  methodText,
+  unitNumber,
+  balanceText,
+  portalUrl,
+  siteSettings,
+}: {
+  name: string;
+  receiptNumber: string;
+  amountText: string;
+  dateText: string;
+  methodText: string;
+  unitNumber: string;
+  /** "USD 90,900.00" -- left out when it can't be worked out. */
+  balanceText?: string;
+  portalUrl: string;
+  siteSettings: SiteSettings;
+}) {
+  const firstName = name.trim().split(/\s+/)[0] || name;
+  const rows: Array<[string, string]> = [
+    ["Receipt number", receiptNumber],
+    ["Amount received", amountText],
+    ["Date received", dateText],
+    ["Method", methodText],
+    ["Residence", `Unit ${unitNumber}`],
+  ];
+  if (balanceText) rows.push(["Balance remaining", balanceText]);
+
+  const body = `
+    <tr>
+      <td style="padding:44px 40px 8px;">
+        <div style="font-family:${FONT_SERIF}; font-size:24px; color:#15181a; line-height:1.3; margin-bottom:18px;">
+          Thank you, ${escapeHtml(firstName)}.
+        </div>
+        <p style="font-family:${FONT_SANS}; font-size:15px; line-height:1.7; color:#3a3a36; margin:0 0 28px;">
+          We've received your payment towards Unit ${escapeHtml(unitNumber)}. Your receipt is attached to this
+          email as a PDF, and you can download it again any time from your account.
+        </p>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:0 40px 32px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#ede7d8; border-left:3px solid #b08d57;">
+          <tr>
+            <td style="padding:20px 24px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                ${rows
+                  .map(
+                    ([label, value]) => `
+                <tr>
+                  <td style="font-family:${FONT_SANS}; font-size:11px; letter-spacing:1px; text-transform:uppercase; color:#8b4a34; padding:5px 0; vertical-align:top;">${escapeHtml(label)}</td>
+                  <td style="font-family:${FONT_SANS}; font-size:14px; color:#15181a; text-align:right; padding:5px 0;">${escapeHtml(value)}</td>
+                </tr>`
+                  )
+                  .join("")}
+              </table>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+    ${ctaButton(escapeHtml(portalUrl), "View your account")}`;
+
+  return {
+    subject: `Your payment receipt ${receiptNumber} — The Lexington`,
+    html: shell(siteSettings, body),
+  };
+}
+
 export function notificationEmail({
   name,
   email,

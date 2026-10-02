@@ -7,6 +7,7 @@ import { ensureReceiptNumbers } from "@/lib/receipts/issue";
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
 import { buyerAccountByIdQuery } from "@/lib/sanity/buyersQueries";
 import type { BuyerAccount } from "@/lib/sanity/buyersTypes";
+import { EmailReceiptButton } from "@/components/EmailReceiptButton";
 import { ResetPasswordForm } from "@/components/ResetPasswordForm";
 import styles from "@/components/Portal.module.css";
 
@@ -24,13 +25,28 @@ export default async function AdminBuyerPage({ params }: { params: Promise<{ id:
 
   const payments = [...(buyer.payments ?? [])].sort((a, b) => (b.date ?? "").localeCompare(a.date ?? ""));
   let receiptNumbers = new Map<string, string>();
+  const emailState = new Map<string, { emailedAt?: string; skipEmail?: boolean }>();
   if (payments.length > 0) {
     try {
       receiptNumbers = await ensureReceiptNumbers(buyer._id, buyer.payments);
+      const rows = await getBuyersClient().fetch<{ paymentKey: string; emailedAt?: string; skipEmail?: boolean }[]>(
+        `*[_type == "receipt" && buyerId == $id]{ paymentKey, emailedAt, skipEmail }`,
+        { id: buyer._id }
+      );
+      for (const r of rows) emailState.set(r.paymentKey, r);
     } catch (err) {
       console.error("Couldn't issue receipt numbers:", err);
     }
   }
+
+  const emailLabel = (key: string) => {
+    const s = emailState.get(key);
+    if (s?.emailedAt) {
+      return `Emailed ${new Date(s.emailedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" })}`;
+    }
+    if (s?.skipEmail) return "Not emailed";
+    return "Goes out automatically in 10–15 minutes";
+  };
 
   return (
     <main className={styles.page}>
@@ -58,6 +74,7 @@ export default async function AdminBuyerPage({ params }: { params: Promise<{ id:
                   <th>Amount</th>
                   <th>Method</th>
                   <th>Receipt</th>
+                  <th>Email to buyer</th>
                 </tr>
               </thead>
               <tbody>
@@ -76,6 +93,22 @@ export default async function AdminBuyerPage({ params }: { params: Promise<{ id:
                             Download receipt
                           </a>
                         </>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                    <td>
+                      {p._key ? (
+                        <div className={styles.receiptActions}>
+                          <div>
+                            <EmailReceiptButton
+                              buyerId={buyer._id}
+                              paymentKey={p._key}
+                              label={emailState.get(p._key)?.emailedAt ? "Email again" : "Email now"}
+                            />
+                            <span className={styles.receiptStatus}>{emailLabel(p._key)}</span>
+                          </div>
+                        </div>
                       ) : (
                         "—"
                       )}

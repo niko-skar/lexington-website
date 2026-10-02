@@ -7,7 +7,7 @@ import { siteSettingsQuery, unitByNumberQuery } from "@/lib/sanity/queries";
 import type { SiteSettings, Unit } from "@/lib/sanity/types";
 import { formatFloor } from "@/lib/format";
 import { byDateThenKey, ensureReceiptNumbers } from "./issue";
-import { buildReceiptPdf } from "./pdf";
+import { buildReceiptPdf, longDate } from "./pdf";
 
 const METHOD_LABELS: Record<string, string> = {
   cash: "Cash",
@@ -17,10 +17,18 @@ const METHOD_LABELS: Record<string, string> = {
 
 // The receipt for one payment on one buyer's account, as a PDF. Returns null
 // if the payment doesn't exist on that account.
-export async function renderReceipt(
-  buyer: BuyerAccount,
-  paymentKey: string
-): Promise<{ bytes: Uint8Array; filename: string } | null> {
+export interface RenderedReceipt {
+  bytes: Uint8Array;
+  filename: string;
+  /** What the receipt says, for the covering email. */
+  number: string;
+  amountText: string;
+  dateText: string;
+  methodText: string;
+  balanceText?: string;
+}
+
+export async function renderReceipt(buyer: BuyerAccount, paymentKey: string): Promise<RenderedReceipt | null> {
   const payments = buyer.payments ?? [];
   const payment = payments.find((p) => p._key === paymentKey);
   if (!payment || !(payment.amount > 0)) return null;
@@ -44,6 +52,7 @@ export async function renderReceipt(
   ]);
 
   const currency = payment.currency === "USD" ? "USD" : "GHS";
+  const methodText = payment.method ? (METHOD_LABELS[payment.method] ?? formatMethod(payment.method)) : "Not recorded";
   const bytes = await buildReceiptPdf({
     receiptNumber,
     issuedOn: new Date().toISOString().slice(0, 10),
@@ -55,7 +64,7 @@ export async function renderReceipt(
       currency,
       exchangeRate: payment.exchangeRate,
       date: payment.date,
-      methodLabel: payment.method ? (METHOD_LABELS[payment.method] ?? formatMethod(payment.method)) : "Not recorded",
+      methodLabel: methodText,
       note: payment.note,
     },
     usdEquivalent: usdEquivalent(payment),
@@ -74,7 +83,19 @@ export async function renderReceipt(
     },
   });
 
-  return { bytes, filename: `Lexington-Receipt-${receiptNumber}.pdf` };
+  const amountFigure = payment.amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return {
+    bytes,
+    filename: `Lexington-Receipt-${receiptNumber}.pdf`,
+    number: receiptNumber,
+    amountText: `${currency} ${amountFigure}`,
+    dateText: longDate(payment.date),
+    methodText,
+    balanceText:
+      paidToDateUSD === null
+        ? undefined
+        : `USD ${Math.max(buyer.contractPriceUSD - paidToDateUSD, 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+  };
 }
 
 export function pdfResponse(file: { bytes: Uint8Array; filename: string }) {
