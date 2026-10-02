@@ -2,10 +2,11 @@
 
 import { createContext, useContext, useOptimistic, useState, useTransition, type ReactNode } from "react";
 
-import { setStageAction } from "@/lib/actions/crm";
-import { LOST_REASONS, STAGES } from "@/lib/crm";
+import { LOST_REASONS, STAGES, stageLabel } from "@/lib/crm";
 import styles from "./Crm.module.css";
 import { StageChip } from "./StageChip";
+import { saveStage } from "./StageSelect";
+import { useToast } from "./Toasts";
 
 interface StageContext {
   stage: string;
@@ -33,22 +34,19 @@ export function StageProvider({
 }) {
   const [shown, setShown] = useOptimistic(stage);
   const [, startTransition] = useTransition();
+  const toast = useToast();
 
   function change(next: string, reason = "") {
     const from = shown;
     startTransition(async () => {
       setShown(next);
-      const data = new FormData();
-      data.set("leadId", leadId);
-      data.set("stage", next);
-      data.set("fromStage", from);
-      if (reason) data.set("lostReason", reason);
       try {
-        await setStageAction(data);
+        await saveStage(leadId, next, from, reason);
       } catch {
         window.alert("Couldn't change the stage. Please try again.");
       }
     });
+    toast.show(`Moved to ${stageLabel(next)}`, () => saveStage(leadId, from, next));
   }
 
   return <Context.Provider value={{ stage: shown, change }}>{children}</Context.Provider>;

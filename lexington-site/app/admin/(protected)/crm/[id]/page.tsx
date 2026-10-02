@@ -4,13 +4,12 @@ import { notFound } from "next/navigation";
 import styles from "@/components/crm/Crm.module.css";
 import { ConfirmSubmitButton } from "@/components/crm/ConfirmSubmitButton";
 import { openTasksOf } from "@/components/crm/data";
-import { AddNoteForm, AddTaskForm, CreateBuyerFromLeadForm, LeadDetailsForm } from "@/components/crm/LeadForms";
+import { NotesPanel, StepsPanel } from "@/components/crm/LeadPanels";
+import { CreateBuyerFromLeadForm, LeadDetailsForm } from "@/components/crm/LeadForms";
 import { LiveStageChip, LostControls, StagePills, StageProvider } from "@/components/crm/StagePanel";
-import { TaskRow } from "@/components/crm/TaskRow";
-import portal from "@/components/Portal.module.css";
 import { deleteLeadAction } from "@/lib/actions/crm";
 import { requireAdminPage } from "@/lib/auth/requireAdmin";
-import { STAGES, formatWhen, paymentLabel, sourceLabel, todayISO } from "@/lib/crm";
+import { STAGES, paymentLabel, sourceLabel, todayISO } from "@/lib/crm";
 import { formatUSD, phoneHref, whatsappUrl } from "@/lib/format";
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
 import { client } from "@/lib/sanity/client";
@@ -52,15 +51,12 @@ export default async function ProspectPage({ params }: { params: Promise<{ id: s
       : null;
 
   return (
-    <main className={portal.page}>
+    <main className={styles.crmPage}>
       <StageProvider leadId={lead._id} stage={lead.stage ?? "new"}>
       <Link href="/admin/crm" className={styles.back}>
         ← All prospects
       </Link>
-      <div className={portal.eyebrow}>Prospect</div>
-      <h1 className={portal.title} style={{ marginBottom: 12 }}>
-        {lead.name}
-      </h1>
+      <h1 className={styles.prospectTitle}>{lead.name}</h1>
       <div className={styles.rowTop}>
         <LiveStageChip />
         <span className={styles.sectionHint}>
@@ -69,7 +65,7 @@ export default async function ProspectPage({ params }: { params: Promise<{ id: s
           {lead.agreedPriceUSD ? ` · Agreed ${formatUSD(lead.agreedPriceUSD)}` : ""}
         </span>
       </div>
-      <div className={styles.contactRow} style={{ marginBottom: 28 }}>
+      <div className={styles.contactRow} style={{ marginBottom: 20 }}>
         {lead.phone && (
           <>
             <a className={styles.btn} href={whatsappUrl(lead.phone)} target="_blank" rel="noreferrer">
@@ -102,47 +98,12 @@ export default async function ProspectPage({ params }: { params: Promise<{ id: s
 
           <section className={styles.panel}>
             <h2 className={styles.panelTitle}>Next steps</h2>
-            {open.length === 0 ? (
-              <div className={styles.empty}>Nothing scheduled. Add the next step below.</div>
-            ) : (
-              <div className={styles.rows} style={{ marginBottom: 18 }}>
-                {open.map((task) => (
-                  <TaskRow
-                    key={task._key}
-                    lead={lead}
-                    task={task}
-                    today={today}
-                    mode={task.waitingOn === "them" ? "them" : "me"}
-                    showLead={false}
-                  />
-                ))}
-              </div>
-            )}
-            <AddTaskForm leadId={lead._id} today={today} />
-            {done.length > 0 && (
-              <details className={styles.doneList}>
-                <summary>Done ({done.length})</summary>
-                {done.map((t) => (
-                  <div key={t._key} className={styles.doneItem}>
-                    {t.text}
-                  </div>
-                ))}
-              </details>
-            )}
+            <StepsPanel lead={lead} open={open} done={done} today={today} />
           </section>
 
           <section className={styles.panel}>
             <h2 className={styles.panelTitle}>Notes</h2>
-            <AddNoteForm leadId={lead._id} />
-            <div className={styles.noteList}>
-              {notes.map((n) => (
-                <div key={n._key} className={`${styles.noteItem} ${n.kind !== "note" ? styles.noteSystem : ""}`}>
-                  <div className={styles.noteMeta}>{formatWhen(n.at)}</div>
-                  {n.text}
-                </div>
-              ))}
-              {notes.length === 0 && <div className={styles.empty}>No notes yet.</div>}
-            </div>
+            <NotesPanel leadId={lead._id} notes={notes} />
           </section>
         </div>
 

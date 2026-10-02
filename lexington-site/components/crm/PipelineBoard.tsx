@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { useOptimistic, useTransition } from "react";
 
-import { setStageAction } from "@/lib/actions/crm";
-import { BOARD_STAGES, dueLabel, dueState } from "@/lib/crm";
+import { BOARD_STAGES, dueLabel, dueState, stageLabel } from "@/lib/crm";
 import type { Lead } from "@/lib/sanity/crmTypes";
 import styles from "./Crm.module.css";
-import { nextTaskOf, unitLine } from "./data";
+import { saveStage } from "./StageSelect";
+import { useToast } from "./Toasts";
+import { aboutLine, nextTaskOf } from "./data";
 
 const DUE_CLASS = {
   overdue: styles.dueOverdue,
@@ -23,28 +24,26 @@ interface Move {
 }
 
 // The board. A card jumps to its new column the moment you press an arrow;
-// the save happens behind it.
+// the save happens behind it, and Undo moves it back.
 export function PipelineBoard({ leads, today }: { leads: Lead[]; today: string }) {
   const [shown, move] = useOptimistic(leads, (current: Lead[], m: Move) =>
     current.map((l) => (l._id === m.id ? { ...l, stage: m.stage } : l))
   );
   const [, startTransition] = useTransition();
+  const toast = useToast();
   const lostCount = shown.filter((l) => l.stage === "lost").length;
 
   function go(lead: Lead, stage: string) {
     const from = lead.stage ?? "new";
     startTransition(async () => {
       move({ id: lead._id, stage });
-      const data = new FormData();
-      data.set("leadId", lead._id);
-      data.set("stage", stage);
-      data.set("fromStage", from);
       try {
-        await setStageAction(data);
+        await saveStage(lead._id, stage, from);
       } catch {
         window.alert("Couldn't move that prospect. Please try again.");
       }
     });
+    toast.show(`${lead.name}: moved to ${stageLabel(stage)}`, () => saveStage(lead._id, from, stage));
   }
 
   return (
@@ -60,7 +59,7 @@ export function PipelineBoard({ leads, today }: { leads: Lead[]; today: string }
           const next = BOARD_STAGES[index + 1];
 
           return (
-            <div key={stage.key} className={styles.col}>
+            <div key={stage.key} className={`${styles.col} ${inStage.length === 0 ? styles.colEmpty : ""}`}>
               <div className={styles.colHead}>
                 <span>{stage.label}</span>
                 <span className={`${styles.badge} ${styles.badgeMuted}`}>{inStage.length}</span>
@@ -68,12 +67,13 @@ export function PipelineBoard({ leads, today }: { leads: Lead[]; today: string }
               <div className={styles.cards}>
                 {inStage.map((lead) => {
                   const task = nextTaskOf(lead, today);
+                  const about = aboutLine(lead);
                   return (
                     <div key={lead._id} className={styles.card}>
                       <Link href={`/admin/crm/${lead._id}`} className={styles.cardName}>
                         {lead.name}
                       </Link>
-                      <div className={styles.cardSub}>{unitLine(lead)}</div>
+                      {about && <div className={styles.cardSub}>{about}</div>}
                       {task ? (
                         <div className={styles.cardTask}>
                           {task.text}{" "}
@@ -90,6 +90,7 @@ export function PipelineBoard({ leads, today }: { leads: Lead[]; today: string }
                             type="button"
                             className={styles.btn}
                             aria-label={`Move back to ${prev.label}`}
+                            title={`Back to ${prev.label}`}
                             onClick={() => go(lead, prev.key)}
                           >
                             ◀
@@ -102,6 +103,7 @@ export function PipelineBoard({ leads, today }: { leads: Lead[]; today: string }
                             type="button"
                             className={styles.btn}
                             aria-label={`Move on to ${next.label}`}
+                            title={`On to ${next.label}`}
                             onClick={() => go(lead, next.key)}
                           >
                             ▶

@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import type { Lead } from "@/lib/sanity/crmTypes";
 import styles from "./Crm.module.css";
+import { AskNextStepButton } from "./FollowUp";
 import { PipelineBoard } from "./PipelineBoard";
 import { StageSelect } from "./StageSelect";
 import { TaskRow } from "./TaskRow";
@@ -32,7 +33,7 @@ function Section({
 }
 
 function taskRows(items: TaskItem[], today: string, mode: "me" | "them", leaveOnSnooze = false) {
-  return items.map(({ lead, task }) => (
+  return items.map(({ lead, task, openCount }) => (
     <TaskRow
       key={`${lead._id}-${task._key}`}
       lead={lead}
@@ -40,6 +41,7 @@ function taskRows(items: TaskItem[], today: string, mode: "me" | "them", leaveOn
       today={today}
       mode={mode}
       leaveOnSnooze={leaveOnSnooze}
+      openCount={openCount}
     />
   ));
 }
@@ -80,11 +82,10 @@ export function TodayView({ leads, today }: { leads: Lead[]; today: string }) {
                   <span>{unitLine(lead)}</span>
                   <span>Nothing scheduled</span>
                 </div>
+                {lead.context && <div className={styles.rowContext}>{lead.context}</div>}
               </div>
               <div className={styles.actions}>
-                <Link href={`/admin/crm/${lead._id}`} className={styles.btnPrimary}>
-                  Add next step
-                </Link>
+                <AskNextStepButton leadId={lead._id} name={lead.name} />
               </div>
             </div>
           ))}

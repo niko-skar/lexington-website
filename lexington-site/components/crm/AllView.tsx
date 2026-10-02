@@ -120,6 +120,7 @@ export function AllView({
                     <span>{sourceLabel(lead.source)}</span>
                     <span>{paymentLabel(lead.paymentPreference)}</span>
                   </div>
+                  {lead.context && <div className={styles.rowContext}>{lead.context}</div>}
                   {task && (
                     <div className={styles.rowText}>
                       {task.text}{" "}

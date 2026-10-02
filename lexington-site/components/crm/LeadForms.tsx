@@ -3,13 +3,7 @@
 import Link from "next/link";
 import { useActionState } from "react";
 
-import {
-  addNoteAction,
-  addTaskAction,
-  createBuyerFromLeadAction,
-  updateLeadAction,
-  type CrmFormState,
-} from "@/lib/actions/crm";
+import { createBuyerFromLeadAction, updateLeadAction, type CrmFormState } from "@/lib/actions/crm";
 import { PAYMENT_PREFS, SOURCES } from "@/lib/crm";
 import type { Lead, UnitOption } from "@/lib/sanity/crmTypes";
 import styles from "./Crm.module.css";
@@ -93,55 +87,6 @@ export function LeadDetailsForm({ lead, units }: { lead: Lead; units: UnitOption
         </div>
       </div>
       <SubmitButton>Save details</SubmitButton>
-      <FormMessage state={state} />
-    </form>
-  );
-}
-
-// ---- add a step --------------------------------------------------------
-
-export function AddTaskForm({ leadId, today }: { leadId: string; today: string }) {
-  const [state, formAction] = useActionState(addTaskAction, initial);
-
-  return (
-    <form action={formAction}>
-      <input type="hidden" name="leadId" value={leadId} />
-      <div className={styles.formGrid}>
-        <div className={styles.field} style={{ gridColumn: "1 / -1" }}>
-          <label htmlFor="t-text">Next step</label>
-          <input id="t-text" name="text" required placeholder="e.g. Send the contract" autoComplete="off" />
-        </div>
-        <div className={styles.field}>
-          <label htmlFor="t-due">Due</label>
-          <input id="t-due" name="due" type="date" defaultValue={today} />
-        </div>
-        <div className={styles.field}>
-          <label htmlFor="t-who">Who has to act</label>
-          <select id="t-who" name="waitingOn" defaultValue="me">
-            <option value="me">Me</option>
-            <option value="them">Them (I&apos;m waiting)</option>
-          </select>
-        </div>
-      </div>
-      <SubmitButton pendingText="Adding…">Add step</SubmitButton>
-      <FormMessage state={state} />
-    </form>
-  );
-}
-
-// ---- add a note --------------------------------------------------------
-
-export function AddNoteForm({ leadId }: { leadId: string }) {
-  const [state, formAction] = useActionState(addNoteAction, initial);
-
-  return (
-    <form action={formAction}>
-      <input type="hidden" name="leadId" value={leadId} />
-      <div className={styles.field} style={{ marginBottom: 12 }}>
-        <label htmlFor="n-text">Add a note</label>
-        <textarea id="n-text" name="text" required placeholder="What was said, what they want…" />
-      </div>
-      <SubmitButton pendingText="Adding…">Add note</SubmitButton>
       <FormMessage state={state} />
     </form>
   );

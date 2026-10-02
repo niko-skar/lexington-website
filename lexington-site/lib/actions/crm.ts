@@ -219,7 +219,9 @@ export async function addTaskAction(_prev: CrmFormState, formData: FormData): Pr
   }
 }
 
-export async function completeTaskAction(formData: FormData) {
+// Returns the id of the timeline note it wrote, so an Undo can take that note
+// back out as well.
+export async function completeTaskAction(formData: FormData): Promise<{ noteKey: string }> {
   await guard();
   const id = field(formData, "leadId", 80);
   const key = field(formData, "taskKey", 40);
@@ -227,11 +229,41 @@ export async function completeTaskAction(formData: FormData) {
   if (!ID_RE.test(id) || !KEY_RE.test(key)) throw new Error("Bad request.");
 
   const now = new Date().toISOString();
+  const doneNote = note("system", `Done: ${text || "task"}`);
   await patchLead(id, (p) =>
     p
       .set({ [`tasks[_key=="${key}"].done`]: true, [`tasks[_key=="${key}"].doneAt`]: now })
-      .append("notes", [note("system", `Done: ${text || "task"}`)])
+      .append("notes", [doneNote])
   );
+  refresh(id);
+  return { noteKey: doneNote._key };
+}
+
+// Undo for "Done": the step is open again and its "Done: ..." note is removed.
+export async function reopenTaskAction(formData: FormData) {
+  await guard();
+  const id = field(formData, "leadId", 80);
+  const key = field(formData, "taskKey", 40);
+  const noteKey = field(formData, "noteKey", 40);
+  if (!ID_RE.test(id) || !KEY_RE.test(key) || (noteKey && !KEY_RE.test(noteKey))) throw new Error("Bad request.");
+
+  await patchLead(id, (p) =>
+    p
+      .set({ [`tasks[_key=="${key}"].done`]: false })
+      .unset([`tasks[_key=="${key}"].doneAt`, ...(noteKey ? [`notes[_key=="${noteKey}"]`] : [])])
+  );
+  refresh(id);
+}
+
+// Undo for "Tomorrow" / "+3 days": puts the date back (empty = no date).
+export async function setTaskDueAction(formData: FormData) {
+  await guard();
+  const id = field(formData, "leadId", 80);
+  const key = field(formData, "taskKey", 40);
+  const due = field(formData, "due", 10);
+  if (!ID_RE.test(id) || !KEY_RE.test(key) || (due && !DATE_RE.test(due))) throw new Error("Bad request.");
+
+  await patchLead(id, (p) => (due ? p.set({ [`tasks[_key=="${key}"].due`]: due }) : p.unset([`tasks[_key=="${key}"].due`])));
   refresh(id);
 }
 
@@ -241,7 +273,6 @@ export async function snoozeTaskAction(formData: FormData) {
   const key = field(formData, "taskKey", 40);
   const days = Number(field(formData, "days", 2));
   if (!ID_RE.test(id) || !KEY_RE.test(key) || ![1, 3, 7].includes(days)) throw new Error("Bad request.");
-
   await patchLead(id, (p) =>
     p.set({ [`tasks[_key=="${key}"].due`]: addDaysISO(todayISO(), days) })
   );

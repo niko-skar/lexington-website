@@ -1,4 +1,5 @@
 import { adminLogoutAction } from "@/lib/actions/adminAuth";
+import { ToastProvider } from "@/components/crm/Toasts";
 import { PortalHeader } from "@/components/PortalHeader";
 
 export const metadata = {
@@ -17,7 +18,7 @@ export default function AdminProtectedLayout({ children }: { children: React.Rea
   return (
     <>
       <PortalHeader navLinks={NAV_LINKS} signOutAction={adminLogoutAction} />
-      {children}
+      <ToastProvider>{children}</ToastProvider>
     </>
   );
 }

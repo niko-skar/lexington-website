@@ -36,6 +36,8 @@ export interface Lead {
   buyerAccountId?: string;
   tasks?: LeadTask[];
   notes?: LeadNote[];
+  /** In lists only: the last thing typed about them, or how they first came in. */
+  context?: string;
 }
 
 export interface UnitOption {

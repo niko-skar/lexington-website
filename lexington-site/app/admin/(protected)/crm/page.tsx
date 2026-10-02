@@ -1,9 +1,9 @@
 import { AddLeadForm } from "@/components/crm/AddLeadForm";
 import { AllView } from "@/components/crm/AllView";
+import styles from "@/components/crm/Crm.module.css";
 import { CrmTabs } from "@/components/crm/CrmTabs";
 import { PipelineView, TodayView, WaitingView } from "@/components/crm/CrmViews";
 import { buildCrmData } from "@/components/crm/data";
-import portal from "@/components/Portal.module.css";
 import { todayISO } from "@/lib/crm";
 import { requireAdminPage } from "@/lib/auth/requireAdmin";
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
@@ -39,14 +39,20 @@ export default async function CrmPage({ searchParams }: { searchParams: Promise<
   const { meDue, needsStep, them } = buildCrmData(leads, today);
 
   return (
-    <main className={portal.page}>
-      <div className={portal.eyebrow}>Admin</div>
-      <h1 className={portal.title}>Prospects</h1>
-
-      <AddLeadForm units={units} today={today} />
-
+    <main className={styles.crmPage}>
       <CrmTabs
         initial={view}
+        today={today}
+        search={leads.map((l) => ({
+          id: l._id,
+          name: l.name,
+          stage: l.stage,
+          phone: l.phone,
+          email: l.email,
+          unitNumber: l.unitNumber,
+          interest: l.interest,
+        }))}
+        addForm={<AddLeadForm units={units} today={today} />}
         tabs={[
           {
             key: "today",

@@ -17,7 +17,8 @@ export const leadsListQuery = defineQuery(`
     paymentPreference,
     agreedPriceUSD,
     buyerAccountId,
-    tasks
+    tasks,
+    "context": coalesce(notes[kind == "note"][-1].text, notes[0].text)
   }
 `);
 
