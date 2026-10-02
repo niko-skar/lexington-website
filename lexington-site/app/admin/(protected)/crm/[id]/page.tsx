@@ -5,12 +5,12 @@ import styles from "@/components/crm/Crm.module.css";
 import { ConfirmSubmitButton } from "@/components/crm/ConfirmSubmitButton";
 import { openTasksOf } from "@/components/crm/data";
 import { AddNoteForm, AddTaskForm, CreateBuyerFromLeadForm, LeadDetailsForm } from "@/components/crm/LeadForms";
-import { StageChip } from "@/components/crm/StageChip";
+import { LiveStageChip, LostControls, StagePills, StageProvider } from "@/components/crm/StagePanel";
 import { TaskRow } from "@/components/crm/TaskRow";
 import portal from "@/components/Portal.module.css";
-import { deleteLeadAction, setStageAction } from "@/lib/actions/crm";
+import { deleteLeadAction } from "@/lib/actions/crm";
 import { requireAdminPage } from "@/lib/auth/requireAdmin";
-import { LOST_REASONS, STAGES, formatWhen, paymentLabel, sourceLabel, todayISO } from "@/lib/crm";
+import { STAGES, formatWhen, paymentLabel, sourceLabel, todayISO } from "@/lib/crm";
 import { formatUSD, phoneHref, whatsappUrl } from "@/lib/format";
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
 import { client } from "@/lib/sanity/client";
@@ -33,7 +33,7 @@ export default async function ProspectPage({ params }: { params: Promise<{ id: s
 
   const [lead, units] = await Promise.all([
     getBuyersClient().fetch<Lead | null>(leadByIdQuery, { id }),
-    client.fetch<UnitOption[]>(unitOptionsQuery),
+    client.fetch<UnitOption[]>(unitOptionsQuery, {}, { next: { revalidate: 300 } }),
   ]);
   if (!lead) notFound();
 
@@ -53,6 +53,7 @@ export default async function ProspectPage({ params }: { params: Promise<{ id: s
 
   return (
     <main className={portal.page}>
+      <StageProvider leadId={lead._id} stage={lead.stage ?? "new"}>
       <Link href="/admin/crm" className={styles.back}>
         ← All prospects
       </Link>
@@ -61,7 +62,7 @@ export default async function ProspectPage({ params }: { params: Promise<{ id: s
         {lead.name}
       </h1>
       <div className={styles.rowTop}>
-        <StageChip stage={lead.stage} />
+        <LiveStageChip />
         <span className={styles.sectionHint}>
           {lead.unitNumber ? `Unit ${lead.unitNumber}` : lead.interest || "No unit yet"} ·{" "}
           {paymentLabel(lead.paymentPreference)} · {sourceLabel(lead.source)}
@@ -95,51 +96,8 @@ export default async function ProspectPage({ params }: { params: Promise<{ id: s
         <div>
           <section className={styles.panel}>
             <h2 className={styles.panelTitle}>Stage</h2>
-            <div className={styles.stageRow}>
-              {STAGES.filter((s) => s.key !== "lost").map((s) =>
-                s.key === lead.stage ? (
-                  <span key={s.key} className={styles.stagePillActive}>
-                    {s.label}
-                  </span>
-                ) : (
-                  <form key={s.key} action={setStageAction}>
-                    <input type="hidden" name="leadId" value={lead._id} />
-                    <input type="hidden" name="stage" value={s.key} />
-                    <button type="submit" className={styles.stagePill}>
-                      {s.label}
-                    </button>
-                  </form>
-                )
-              )}
-            </div>
-            {lead.stage === "lost" ? (
-              <div className={styles.lostForm}>
-                <span className={styles.sectionHint}>Lost{lead.lostReason ? `: ${lead.lostReason}` : ""}</span>
-                <form action={setStageAction}>
-                  <input type="hidden" name="leadId" value={lead._id} />
-                  <input type="hidden" name="stage" value="contacted" />
-                  <button type="submit" className={styles.btn}>
-                    Reopen
-                  </button>
-                </form>
-              </div>
-            ) : (
-              <form action={setStageAction} className={styles.lostForm}>
-                <input type="hidden" name="leadId" value={lead._id} />
-                <input type="hidden" name="stage" value="lost" />
-                <select name="lostReason" defaultValue="" aria-label="Why they're lost">
-                  <option value="">Not going ahead because…</option>
-                  {LOST_REASONS.map((r) => (
-                    <option key={r} value={r}>
-                      {r}
-                    </option>
-                  ))}
-                </select>
-                <button type="submit" className={styles.btnDanger}>
-                  Mark lost
-                </button>
-              </form>
-            )}
+            <StagePills />
+            <LostControls lostReason={lead.lostReason} />
           </section>
 
           <section className={styles.panel}>
@@ -216,6 +174,7 @@ export default async function ProspectPage({ params }: { params: Promise<{ id: s
           </section>
         </div>
       </div>
+      </StageProvider>
     </main>
   );
 }

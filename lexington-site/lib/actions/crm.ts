@@ -121,19 +121,26 @@ export async function setStageAction(formData: FormData) {
   const id = field(formData, "leadId", 80);
   const stage = field(formData, "stage", 30);
   const reason = field(formData, "lostReason", 80);
+  const fromRaw = field(formData, "fromStage", 30);
   if (!ID_RE.test(id) || !STAGE_KEYS.includes(stage)) throw new Error("Bad request.");
 
-  const current = await getBuyersClient().fetch<{ stage?: string } | null>(
-    `*[_type == "lead" && _id == $id][0]{ stage }`,
-    { id }
-  );
-  if (!current) throw new Error("Prospect not found.");
-  if (current.stage === stage) return;
+  // The screen already knows where the prospect is, so it sends that along and
+  // we skip a round trip to Sanity (it only feeds the timeline note).
+  let from: string | undefined = STAGE_KEYS.includes(fromRaw) ? fromRaw : undefined;
+  if (!from) {
+    const current = await getBuyersClient().fetch<{ stage?: string } | null>(
+      `*[_type == "lead" && _id == $id][0]{ stage }`,
+      { id }
+    );
+    if (!current) throw new Error("Prospect not found.");
+    from = current.stage ?? "new";
+  }
+  if (from === stage) return;
 
   const text =
     stage === "lost"
       ? `Marked lost${reason ? `: ${reason}` : ""}`
-      : `Moved: ${stageLabel(current.stage)} → ${stageLabel(stage)}`;
+      : `Moved: ${stageLabel(from)} → ${stageLabel(stage)}`;
 
   await patchLead(id, (p) =>
     (stage === "lost"

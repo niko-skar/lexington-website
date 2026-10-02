@@ -6,6 +6,10 @@ export interface TaskItem {
   task: LeadTask;
 }
 
+export function unitLine(lead: Pick<Lead, "unitNumber" | "interest">) {
+  return lead.unitNumber ? `Unit ${lead.unitNumber}` : lead.interest || "No unit yet";
+}
+
 export function openTasksOf(lead: Lead): LeadTask[] {
   return (lead.tasks ?? []).filter((t) => !t.done);
 }

@@ -1,8 +1,7 @@
-import Link from "next/link";
-
 import { AddLeadForm } from "@/components/crm/AddLeadForm";
-import styles from "@/components/crm/Crm.module.css";
-import { AllView, PipelineView, TodayView, WaitingView } from "@/components/crm/CrmViews";
+import { AllView } from "@/components/crm/AllView";
+import { CrmTabs } from "@/components/crm/CrmTabs";
+import { PipelineView, TodayView, WaitingView } from "@/components/crm/CrmViews";
 import { buildCrmData } from "@/components/crm/data";
 import portal from "@/components/Portal.module.css";
 import { todayISO } from "@/lib/crm";
@@ -17,12 +16,7 @@ export const metadata = {
   title: "Prospects | The Lexington",
 };
 
-const VIEWS = [
-  { key: "today", label: "Today" },
-  { key: "waiting", label: "Waiting on them" },
-  { key: "pipeline", label: "Pipeline" },
-  { key: "all", label: "All prospects" },
-];
+const VIEWS = ["today", "waiting", "pipeline", "all"];
 
 type Params = Record<string, string | string[] | undefined>;
 const one = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value) ?? "";
@@ -32,20 +26,17 @@ export default async function CrmPage({ searchParams }: { searchParams: Promise<
 
   const params = await searchParams;
   const requested = one(params.view);
-  const view = VIEWS.some((v) => v.key === requested) ? requested : "today";
+  const view = VIEWS.includes(requested) ? requested : "today";
   const today = todayISO();
 
+  // The unit list barely changes, so it's kept for a few minutes instead of
+  // being fetched on every click.
   const [leads, units] = await Promise.all([
     getBuyersClient().fetch<Lead[]>(leadsListQuery),
-    client.fetch<UnitOption[]>(unitOptionsQuery),
+    client.fetch<UnitOption[]>(unitOptionsQuery, {}, { next: { revalidate: 300 } }),
   ]);
 
   const { meDue, needsStep, them } = buildCrmData(leads, today);
-  const counts: Record<string, number> = {
-    today: meDue.length + needsStep.length,
-    waiting: them.length,
-    all: leads.length,
-  };
 
   return (
     <main className={portal.page}>
@@ -54,35 +45,40 @@ export default async function CrmPage({ searchParams }: { searchParams: Promise<
 
       <AddLeadForm units={units} today={today} />
 
-      <nav className={styles.tabs}>
-        {VIEWS.map((v) => (
-          <Link
-            key={v.key}
-            href={`/admin/crm?view=${v.key}`}
-            className={`${styles.tab} ${view === v.key ? styles.tabActive : ""}`}
-          >
-            {v.label}
-            {counts[v.key] !== undefined && counts[v.key] > 0 && (
-              <span className={`${styles.badge} ${v.key === "today" ? "" : styles.badgeMuted}`}>
-                {counts[v.key]}
-              </span>
-            )}
-          </Link>
-        ))}
-      </nav>
-
-      {view === "today" && <TodayView leads={leads} today={today} />}
-      {view === "waiting" && <WaitingView leads={leads} today={today} />}
-      {view === "pipeline" && <PipelineView leads={leads} today={today} />}
-      {view === "all" && (
-        <AllView
-          leads={leads}
-          today={today}
-          q={one(params.q)}
-          stage={one(params.stage)}
-          source={one(params.source)}
-        />
-      )}
+      <CrmTabs
+        initial={view}
+        tabs={[
+          {
+            key: "today",
+            label: "Today",
+            count: meDue.length + needsStep.length,
+            content: <TodayView leads={leads} today={today} />,
+          },
+          {
+            key: "waiting",
+            label: "Waiting on them",
+            count: them.length,
+            muted: true,
+            content: <WaitingView leads={leads} today={today} />,
+          },
+          { key: "pipeline", label: "Pipeline", content: <PipelineView leads={leads} today={today} /> },
+          {
+            key: "all",
+            label: "All prospects",
+            count: leads.length,
+            muted: true,
+            content: (
+              <AllView
+                leads={leads}
+                today={today}
+                q={one(params.q)}
+                stage={one(params.stage)}
+                source={one(params.source)}
+              />
+            ),
+          },
+        ]}
+      />
     </main>
   );
 }
