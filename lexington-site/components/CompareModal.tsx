@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect } from "react";
 import type { ReactNode } from "react";
 
 import type { PackageTier, Unit } from "@/lib/sanity/types";
 import { formatFloor, formatUSD } from "@/lib/format";
 import { floorTierName, isTierClamped, priceAtTier, tierAddon } from "@/lib/pricing";
 import { StatusBadge } from "./StatusBadge";
+import { useDialog } from "./useDialog";
 import styles from "./CompareModal.module.css";
 
 interface CompareModalProps {
@@ -23,16 +23,18 @@ const baseRows: { label: string; render: (u: Unit) => ReactNode }[] = [
 ];
 
 export function CompareModal({ units, tiers, onClose }: CompareModalProps) {
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  const dialogRef = useDialog<HTMLDivElement>(onClose);
 
   return (
-    <div className={styles.overlay} onClick={onClose} role="dialog" aria-modal="true">
+    <div
+      ref={dialogRef}
+      tabIndex={-1}
+      className={styles.overlay}
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Compare units"
+    >
       <div className={styles.panel} onClick={(e) => e.stopPropagation()}>
         <button className={styles.close} onClick={onClose} aria-label="Close">
           ×

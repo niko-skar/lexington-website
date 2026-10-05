@@ -23,7 +23,7 @@
   font-size: 11px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--brass);
+  color: var(--brass-text);
   font-weight: 600;
 }
 
@@ -62,7 +62,7 @@
 
 .count {
   font-size: 13.5px;
-  color: var(--brass);
+  color: var(--brass-text);
   margin-bottom: var(--space-5);
   font-variant-numeric: tabular-nums;
 }
@@ -88,7 +88,7 @@
   font-size: 11px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--brass);
+  color: var(--brass-text);
   font-weight: 600;
 }
 
@@ -135,7 +135,7 @@
   font-weight: 400;
   font-size: 11.5px;
   font-variant-numeric: tabular-nums;
-  color: var(--brass);
+  color: var(--brass-text);
 }
 
 .table tr:hover td {
@@ -165,7 +165,7 @@
   font-weight: 600;
   letter-spacing: 0.03em;
   text-transform: uppercase;
-  color: var(--brass);
+  color: var(--brass-text);
   white-space: nowrap;
   transition: color 0.2s var(--ease);
 }

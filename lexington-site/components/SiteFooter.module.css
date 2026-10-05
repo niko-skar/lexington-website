@@ -58,7 +58,7 @@
   flex-wrap: wrap;
 }
 
-.links h4 {
+.links .groupTitle {
   font-family: var(--font-sans);
   font-size: 12px;
   letter-spacing: 0.1em;

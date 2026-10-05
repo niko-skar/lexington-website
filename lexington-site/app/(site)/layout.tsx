@@ -17,9 +17,15 @@ export default async function SiteLayout({
 
   return (
     <>
+      <a href="#main" className="skipLink">
+        Skip to content
+      </a>
       <SiteHeader />
       {banner?.enabled && banner.message && <PromoBanner message={banner.message} />}
-      {children}
+      {/* The page itself: what screen readers jump to, and what the skip link lands on. */}
+      <main id="main" tabIndex={-1}>
+        {children}
+      </main>
       <SiteFooter />
       <WhatsAppButton />
     </>

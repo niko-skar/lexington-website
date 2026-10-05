@@ -39,13 +39,16 @@ export default async function HomePage() {
   ]);
 
   const availableUnits = units.filter((u) => u.status === "available");
-  const startingPrice = Math.min(...availableUnits.map((u) => u.priceUSD));
+  // If everything is ever reserved or sold, "from" falls back to the cheapest
+  // overall instead of reading "$Infinity".
+  const startingPrice = Math.min(...(availableUnits.length > 0 ? availableUnits : units).map((u) => u.priceUSD));
 
   const exteriorImages = images.filter((i) => i.category === "exterior");
   const interiorImages = images.filter((i) => i.category === "interior");
 
-  const heroImage = exteriorImages[0];
-  const residencesImage = interiorImages[1] ?? interiorImages[0];
+  // The page must survive someone clearing out a photo category in Studio.
+  const heroImage = exteriorImages[0] ?? images[0];
+  const residencesImage = interiorImages[1] ?? interiorImages[0] ?? images[1];
   // Mikhail founded the family's development legacy in 1960s Tema — his
   // portrait anchors the "three generations" teaser on the home page.
   const familyPhotoMember =
@@ -62,8 +65,8 @@ export default async function HomePage() {
   return (
     <>
       <Hero
-        imageUrl={urlFor(heroImage.image).width(1920).height(1280).url()}
-        imageAlt={heroImage.alt}
+        imageUrl={heroImage ? urlFor(heroImage.image).width(1920).height(1280).url() : undefined}
+        imageAlt={heroImage?.alt ?? "The Lexington"}
         eyebrow={siteSettings.heroEyebrow}
       >
         <h1>{siteSettings.heroTitle}</h1>
@@ -94,23 +97,25 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <SplitSection
-        imageUrl={urlFor(residencesImage.image).width(800).height(1000).url()}
-        imageAlt={residencesImage.alt}
-        eyebrow="Residences"
-        title="One, two and three-bedroom duplex penthouses."
-        style={{ paddingTop: "clamp(48px, 6vw, 80px)" }}
-      >
-        <p>
-          Every floor plan is drawn to let daily life move naturally — from
-          high-speed elevators and natural stone flooring to a back-up
-          generator and water supply that never leave you waiting. Prices
-          from {formatUSD(startingPrice)}.
-        </p>
-        <Button href="/residences" variant="outline-dark">
-          Explore Floor Plans
-        </Button>
-      </SplitSection>
+      {residencesImage && (
+        <SplitSection
+          imageUrl={urlFor(residencesImage.image).width(800).height(1000).url()}
+          imageAlt={residencesImage.alt}
+          eyebrow="Residences"
+          title="One, two and three-bedroom duplex penthouses."
+          style={{ paddingTop: "clamp(48px, 6vw, 80px)" }}
+        >
+          <p>
+            Every floor plan is drawn to let daily life move naturally — from
+            high-speed elevators and natural stone flooring to a back-up
+            generator and water supply that never leave you waiting. Prices
+            from {formatUSD(startingPrice)}.
+          </p>
+          <Button href="/residences" variant="outline-dark">
+            Explore Floor Plans
+          </Button>
+        </SplitSection>
+      )}
 
       <section className="section sectionStone" style={{ background: "var(--stone)" }}>
         <div className="wrap">

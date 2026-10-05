@@ -17,6 +17,10 @@
   --stone-lt: #e4dfd3;
   --brass: #b08d57;
   --brass-lt: #d9c29a;
+  /* The brass is for lines, dots and fills. Used as TEXT on the cream it is
+     only 2.8:1, below the 4.5:1 that small print needs, so text uses these. */
+  --brass-text: #76592a;
+  --brass-text-deep: #5f4519;
   --clay: #8b4a34;
   --clay-lt: #b26a4e;
   --sage: #67735f;
@@ -64,7 +68,7 @@
      (unit table, unit cards, unit detail modal), so each needs to be
      dark/saturated enough for reliable contrast on paper/stone. */
   --status-available: #2f5068;
-  --status-reserved: var(--brass);
+  --status-reserved: var(--brass-text);
   --status-sold: var(--clay);
 
   /* Type */
@@ -196,8 +200,39 @@ table {
 }
 
 :focus-visible {
-  outline: 2px solid var(--brass);
+  outline: 2px solid var(--brass-text);
   outline-offset: 3px;
+}
+
+/* On the dark bands the dark gold ring would vanish; use the light brass. */
+header :focus-visible,
+footer :focus-visible,
+.sectionDark :focus-visible,
+[role="dialog"] :focus-visible {
+  outline-color: var(--brass-lt);
+}
+
+/* "Skip to content": the first thing a keyboard user can reach, so they don't
+   have to tab through the whole menu on every page. */
+.skipLink {
+  position: absolute;
+  top: 8px;
+  left: -9999px;
+  z-index: 1000;
+  padding: 10px 16px;
+  background: var(--ink);
+  color: var(--paper);
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.skipLink:focus {
+  left: 8px;
+}
+
+main:focus {
+  outline: none;
 }
 
 h1,
@@ -252,11 +287,21 @@ h4 {
   font-weight: 600;
   letter-spacing: 0.18em;
   text-transform: uppercase;
+  color: var(--brass-text);
+}
+
+/* On the dark navy bands the lighter brass is the readable one; on the stone
+   bands the deeper one is. */
+.sectionDark .eyebrow {
   color: var(--brass);
+}
+
+.sectionStone .eyebrow {
+  color: var(--brass-text-deep);
 }
 
 .disclaimer {
   font-size: var(--fs-200);
-  color: #7c8489;
+  color: #5f666b;
   max-width: 70ch;
 }

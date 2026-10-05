@@ -34,23 +34,30 @@ export function ContactForm() {
     }
   }, [state]);
 
+  // React empties a form once its action finishes, success or not. After a
+  // failure that threw away what the visitor had typed, so the server sends it
+  // back and the form is rebuilt with it (a new `key` is what makes a <select>
+  // pick up its new value, too).
+  const kept = state.status === "error" ? state.values : undefined;
+  const formKey = kept ? JSON.stringify(kept) : "fresh";
+
   return (
-    <form action={formAction}>
+    <form action={formAction} key={formKey}>
       <div className={styles.field}>
         <label htmlFor="name">Full name</label>
-        <input type="text" id="name" name="name" required />
+        <input type="text" id="name" name="name" required autoComplete="name" defaultValue={kept?.name} />
       </div>
       <div className={styles.field}>
         <label htmlFor="email">Email</label>
-        <input type="email" id="email" name="email" required />
+        <input type="email" id="email" name="email" required autoComplete="email" defaultValue={kept?.email} />
       </div>
       <div className={styles.field}>
         <label htmlFor="phone">Phone / WhatsApp</label>
-        <input type="tel" id="phone" name="phone" />
+        <input type="tel" id="phone" name="phone" autoComplete="tel" defaultValue={kept?.phone} />
       </div>
       <div className={styles.field}>
         <label htmlFor="unit">Interested in</label>
-        <select id="unit" name="unit" defaultValue="One Bedroom Apartment">
+        <select id="unit" name="unit" defaultValue={kept?.unit || "One Bedroom Apartment"}>
           <option>Studio Apartment</option>
           <option>One Bedroom Apartment</option>
           <option>Two Bedroom Apartment</option>
@@ -65,15 +72,19 @@ export function ContactForm() {
           id="message"
           name="message"
           placeholder="Tell us about your timeline and financing preference."
+          defaultValue={kept?.message}
         />
       </div>
       {/* Honeypot — invisible to real visitors (off-screen, unreachable by
           tab, hidden from screen readers), but a bot that blindly fills
           every field will fill this one too, so the server action can
-          silently drop the submission. */}
+          silently drop the submission. Deliberately NOT called "company",
+          "website" or anything else a browser's autofill knows: autofill would
+          fill it for a real visitor and their enquiry would vanish without a
+          word. */}
       <div style={{ position: "absolute", left: "-9999px", top: "auto" }} aria-hidden="true">
-        <label htmlFor="company">Company</label>
-        <input type="text" id="company" name="company" tabIndex={-1} autoComplete="off" />
+        <label htmlFor="website_url">Leave this empty</label>
+        <input type="text" id="website_url" name="website_url" tabIndex={-1} autoComplete="off" />
       </div>
       <SubmitButton />
       {state.status === "success" && <p className={styles.success}>{state.message}</p>}

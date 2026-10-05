@@ -16,24 +16,35 @@ export interface Stat {
 
 function AnimatedStat({ value, prefix = "", suffix = "", label, noGrouping }: Stat) {
   const ref = useRef<HTMLDivElement>(null);
-  const [display, setDisplay] = useState(0);
+  // THE REAL NUMBER FIRST. This used to start at 0 and count up once scrolled
+  // into view, so the page as search engines, screen readers and anyone without
+  // JavaScript saw it read "0 of 32 units available, from $0". Now the real
+  // figure is what the page says, and the count-up only happens for a stat that
+  // starts below the fold.
+  const [display, setDisplay] = useState(value);
 
   useEffect(() => {
     const node = ref.current;
     if (!node) return;
 
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let primed = false;
+
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (!entry.isIntersecting) return;
-        observer.disconnect();
-
-        const prefersReducedMotion = window.matchMedia(
-          "(prefers-reduced-motion: reduce)"
-        ).matches;
-        if (prefersReducedMotion) {
-          setDisplay(value);
+        // First answer: is it already on screen? Then leave the real number alone.
+        if (!primed) {
+          primed = true;
+          if (entry.isIntersecting || prefersReducedMotion) {
+            observer.disconnect();
+            return;
+          }
+          // Below the fold: reset to 0 out of sight, count up when it arrives.
+          setDisplay(0);
           return;
         }
+        if (!entry.isIntersecting) return;
+        observer.disconnect();
 
         const duration = 900;
         const start = performance.now();
@@ -53,12 +64,24 @@ function AnimatedStat({ value, prefix = "", suffix = "", label, noGrouping }: St
     return () => observer.disconnect();
   }, [value]);
 
+  // A fixed locale, so $72,000 is never "$72.000" on a German phone.
+  const format = (n: number) => n.toLocaleString("en-US", noGrouping ? { useGrouping: false } : undefined);
+
   return (
     <div className={styles.stat} ref={ref}>
       <b>
-        {prefix}
-        {display.toLocaleString(undefined, noGrouping ? { useGrouping: false } : undefined)}
-        {suffix}
+        {/* The moving number is for the eyes only; screen readers get the real one
+            from the line below, whatever the count-up is doing. */}
+        <span aria-hidden="true">
+          {prefix}
+          {format(display)}
+          {suffix}
+        </span>
+        <span className={styles.visuallyHidden}>
+          {prefix}
+          {format(value)}
+          {suffix}
+        </span>
       </b>
       <span>{label}</span>
     </div>

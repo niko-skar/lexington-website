@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect } from "react";
 import Image from "next/image";
 
 import type { GalleryImage, PackageTier, PackageTierKey, Unit, UnitLocationPlan } from "@/lib/sanity/types";
@@ -8,6 +7,7 @@ import { urlFor } from "@/lib/sanity/image";
 import { formatFloor, formatUSD } from "@/lib/format";
 import { floorTierName, isTierClamped, priceAtTier, tierAddon } from "@/lib/pricing";
 import { StatusBadge } from "./StatusBadge";
+import { useDialog } from "./useDialog";
 import styles from "./UnitDetailModal.module.css";
 
 interface UnitDetailModalProps {
@@ -36,19 +36,21 @@ export function UnitDetailModal({
   selectedTier,
   onClose,
 }: UnitDetailModalProps) {
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  const dialogRef = useDialog<HTMLDivElement>(onClose);
 
   const clamped = isTierClamped(unit, selectedTier, tiers);
   const addon = tierAddon(unit, selectedTier, tiers);
 
   return (
-    <div className={styles.overlay} onClick={onClose} role="dialog" aria-modal="true">
+    <div
+      ref={dialogRef}
+      tabIndex={-1}
+      className={styles.overlay}
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Unit ${unit.unitNumber}: floor plan and price`}
+    >
       <div className={styles.panel} onClick={(e) => e.stopPropagation()}>
         <button className={styles.close} onClick={onClose} aria-label="Close">
           ×

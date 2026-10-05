@@ -19,7 +19,7 @@
   font-size: 11px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--brass);
+  color: var(--brass-text);
   border-bottom: 2px solid var(--brass);
 }
 

@@ -29,6 +29,18 @@ const MAX_COMPARE = 4;
 // but spelling it out keeps that from being an accident future edits break.
 const STATUS_ORDER: Record<UnitStatus, number> = { available: 0, reserved: 1, sold: 2 };
 
+// "Type" sorts by size, the way a buyer reads it: Studio, One, Two, Three, then
+// the penthouses. Sorting the words alphabetically put "3BR Duplex Penthouse"
+// first and "Two Bedroom" last.
+function typeRank(type: string) {
+  if (/penthouse|duplex/i.test(type)) return 4;
+  if (/studio/i.test(type)) return 0;
+  if (/\bone\b|\b1\b/i.test(type)) return 1;
+  if (/\btwo\b|\b2\b/i.test(type)) return 2;
+  if (/\bthree\b|\b3\b/i.test(type)) return 3;
+  return 5;
+}
+
 interface UnitFinderProps {
   units: Unit[];
   tiers: PackageTier[];
@@ -76,7 +88,7 @@ export function UnitFinder({ units, tiers }: UnitFinderProps) {
         case "floor":
           return (a.floor - b.floor) * dir;
         case "type":
-          return a.bedroomType.localeCompare(b.bedroomType) * dir;
+          return (typeRank(a.bedroomType) - typeRank(b.bedroomType) || a.bedroomType.localeCompare(b.bedroomType)) * dir;
         case "area":
           return (a.areaSqm - b.areaSqm) * dir;
         case "price":

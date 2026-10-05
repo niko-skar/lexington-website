@@ -7,7 +7,8 @@ import type { ReactNode } from "react";
 import styles from "./Hero.module.css";
 
 interface HeroProps {
-  imageUrl: string;
+  /** Missing only if every exterior photo was removed; the page still shows. */
+  imageUrl?: string;
   imageAlt: string;
   eyebrow: string;
   children: ReactNode;
@@ -42,7 +43,19 @@ export function Hero({ imageUrl, imageAlt, eyebrow, children }: HeroProps) {
   return (
     <section className={styles.hero}>
       <div className={styles.media} ref={imgWrapRef}>
-        <Image src={imageUrl} alt={imageAlt} fill priority sizes="100vw" style={{ objectFit: "cover" }} />
+        {/* The biggest thing on the page and what "loaded" is measured by, so it is
+            asked for first (`fetchPriority`), not just preloaded. */}
+        {imageUrl && (
+          <Image
+            src={imageUrl}
+            alt={imageAlt}
+            fill
+            priority
+            fetchPriority="high"
+            sizes="100vw"
+            style={{ objectFit: "cover" }}
+          />
+        )}
       </div>
       <div className={`wrap ${styles.content}`}>
         <div className={styles.eyebrow}>{eyebrow}</div>

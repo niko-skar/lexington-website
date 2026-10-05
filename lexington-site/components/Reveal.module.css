@@ -17,3 +17,13 @@
     transition: none;
   }
 }
+
+/* Without JavaScript nothing would ever flip a block to "visible", leaving the
+   page blank below the first screen -- so show everything as it is. */
+@media (scripting: none) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}

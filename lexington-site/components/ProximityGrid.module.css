@@ -28,7 +28,7 @@
 
 .time {
   font-size: 13px;
-  color: var(--brass);
+  color: var(--brass-text);
   white-space: nowrap;
   font-weight: 600;
 }

@@ -51,13 +51,21 @@ export async function SiteFooter() {
               rel="noopener noreferrer"
               aria-label="View The Lexington's location on Google Maps"
             >
+              {/* Far down every page: lazy, so it stops competing with the photo at the top. */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={footerMapUrl()} alt="Map showing The Lexington's location in Shiashie, East Legon" width={280} height={160} />
+              <img
+                src={footerMapUrl()}
+                alt="Map showing The Lexington's location in Shiashie, East Legon"
+                width={280}
+                height={160}
+                loading="lazy"
+                decoding="async"
+              />
             </a>
           </div>
           <div className={styles.links}>
             <div>
-              <h4>Explore</h4>
+              <p className={styles.groupTitle}>Explore</p>
               <Link href="/residences">Residences</Link>
               <Link href="/amenities">Amenities</Link>
               <Link href="/gallery">Gallery</Link>
@@ -65,7 +73,7 @@ export async function SiteFooter() {
               <Link href="/invest">Invest</Link>
             </div>
             <div>
-              <h4>Contact</h4>
+              <p className={styles.groupTitle}>Contact</p>
               <a href={phoneHref(siteSettings.contactPhone)}>{siteSettings.contactPhone}</a>
               <a
                 href={whatsappUrl(siteSettings.contactPhone, "Hi, I'm interested in The Lexington.")}

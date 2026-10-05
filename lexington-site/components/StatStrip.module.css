@@ -22,7 +22,21 @@
   font-variant-numeric: tabular-nums;
 }
 
-.stat span {
+.stat > span {
   font-size: 13px;
   color: #555;
+}
+
+/* Text for screen readers only (and for anything reading the page without
+   looking at it): present, but not drawn. */
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
 }

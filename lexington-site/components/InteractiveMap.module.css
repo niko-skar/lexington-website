@@ -14,7 +14,7 @@
   height: 420px;
   border-radius: var(--radius);
   background: var(--stone-lt);
-  color: var(--brass);
+  color: var(--brass-text);
   font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.03em;

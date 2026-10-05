@@ -29,7 +29,7 @@
 .years {
   font-family: var(--font-serif);
   font-style: italic;
-  color: var(--brass);
+  color: var(--brass-text);
   font-size: 16px;
 }
 

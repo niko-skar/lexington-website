@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Image from "next/image";
 
 import type { GalleryCategory, GalleryImage } from "@/lib/sanity/types";
 import { urlFor } from "@/lib/sanity/image";
 import styles from "./Gallery.module.css";
+import { Lightbox } from "./Lightbox";
 
 const CATEGORY_LABEL: Record<GalleryCategory, string> = {
   exterior: "Exterior",
@@ -15,6 +16,10 @@ const CATEGORY_LABEL: Record<GalleryCategory, string> = {
   family: "Family",
   progress: "Progress",
 };
+
+// The first photos on the page are what the page "loads" on, so they are asked
+// for straight away; the rest wait until they are scrolled near.
+const EAGER_PHOTOS = 3;
 
 export function Gallery({ images }: { images: GalleryImage[] }) {
   const categories = useMemo(
@@ -45,34 +50,15 @@ export function Gallery({ images }: { images: GalleryImage[] }) {
     [images, filter]
   );
 
-  const closeLightbox = () => setLightboxIndex(null);
-  const showPrev = () =>
-    setLightboxIndex((i) => (i === null ? null : (i - 1 + filtered.length) % filtered.length));
-  const showNext = () =>
-    setLightboxIndex((i) => (i === null ? null : (i + 1) % filtered.length));
-
-  useEffect(() => {
-    if (lightboxIndex === null) return;
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") closeLightbox();
-      if (e.key === "ArrowLeft") showPrev();
-      if (e.key === "ArrowRight") showNext();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lightboxIndex, filtered.length]);
-
-  const touchStartX = useRef(0);
-  function onTouchStart(e: React.TouchEvent) {
-    touchStartX.current = e.touches[0].clientX;
-  }
-  function onTouchEnd(e: React.TouchEvent) {
-    const dx = e.changedTouches[0].clientX - touchStartX.current;
-    if (Math.abs(dx) < 40) return;
-    if (dx > 0) showPrev();
-    else showNext();
-  }
+  const closeLightbox = useCallback(() => setLightboxIndex(null), []);
+  const showPrev = useCallback(
+    () => setLightboxIndex((i) => (i === null ? null : (i - 1 + filtered.length) % filtered.length)),
+    [filtered.length]
+  );
+  const showNext = useCallback(
+    () => setLightboxIndex((i) => (i === null ? null : (i + 1) % filtered.length)),
+    [filtered.length]
+  );
 
   const active = lightboxIndex !== null ? filtered[lightboxIndex] : null;
 
@@ -85,6 +71,30 @@ export function Gallery({ images }: { images: GalleryImage[] }) {
   const progressSplit = filtered.findIndex((img) => img.category === "progress");
   const curatedShots = progressSplit === -1 ? filtered : filtered.slice(0, progressSplit);
   const progressShots = progressSplit === -1 ? [] : filtered.slice(progressSplit);
+
+  // A photo is a button, so it can be reached and opened from the keyboard.
+  function thumb(img: GalleryImage, index: number) {
+    return (
+      <figure className={styles.figure} key={img._id}>
+        <button
+          type="button"
+          className={styles.figureButton}
+          onClick={() => setLightboxIndex(index)}
+          aria-label={`View larger: ${img.alt}`}
+        >
+          <Image
+            src={urlFor(img.image).width(640).url()}
+            alt={img.alt}
+            width={640}
+            height={480}
+            sizes="(max-width: 640px) 50vw, 33vw"
+            priority={index === 0}
+            loading={index < EAGER_PHOTOS ? "eager" : "lazy"}
+          />
+        </button>
+      </figure>
+    );
+  }
 
   return (
     <>
@@ -106,92 +116,23 @@ export function Gallery({ images }: { images: GalleryImage[] }) {
         ))}
       </div>
 
-      <div className={styles.grid}>
-        {curatedShots.map((img, i) => (
-          <figure
-            className={styles.figure}
-            key={img._id}
-            onClick={() => setLightboxIndex(i)}
-          >
-            <Image
-              src={urlFor(img.image).width(640).url()}
-              alt={img.alt}
-              width={640}
-              height={480}
-              sizes="(max-width: 640px) 50vw, 33vw"
-            />
-          </figure>
-        ))}
-      </div>
+      <div className={styles.grid}>{curatedShots.map((img, i) => thumb(img, i))}</div>
 
       {progressShots.length > 0 && (
         <div className={styles.grid} style={{ marginTop: curatedShots.length > 0 ? "var(--space-6)" : 0 }}>
-          {progressShots.map((img, i) => (
-            <figure
-              className={styles.figure}
-              key={img._id}
-              onClick={() => setLightboxIndex(curatedShots.length + i)}
-            >
-              <Image
-                src={urlFor(img.image).width(640).url()}
-                alt={img.alt}
-                width={640}
-                height={480}
-                sizes="(max-width: 640px) 50vw, 33vw"
-              />
-            </figure>
-          ))}
+          {progressShots.map((img, i) => thumb(img, curatedShots.length + i))}
         </div>
       )}
 
       {active && (
-        <div
-          className={styles.lightbox}
-          onClick={closeLightbox}
-          onTouchStart={onTouchStart}
-          onTouchEnd={onTouchEnd}
-          role="dialog"
-          aria-modal="true"
-        >
-          <button
-            className={styles.close}
-            onClick={closeLightbox}
-            aria-label="Close"
-          >
-            ×
-          </button>
-          <button
-            className={styles.navPrev}
-            onClick={(e) => {
-              e.stopPropagation();
-              showPrev();
-            }}
-            aria-label="Previous image"
-          >
-            ‹
-          </button>
-          <div className={styles.lightboxImageWrap} onClick={(e) => e.stopPropagation()}>
-            <Image
-              src={urlFor(active.image).width(1600).url()}
-              alt={active.alt}
-              width={1600}
-              height={1200}
-              sizes="90vw"
-              className={styles.lightboxImage}
-            />
-            <p className={styles.caption}>{active.alt}</p>
-          </div>
-          <button
-            className={styles.navNext}
-            onClick={(e) => {
-              e.stopPropagation();
-              showNext();
-            }}
-            aria-label="Next image"
-          >
-            ›
-          </button>
-        </div>
+        <Lightbox
+          src={urlFor(active.image).width(1600).url()}
+          alt={active.alt}
+          caption={active.alt}
+          onClose={closeLightbox}
+          onPrev={showPrev}
+          onNext={showNext}
+        />
       )}
     </>
   );

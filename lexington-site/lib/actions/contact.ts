@@ -15,6 +15,8 @@ export interface ContactFormState {
   /** Which residence the enquiry was for — surfaced so the client can attach
    *  it to the analytics conversion event on success. */
   unit?: string;
+  /** What was typed, sent back on an error so the form can keep it. */
+  values?: { name: string; email: string; phone: string; unit: string; message: string };
 }
 
 export async function sendEnquiry(
@@ -26,17 +28,18 @@ export async function sendEnquiry(
   const phone = String(formData.get("phone") || "").trim();
   const unit = String(formData.get("unit") || "").trim();
   const message = String(formData.get("message") || "").trim();
+  const values = { name, email, phone, unit, message };
 
   // Honeypot — a real visitor never sees or fills this field (it's
   // off-screen and unreachable by tab), so anything here means a bot.
   // Report success without sending mail, so the bot has no signal to
   // adapt its behavior.
-  if (String(formData.get("company") || "").trim()) {
+  if (String(formData.get("website_url") || "").trim()) {
     return { status: "success", message: "Thanks — we'll be in touch shortly.", unit };
   }
 
   if (!name || !email) {
-    return { status: "error", message: "Please fill in your name and email." };
+    return { status: "error", message: "Please fill in your name and email.", values };
   }
 
   // Save the enquiry as a prospect in the CRM before any email work, so it is
@@ -51,6 +54,7 @@ export async function sendEnquiry(
     return {
       status: "error",
       message: "Something went wrong on our end. Please email us directly instead.",
+      values,
     };
   }
 
@@ -84,6 +88,7 @@ export async function sendEnquiry(
       return {
         status: "error",
         message: "Something went wrong sending your enquiry. Please email us directly instead.",
+        values,
       };
     }
   } catch (err) {
@@ -91,6 +96,7 @@ export async function sendEnquiry(
     return {
       status: "error",
       message: "Something went wrong sending your enquiry. Please email us directly instead.",
+      values,
     };
   }
 

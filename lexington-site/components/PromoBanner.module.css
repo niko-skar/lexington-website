@@ -42,3 +42,10 @@
     overflow-x: auto;
   }
 }
+
+/* Moving text has to be stoppable (WCAG 2.2.2): hovering or focusing the
+   banner holds it still so it can be read. */
+.banner:hover .track,
+.banner:focus-within .track {
+  animation-play-state: paused;
+}

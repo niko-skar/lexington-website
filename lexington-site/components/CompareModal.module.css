@@ -64,7 +64,7 @@
   font-size: 11px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--brass);
+  color: var(--brass-text);
   font-weight: 600;
   white-space: nowrap;
 }
@@ -87,6 +87,6 @@
   display: block;
   margin-top: 2px;
   font-size: 11.5px;
-  color: var(--brass);
+  color: var(--brass-text);
   white-space: normal;
 }

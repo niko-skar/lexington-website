@@ -88,7 +88,7 @@
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--brass);
+  color: var(--brass-text);
   border: 1px solid var(--brass);
   border-radius: 20px;
   padding: 2px 8px;
@@ -150,7 +150,7 @@
 .includes li svg {
   flex: none;
   margin-top: 3px;
-  color: var(--brass);
+  color: var(--brass-text);
 }
 
 .note {
