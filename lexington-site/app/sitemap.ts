@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 
 import { SITE_URL } from "@/lib/seo";
 
-const ROUTES = ["", "/residences", "/amenities", "/gallery", "/progress", "/invest", "/about", "/contact"];
+const ROUTES = ["", "/residences", "/amenities", "/gallery", "/progress", "/invest", "/about", "/contact", "/privacy"];
 
 /**
  * No `lastModified`: it would have to be the build time, which claims every
