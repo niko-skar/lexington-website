@@ -65,7 +65,9 @@ export async function runDaily(opts: RunOptions = {}): Promise<RunResult> {
   const base = { date, post: post.id, title: post.title };
 
   const platforms: Platform[] = opts.only?.length ? opts.only : ["fb", "ig"];
-  const prior = opts.dryRun || opts.rehearse ? null : await readLog(date);
+  // A record from the same day only counts if it was for THIS post (the calendar can be re-planned: a day's post may change).
+  const logged = opts.dryRun || opts.rehearse ? null : await readLog(date);
+  const prior = logged && logged.post === post.id ? logged : null;
   const todo = platforms.filter((p) => !prior?.[p]?.ok);
   if (!todo.length) return { ...base, outcome: "already-done", detail: ["Everything for this day has already gone out."], fb: prior?.fb, ig: prior?.ig };
 

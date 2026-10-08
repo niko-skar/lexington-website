@@ -1,10 +1,10 @@
 {
- "generated": "2026-10-08T13:50:42.109Z",
+ "generated": "2026-10-08T14:55:39.524Z",
  "postHourUtc": 18,
  "posts": [
   {
    "id": "lx01",
-   "date": "2026-10-09",
+   "date": "2026-10-08",
    "pillar": "Welcome",
    "title": "Eight storeys, one address",
    "images": [
@@ -51,7 +51,7 @@
   },
   {
    "id": "lx02",
-   "date": "2026-10-10",
+   "date": "2026-10-09",
    "pillar": "Behind the build",
    "title": "Where it began",
    "images": [
@@ -69,6 +69,58 @@
      "note": "completion date",
      "q": "*[_type==\"siteSettings\"][0].progressIntro.lede",
      "includes": "December 2027"
+    }
+   ],
+   "notes": ""
+  },
+  {
+   "id": "lx31",
+   "date": "2026-10-10",
+   "pillar": "Engagement",
+   "title": "Which amenity first?",
+   "images": [
+    "lx31-1.jpg"
+   ],
+   "alt": [
+    "Question card: Quick question. Which amenity would you use first? 1 Swimming pool; 2 Gym; 3 Sauna; 4 Jacuzzi; 5 Ice bath; 6 Café; 7 Rooftop garden."
+   ],
+   "fb": "Which amenity would you use first?\n\nPick a number and tell us why.\n\n1 Swimming pool · 2 Gym · 3 Sauna · 4 Jacuzzi · 5 Ice bath · 6 Café · 7 Private rooftop garden\n\nSee every amenity: https://www.lexington.com.gh/amenities?utm_source=facebook&utm_medium=organic_social&utm_campaign=daily_post&utm_content=lx31\n\n📍 Shiashie, East Legon, Accra",
+   "ig": "Which amenity would you use first?\n\nPick a number and tell us why.\n\n1 Swimming pool · 2 Gym · 3 Sauna · 4 Jacuzzi · 5 Ice bath · 6 Café · 7 Private rooftop garden\n\nSee every amenity: link in bio (lexington.com.gh/amenities)\n\n📍 Shiashie, East Legon, Accra\n\n#TheLexingtonGH #EastLegon #Shiashie #Accra #GhanaRealEstate #AccraLiving #LuxuryLiving #AccraApartments #HomeGoals #OffPlan",
+   "checks": [
+    {
+     "note": "amenity Swimming Pool",
+     "q": "count(*[_type==\"amenity\" && name==\"Swimming Pool\"])",
+     "equals": 1
+    },
+    {
+     "note": "amenity Gym",
+     "q": "count(*[_type==\"amenity\" && name==\"Gym\"])",
+     "equals": 1
+    },
+    {
+     "note": "amenity Sauna",
+     "q": "count(*[_type==\"amenity\" && name==\"Sauna\"])",
+     "equals": 1
+    },
+    {
+     "note": "amenity Jacuzzi",
+     "q": "count(*[_type==\"amenity\" && name==\"Jacuzzi\"])",
+     "equals": 1
+    },
+    {
+     "note": "amenity Ice Bath",
+     "q": "count(*[_type==\"amenity\" && name==\"Ice Bath\"])",
+     "equals": 1
+    },
+    {
+     "note": "amenity Café",
+     "q": "count(*[_type==\"amenity\" && name==\"Café\"])",
+     "equals": 1
+    },
+    {
+     "note": "amenity Private Resident's Rooftop Garden",
+     "q": "count(*[_type==\"amenity\" && name==\"Private Resident's Rooftop Garden\"])",
+     "equals": 1
     }
    ],
    "notes": ""
