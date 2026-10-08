@@ -9,7 +9,8 @@
     "lint": "eslint",
     "seed": "tsx --env-file=.env.local scripts/seed.ts",
     "meta:setup": "tsx --env-file=.env.local scripts/meta-setup.ts",
-    "meta:post": "tsx --env-file=.env.local scripts/post-to-meta.ts"
+    "meta:post": "tsx --env-file=.env.local scripts/post-to-meta.ts",
+    "social:post": "tsx --env-file=.env.local scripts/social-post.ts"
   },
   "dependencies": {
     "@sanity/client": "^7.23.0",

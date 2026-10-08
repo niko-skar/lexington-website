@@ -1,0 +1,1405 @@
+{
+ "generated": "2026-10-08T13:50:42.109Z",
+ "postHourUtc": 18,
+ "posts": [
+  {
+   "id": "lx01",
+   "date": "2026-10-09",
+   "pillar": "Welcome",
+   "title": "Eight storeys, one address",
+   "images": [
+    "lx01-1.jpg"
+   ],
+   "alt": [
+    "Photo: Shiashie · East Legon · Accra. Eight storeys, one address worth arriving at. Studios to penthouses, from $72,000. Illustrative render."
+   ],
+   "fb": "Eight storeys. One address worth arriving at.\n\nThe Lexington is rising in Shiashie, East Legon: studios, one, two and three-bedroom residences and two duplex penthouses, with a swimming pool, gym, sauna and a private rooftop garden.\n\nPrices start at $72,000.\n\nOver the next month we'll share the plans, the progress on site and a closer look at life here. Follow along.\n\nSee the residences: https://www.lexington.com.gh/residences?utm_source=facebook&utm_medium=organic_social&utm_campaign=daily_post&utm_content=lx01\n\n📍 Shiashie, East Legon, Accra\n\nIllustrative render. Prices subject to change.",
+   "ig": "Eight storeys. One address worth arriving at.\n\nThe Lexington is rising in Shiashie, East Legon: studios, one, two and three-bedroom residences and two duplex penthouses, with a swimming pool, gym, sauna and a private rooftop garden.\n\nPrices start at $72,000.\n\nOver the next month we'll share the plans, the progress on site and a closer look at life here. Follow along.\n\nSee the residences: link in bio (lexington.com.gh/residences)\n\n📍 Shiashie, East Legon, Accra\n\nIllustrative render. Prices subject to change.\n\n#TheLexingtonGH #EastLegon #Shiashie #Accra #GhanaRealEstate #AccraApartments #AccraProperty #OffPlan #PropertyInvestment #LuxuryApartments",
+   "checks": [
+    {
+     "note": "hero title",
+     "q": "*[_type==\"siteSettings\"][0].heroTitle",
+     "equals": "Eight storeys, one address worth arriving at."
+    },
+    {
+     "note": "from price all",
+     "q": "math::min(*[_type==\"unit\" && status==\"available\"].priceUSD)",
+     "equals": 72000
+    },
+    {
+     "note": "amenity Swimming Pool",
+     "q": "count(*[_type==\"amenity\" && name==\"Swimming Pool\"])",
+     "equals": 1
+    },
+    {
+     "note": "amenity Gym",
+     "q": "count(*[_type==\"amenity\" && name==\"Gym\"])",
+     "equals": 1
+    },
+    {
+     "note": "amenity Sauna",
+     "q": "count(*[_type==\"amenity\" && name==\"Sauna\"])",
+     "equals": 1
+    },
+    {
+     "note": "amenity Private Resident's Rooftop Garden",
+     "q": "count(*[_type==\"amenity\" && name==\"Private Resident's Rooftop Garden\"])",
+     "equals": 1
+    }
+   ],
+   "notes": ""
+  },
+  {
+   "id": "lx02",
+   "date": "2026-10-10",
+   "pillar": "Behind the build",
+   "title": "Where it began",
+   "images": [
+    "lx02-1.jpg",
+    "lx02-2.jpg"
+   ],
+   "alt": [
+    "Leo and Niko Skarlatos with shovels on the plot, breaking ground on The Lexington at dusk.",
+    "Leo and Niko Skarlatos holding shovels in front of The Lexington banner on the day they broke ground."
+   ],
+   "fb": "Where it began.\n\nThe day Leo and Niko Skarlatos broke ground on The Lexington in Shiashie, East Legon. Everything we are building starts from this day.\n\nFollow the build from groundbreaking to the roof, here and on our progress page. Estimated completion: December 2027.\n\nProgress page: https://www.lexington.com.gh/progress?utm_source=facebook&utm_medium=organic_social&utm_campaign=daily_post&utm_content=lx02\n\n📍 Shiashie, East Legon, Accra\n\nPhotos from the site.",
+   "ig": "Where it began.\n\nThe day Leo and Niko Skarlatos broke ground on The Lexington in Shiashie, East Legon. Everything we are building starts from this day.\n\nFollow the build from groundbreaking to the roof, here and on our progress page. Estimated completion: December 2027.\n\nProgress page: link in bio (lexington.com.gh/progress)\n\n📍 Shiashie, East Legon, Accra\n\nPhotos from the site.\n\n#TheLexingtonGH #EastLegon #Shiashie #Accra #GhanaRealEstate #ConstructionProgress #BuildingGhana #OffPlan #AccraProperty #UnderConstruction",
+   "checks": [
+    {
+     "note": "completion date",
+     "q": "*[_type==\"siteSettings\"][0].progressIntro.lede",
+     "includes": "December 2027"
+    }
+   ],
+   "notes": ""
+  },
+  {
+   "id": "lx03",
+   "date": "2026-10-11",
+   "pillar": "Engagement",
+   "title": "A or B? Living rooms",
+   "images": [
+    "lx03-1.jpg"
+   ],
+   "alt": [
+    "Two living room renders. A: grey sofas and a white textured wall. B: dark leather sofas and a wood-slat wall."
+   ],
+   "fb": "A or B?\n\nTwo living room concepts from our gallery. Which one would you come home to?\n\nTell us in the comments. We read every one.\n\nSee more of the gallery: https://www.lexington.com.gh/gallery?utm_source=facebook&utm_medium=organic_social&utm_campaign=daily_post&utm_content=lx03\n\n📍 Shiashie, East Legon, Accra\n\nIllustrative renders.",
+   "ig": "A or B?\n\nTwo living room concepts from our gallery. Which one would you come home to?\n\nTell us in the comments. We read every one.\n\nSee more of the gallery: link in bio (lexington.com.gh/gallery)\n\n📍 Shiashie, East Legon, Accra\n\nIllustrative renders.\n\n#TheLexingtonGH #EastLegon #Shiashie #Accra #GhanaRealEstate #AccraLiving #LuxuryLiving #AccraApartments #HomeGoals #OffPlan",
+   "checks": [],
+   "notes": ""
+  },
+  {
+   "id": "lx04",
+   "date": "2026-10-12",
+   "pillar": "Homes",
+   "title": "Studio from $72,000",
+   "images": [
+    "lx04-1.jpg",
+    "lx04-2.jpg",
+    "lx04-3.jpg"
+   ],
+   "alt": [
+    "Floor plan card: Studio. Studio 1. Floor Ground, Area 36 sqm, Price $72,000.",
+    "Floor plan card: Studio. Studio 204B. Floor 2, Area 37 sqm, Price $77,700.",
+    "Card: Studios. Reserve from $10,000. Studios start at $72,000. Full drawings are available on request for any floor or unit."
+   ],
+   "fb": "Studio living, from $72,000.\n\nStudio 1 on the ground floor: 36 sqm, $72,000. Studio 204B on the second floor: 37 sqm, $77,700.\n\nReserve yours from $10,000. Full drawings are available on request for any floor or unit.\n\nSee the residences: https://www.lexington.com.gh/residences?utm_source=facebook&utm_medium=organic_social&utm_campaign=daily_post&utm_content=lx04\n\n📍 Shiashie, East Legon, Accra\n\nFloor plans are illustrative. Prices subject to change.",
+   "ig": "Studio living, from $72,000.\n\nStudio 1 on the ground floor: 36 sqm, $72,000. Studio 204B on the second floor: 37 sqm, $77,700.\n\nReserve yours from $10,000. Full drawings are available on request for any floor or unit.\n\nSee the residences: link in bio (lexington.com.gh/residences)\n\n📍 Shiashie, East Legon, Accra\n\nFloor plans are illustrative. Prices subject to change.\n\n#TheLexingtonGH #EastLegon #Shiashie #Accra #GhanaRealEstate #AccraApartments #AccraProperty #OffPlan #PropertyInvestment #LuxuryApartments",
+   "checks": [
+    {
+     "note": "unit Studio 1",
+     "q": "*[_type==\"unit\" && unitNumber==\"Studio 1\"][0]{areaSqm,floor,priceUSD,status}",
+     "equals": {
+      "areaSqm": 36,
+      "floor": 0,
+      "priceUSD": 72000,
+      "status": "available"
+     }
+    },
+    {
+     "note": "unit 204B",
+     "q": "*[_type==\"unit\" && unitNumber==\"204B\"][0]{areaSqm,floor,priceUSD,status}",
+     "equals": {
+      "areaSqm": 37,
+      "floor": 2,
+      "priceUSD": 77700,
+      "status": "available"
+     }
+    },
+    {
+     "note": "from price Studio",
+     "q": "math::min(*[_type==\"unit\" && status==\"available\" && bedroomType==\"Studio\"].priceUSD)",
+     "equals": 72000
+    },
+    {
+     "note": "reservation",
+     "q": "*[_type==\"financingPlan\"][0].selfFinanceRows[milestone==\"Reservation\"][0].option1",
+     "equals": "$10,000"
+    },
+    {
+     "note": "page /residences says \"drawings are available on request\"",
+     "page": "/residences",
+     "includes": "drawings are available on request"
+    }
+   ],
+   "notes": ""
+  },
+  {
+   "id": "lx05",
+   "date": "2026-10-13",
+   "pillar": "Amenities",
+   "title": "Pool, gym and everything after",
+   "images": [
+    "lx05-1.jpg",
+    "lx05-2.jpg",
+    "lx05-3.jpg"
+   ],
+   "alt": [
+    "Render of the indoor pool and gym area, with loungers beside a turquoise pool.",
+    "Render of the pool deck, with palm fronds in the foreground and dark stone paving.",
+    "Card: Amenities. The full list. Swimming pool; Gym; Sauna; Jacuzzi; Ice bath; Café; Private resident's rooftop garden."
+   ],
+   "fb": "Pool, gym, and everything after.\n\nA swimming pool, a fitted gym, sauna, jacuzzi and ice bath: everything residents need for a full day, without leaving the building.\n\nSwipe for the pool deck and the full amenity list.\n\nAll amenities: https://www.lexington.com.gh/amenities?utm_source=facebook&utm_medium=organic_social&utm_campaign=daily_post&utm_content=lx05\n\n📍 Shiashie, East Legon, Accra\n\nIllustrative renders.",
+   "ig": "Pool, gym, and everything after.\n\nA swimming pool, a fitted gym, sauna, jacuzzi and ice bath: everything residents need for a full day, without leaving the building.\n\nSwipe for the pool deck and the full amenity list.\n\nAll amenities: link in bio (lexington.com.gh/amenities)\n\n📍 Shiashie, East Legon, Accra\n\nIllustrative renders.\n\n#TheLexingtonGH #EastLegon #Shiashie #Accra #GhanaRealEstate #LuxuryLiving #AccraApartments #WellnessLiving #OffPlan #LuxuryApartments",
+   "checks": [
+    {
+     "note": "amenity Swimming Pool",
+     "q": "count(*[_type==\"amenity\" && name==\"Swimming Pool\"])",
+     "equals": 1
+    },
+    {
+     "note": "amenity Gym",
+     "q": "count(*[_type==\"amenity\" && name==\"Gym\"])",
+     "equals": 1
+    },
+    {
+     "note": "amenity Sauna",
+     "q": "count(*[_type==\"amenity\" && name==\"Sauna\"])",
+     "equals": 1
+    },
+    {
+     "note": "amenity Jacuzzi",
+     "q": "count(*[_type==\"amenity\" && name==\"Jacuzzi\"])",
+     "equals": 1
+    },
+    {
+     "note": "amenity Ice Bath",
+     "q": "count(*[_type==\"amenity\" && name==\"Ice Bath\"])",
+     "equals": 1
+    },
+    {
+     "note": "amenity Café",
+     "q": "count(*[_type==\"amenity\" && name==\"Café\"])",
+     "equals": 1
+    },
+    {
+     "note": "amenity Private Resident's Rooftop Garden",
+     "q": "count(*[_type==\"amenity\" && name==\"Private Resident's Rooftop Garden\"])",
+     "equals": 1
+    }
+   ],
+   "notes": ""
+  },
+  {
+   "id": "lx06",
+   "date": "2026-10-14",
+   "pillar": "Progress",
+   "title": "From first spade to first floor",
+   "images": [
+    "lx06-1.jpg",
+    "lx06-2.jpg",
+    "lx06-3.jpg",
+    "lx06-4.jpg",
+    "lx06-5.jpg",
+    "lx06-6.jpg"
+   ],
+   "alt": [
+    "Wide view of first-floor rebar columns rising across the site.",
+    "Photo: 01 · Groundbreaking. Breaking ground.",
+    "Photo: 02 · Earthworks. Excavating the foundation trench.",
+    "Photo: 03 · Foundations. Pouring the foundation.",
+    "Photo: 04 · Ground floor. The ground floor slab.",
+    "Photo: 05 · First floor. Columns rise from the first floor slab."
+   ],
+   "fb": "From first spade to first floor.\n\nFive stages, photographed on site: groundbreaking, earthworks, foundations, the ground floor and the first floor. Swipe through them.\n\nEstimated completion: December 2027.\n\nFollow the build: https://www.lexington.com.gh/progress?utm_source=facebook&utm_medium=organic_social&utm_campaign=daily_post&utm_content=lx06\n\n📍 Shiashie, East Legon, Accra\n\nReal photos from the site.",
+   "ig": "From first spade to first floor.\n\nFive stages, photographed on site: groundbreaking, earthworks, foundations, the ground floor and the first floor. Swipe through them.\n\nEstimated completion: December 2027.\n\nFollow the build: link in bio (lexington.com.gh/progress)\n\n📍 Shiashie, East Legon, Accra\n\nReal photos from the site.\n\n#TheLexingtonGH #EastLegon #Shiashie #Accra #GhanaRealEstate #ConstructionProgress #BuildingGhana #OffPlan #AccraProperty #UnderConstruction",
+   "checks": [
+    {
+     "note": "completion date",
+     "q": "*[_type==\"siteSettings\"][0].progressIntro.lede",
+     "includes": "December 2027"
+    },
+    {
+     "note": "progress stages",
+     "q": "array::unique(*[_type==\"constructionUpdate\"].stage)",
+     "includesAll": [
+      "Groundbreaking",
+      "Earthworks",
+      "Foundations",
+      "Ground Floor",
+      "First Floor"
+     ]
+    }
+   ],
+   "notes": ""
+  },
+  {
+   "id": "lx07",
+   "date": "2026-10-15",
+   "pillar": "Buying",
+   "title": "Buying at The Lexington",
+   "images": [
+    "lx07-1.jpg",
+    "lx07-2.jpg",
+    "lx07-3.jpg",
+    "lx07-4.jpg"
+   ],
+   "alt": [
+    "Card: Buying made clear. Three things to know. Before you enquire.",
+    "Card: 1 of 3. A $10,000 reservation. It is the one fixed part. Everything else about how you pay is flexible.",
+    "Card: 2 of 3. Pay your way. Payment plans are flexible. Tell us what suits you and we'll put together a custom package.",
+    "Card: 3 of 3. Prefer a mortgage? Unit prices for mortgage financing are 5% higher across the board."
+   ],
+   "fb": "Buying at The Lexington, in three lines.\n\n1. The reservation is $10,000.\n\n2. Payment plans are flexible. Tell us what suits you and we'll put together a custom package.\n\n3. Prefer a mortgage? Unit prices for mortgage financing are 5% higher across the board.\n\nQuestions? Send us your details and we will follow up with availability and a custom payment plan.\n\nTalk to us: https://www.lexington.com.gh/contact?utm_source=facebook&utm_medium=organic_social&utm_campaign=daily_post&utm_content=lx07\n\n📍 Shiashie, East Legon, Accra\n\nPrices subject to change.",
+   "ig": "Buying at The Lexington, in three lines.\n\n1. The reservation is $10,000.\n\n2. Payment plans are flexible. Tell us what suits you and we'll put together a custom package.\n\n3. Prefer a mortgage? Unit prices for mortgage financing are 5% higher across the board.\n\nQuestions? Send us your details and we will follow up with availability and a custom payment plan.\n\nTalk to us: link in bio (lexington.com.gh/contact)\n\n📍 Shiashie, East Legon, Accra\n\nPrices subject to change.\n\n#TheLexingtonGH #EastLegon #Shiashie #Accra #GhanaRealEstate #PropertyInvestment #DiasporaInvestors #BuyInGhana #OffPlan #AccraProperty",
+   "checks": [
+    {
+     "note": "reservation",
+     "q": "*[_type==\"financingPlan\"][0].selfFinanceRows[milestone==\"Reservation\"][0].option1",
+     "equals": "$10,000"
+    },
+    {
+     "note": "mortgage note",
+     "q": "*[_type==\"financingPlan\"][0].mortgageNote",
+     "equals": "Unit prices for mortgage financing are 5% higher across the board."
+    },
+    {
+     "note": "page /invest says \"custom package\"",
+     "page": "/invest",
+     "includes": "custom package"
+    }
+   ],
+   "notes": ""
+  },
+  {
+   "id": "lx08",
+   "date": "2026-10-16",
+   "pillar": "Homes",
+   "title": "PH2b penthouse",
+   "images": [
+    "lx08-1.jpg",
+    "lx08-2.jpg",
+    "lx08-3.jpg",
+    "lx08-4.jpg"
+   ],
+   "alt": [
+    "Render of the penthouse living, dining and kitchen area, with a long white dining table.",
+    "Floor plan card: PH2b. Upper floor. Level 7, Unit area 375 sqm.",
+    "Floor plan card: PH2b. Lower floor. Level 6, Unit area 375 sqm.",
+    "Card: Finishes. Premium finishes come as standard. On both penthouses. Plans and prices at lexington.com.gh/residences."
+   ],
+   "fb": "PH2b: a three-bedroom duplex penthouse.\n\n375 sqm over two floors, priced at $975,000. Premium finishes are included as standard on the penthouses.\n\nSwipe for both floor plans.\n\nSee the residences: https://www.lexington.com.gh/residences?utm_source=facebook&utm_medium=organic_social&utm_campaign=daily_post&utm_content=lx08\n\n📍 Shiashie, East Legon, Accra\n\nIllustrative render and plans. Prices subject to change.",
+   "ig": "PH2b: a three-bedroom duplex penthouse.\n\n375 sqm over two floors, priced at $975,000. Premium finishes are included as standard on the penthouses.\n\nSwipe for both floor plans.\n\nSee the residences: link in bio (lexington.com.gh/residences)\n\n📍 Shiashie, East Legon, Accra\n\nIllustrative render and plans. Prices subject to change.\n\n#TheLexingtonGH #EastLegon #Shiashie #Accra #GhanaRealEstate #AccraApartments #AccraProperty #OffPlan #PropertyInvestment #LuxuryApartments",
+   "checks": [
+    {
+     "note": "unit PH2b",
+     "q": "*[_type==\"unit\" && unitNumber==\"PH2b\"][0]{areaSqm,floor,priceUSD,status}",
+     "equals": {
+      "areaSqm": 375,
+      "floor": 7,
+      "priceUSD": 975000,
+      "status": "available"
+     }
+    },
+    {
+     "note": "finish tiers",
+     "q": "*[_type==\"packageTiers\"][0].tiers[]{key,name,ratePerSqm,description,features,\"note\":coalesce(note,null),\"badge\":coalesce(badge,null)}",
+     "equals": [
+      {
+       "key": "standard",
+       "name": "Standard",
+       "ratePerSqm": 0,
+       "description": "The finish every residence ships with.",
+       "features": [
+        "Standard Porcelain tiles and white walls",
+        "Standard kitchen with laminate countertop",
+        "Standard bathroom fittings",
+        "Standard lights and ceiling works",
+        "Standard window glass"
+       ],
+       "note": null,
+       "badge": null
+      },
+      {
+       "key": "premium",
+       "name": "Premium",
+       "ratePerSqm": 150,
+       "description": "Natural stone finishes, upgraded fittings and soundproofed glass.",
+       "features": [
+        "Black natural stone and skirting",
+        "Premium kitchen with stone or granite countertop",
+        "Upgraded bathroom fittings",
+        "Paint colour of your choice",
+        "Hidden lights and ceiling works, plus dimmable switches",
+        "10mm thick window glass, laminated and tempered for soundproofing"
+       ],
+       "note": "Included as standard on penthouses.",
+       "badge": "Popular"
+      },
+      {
+       "key": "premiumplus",
+       "name": "Premium Plus",
+       "ratePerSqm": 300,
+       "description": "Fully smart-home enabled, with advanced sound and burglarproofing.",
+       "features": [
+        "Curtains",
+        "Upgraded kitchen appliances",
+        "Smart home enabled — control everything from your phone",
+        "16mm thick window glass",
+        "Advanced soundproofing and burglarproofing"
+       ],
+       "note": null,
+       "badge": "Smart Home"
+      }
+     ]
+    }
+   ],
+   "notes": ""
+  },
+  {
+   "id": "lx09",
+   "date": "2026-10-17",
+   "pillar": "Behind the build",
+   "title": "Three generations",
+   "images": [
+    "lx09-1.jpg",
+    "lx09-2.jpg",
+    "lx09-3.jpg",
+    "lx09-4.jpg"
+   ],
+   "alt": [
+    "Portraits: The family. Three generations. One standard. The family behind The Lexington.",
+    "Portrait card: Mikhail Skarlatos. 1922 – Present. Senior Executive at Doxiades & Associates for 60+ years, responsible for city-wide planning and development of Tema from the ground up in the 1960s.",
+    "Portrait card: Leo Skarlatos. 1962 – Present. Designed the MTN Headquarters in Accra as CFO of MTN. Designed and financed the Silver Mountain Resort & Spa in Brasov, Romania.",
+    "Portrait card: Niko Skarlatos. 1992 – Present. Developed multiple world-class showrooms in London, Accra, and Abidjan; completed a six-bedroom residence in Shiashie, East Legon."
+   ],
+   "fb": "Three generations, one standard.\n\nThe Lexington is the latest chapter in a family history written across Tema's master plan, MTN's headquarters and a resort in the Carpathians. Meet the family behind it.\n\nSpeak with the family directly.\n\nOur story: https://www.lexington.com.gh/about?utm_source=facebook&utm_medium=organic_social&utm_campaign=daily_post&utm_content=lx09\n\n📍 Shiashie, East Legon, Accra",
+   "ig": "Three generations, one standard.\n\nThe Lexington is the latest chapter in a family history written across Tema's master plan, MTN's headquarters and a resort in the Carpathians. Meet the family behind it.\n\nSpeak with the family directly.\n\nOur story: link in bio (lexington.com.gh/about)\n\n📍 Shiashie, East Legon, Accra\n\n#TheLexingtonGH #EastLegon #Shiashie #Accra #GhanaRealEstate #BuildingGhana #FamilyBusiness #AccraProperty #OffPlan #LuxuryApartments",
+   "checks": [
+    {
+     "note": "family bios",
+     "q": "*[_type==\"familyMember\"]|order(order asc){name,years,bio}",
+     "equals": [
+      {
+       "name": "Mikhail Skarlatos",
+       "years": "1922 – Present",
+       "bio": "Senior Executive at Doxiades & Associates for 60+ years, responsible for city-wide planning and development of Tema from the ground up in the 1960s."
+      },
+      {
+       "name": "Leo Skarlatos",
+       "years": "1962 – Present",
+       "bio": "Designed the MTN Headquarters in Accra as CFO of MTN. Designed and financed the Silver Mountain Resort & Spa in Brasov, Romania."
+      },
+      {
+       "name": "Niko Skarlatos",
+       "years": "1992 – Present",
+       "bio": "Developed multiple world-class showrooms in London, Accra, and Abidjan; completed a six-bedroom residence in Shiashie, East Legon."
+      }
+     ]
+    }
+   ],
+   "notes": ""
+  },
+  {
+   "id": "lx10",
+   "date": "2026-10-18",
+   "pillar": "Engagement",
+   "title": "Which home is yours?",
+   "images": [
+    "lx10-1.jpg"
+   ],
+   "alt": [
+    "Question card: Sunday question. Which home is yours? 1 Studio 36–37 sqm; 2 One-bedroom 44–88 sqm; 3 Two-bedroom 72–165 sqm; 4 Three-bedroom 138 sqm; 5 Penthouse 327–375 sqm."
+   ],
+   "fb": "Which home is yours?\n\nStudio, one-bed, two-bed, three-bed or penthouse? Comment the number and tell us why.\n\n1 Studio · 2 One-bedroom · 3 Two-bedroom · 4 Three-bedroom · 5 Penthouse (327–375 sqm)\n\nSee every plan: https://www.lexington.com.gh/residences?utm_source=facebook&utm_medium=organic_social&utm_campaign=daily_post&utm_content=lx10\n\n📍 Shiashie, East Legon, Accra",
+   "ig": "Which home is yours?\n\nStudio, one-bed, two-bed, three-bed or penthouse? Comment the number and tell us why.\n\n1 Studio · 2 One-bedroom · 3 Two-bedroom · 4 Three-bedroom · 5 Penthouse (327–375 sqm)\n\nSee every plan: link in bio (lexington.com.gh/residences)\n\n📍 Shiashie, East Legon, Accra\n\n#TheLexingtonGH #EastLegon #Shiashie #Accra #GhanaRealEstate #AccraLiving #LuxuryLiving #AccraApartments #HomeGoals #OffPlan",
+   "checks": [
+    {
+     "note": "area range Studio",
+     "q": "{\"min\":math::min(*[_type==\"unit\" && bedroomType==\"Studio\"].areaSqm),\"max\":math::max(*[_type==\"unit\" && bedroomType==\"Studio\"].areaSqm)}",
+     "equals": {
+      "min": 36,
+      "max": 37
+     }
+    },
+    {
+     "note": "area range One Bedroom",
+     "q": "{\"min\":math::min(*[_type==\"unit\" && bedroomType==\"One Bedroom\"].areaSqm),\"max\":math::max(*[_type==\"unit\" && bedroomType==\"One Bedroom\"].areaSqm)}",
+     "equals": {
+      "min": 44,
+      "max": 88
+     }
+    },
+    {
+     "note": "area range Two Bedroom",
+     "q": "{\"min\":math::min(*[_type==\"unit\" && bedroomType==\"Two Bedroom\"].areaSqm),\"max\":math::max(*[_type==\"unit\" && bedroomType==\"Two Bedroom\"].areaSqm)}",
+     "equals": {
+      "min": 72,
+      "max": 165
+     }
+    },
+    {
+     "note": "area range Three Bedroom",
+     "q": "{\"min\":math::min(*[_type==\"unit\" && bedroomType==\"Three Bedroom\"].areaSqm),\"max\":math::max(*[_type==\"unit\" && bedroomType==\"Three Bedroom\"].areaSqm)}",
+     "equals": {
+      "min": 138,
+      "max": 138
+     }
+    },
+    {
+     "note": "area range 3BR Duplex Penthouse",
+     "q": "{\"min\":math::min(*[_type==\"unit\" && bedroomType==\"3BR Duplex Penthouse\"].areaSqm),\"max\":math::max(*[_type==\"unit\" && bedroomType==\"3BR Duplex Penthouse\"].areaSqm)}",
+     "equals": {
+      "min": 327,
+      "max": 375
+     }
+    }
+   ],
+   "notes": ""
+  },
+  {
+   "id": "lx11",
+   "date": "2026-10-19",
+   "pillar": "Homes",
+   "title": "One-bedroom from $92,400",
+   "images": [
+    "lx11-1.jpg",
+    "lx11-2.jpg",
+    "lx11-3.jpg"
+   ],
+   "alt": [
+    "Floor plan card: One-bedroom. Residence 205B. Floor 2, Area 44 sqm, Price $92,400.",
+    "Floor plan card: One-bedroom. Residence 206B. Floor 2, Area 60 sqm, Price $126,000.",
+    "Card: One-bedroom residences. From $92,400. Compound parking included: one space for every one-bedroom; Full drawings on request for any floor or unit; Reserve from $10,000."
+   ],
+   "fb": "One-bedroom residences from $92,400.\n\nResidence 205B is 44 sqm at $92,400. Residence 206B is 60 sqm at $126,000.\n\nCompound parking is included: one space for every one-bedroom. Full drawings are available on request for any floor or unit.\n\nSee the residences: https://www.lexington.com.gh/residences?utm_source=facebook&utm_medium=organic_social&utm_campaign=daily_post&utm_content=lx11\n\n📍 Shiashie, East Legon, Accra\n\nFloor plans are illustrative. Prices subject to change.",
+   "ig": "One-bedroom residences from $92,400.\n\nResidence 205B is 44 sqm at $92,400. Residence 206B is 60 sqm at $126,000.\n\nCompound parking is included: one space for every one-bedroom. Full drawings are available on request for any floor or unit.\n\nSee the residences: link in bio (lexington.com.gh/residences)\n\n📍 Shiashie, East Legon, Accra\n\nFloor plans are illustrative. Prices subject to change.\n\n#TheLexingtonGH #EastLegon #Shiashie #Accra #GhanaRealEstate #AccraApartments #AccraProperty #OffPlan #PropertyInvestment #LuxuryApartments",
+   "checks": [
+    {
+     "note": "unit 205B",
+     "q": "*[_type==\"unit\" && unitNumber==\"205B\"][0]{areaSqm,floor,priceUSD,status}",
+     "equals": {
+      "areaSqm": 44,
+      "floor": 2,
+      "priceUSD": 92400,
+      "status": "available"
+     }
+    },
+    {
+     "note": "unit 206B",
+     "q": "*[_type==\"unit\" && unitNumber==\"206B\"][0]{areaSqm,floor,priceUSD,status}",
+     "equals": {
+      "areaSqm": 60,
+      "floor": 2,
+      "priceUSD": 126000,
+      "status": "available"
+     }
+    },
+    {
+     "note": "from price One Bedroom",
+     "q": "math::min(*[_type==\"unit\" && status==\"available\" && bedroomType==\"One Bedroom\"].priceUSD)",
+     "equals": 92400
+    },
+    {
+     "note": "page /residences says \"Compound parking included\"",
+     "page": "/residences",
+     "includes": "Compound parking included"
+    },
+    {
+     "note": "page /residences says \"drawings are available on request\"",
+     "page": "/residences",
+     "includes": "drawings are available on request"
+    },
+    {
+     "note": "reservation",
+     "q": "*[_type==\"financingPlan\"][0].selfFinanceRows[milestone==\"Reservation\"][0].option1",
+     "equals": "$10,000"
+    }
+   ],
+   "notes": ""
+  },
+  {
+   "id": "lx12",
+   "date": "2026-10-20",
+   "pillar": "Amenities",
+   "title": "A fitted gym",
+   "images": [
+    "lx12-1.jpg",
+    "lx12-2.jpg",
+    "lx12-3.jpg"
+   ],
+   "alt": [
+    "Render of the gym and fitness area, with treadmills and a floor-to-ceiling window.",
+    "Render of the indoor pool and gym area, with the gym visible behind glass.",
+    "Card: Wellness at The Lexington. Everything in one place. Gym; Swimming pool; Sauna; Jacuzzi; Ice bath."
+   ],
+   "fb": "A fitted gym, in the building.\n\nThe Lexington has a fitted gym, plus a swimming pool, sauna, jacuzzi and ice bath for recovery.\n\nWhich would you use first?\n\nAll amenities: https://www.lexington.com.gh/amenities?utm_source=facebook&utm_medium=organic_social&utm_campaign=daily_post&utm_content=lx12\n\n📍 Shiashie, East Legon, Accra\n\nIllustrative renders.",
+   "ig": "A fitted gym, in the building.\n\nThe Lexington has a fitted gym, plus a swimming pool, sauna, jacuzzi and ice bath for recovery.\n\nWhich would you use first?\n\nAll amenities: link in bio (lexington.com.gh/amenities)\n\n📍 Shiashie, East Legon, Accra\n\nIllustrative renders.\n\n#TheLexingtonGH #EastLegon #Shiashie #Accra #GhanaRealEstate #LuxuryLiving #AccraApartments #WellnessLiving #OffPlan #LuxuryApartments",
+   "checks": [
+    {
+     "note": "amenity Gym",
+     "q": "count(*[_type==\"amenity\" && name==\"Gym\"])",
+     "equals": 1
+    },
+    {
+     "note": "amenity Swimming Pool",
+     "q": "count(*[_type==\"amenity\" && name==\"Swimming Pool\"])",
+     "equals": 1
+    },
+    {
+     "note": "amenity Sauna",
+     "q": "count(*[_type==\"amenity\" && name==\"Sauna\"])",
+     "equals": 1
+    },
+    {
+     "note": "amenity Jacuzzi",
+     "q": "count(*[_type==\"amenity\" && name==\"Jacuzzi\"])",
+     "equals": 1
+    },
+    {
+     "note": "amenity Ice Bath",
+     "q": "count(*[_type==\"amenity\" && name==\"Ice Bath\"])",
+     "equals": 1
+    }
+   ],
+   "notes": ""
+  },
+  {
+   "id": "lx13",
+   "date": "2026-10-21",
+   "pillar": "Progress",
+   "title": "Foundations",
+   "images": [
+    "lx13-1.jpg",
+    "lx13-2.jpg",
+    "lx13-3.jpg",
+    "lx13-4.jpg",
+    "lx13-5.jpg"
+   ],
+   "alt": [
+    "Concrete pump truck pouring the foundation by day, with workers on the rebar below.",
+    "Photo: Foundations. Steel mats, tied and ready for the pour.",
+    "Photo: Foundations. Column cages rise from the slab.",
+    "Photo: Foundations. A night-time pour.",
+    "Photo: Foundations. Rebar cages for the foundation columns."
+   ],
+   "fb": "Foundations: where a building really begins.\n\nSteel mats tied and ready for the pour, column cages standing tall, and concrete poured by day and by night. Swipe through.\n\nFollow the build: https://www.lexington.com.gh/progress?utm_source=facebook&utm_medium=organic_social&utm_campaign=daily_post&utm_content=lx13\n\n📍 Shiashie, East Legon, Accra\n\nPhotos from the site.",
+   "ig": "Foundations: where a building really begins.\n\nSteel mats tied and ready for the pour, column cages standing tall, and concrete poured by day and by night. Swipe through.\n\nFollow the build: link in bio (lexington.com.gh/progress)\n\n📍 Shiashie, East Legon, Accra\n\nPhotos from the site.\n\n#TheLexingtonGH #EastLegon #Shiashie #Accra #GhanaRealEstate #ConstructionProgress #BuildingGhana #OffPlan #AccraProperty #UnderConstruction",
+   "checks": [],
+   "notes": ""
+  },
+  {
+   "id": "lx14",
+   "date": "2026-10-22",
+   "pillar": "Buying",
+   "title": "Choose your finish",
+   "images": [
+    "lx14-1.jpg",
+    "lx14-2.jpg",
+    "lx14-3.jpg",
+    "lx14-4.jpg"
+   ],
+   "alt": [
+    "Render of a bedroom with a wood-slat headboard wall and warm lighting.",
+    "Card: Package 1 of 3. Standard. The finish every residence ships with. Standard Porcelain tiles and white walls; Standard kitchen with laminate countertop; Standard bathroom fittings; Standard lights and ceiling works; Standard window glass.",
+    "Card: Package 2 of 3 · Popular. Premium. Natural stone finishes, upgraded fittings and soundproofed glass. Black natural stone and skirting; Premium kitchen with stone or granite countertop; Upgraded bathroom fittings; Paint colour of your choice; Hidden lights and ceiling works, plus dimmable switches; 10mm thick window glass, laminated and tempered for soundproofing.",
+    "Card: Package 3 of 3 · Smart Home. Premium Plus. Fully smart-home enabled, with advanced sound and burglarproofing. Curtains; Upgraded kitchen appliances; Smart home enabled — control everything from your phone; 16mm thick window glass; Advanced soundproofing and burglarproofing."
+   ],
+   "fb": "Choose your finish.\n\nStandard comes with every residence. Premium adds natural stone finishes, upgraded fittings and soundproofed glass for $150 per sqm. Premium Plus adds smart-home control from your phone, curtains and upgraded kitchen appliances for $300 per sqm.\n\nIncluded as standard on penthouses.\n\nSee the packages: https://www.lexington.com.gh/residences?utm_source=facebook&utm_medium=organic_social&utm_campaign=daily_post&utm_content=lx14\n\n📍 Shiashie, East Legon, Accra\n\nPrices subject to change.",
+   "ig": "Choose your finish.\n\nStandard comes with every residence. Premium adds natural stone finishes, upgraded fittings and soundproofed glass for $150 per sqm. Premium Plus adds smart-home control from your phone, curtains and upgraded kitchen appliances for $300 per sqm.\n\nIncluded as standard on penthouses.\n\nSee the packages: link in bio (lexington.com.gh/residences)\n\n📍 Shiashie, East Legon, Accra\n\nPrices subject to change.\n\n#TheLexingtonGH #EastLegon #Shiashie #Accra #GhanaRealEstate #PropertyInvestment #DiasporaInvestors #BuyInGhana #OffPlan #AccraProperty",
+   "checks": [
+    {
+     "note": "finish tiers",
+     "q": "*[_type==\"packageTiers\"][0].tiers[]{key,name,ratePerSqm,description,features,\"note\":coalesce(note,null),\"badge\":coalesce(badge,null)}",
+     "equals": [
+      {
+       "key": "standard",
+       "name": "Standard",
+       "ratePerSqm": 0,
+       "description": "The finish every residence ships with.",
+       "features": [
+        "Standard Porcelain tiles and white walls",
+        "Standard kitchen with laminate countertop",
+        "Standard bathroom fittings",
+        "Standard lights and ceiling works",
+        "Standard window glass"
+       ],
+       "note": null,
+       "badge": null
+      },
+      {
+       "key": "premium",
+       "name": "Premium",
+       "ratePerSqm": 150,
+       "description": "Natural stone finishes, upgraded fittings and soundproofed glass.",
+       "features": [
+        "Black natural stone and skirting",
+        "Premium kitchen with stone or granite countertop",
+        "Upgraded bathroom fittings",
+        "Paint colour of your choice",
+        "Hidden lights and ceiling works, plus dimmable switches",
+        "10mm thick window glass, laminated and tempered for soundproofing"
+       ],
+       "note": "Included as standard on penthouses.",
+       "badge": "Popular"
+      },
+      {
+       "key": "premiumplus",
+       "name": "Premium Plus",
+       "ratePerSqm": 300,
+       "description": "Fully smart-home enabled, with advanced sound and burglarproofing.",
+       "features": [
+        "Curtains",
+        "Upgraded kitchen appliances",
+        "Smart home enabled — control everything from your phone",
+        "16mm thick window glass",
+        "Advanced soundproofing and burglarproofing"
+       ],
+       "note": null,
+       "badge": "Smart Home"
+      }
+     ]
+    }
+   ],
+   "notes": ""
+  },
+  {
+   "id": "lx15",
+   "date": "2026-10-23",
+   "pillar": "Homes",
+   "title": "PH1a penthouse",
+   "images": [
+    "lx15-1.jpg",
+    "lx15-2.jpg",
+    "lx15-3.jpg"
+   ],
+   "alt": [
+    "Floor plan card: Three-bedroom duplex penthouse. PH1a. Bedrooms 3, Area 327 sqm, Price $850,200.",
+    "Floor plan card: PH1a. Lower floor. Level 6, Unit area 327 sqm.",
+    "Card: At a glance. PH1a. Three-bedroom duplex penthouse; 327 sqm over two floors; Premium finishes included as standard; $850,200."
+   ],
+   "fb": "PH1a: three bedrooms over two floors.\n\n327 sqm, priced at $850,200, with Premium finishes included as standard. Swipe for the plans.\n\nSee the residences: https://www.lexington.com.gh/residences?utm_source=facebook&utm_medium=organic_social&utm_campaign=daily_post&utm_content=lx15\n\n📍 Shiashie, East Legon, Accra\n\nFloor plans are illustrative. Prices subject to change.",
+   "ig": "PH1a: three bedrooms over two floors.\n\n327 sqm, priced at $850,200, with Premium finishes included as standard. Swipe for the plans.\n\nSee the residences: link in bio (lexington.com.gh/residences)\n\n📍 Shiashie, East Legon, Accra\n\nFloor plans are illustrative. Prices subject to change.\n\n#TheLexingtonGH #EastLegon #Shiashie #Accra #GhanaRealEstate #AccraApartments #AccraProperty #OffPlan #PropertyInvestment #LuxuryApartments",
+   "checks": [
+    {
+     "note": "unit PH1a",
+     "q": "*[_type==\"unit\" && unitNumber==\"PH1a\"][0]{areaSqm,floor,priceUSD,status}",
+     "equals": {
+      "areaSqm": 327,
+      "floor": 7,
+      "priceUSD": 850200,
+      "status": "available"
+     }
+    },
+    {
+     "note": "finish tiers",
+     "q": "*[_type==\"packageTiers\"][0].tiers[]{key,name,ratePerSqm,description,features,\"note\":coalesce(note,null),\"badge\":coalesce(badge,null)}",
+     "equals": [
+      {
+       "key": "standard",
+       "name": "Standard",
+       "ratePerSqm": 0,
+       "description": "The finish every residence ships with.",
+       "features": [
+        "Standard Porcelain tiles and white walls",
+        "Standard kitchen with laminate countertop",
+        "Standard bathroom fittings",
+        "Standard lights and ceiling works",
+        "Standard window glass"
+       ],
+       "note": null,
+       "badge": null
+      },
+      {
+       "key": "premium",
+       "name": "Premium",
+       "ratePerSqm": 150,
+       "description": "Natural stone finishes, upgraded fittings and soundproofed glass.",
+       "features": [
+        "Black natural stone and skirting",
+        "Premium kitchen with stone or granite countertop",
+        "Upgraded bathroom fittings",
+        "Paint colour of your choice",
+        "Hidden lights and ceiling works, plus dimmable switches",
+        "10mm thick window glass, laminated and tempered for soundproofing"
+       ],
+       "note": "Included as standard on penthouses.",
+       "badge": "Popular"
+      },
+      {
+       "key": "premiumplus",
+       "name": "Premium Plus",
+       "ratePerSqm": 300,
+       "description": "Fully smart-home enabled, with advanced sound and burglarproofing.",
+       "features": [
+        "Curtains",
+        "Upgraded kitchen appliances",
+        "Smart home enabled — control everything from your phone",
+        "16mm thick window glass",
+        "Advanced soundproofing and burglarproofing"
+       ],
+       "note": null,
+       "badge": "Smart Home"
+      }
+     ]
+    }
+   ],
+   "notes": ""
+  },
+  {
+   "id": "lx16",
+   "date": "2026-10-24",
+   "pillar": "Offer",
+   "title": "Phase 1 pricing ends 31 October.",
+   "images": [
+    "lx16-1.jpg"
+   ],
+   "alt": [
+    "Countdown card: Phase 1 pricing ends 31 October. 7. Days left. 15% off with full payment; 8% off with flexible payment plans up to 18 months."
+   ],
+   "fb": "7 days left on Phase 1 pricing.\n\nPhase 1 pricing at The Lexington ends on 31 October: 15% off with full payment, or 8% off with flexible payment plans of up to 18 months.\n\nReserve from $10,000.\n\nEnquire: https://www.lexington.com.gh/contact?utm_source=facebook&utm_medium=organic_social&utm_campaign=daily_post&utm_content=lx16\n\n📍 Shiashie, East Legon, Accra\n\nTerms apply. Prices subject to change.",
+   "ig": "7 days left on Phase 1 pricing.\n\nPhase 1 pricing at The Lexington ends on 31 October: 15% off with full payment, or 8% off with flexible payment plans of up to 18 months.\n\nReserve from $10,000.\n\nEnquire: link in bio (lexington.com.gh/contact)\n\n📍 Shiashie, East Legon, Accra\n\nTerms apply. Prices subject to change.\n\n#TheLexingtonGH #EastLegon #Shiashie #Accra #GhanaRealEstate #PropertyInvestment #DiasporaInvestors #BuyInGhana #OffPlan #AccraProperty",
+   "checks": [
+    {
+     "note": "promo banner on",
+     "q": "*[_type==\"siteSettings\"][0].promoBanner.enabled",
+     "equals": true
+    },
+    {
+     "note": "banner says 15% off",
+     "q": "*[_type==\"siteSettings\"][0].promoBanner.message",
+     "includes": "15% off"
+    },
+    {
+     "note": "banner says 8% off",
+     "q": "*[_type==\"siteSettings\"][0].promoBanner.message",
+     "includes": "8% off"
+    },
+    {
+     "note": "banner says 18 months",
+     "q": "*[_type==\"siteSettings\"][0].promoBanner.message",
+     "includes": "18 months"
+    },
+    {
+     "note": "banner says 31st of October",
+     "q": "*[_type==\"siteSettings\"][0].promoBanner.message",
+     "includes": "31st of October"
+    },
+    {
+     "note": "reservation",
+     "q": "*[_type==\"financingPlan\"][0].selfFinanceRows[milestone==\"Reservation\"][0].option1",
+     "equals": "$10,000"
+    }
+   ],
+   "notes": ""
+  },
+  {
+   "id": "lx17",
+   "date": "2026-10-25",
+   "pillar": "Engagement",
+   "title": "Rooftop evening",
+   "images": [
+    "lx17-1.jpg"
+   ],
+   "alt": [
+    "Render of a rooftop lounge with sofas around a fire feature and the city skyline behind."
+   ],
+   "fb": "One rooftop evening. Who's on your guest list?\n\nThe Lexington has a Private Resident's Rooftop Garden, reserved for residents. If you had it for one evening, who would you invite?\n\nTell us below.\n\nSee the amenities: https://www.lexington.com.gh/amenities?utm_source=facebook&utm_medium=organic_social&utm_campaign=daily_post&utm_content=lx17\n\n📍 Shiashie, East Legon, Accra\n\nIllustrative render.",
+   "ig": "One rooftop evening. Who's on your guest list?\n\nThe Lexington has a Private Resident's Rooftop Garden, reserved for residents. If you had it for one evening, who would you invite?\n\nTell us below.\n\nSee the amenities: link in bio (lexington.com.gh/amenities)\n\n📍 Shiashie, East Legon, Accra\n\nIllustrative render.\n\n#TheLexingtonGH #EastLegon #Shiashie #Accra #GhanaRealEstate #AccraLiving #LuxuryLiving #AccraApartments #HomeGoals #OffPlan",
+   "checks": [
+    {
+     "note": "amenity Private Resident's Rooftop Garden",
+     "q": "count(*[_type==\"amenity\" && name==\"Private Resident's Rooftop Garden\"])",
+     "equals": 1
+    }
+   ],
+   "notes": ""
+  },
+  {
+   "id": "lx18",
+   "date": "2026-10-26",
+   "pillar": "Homes",
+   "title": "Two-bedroom from $151,200",
+   "images": [
+    "lx18-1.jpg",
+    "lx18-2.jpg",
+    "lx18-3.jpg"
+   ],
+   "alt": [
+    "Floor plan card: Two-bedroom. Residence 207B. Floor 2, Area 72 sqm, Price $151,200.",
+    "Floor plan card: Two-bedroom. Residence 302A. Floor 3, Area 84 sqm, Price $184,800.",
+    "Card: Two-bedroom residences. From $151,200. Compound parking included: two spaces for every two-bedroom; Full drawings on request for any floor or unit; Reserve from $10,000."
+   ],
+   "fb": "Two-bedroom residences from $151,200.\n\nResidence 207B is 72 sqm at $151,200. Residence 302A is 84 sqm at $184,800.\n\nCompound parking is included: two spaces for every two-bedroom. Full drawings are available on request for any floor or unit.\n\nSee the residences: https://www.lexington.com.gh/residences?utm_source=facebook&utm_medium=organic_social&utm_campaign=daily_post&utm_content=lx18\n\n📍 Shiashie, East Legon, Accra\n\nFloor plans are illustrative. Prices subject to change.",
+   "ig": "Two-bedroom residences from $151,200.\n\nResidence 207B is 72 sqm at $151,200. Residence 302A is 84 sqm at $184,800.\n\nCompound parking is included: two spaces for every two-bedroom. Full drawings are available on request for any floor or unit.\n\nSee the residences: link in bio (lexington.com.gh/residences)\n\n📍 Shiashie, East Legon, Accra\n\nFloor plans are illustrative. Prices subject to change.\n\n#TheLexingtonGH #EastLegon #Shiashie #Accra #GhanaRealEstate #AccraApartments #AccraProperty #OffPlan #PropertyInvestment #LuxuryApartments",
+   "checks": [
+    {
+     "note": "unit 207B",
+     "q": "*[_type==\"unit\" && unitNumber==\"207B\"][0]{areaSqm,floor,priceUSD,status}",
+     "equals": {
+      "areaSqm": 72,
+      "floor": 2,
+      "priceUSD": 151200,
+      "status": "available"
+     }
+    },
+    {
+     "note": "unit 302A",
+     "q": "*[_type==\"unit\" && unitNumber==\"302A\"][0]{areaSqm,floor,priceUSD,status}",
+     "equals": {
+      "areaSqm": 84,
+      "floor": 3,
+      "priceUSD": 184800,
+      "status": "available"
+     }
+    },
+    {
+     "note": "from price Two Bedroom",
+     "q": "math::min(*[_type==\"unit\" && status==\"available\" && bedroomType==\"Two Bedroom\"].priceUSD)",
+     "equals": 151200
+    },
+    {
+     "note": "page /residences says \"Compound parking included\"",
+     "page": "/residences",
+     "includes": "Compound parking included"
+    },
+    {
+     "note": "page /residences says \"drawings are available on request\"",
+     "page": "/residences",
+     "includes": "drawings are available on request"
+    },
+    {
+     "note": "reservation",
+     "q": "*[_type==\"financingPlan\"][0].selfFinanceRows[milestone==\"Reservation\"][0].option1",
+     "equals": "$10,000"
+    }
+   ],
+   "notes": ""
+  },
+  {
+   "id": "lx19",
+   "date": "2026-10-27",
+   "pillar": "Amenities",
+   "title": "Sauna, jacuzzi, ice bath",
+   "images": [
+    "lx19-1.jpg",
+    "lx19-2.jpg",
+    "lx19-3.jpg",
+    "lx19-4.jpg"
+   ],
+   "alt": [
+    "Render of a wood-lined sauna with large windows onto tropical planting.",
+    "Render of the jacuzzi and spa lounge, with a stone feature wall and warm lighting.",
+    "Render of an ice bath in a dark stone room with a window onto greenery.",
+    "Card: Wellness. Recovery, built in. Sauna; Jacuzzi; Ice bath; Gym; Swimming pool."
+   ],
+   "fb": "Sauna. Jacuzzi. Ice bath.\n\nRecovery, built in: a sauna, a jacuzzi and an ice bath, alongside the gym and swimming pool.\n\nWhich would you reach for after a long week?\n\nAll amenities: https://www.lexington.com.gh/amenities?utm_source=facebook&utm_medium=organic_social&utm_campaign=daily_post&utm_content=lx19\n\n📍 Shiashie, East Legon, Accra\n\nIllustrative renders.",
+   "ig": "Sauna. Jacuzzi. Ice bath.\n\nRecovery, built in: a sauna, a jacuzzi and an ice bath, alongside the gym and swimming pool.\n\nWhich would you reach for after a long week?\n\nAll amenities: link in bio (lexington.com.gh/amenities)\n\n📍 Shiashie, East Legon, Accra\n\nIllustrative renders.\n\n#TheLexingtonGH #EastLegon #Shiashie #Accra #GhanaRealEstate #LuxuryLiving #AccraApartments #WellnessLiving #OffPlan #LuxuryApartments",
+   "checks": [
+    {
+     "note": "amenity Sauna",
+     "q": "count(*[_type==\"amenity\" && name==\"Sauna\"])",
+     "equals": 1
+    },
+    {
+     "note": "amenity Jacuzzi",
+     "q": "count(*[_type==\"amenity\" && name==\"Jacuzzi\"])",
+     "equals": 1
+    },
+    {
+     "note": "amenity Ice Bath",
+     "q": "count(*[_type==\"amenity\" && name==\"Ice Bath\"])",
+     "equals": 1
+    },
+    {
+     "note": "amenity Gym",
+     "q": "count(*[_type==\"amenity\" && name==\"Gym\"])",
+     "equals": 1
+    },
+    {
+     "note": "amenity Swimming Pool",
+     "q": "count(*[_type==\"amenity\" && name==\"Swimming Pool\"])",
+     "equals": 1
+    }
+   ],
+   "notes": ""
+  },
+  {
+   "id": "lx20",
+   "date": "2026-10-28",
+   "pillar": "Offer",
+   "title": "Phase 1 pricing ends 31 October.",
+   "images": [
+    "lx20-1.jpg"
+   ],
+   "alt": [
+    "Countdown card: Phase 1 pricing ends 31 October. 3. Days left. 15% off with full payment; 8% off with flexible payment plans up to 18 months."
+   ],
+   "fb": "3 days left on Phase 1 pricing.\n\nThree days left to enquire at Phase 1 pricing, which ends on 31 October: 15% off with full payment, or 8% off with flexible payment plans of up to 18 months.\n\nReserve from $10,000.\n\nEnquire: https://www.lexington.com.gh/contact?utm_source=facebook&utm_medium=organic_social&utm_campaign=daily_post&utm_content=lx20\n\n📍 Shiashie, East Legon, Accra\n\nTerms apply. Prices subject to change.",
+   "ig": "3 days left on Phase 1 pricing.\n\nThree days left to enquire at Phase 1 pricing, which ends on 31 October: 15% off with full payment, or 8% off with flexible payment plans of up to 18 months.\n\nReserve from $10,000.\n\nEnquire: link in bio (lexington.com.gh/contact)\n\n📍 Shiashie, East Legon, Accra\n\nTerms apply. Prices subject to change.\n\n#TheLexingtonGH #EastLegon #Shiashie #Accra #GhanaRealEstate #PropertyInvestment #DiasporaInvestors #BuyInGhana #OffPlan #AccraProperty",
+   "checks": [
+    {
+     "note": "promo banner on",
+     "q": "*[_type==\"siteSettings\"][0].promoBanner.enabled",
+     "equals": true
+    },
+    {
+     "note": "banner says 15% off",
+     "q": "*[_type==\"siteSettings\"][0].promoBanner.message",
+     "includes": "15% off"
+    },
+    {
+     "note": "banner says 8% off",
+     "q": "*[_type==\"siteSettings\"][0].promoBanner.message",
+     "includes": "8% off"
+    },
+    {
+     "note": "banner says 18 months",
+     "q": "*[_type==\"siteSettings\"][0].promoBanner.message",
+     "includes": "18 months"
+    },
+    {
+     "note": "banner says 31st of October",
+     "q": "*[_type==\"siteSettings\"][0].promoBanner.message",
+     "includes": "31st of October"
+    },
+    {
+     "note": "reservation",
+     "q": "*[_type==\"financingPlan\"][0].selfFinanceRows[milestone==\"Reservation\"][0].option1",
+     "equals": "$10,000"
+    }
+   ],
+   "notes": ""
+  },
+  {
+   "id": "lx21",
+   "date": "2026-10-29",
+   "pillar": "Progress",
+   "title": "Ground floor",
+   "images": [
+    "lx21-1.jpg",
+    "lx21-2.jpg",
+    "lx21-3.jpg",
+    "lx21-4.jpg",
+    "lx21-5.jpg"
+   ],
+   "alt": [
+    "Aerial view of the ground floor slab rebar mat.",
+    "Photo: Ground floor. Reinforcement spanning the site.",
+    "Photo: Ground floor. Screeding a freshly poured slab.",
+    "Photo: Ground floor. A column cage, ready for concrete.",
+    "Photo: Ground floor. Pouring a column."
+   ],
+   "fb": "Ground floor: slabs, columns and formwork.\n\nReinforcement laid across the site, slabs screeded after the pour, and columns poured inside plywood formwork. Swipe through.\n\nFollow the build: https://www.lexington.com.gh/progress?utm_source=facebook&utm_medium=organic_social&utm_campaign=daily_post&utm_content=lx21\n\n📍 Shiashie, East Legon, Accra\n\nPhotos from the site.",
+   "ig": "Ground floor: slabs, columns and formwork.\n\nReinforcement laid across the site, slabs screeded after the pour, and columns poured inside plywood formwork. Swipe through.\n\nFollow the build: link in bio (lexington.com.gh/progress)\n\n📍 Shiashie, East Legon, Accra\n\nPhotos from the site.\n\n#TheLexingtonGH #EastLegon #Shiashie #Accra #GhanaRealEstate #ConstructionProgress #BuildingGhana #OffPlan #AccraProperty #UnderConstruction",
+   "checks": [],
+   "notes": ""
+  },
+  {
+   "id": "lx22",
+   "date": "2026-10-30",
+   "pillar": "Offer",
+   "title": "Phase 1 pricing ends tomorrow.",
+   "images": [
+    "lx22-1.jpg"
+   ],
+   "alt": [
+    "Countdown card: Phase 1 pricing ends tomorrow. 1. Day left. 15% off with full payment; 8% off with flexible payment plans up to 18 months."
+   ],
+   "fb": "Phase 1 pricing ends tomorrow.\n\nTomorrow, 31 October, is the last day of Phase 1 pricing: 15% off with full payment, or 8% off with flexible payment plans of up to 18 months.\n\nReserve from $10,000.\n\nEnquire: https://www.lexington.com.gh/contact?utm_source=facebook&utm_medium=organic_social&utm_campaign=daily_post&utm_content=lx22\n\n📍 Shiashie, East Legon, Accra\n\nTerms apply. Prices subject to change.",
+   "ig": "Phase 1 pricing ends tomorrow.\n\nTomorrow, 31 October, is the last day of Phase 1 pricing: 15% off with full payment, or 8% off with flexible payment plans of up to 18 months.\n\nReserve from $10,000.\n\nEnquire: link in bio (lexington.com.gh/contact)\n\n📍 Shiashie, East Legon, Accra\n\nTerms apply. Prices subject to change.\n\n#TheLexingtonGH #EastLegon #Shiashie #Accra #GhanaRealEstate #PropertyInvestment #DiasporaInvestors #BuyInGhana #OffPlan #AccraProperty",
+   "checks": [
+    {
+     "note": "promo banner on",
+     "q": "*[_type==\"siteSettings\"][0].promoBanner.enabled",
+     "equals": true
+    },
+    {
+     "note": "banner says 15% off",
+     "q": "*[_type==\"siteSettings\"][0].promoBanner.message",
+     "includes": "15% off"
+    },
+    {
+     "note": "banner says 8% off",
+     "q": "*[_type==\"siteSettings\"][0].promoBanner.message",
+     "includes": "8% off"
+    },
+    {
+     "note": "banner says 18 months",
+     "q": "*[_type==\"siteSettings\"][0].promoBanner.message",
+     "includes": "18 months"
+    },
+    {
+     "note": "banner says 31st of October",
+     "q": "*[_type==\"siteSettings\"][0].promoBanner.message",
+     "includes": "31st of October"
+    },
+    {
+     "note": "reservation",
+     "q": "*[_type==\"financingPlan\"][0].selfFinanceRows[milestone==\"Reservation\"][0].option1",
+     "equals": "$10,000"
+    }
+   ],
+   "notes": ""
+  },
+  {
+   "id": "lx23",
+   "date": "2026-10-31",
+   "pillar": "Offer",
+   "title": "Phase 1 pricing ends today.",
+   "images": [
+    "lx23-1.jpg"
+   ],
+   "alt": [
+    "Countdown card: Phase 1 pricing ends today. Today. Last day. 15% off with full payment; 8% off with flexible payment plans up to 18 months."
+   ],
+   "fb": "Last day of Phase 1 pricing.\n\nPhase 1 pricing at The Lexington ends today, 31 October: 15% off with full payment, or 8% off with flexible payment plans of up to 18 months.\n\nReserve from $10,000.\n\nEnquire: https://www.lexington.com.gh/contact?utm_source=facebook&utm_medium=organic_social&utm_campaign=daily_post&utm_content=lx23\n\n📍 Shiashie, East Legon, Accra\n\nTerms apply. Prices subject to change.",
+   "ig": "Last day of Phase 1 pricing.\n\nPhase 1 pricing at The Lexington ends today, 31 October: 15% off with full payment, or 8% off with flexible payment plans of up to 18 months.\n\nReserve from $10,000.\n\nEnquire: link in bio (lexington.com.gh/contact)\n\n📍 Shiashie, East Legon, Accra\n\nTerms apply. Prices subject to change.\n\n#TheLexingtonGH #EastLegon #Shiashie #Accra #GhanaRealEstate #PropertyInvestment #DiasporaInvestors #BuyInGhana #OffPlan #AccraProperty",
+   "checks": [
+    {
+     "note": "promo banner on",
+     "q": "*[_type==\"siteSettings\"][0].promoBanner.enabled",
+     "equals": true
+    },
+    {
+     "note": "banner says 15% off",
+     "q": "*[_type==\"siteSettings\"][0].promoBanner.message",
+     "includes": "15% off"
+    },
+    {
+     "note": "banner says 8% off",
+     "q": "*[_type==\"siteSettings\"][0].promoBanner.message",
+     "includes": "8% off"
+    },
+    {
+     "note": "banner says 18 months",
+     "q": "*[_type==\"siteSettings\"][0].promoBanner.message",
+     "includes": "18 months"
+    },
+    {
+     "note": "banner says 31st of October",
+     "q": "*[_type==\"siteSettings\"][0].promoBanner.message",
+     "includes": "31st of October"
+    },
+    {
+     "note": "reservation",
+     "q": "*[_type==\"financingPlan\"][0].selfFinanceRows[milestone==\"Reservation\"][0].option1",
+     "equals": "$10,000"
+    }
+   ],
+   "notes": ""
+  },
+  {
+   "id": "lx24",
+   "date": "2026-11-01",
+   "pillar": "Engagement",
+   "title": "What should we show next?",
+   "images": [
+    "lx24-1.jpg"
+   ],
+   "alt": [
+    "Question card: Sunday question. What should we show you next? A Floor plans; B Progress on site; C Finishes; D The neighbourhood."
+   ],
+   "fb": "What should we show you next?\n\nThank you for following along. Tell us what you would like to see more of.\n\nA Floor plans · B Progress on site · C Finishes · D The neighbourhood\n\nExplore the site: https://www.lexington.com.gh/?utm_source=facebook&utm_medium=organic_social&utm_campaign=daily_post&utm_content=lx24\n\n📍 Shiashie, East Legon, Accra",
+   "ig": "What should we show you next?\n\nThank you for following along. Tell us what you would like to see more of.\n\nA Floor plans · B Progress on site · C Finishes · D The neighbourhood\n\nExplore the site: link in bio (lexington.com.gh)\n\n📍 Shiashie, East Legon, Accra\n\n#TheLexingtonGH #EastLegon #Shiashie #Accra #GhanaRealEstate #AccraLiving #LuxuryLiving #AccraApartments #HomeGoals #OffPlan",
+   "checks": [],
+   "notes": ""
+  },
+  {
+   "id": "lx25",
+   "date": "2026-11-02",
+   "pillar": "Homes",
+   "title": "Three-bedroom 405B",
+   "images": [
+    "lx25-1.jpg",
+    "lx25-2.jpg"
+   ],
+   "alt": [
+    "Floor plan card: Three-bedroom. Residence 405B. Floor 4, Area 138 sqm, Price $317,000.",
+    "Card: Residence 405B. At a glance. Three bedrooms; 138 sqm on floor 4; Compound parking included: two spaces; $317,000."
+   ],
+   "fb": "Residence 405B: three bedrooms.\n\nOn the fourth floor, 138 sqm, priced at $317,000. Compound parking is included: two spaces for every residence of two bedrooms and up.\n\nFull drawings are available on request for any floor or unit.\n\nSee the residences: https://www.lexington.com.gh/residences?utm_source=facebook&utm_medium=organic_social&utm_campaign=daily_post&utm_content=lx25\n\n📍 Shiashie, East Legon, Accra\n\nFloor plan is illustrative. Prices subject to change.",
+   "ig": "Residence 405B: three bedrooms.\n\nOn the fourth floor, 138 sqm, priced at $317,000. Compound parking is included: two spaces for every residence of two bedrooms and up.\n\nFull drawings are available on request for any floor or unit.\n\nSee the residences: link in bio (lexington.com.gh/residences)\n\n📍 Shiashie, East Legon, Accra\n\nFloor plan is illustrative. Prices subject to change.\n\n#TheLexingtonGH #EastLegon #Shiashie #Accra #GhanaRealEstate #AccraApartments #AccraProperty #OffPlan #PropertyInvestment #LuxuryApartments",
+   "checks": [
+    {
+     "note": "unit 405B",
+     "q": "*[_type==\"unit\" && unitNumber==\"405B\"][0]{areaSqm,floor,priceUSD,status}",
+     "equals": {
+      "areaSqm": 138,
+      "floor": 4,
+      "priceUSD": 317000,
+      "status": "available"
+     }
+    },
+    {
+     "note": "page /residences says \"Compound parking included\"",
+     "page": "/residences",
+     "includes": "Compound parking included"
+    },
+    {
+     "note": "page /residences says \"drawings are available on request\"",
+     "page": "/residences",
+     "includes": "drawings are available on request"
+    }
+   ],
+   "notes": ""
+  },
+  {
+   "id": "lx26",
+   "date": "2026-11-03",
+   "pillar": "Amenities",
+   "title": "Rooftop garden and café",
+   "images": [
+    "lx26-1.jpg",
+    "lx26-2.jpg",
+    "lx26-3.jpg"
+   ],
+   "alt": [
+    "Render of the rooftop garden, with planting in the foreground and lounge seating under a black pergola.",
+    "Render of the café and lounge terrace, with wooden tables, a coffee counter and a bookshelf.",
+    "Card: Amenities. See every amenity. Pool, gym, sauna, jacuzzi, ice bath, café and the rooftop garden."
+   ],
+   "fb": "A private garden, above it all.\n\nThe Private Resident's Rooftop Garden sits at the very top of the building: a quiet, planted space reserved for residents. And a private café and lounge for residents and guests, built for evenings as much as mornings.\n\nSee every amenity: https://www.lexington.com.gh/amenities?utm_source=facebook&utm_medium=organic_social&utm_campaign=daily_post&utm_content=lx26\n\n📍 Shiashie, East Legon, Accra\n\nIllustrative renders.",
+   "ig": "A private garden, above it all.\n\nThe Private Resident's Rooftop Garden sits at the very top of the building: a quiet, planted space reserved for residents. And a private café and lounge for residents and guests, built for evenings as much as mornings.\n\nSee every amenity: link in bio (lexington.com.gh/amenities)\n\n📍 Shiashie, East Legon, Accra\n\nIllustrative renders.\n\n#TheLexingtonGH #EastLegon #Shiashie #Accra #GhanaRealEstate #LuxuryLiving #AccraApartments #WellnessLiving #OffPlan #LuxuryApartments",
+   "checks": [
+    {
+     "note": "amenity Private Resident's Rooftop Garden",
+     "q": "count(*[_type==\"amenity\" && name==\"Private Resident's Rooftop Garden\"])",
+     "equals": 1
+    },
+    {
+     "note": "amenity Café",
+     "q": "count(*[_type==\"amenity\" && name==\"Café\"])",
+     "equals": 1
+    },
+    {
+     "note": "page /amenities says \"reserved for residents\"",
+     "page": "/amenities",
+     "includes": "reserved for residents"
+    },
+    {
+     "note": "page /amenities says \"residents and guests\"",
+     "page": "/amenities",
+     "includes": "residents and guests"
+    }
+   ],
+   "notes": ""
+  },
+  {
+   "id": "lx27",
+   "date": "2026-11-04",
+   "pillar": "Progress",
+   "title": "First floor",
+   "images": [
+    "lx27-1.jpg",
+    "lx27-2.jpg",
+    "lx27-3.jpg",
+    "lx27-4.jpg",
+    "lx27-5.jpg",
+    "lx27-6.jpg"
+   ],
+   "alt": [
+    "Wide view of first-floor rebar columns rising across the site.",
+    "Photo: First floor. Tying a column cage on elevated scaffolding.",
+    "Photo: First floor. Slab formwork laid across the site.",
+    "Photo: First floor. Screeding the first floor slab.",
+    "Photo: First floor. The team on the slab as columns rise.",
+    "Card: Completion. Estimated completion: December 2027. Follow every stage on our progress page."
+   ],
+   "fb": "First floor: columns rising, slab by slab.\n\nScaffolding going up, formwork laid, reinforcement tied and slabs screeded. Swipe through the first floor. Estimated completion: December 2027.\n\nFollow the build: https://www.lexington.com.gh/progress?utm_source=facebook&utm_medium=organic_social&utm_campaign=daily_post&utm_content=lx27\n\n📍 Shiashie, East Legon, Accra\n\nPhotos from the site.",
+   "ig": "First floor: columns rising, slab by slab.\n\nScaffolding going up, formwork laid, reinforcement tied and slabs screeded. Swipe through the first floor. Estimated completion: December 2027.\n\nFollow the build: link in bio (lexington.com.gh/progress)\n\n📍 Shiashie, East Legon, Accra\n\nPhotos from the site.\n\n#TheLexingtonGH #EastLegon #Shiashie #Accra #GhanaRealEstate #ConstructionProgress #BuildingGhana #OffPlan #AccraProperty #UnderConstruction",
+   "checks": [
+    {
+     "note": "completion date",
+     "q": "*[_type==\"siteSettings\"][0].progressIntro.lede",
+     "includes": "December 2027"
+    }
+   ],
+   "notes": ""
+  },
+  {
+   "id": "lx28",
+   "date": "2026-11-05",
+   "pillar": "Buying",
+   "title": "Parking, storage and extras",
+   "images": [
+    "lx28-1.jpg",
+    "lx28-2.jpg",
+    "lx28-3.jpg"
+   ],
+   "alt": [
+    "Card: Good to know. Parking, storage and boys’ quarters. What is included, and what you can add.",
+    "Card: Included. Compound parking. One space for every one-bedroom; Two spaces for every two-bedroom and up.",
+    "Card: Available as extras. Add what you need. Covered parking near the lifts - $5,000 per space, purchased in pairs; Boys’ quarters - $1,250 per sqm (8–12 sqm units); Storage units - $1,200 per sqm (4–12 sqm units)."
+   ],
+   "fb": "Parking, storage and boys’ quarters.\n\nIncluded: compound parking, one space for every one-bedroom and two for every two-bedroom and up.\n\nAvailable as extras: covered parking near the lifts at $5,000 per space (purchased in pairs), boys’ quarters at $1,250 per sqm (8–12 sqm units) and storage units at $1,200 per sqm (4–12 sqm units). All extras are also available on monthly rental.\n\nSee the residences: https://www.lexington.com.gh/residences?utm_source=facebook&utm_medium=organic_social&utm_campaign=daily_post&utm_content=lx28\n\n📍 Shiashie, East Legon, Accra\n\nPrices subject to change.",
+   "ig": "Parking, storage and boys’ quarters.\n\nIncluded: compound parking, one space for every one-bedroom and two for every two-bedroom and up.\n\nAvailable as extras: covered parking near the lifts at $5,000 per space (purchased in pairs), boys’ quarters at $1,250 per sqm (8–12 sqm units) and storage units at $1,200 per sqm (4–12 sqm units). All extras are also available on monthly rental.\n\nSee the residences: link in bio (lexington.com.gh/residences)\n\n📍 Shiashie, East Legon, Accra\n\nPrices subject to change.\n\n#TheLexingtonGH #EastLegon #Shiashie #Accra #GhanaRealEstate #PropertyInvestment #DiasporaInvestors #BuyInGhana #OffPlan #AccraProperty",
+   "checks": [
+    {
+     "note": "page /residences says \"Compound parking included\"",
+     "page": "/residences",
+     "includes": "Compound parking included"
+    },
+    {
+     "note": "page /residences says \"$5,000/space\"",
+     "page": "/residences",
+     "includes": "$5,000/space"
+    },
+    {
+     "note": "page /residences says \"$1,250/sqm\"",
+     "page": "/residences",
+     "includes": "$1,250/sqm"
+    },
+    {
+     "note": "page /residences says \"$1,200/sqm\"",
+     "page": "/residences",
+     "includes": "$1,200/sqm"
+    },
+    {
+     "note": "page /residences says \"monthly rental\"",
+     "page": "/residences",
+     "includes": "monthly rental"
+    }
+   ],
+   "notes": ""
+  },
+  {
+   "id": "lx29",
+   "date": "2026-11-06",
+   "pillar": "Location",
+   "title": "Everything, close at hand",
+   "images": [
+    "lx29-1.jpg",
+    "lx29-2.jpg"
+   ],
+   "alt": [
+    "Render of The Lexington at dusk, front facade with covered parking.",
+    "Card: Shiashie, East Legon. Close to what matters. Near enough to the city's schools, malls and airport to make the daily commute disappear. Lycée Français 4 min; Legon City Mall 5 min; Accra Mall 6 min; Kotoka Int'l Airport 7 min; Al Rayan School 8 min; Galaxy International School 9 min; A&C Mall 9 min; 37 Military Hospital 10 min; Lincoln Community School 11 min."
+   ],
+   "fb": "Everything, close at hand.\n\nShiashie sits at the quiet centre of East Legon, near enough to the city's schools, malls and airport to make the daily commute disappear.\n\nLycée Français 4 min · Legon City Mall 5 min · Accra Mall 6 min · Kotoka Int'l Airport 7 min · Al Rayan School 8 min · Galaxy International School 9 min · A&C Mall 9 min · 37 Military Hospital 10 min · Lincoln Community School 11 min (approximate times).\n\nFind us: https://www.lexington.com.gh/contact?utm_source=facebook&utm_medium=organic_social&utm_campaign=daily_post&utm_content=lx29\n\n📍 Shiashie, East Legon, Accra\n\nIllustrative render.",
+   "ig": "Everything, close at hand.\n\nShiashie sits at the quiet centre of East Legon, near enough to the city's schools, malls and airport to make the daily commute disappear.\n\nLycée Français 4 min · Legon City Mall 5 min · Accra Mall 6 min · Kotoka Int'l Airport 7 min · Al Rayan School 8 min · Galaxy International School 9 min · A&C Mall 9 min · 37 Military Hospital 10 min · Lincoln Community School 11 min (approximate times).\n\nFind us: link in bio (lexington.com.gh/contact)\n\n📍 Shiashie, East Legon, Accra\n\nIllustrative render.\n\n#TheLexingtonGH #EastLegon #Shiashie #Accra #GhanaRealEstate #AccraApartments #AccraProperty #OffPlan #PropertyInvestment #LuxuryApartments",
+   "checks": [
+    {
+     "note": "page / says \"Legon City Mall\"",
+     "page": "/",
+     "includes": "Legon City Mall"
+    },
+    {
+     "note": "page / says \"Accra Mall\"",
+     "page": "/",
+     "includes": "Accra Mall"
+    },
+    {
+     "note": "page / says \"Kotoka\"",
+     "page": "/",
+     "includes": "Kotoka"
+    },
+    {
+     "note": "page / says \"Lycée Français\"",
+     "page": "/",
+     "includes": "Lycée Français"
+    },
+    {
+     "note": "page / says \"37 Military Hospital\"",
+     "page": "/",
+     "includes": "37 Military Hospital"
+    }
+   ],
+   "notes": ""
+  },
+  {
+   "id": "lx30",
+   "date": "2026-11-07",
+   "pillar": "Building",
+   "title": "Behind the front door",
+   "images": [
+    "lx30-1.jpg",
+    "lx30-2.jpg",
+    "lx30-3.jpg",
+    "lx30-4.jpg",
+    "lx30-5.jpg"
+   ],
+   "alt": [
+    "Render of The Lexington exterior facade.",
+    "Card: Power, water and connection. Built in. Back-up power generator and water; High-speed elevators; Ultra-fast internet connectivity.",
+    "Card: Safety. Built to be safe. CCTV and fire safety systems; Built-in earthquake-resistant features.",
+    "Card: Finishes and fittings. Everyday details. Natural stone flooring; Premium kitchen appliances; Energy-saving LED spotlights; Garbage management chutes.",
+    "Card: Monthly management fee. What it covers. Swimming pool & gym; Elevators; Common-area lighting; Security; Generator servicing; Water in the common areas; Electricity in the common areas."
+   ],
+   "fb": "Behind the front door.\n\nBack-up power generator and water, high-speed elevators, ultra-fast internet, CCTV and fire safety systems, built-in earthquake-resistant features and natural stone flooring: what is built in at The Lexington.\n\nEvery residence carries a monthly management fee covering the shared spaces: swimming pool & gym, elevators, common-area lighting, security, generator servicing, water in the common areas, electricity in the common areas. The fee is confirmed each year; contact us for the current schedule.\n\nSee the details: https://www.lexington.com.gh/invest?utm_source=facebook&utm_medium=organic_social&utm_campaign=daily_post&utm_content=lx30\n\n📍 Shiashie, East Legon, Accra\n\nIllustrative render.",
+   "ig": "Behind the front door.\n\nBack-up power generator and water, high-speed elevators, ultra-fast internet, CCTV and fire safety systems, built-in earthquake-resistant features and natural stone flooring: what is built in at The Lexington.\n\nEvery residence carries a monthly management fee covering the shared spaces: swimming pool & gym, elevators, common-area lighting, security, generator servicing, water in the common areas, electricity in the common areas. The fee is confirmed each year; contact us for the current schedule.\n\nSee the details: link in bio (lexington.com.gh/invest)\n\n📍 Shiashie, East Legon, Accra\n\nIllustrative render.\n\n#TheLexingtonGH #EastLegon #Shiashie #Accra #GhanaRealEstate #LuxuryLiving #AccraApartments #WellnessLiving #OffPlan #LuxuryApartments",
+   "checks": [
+    {
+     "note": "service charge items",
+     "q": "*[_type==\"financingPlan\"][0].serviceCharge.coveredItems",
+     "equals": [
+      "Swimming pool & gym",
+      "Elevators",
+      "Common-area lighting",
+      "Security",
+      "Generator servicing",
+      "Water, common areas",
+      "Electricity, common areas"
+     ]
+    },
+    {
+     "note": "amenity Back-up Power Generator & Water",
+     "q": "count(*[_type==\"amenity\" && name==\"Back-up Power Generator & Water\"])",
+     "equals": 1
+    },
+    {
+     "note": "amenity High-Speed Elevators",
+     "q": "count(*[_type==\"amenity\" && name==\"High-Speed Elevators\"])",
+     "equals": 1
+    },
+    {
+     "note": "amenity Ultra-Fast Internet Connectivity",
+     "q": "count(*[_type==\"amenity\" && name==\"Ultra-Fast Internet Connectivity\"])",
+     "equals": 1
+    },
+    {
+     "note": "amenity CCTV & Fire Safety Systems",
+     "q": "count(*[_type==\"amenity\" && name==\"CCTV & Fire Safety Systems\"])",
+     "equals": 1
+    },
+    {
+     "note": "amenity Built-in Earthquake-Resistant Features",
+     "q": "count(*[_type==\"amenity\" && name==\"Built-in Earthquake-Resistant Features\"])",
+     "equals": 1
+    },
+    {
+     "note": "amenity Natural Stone Flooring",
+     "q": "count(*[_type==\"amenity\" && name==\"Natural Stone Flooring\"])",
+     "equals": 1
+    },
+    {
+     "note": "amenity Premium Kitchen Appliances",
+     "q": "count(*[_type==\"amenity\" && name==\"Premium Kitchen Appliances\"])",
+     "equals": 1
+    },
+    {
+     "note": "amenity Energy-Saving LED Spotlights",
+     "q": "count(*[_type==\"amenity\" && name==\"Energy-Saving LED Spotlights\"])",
+     "equals": 1
+    },
+    {
+     "note": "amenity Garbage Management Chutes",
+     "q": "count(*[_type==\"amenity\" && name==\"Garbage Management Chutes\"])",
+     "equals": 1
+    }
+   ],
+   "notes": ""
+  }
+ ]
+}

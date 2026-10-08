@@ -3,6 +3,14 @@
     {
       "path": "/api/cron/receipt-emails",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/social-daily",
+      "schedule": "0 18 * * *"
+    },
+    {
+      "path": "/api/cron/social-daily",
+      "schedule": "30 19 * * *"
     }
   ]
 }
