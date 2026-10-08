@@ -137,3 +137,19 @@ export async function postInstagram(env: MetaEnv, opts: { caption: string; image
   }
   return { id: published.id, url };
 }
+
+// ---------------------------------------------------------------- rehearsal
+// Everything up to, but not including, going public: Facebook uploads the pictures unpublished (and they are deleted
+// again straight away); Instagram builds and processes the post but never publishes it (it expires by itself).
+export async function rehearse(env: MetaEnv, imageUrls: string[]): Promise<string[]> {
+  const notes: string[] = [];
+  const uploaded = await Promise.all(imageUrls.map((url) => graph<{ id: string }>("POST", `${env.pageId}/photos`, { url, published: "false" }, env.pageToken)));
+  notes.push(`Facebook fetched and accepted ${uploaded.length} picture(s) (unpublished).`);
+  await Promise.all(uploaded.map((u) => graph("POST", u.id, { method: "delete" }, env.pageToken).catch(() => undefined)));
+  if (env.igUserId) {
+    const children = await Promise.all(imageUrls.map((url) => graph<{ id: string }>("POST", `${env.igUserId}/media`, imageUrls.length > 1 ? { image_url: url, is_carousel_item: "true" } : { image_url: url }, env.pageToken)));
+    await Promise.all(children.map((c) => waitForContainer(c.id, env.pageToken)));
+    notes.push(`Instagram fetched and processed ${children.length} picture(s) (not published).`);
+  }
+  return notes;
+}

@@ -2,7 +2,7 @@ import { SITE_URL } from "@/lib/seo";
 
 import { calendar, postForDate } from "./calendar";
 import { runChecks } from "./checks";
-import { MetaError, metaEnv, postFacebook, postInstagram, type MetaEnv } from "./meta";
+import { MetaError, metaEnv, postFacebook, postInstagram, rehearse, type MetaEnv } from "./meta";
 import { sendNotice } from "./notify";
 import { logId, readLog, saveLog } from "./state";
 import type { Platform, PlatformResult, SocialLog, SocialPost } from "./types";
@@ -12,6 +12,8 @@ export interface RunOptions {
   date?: string;
   /** do everything except publish */
   dryRun?: boolean;
+  /** like a dry run, but also hands the pictures to Facebook and Instagram to prove they accept them (nothing goes public) */
+  rehearse?: boolean;
   /** only these platforms */
   only?: Platform[];
   /** ignore the pause switch, the retry limit and a "held" day */
@@ -63,7 +65,7 @@ export async function runDaily(opts: RunOptions = {}): Promise<RunResult> {
   const base = { date, post: post.id, title: post.title };
 
   const platforms: Platform[] = opts.only?.length ? opts.only : ["fb", "ig"];
-  const prior = opts.dryRun ? null : await readLog(date);
+  const prior = opts.dryRun || opts.rehearse ? null : await readLog(date);
   const todo = platforms.filter((p) => !prior?.[p]?.ok);
   if (!todo.length) return { ...base, outcome: "already-done", detail: ["Everything for this day has already gone out."], fb: prior?.fb, ig: prior?.ig };
 
@@ -91,7 +93,7 @@ export async function runDaily(opts: RunOptions = {}): Promise<RunResult> {
   // 2. the pictures are reachable?
   const imageUrls = post.images.map((f) => `${SITE_URL}/social/${f}`);
   const missing = await missingPictures(post);
-  if (missing.length && opts.dryRun) log(`warning: ${missing.length} picture(s) are not on the website yet (a rehearsal before the first deploy is expected to say this)`);
+  if (missing.length && (opts.dryRun || opts.rehearse)) log(`warning: ${missing.length} picture(s) are not on the website yet (a rehearsal before the first deploy is expected to say this)`);
   else if (missing.length) {
     const detail = [`Pictures not reachable on the website yet: ${missing.join(", ")}`];
     log(detail[0]);
@@ -100,6 +102,12 @@ export async function runDaily(opts: RunOptions = {}): Promise<RunResult> {
       await sendNotice(`Lexington post could not go out: ${post.title}`, [`The pictures for today's post are not on the website: ${missing.join(", ")}.`, "The next scheduled run will try again."]);
     }
     return { ...base, outcome: "failed", detail };
+  }
+
+  if (opts.rehearse) {
+    const notes = await rehearse(metaEnv(), imageUrls);
+    notes.forEach((n) => log(n));
+    return { ...base, outcome: "dry-run", detail: notes };
   }
 
   if (opts.dryRun) {
