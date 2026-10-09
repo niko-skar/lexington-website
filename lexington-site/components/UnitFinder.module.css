@@ -170,6 +170,21 @@
   transition: color 0.2s var(--ease);
 }
 
+/* "3D": this unit's floor plan can be turned and walked through */
+.pill3d {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--brass);
+  color: var(--ink);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1.5;
+  vertical-align: 1px;
+}
+
 .planLink:hover {
   color: var(--clay);
 }

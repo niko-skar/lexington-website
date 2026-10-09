@@ -20,6 +20,7 @@ import { formatUSD } from "@/lib/format";
 
 import { Hero } from "@/components/Hero";
 import { Button } from "@/components/Button";
+import { Penthouse3DSection } from "@/components/Penthouse3D";
 import { ProximityGrid } from "@/components/ProximityGrid";
 import { SplitSection } from "@/components/SplitSection";
 import { StatStrip } from "@/components/StatStrip";
@@ -57,6 +58,9 @@ export default async function HomePage() {
   const featuredAmenities = amenities
     .filter((a) => a.category === "signature" || a.category === "rooftop")
     .sort((a, b) => a.order - b.order);
+
+  // The 3D walk-through is modelled on PH2b; its size comes from the unit record so it can't drift from the unit table.
+  const ph2b = units.find((u) => u.unitNumber === "PH2b");
 
   const reservationAmount =
     financingPlan?.selfFinanceRows?.[0]?.option1 ?? "$10,000";
@@ -116,6 +120,8 @@ export default async function HomePage() {
           </Button>
         </SplitSection>
       )}
+
+      {ph2b && <Penthouse3DSection areaSqm={ph2b.areaSqm} />}
 
       <section className="section sectionStone" style={{ background: "var(--stone)" }}>
         <div className="wrap">

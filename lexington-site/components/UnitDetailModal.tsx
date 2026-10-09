@@ -6,6 +6,7 @@ import type { GalleryImage, PackageTier, PackageTierKey, Unit, UnitLocationPlan 
 import { urlFor } from "@/lib/sanity/image";
 import { formatFloor, formatUSD } from "@/lib/format";
 import { floorTierName, isTierClamped, priceAtTier, tierAddon } from "@/lib/pricing";
+import { Penthouse3DPlan, levelOfPlan } from "./Penthouse3D";
 import { StatusBadge } from "./StatusBadge";
 import { useDialog } from "./useDialog";
 import styles from "./UnitDetailModal.module.css";
@@ -38,6 +39,7 @@ export function UnitDetailModal({
 }: UnitDetailModalProps) {
   const dialogRef = useDialog<HTMLDivElement>(onClose);
 
+  const has3D = unit.unitNumber === "PH2b";
   const clamped = isTierClamped(unit, selectedTier, tiers);
   const addon = tierAddon(unit, selectedTier, tiers);
 
@@ -77,6 +79,15 @@ export function UnitDetailModal({
           </div>
           <StatusBadge status={unit.status} />
         </div>
+
+        {/* The 3D plan is of PH2b only (the other penthouse has a different layout): the first thing under the price. */}
+        {has3D && (
+          <>
+            <div className={styles.planLabel}>3D floor plan</div>
+            <Penthouse3DPlan startLevel={levelOfPlan(floorPlans[0]?.alt)} />
+            {floorPlans.length > 0 && <div className={styles.planLabel}>2D floor plans</div>}
+          </>
+        )}
 
         {floorPlans.length > 0 ? (
           <div className={styles.plans}>
