@@ -14,6 +14,7 @@ import { floorTierName, isTierClamped, priceAtTier, tierAddon } from "@/lib/pric
 import { StatusBadge } from "./StatusBadge";
 import { UnitDetailModal } from "./UnitDetailModal";
 import { CompareModal } from "./CompareModal";
+import { levelOfPlan, warm3D } from "./Penthouse3D";
 import { PackageTiers } from "./PackageTiers";
 import styles from "./UnitFinder.module.css";
 
@@ -24,6 +25,12 @@ type SortColumn = "floor" | "type" | "area" | "price" | "status";
 type SortDir = "asc" | "desc";
 
 const MAX_COMPARE = 4;
+
+// PH2b has a 3D floor plan in its pop-up: start fetching it as soon as someone points at the row or card.
+const has3D = (u: Unit) => u.unitNumber === "PH2b";
+function warmFor(u: Unit) {
+  if (has3D(u)) warm3D(levelOfPlan(u.floorPlans?.[0]?.alt));
+}
 
 // Alphabetical order happens to already read available < reserved < sold,
 // but spelling it out keeps that from being an accident future edits break.
@@ -242,6 +249,8 @@ export function UnitFinder({ units, tiers }: UnitFinderProps) {
                   className={styles.clickableRow}
                   tabIndex={0}
                   onClick={() => setSelectedUnit(u)}
+                  onPointerEnter={() => warmFor(u)}
+                  onFocus={() => warmFor(u)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
                       e.preventDefault();
@@ -282,6 +291,7 @@ export function UnitFinder({ units, tiers }: UnitFinderProps) {
                   </td>
                   <td>
                     <span className={styles.planLink}>Floor Plan</span>
+                    {has3D(u) && <span className={styles.pill3d}>3D</span>}
                   </td>
                 </tr>
               );
@@ -301,6 +311,8 @@ export function UnitFinder({ units, tiers }: UnitFinderProps) {
               key={u._id}
               tabIndex={0}
               onClick={() => setSelectedUnit(u)}
+              onPointerEnter={() => warmFor(u)}
+              onFocus={() => warmFor(u)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
@@ -328,7 +340,10 @@ export function UnitFinder({ units, tiers }: UnitFinderProps) {
                 )}
               </div>
               <div className={styles.cardActions}>
-                <span className={styles.planLink}>View Floor Plan &amp; Location</span>
+                <span>
+                  <span className={styles.planLink}>View Floor Plan &amp; Location</span>
+                  {has3D(u) && <span className={styles.pill3d}>3D</span>}
+                </span>
                 <label className={styles.compareLabel} onClick={(e) => e.stopPropagation()}>
                   <input
                     type="checkbox"
