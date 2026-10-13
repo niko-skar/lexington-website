@@ -1,8 +1,9 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 
 import type { PackageTier, Unit } from "@/lib/sanity/types";
+import { trackAction } from "@/lib/visits/client";
 import { formatFloor, formatUSD } from "@/lib/format";
 import { floorTierName, isTierClamped, priceAtTier, tierAddon } from "@/lib/pricing";
 import { StatusBadge } from "./StatusBadge";
@@ -24,6 +25,10 @@ const baseRows: { label: string; render: (u: Unit) => ReactNode }[] = [
 
 export function CompareModal({ units, tiers, onClose }: CompareModalProps) {
   const dialogRef = useDialog<HTMLDivElement>(onClose);
+
+  useEffect(() => {
+    trackAction("compare");
+  }, []);
 
   return (
     <div

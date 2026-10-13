@@ -6,6 +6,7 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { PromoBanner } from "@/components/PromoBanner";
 import { SiteFooter } from "@/components/SiteFooter";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
+import { VisitTracker } from "@/components/analytics/VisitTracker";
 
 export default async function SiteLayout({
   children,
@@ -28,6 +29,8 @@ export default async function SiteLayout({
       </main>
       <SiteFooter />
       <WhatsAppButton />
+      {/* The anonymous visit record behind the admin dashboard's Visitors tab. */}
+      <VisitTracker />
     </>
   );
 }

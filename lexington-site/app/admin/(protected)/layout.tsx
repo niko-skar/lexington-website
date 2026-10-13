@@ -12,6 +12,7 @@ export const dynamic = "force-dynamic";
 const NAV_LINKS = [
   { href: "/admin/crm", label: "Prospects" },
   { href: "/admin", label: "Buyers" },
+  { href: "/admin/dashboard", label: "Dashboard" },
 ];
 
 export default function AdminProtectedLayout({ children }: { children: React.ReactNode }) {

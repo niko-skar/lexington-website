@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useEffect, useRef } from "react";
 
+import { trackAction } from "@/lib/visits/client";
 import styles from "./Gallery.module.css";
 import { useDialog } from "./useDialog";
 
@@ -25,6 +26,10 @@ export function Lightbox({
 }) {
   const ref = useDialog<HTMLDivElement>(onClose);
   const touchStartX = useRef(0);
+
+  useEffect(() => {
+    trackAction("photo");
+  }, []);
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {

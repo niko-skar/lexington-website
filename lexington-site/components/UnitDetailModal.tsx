@@ -1,8 +1,10 @@
 "use client";
 
 import Image from "next/image";
+import { useEffect } from "react";
 
 import type { GalleryImage, PackageTier, PackageTierKey, Unit, UnitLocationPlan } from "@/lib/sanity/types";
+import { trackAction } from "@/lib/visits/client";
 import { urlFor } from "@/lib/sanity/image";
 import { formatFloor, formatUSD } from "@/lib/format";
 import { floorTierName, isTierClamped, priceAtTier, tierAddon } from "@/lib/pricing";
@@ -37,6 +39,11 @@ export function UnitDetailModal({
   onClose,
 }: UnitDetailModalProps) {
   const dialogRef = useDialog<HTMLDivElement>(onClose);
+
+  // The dashboard's "Units opened most" (each unit counts once per visit).
+  useEffect(() => {
+    trackAction("unit", unit.unitNumber);
+  }, [unit.unitNumber]);
 
   const clamped = isTierClamped(unit, selectedTier, tiers);
   const addon = tierAddon(unit, selectedTier, tiers);

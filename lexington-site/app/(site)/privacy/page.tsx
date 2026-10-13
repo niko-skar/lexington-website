@@ -14,7 +14,7 @@ export const metadata = pageMetadata({
     "How The Lexington collects, uses and protects the personal information you share through our website, enquiry forms, Facebook and Instagram lead forms and WhatsApp.",
 });
 
-const UPDATED = "6 October 2026";
+const UPDATED = "13 October 2026";
 
 export default async function PrivacyPage() {
   const siteSettings = await client.fetch<SiteSettings>(siteSettingsQuery);
@@ -50,6 +50,18 @@ export default async function PrivacyPage() {
               cookies and similar tools such as Google Analytics and the Meta
               Pixel.
             </li>
+            <li>
+              <strong>Our own visit record:</strong> the website also keeps an
+              anonymous record of each visit: the pages opened and in what
+              order, how long each was open and how far down it was read, taps
+              that seemed not to work, whether the enquiry form or a WhatsApp,
+              phone or email link was used, the country (worked out from the
+              connection), the type of device and browser, and where the visit
+              came from (for example an advert). It uses no cookies, does not
+              keep your IP address or anything you type, and cannot tell who
+              you are or link one visit to another. Nothing is recorded if your
+              browser sends a Do Not Track or Global Privacy Control signal.
+            </li>
           </ul>
 
           <h2 style={{ marginTop: 40 }}>How we use it</h2>
@@ -84,7 +96,8 @@ export default async function PrivacyPage() {
           <p>
             We keep your information for as long as we need it to deal with
             your enquiry or purchase, and for any period the law requires.
-            After that we delete it or make it anonymous.
+            After that we delete it or make it anonymous. The anonymous visit
+            record is deleted after 30 days.
           </p>
 
           <h2 style={{ marginTop: 40 }}>Your rights</h2>
