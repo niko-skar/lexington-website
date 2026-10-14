@@ -13,7 +13,7 @@ export const reservationSettings = defineType({
       name: "autoSend",
       title: "Email the form automatically",
       description:
-        "On: when someone finishes the reservation questions on the website, the reservation fee form is emailed to them straight away. Off: nothing goes out by itself. They are told an advisor will send it, and you get the form by email to send yourself.",
+        "On: when someone finishes the reservation questions on the website, the reservation fee form is emailed to them straight away. Off: nothing goes out by itself. They are told an advisor will send it, and you get the form by email to send yourself. Until all five bank lines below are filled in, nothing is emailed either. After any change, press Publish (bottom right): the website only uses what is published.",
       type: "boolean",
       initialValue: true,
     }),
