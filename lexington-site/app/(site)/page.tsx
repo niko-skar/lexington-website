@@ -75,7 +75,7 @@ export default async function HomePage() {
           <Button href="/residences" variant="clay">
             View Residences
           </Button>
-          <Button href="/contact" variant="outline-light">
+          <Button href="/reserve" variant="outline-light">
             Reserve a Unit
           </Button>
         </div>
@@ -231,7 +231,7 @@ export default async function HomePage() {
               with early-payment discounts of up to 12.5%.
             </p>
             <div style={{ marginTop: 32 }}>
-              <Button href="/contact" variant="clay">
+              <Button href="/reserve" variant="clay">
                 Start Your Reservation
               </Button>
             </div>

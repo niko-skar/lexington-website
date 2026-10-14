@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { pageMetadata } from "@/lib/seo";
 import { client } from "@/lib/sanity/client";
 import { siteSettingsQuery } from "@/lib/sanity/queries";
@@ -70,13 +72,17 @@ export default async function ContactPage() {
                   A minimum $10,000 reservation secures your residence. Card
                   and bank-transfer deposit options are available on request.
                 </p>
-                <a
-                  href={`mailto:${siteSettings.contactEmail}?subject=Reservation%20Enquiry%20-%20The%20Lexington`}
+                <p style={{ marginTop: 10 }}>
+                  Answer a few questions and we&rsquo;ll email you the
+                  reservation form.
+                </p>
+                <Link
+                  href="/reserve"
                   className={`${buttonStyles.btn} ${buttonStyles.brass}`}
                   style={{ marginTop: 18 }}
                 >
                   Start a Reservation
-                </a>
+                </Link>
               </div>
             </div>
 

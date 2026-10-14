@@ -14,7 +14,7 @@ export const metadata = pageMetadata({
     "How The Lexington collects, uses and protects the personal information you share through our website, enquiry forms, Facebook and Instagram lead forms and WhatsApp.",
 });
 
-const UPDATED = "13 October 2026";
+const UPDATED = "14 October 2026";
 
 export default async function PrivacyPage() {
   const siteSettings = await client.fetch<SiteSettings>(siteSettingsQuery);
@@ -45,6 +45,16 @@ export default async function PrivacyPage() {
               tour, how soon you hope to buy, and any message you write.
             </li>
             <li>
+              <strong>If you start a reservation:</strong> the same details,
+              plus the country you live in, how you prefer to be contacted,
+              what the residence is for, whether you are buying alone, with
+              someone else or through a company (and their names), whether
+              you have visited, and which advert or link brought you to us.
+              We email you the reservation form at the address you give. The
+              reservation questions do not take a payment and do not ask for
+              card or bank details.
+            </li>
+            <li>
               <strong>Usage information:</strong> pages visited, device and
               browser type, and approximate location, collected through
               cookies and similar tools such as Google Analytics and the Meta
@@ -67,7 +77,7 @@ export default async function PrivacyPage() {
           <h2 style={{ marginTop: 40 }}>How we use it</h2>
           <ul>
             <li>To reply to your enquiry and send prices, floor plans and availability.</li>
-            <li>To arrange viewings, video tours and reservations.</li>
+            <li>To arrange viewings, video tours and reservations, and to email you the reservation form you ask for.</li>
             <li>To follow up on your enquiry by WhatsApp, phone or email.</li>
             <li>To understand how people use our website and improve our advertising.</li>
           </ul>

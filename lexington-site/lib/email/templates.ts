@@ -275,3 +275,191 @@ export function notificationEmail({
     html: shell(siteSettings, body),
   };
 }
+
+// ---- reservation requests ---------------------------------------------------
+
+function factsBox(rows: Array<[string, string]>) {
+  return `
+    <tr>
+      <td style="padding:0 40px 28px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#ede7d8; border-left:3px solid #b08d57;">
+          <tr>
+            <td style="padding:20px 24px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                ${rows
+                  .map(
+                    ([label, value]) => `
+                <tr>
+                  <td style="font-family:${FONT_SANS}; font-size:11px; letter-spacing:1px; text-transform:uppercase; color:#8b4a34; padding:5px 12px 5px 0; vertical-align:top; width:38%;">${escapeHtml(label)}</td>
+                  <td style="font-family:${FONT_SANS}; font-size:14px; color:#15181a; text-align:right; padding:5px 0; vertical-align:top;">${escapeHtml(value).replace(/\n/g, "<br />")}</td>
+                </tr>`
+                  )
+                  .join("")}
+              </table>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>`;
+}
+
+// Sent to the buyer the moment they finish the reservation questions; the PDF
+// reservation fee form travels as an attachment. The bank details are in the PDF
+// only, not in this email's text.
+export function reservationFormEmail({
+  name,
+  residenceText,
+  amountText,
+  whatsappHref,
+  siteSettings,
+}: {
+  name: string;
+  /** "Unit 205B, One bedroom" or "One bedroom (we'll confirm the unit with you)". */
+  residenceText: string;
+  amountText: string;
+  whatsappHref: string;
+  siteSettings: SiteSettings;
+}) {
+  const firstName = name.trim().split(/\s+/)[0] || name;
+  const steps = [
+    "Open the attached form and check your name and details.",
+    `Phone us on ${siteSettings.contactPhone} to confirm the bank details. Then send the ${amountText} by bank transfer, in US dollars.`,
+    `Email your proof of payment to ${siteSettings.contactEmail}.`,
+    "We will confirm your residence in writing, and a payment receipt follows once your payment has been received.",
+  ];
+
+  const body = `
+    <tr>
+      <td style="padding:44px 40px 8px;">
+        <div style="font-family:${FONT_SERIF}; font-size:24px; color:#15181a; line-height:1.3; margin-bottom:18px;">
+          Your reservation form, ${escapeHtml(firstName)}.
+        </div>
+        <p style="font-family:${FONT_SANS}; font-size:15px; line-height:1.7; color:#3a3a36; margin:0 0 24px;">
+          Thank you for choosing The Lexington. Your reservation fee form is attached to this email as a PDF.
+        </p>
+      </td>
+    </tr>
+    ${factsBox([
+      ["Residence", residenceText],
+      ["Reservation fee", amountText],
+      ["Pay by", "Bank transfer, in US dollars"],
+    ])}
+    <tr>
+      <td style="padding:0 40px 8px;">
+        <div style="font-family:${FONT_SANS}; font-size:11px; letter-spacing:1px; text-transform:uppercase; color:#8b4a34; padding-bottom:10px;">What to do next</div>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+          ${steps
+            .map(
+              (step, i) => `
+          <tr>
+            <td style="font-family:${FONT_SERIF}; font-size:18px; color:#b08d57; width:30px; vertical-align:top; padding:0 0 12px;">${i + 1}</td>
+            <td style="font-family:${FONT_SANS}; font-size:14.5px; line-height:1.6; color:#3a3a36; padding:2px 0 12px;">${escapeHtml(step)}</td>
+          </tr>`
+            )
+            .join("")}
+        </table>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:8px 40px 20px;">
+        <p style="font-family:${FONT_SANS}; font-size:13px; line-height:1.6; color:#6b6b66; margin:0;">
+          Questions? Reply to this email or message us on WhatsApp. If you didn't ask for this form, you can ignore this email.
+        </p>
+      </td>
+    </tr>
+    ${ctaButton(escapeHtml(whatsappHref), "Message us on WhatsApp")}`;
+
+  return {
+    subject: "Your reservation form — The Lexington",
+    html: shell(siteSettings, body),
+  };
+}
+
+// Sent instead of the form when it can't go out automatically (switched off in
+// the settings, or the bank details aren't complete): the request is safe and a
+// person will send the form.
+export function reservationReceivedEmail({
+  name,
+  residenceText,
+  whatsappHref,
+  siteSettings,
+}: {
+  name: string;
+  residenceText: string;
+  whatsappHref: string;
+  siteSettings: SiteSettings;
+}) {
+  const firstName = name.trim().split(/\s+/)[0] || name;
+  const body = `
+    <tr>
+      <td style="padding:44px 40px 8px;">
+        <div style="font-family:${FONT_SERIF}; font-size:24px; color:#15181a; line-height:1.3; margin-bottom:18px;">
+          We've received your request, ${escapeHtml(firstName)}.
+        </div>
+        <p style="font-family:${FONT_SANS}; font-size:15px; line-height:1.7; color:#3a3a36; margin:0 0 24px;">
+          Thank you for choosing The Lexington. One of our sales advisors will send you your reservation fee form
+          shortly.
+        </p>
+      </td>
+    </tr>
+    ${factsBox([["Residence", residenceText]])}
+    <tr>
+      <td style="padding:0 40px 20px;">
+        <p style="font-family:${FONT_SANS}; font-size:13px; line-height:1.6; color:#6b6b66; margin:0;">
+          In the meantime you can reply to this email or message us on WhatsApp. If you didn't ask for this, you can ignore this email.
+        </p>
+      </td>
+    </tr>
+    ${ctaButton(escapeHtml(whatsappHref), "Message us on WhatsApp")}`;
+
+  return {
+    subject: "We've received your reservation request — The Lexington",
+    html: shell(siteSettings, body),
+  };
+}
+
+// Sent to the sales inbox with everything the visitor answered, and the form as
+// an attachment so it can be forwarded by hand if it didn't go out.
+export function reservationNotificationEmail({
+  name,
+  email,
+  rows,
+  outcome,
+  siteSettings,
+  crmUrl,
+}: {
+  name: string;
+  email: string;
+  rows: Array<[string, string]>;
+  /** One line: what happened to the form (emailed / held / failed). */
+  outcome: string;
+  siteSettings: SiteSettings;
+  crmUrl?: string;
+}) {
+  const body = `
+    <tr>
+      <td style="padding:44px 40px 8px;">
+        <div style="font-family:${FONT_SERIF}; font-size:24px; color:#15181a; line-height:1.3; margin-bottom:14px;">
+          New reservation request.
+        </div>
+        <p style="font-family:${FONT_SANS}; font-size:14.5px; line-height:1.6; color:#3a3a36; margin:0 0 22px;">${escapeHtml(outcome)}</p>
+      </td>
+    </tr>
+    ${factsBox(rows)}
+    ${
+      crmUrl
+        ? `
+    <tr>
+      <td style="padding:0 40px 24px;">
+        <a href="${escapeHtml(crmUrl)}" style="font-family:${FONT_SANS}; font-size:13px; color:#8b4a34; text-decoration:underline;">Open this prospect in your CRM &rarr;</a>
+      </td>
+    </tr>`
+        : ""
+    }
+    ${ctaButton(`mailto:${encodeURIComponent(email)}`, `Reply to ${escapeHtml(name.split(/\s+/)[0] || name)}`)}`;
+
+  return {
+    subject: `Reservation request - The Lexington (${name})`,
+    html: shell(siteSettings, body),
+  };
+}

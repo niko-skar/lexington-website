@@ -1,8 +1,8 @@
 import type { StructureResolver } from "sanity/structure";
 
-// standardAgreements is a singleton: fixed _id "standardAgreements", no
-// create/duplicate/delete -- same convention as financingPlan in the
-// public workspace (see sanity/structure.ts).
+// standardAgreements and reservationSettings are singletons: fixed _id (the
+// same as the type name), no create/duplicate/delete -- same convention as
+// financingPlan in the public workspace (see sanity/structure.ts).
 export const buyersStructure: StructureResolver = (S) =>
   S.list()
     .title("Buyers")
@@ -36,5 +36,13 @@ export const buyersStructure: StructureResolver = (S) =>
           S.document()
             .schemaType("standardAgreements")
             .documentId("standardAgreements")
+        ),
+      S.listItem()
+        .title("Reservation form settings")
+        .id("reservationSettings")
+        .child(
+          S.document()
+            .schemaType("reservationSettings")
+            .documentId("reservationSettings")
         ),
     ]);

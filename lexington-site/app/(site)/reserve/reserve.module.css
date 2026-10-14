@@ -1,0 +1,75 @@
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  gap: var(--space-8);
+  align-items: start;
+  margin-top: var(--space-6);
+}
+
+@media (max-width: 980px) {
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-6);
+  }
+}
+
+.aside {
+  display: grid;
+  gap: var(--space-5);
+  position: sticky;
+  top: 110px;
+}
+
+@media (max-width: 980px) {
+  .aside {
+    position: static;
+  }
+}
+
+.panel {
+  padding: 26px 28px;
+  border: 1px solid var(--stone);
+  background: var(--paper);
+}
+
+.steps {
+  list-style: none;
+  counter-reset: s;
+  margin-top: 16px;
+  display: grid;
+  gap: 14px;
+}
+
+.steps li {
+  counter-increment: s;
+  position: relative;
+  padding-left: 36px;
+  font-size: 15px;
+  color: #333;
+}
+
+.steps li::before {
+  content: counter(s);
+  position: absolute;
+  left: 0;
+  top: -1px;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1px solid var(--brass);
+  color: var(--brass-text);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.talk {
+  margin-top: 10px;
+  font-family: var(--font-serif);
+  font-size: 18px;
+}
+
+.talk a:hover {
+  color: var(--clay);
+}
