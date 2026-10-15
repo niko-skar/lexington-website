@@ -84,7 +84,7 @@ export const VIEWINGS: Option[] = [
 
 export const PAYMENTS: Option[] = [
   { key: "full", label: "Pay in full" },
-  { key: "plan", label: "Instalment plan" },
+  { key: "plan", label: "Payment plan" },
   { key: "mortgage", label: "Mortgage" },
   { key: "undecided", label: "Not decided yet" },
 ];
