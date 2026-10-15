@@ -23,6 +23,7 @@ import {
   findBox,
   gapsAround,
   gapsOf,
+  openingNeighbours,
   gridLines,
   isMeasured,
   shiftsForGap,
@@ -131,7 +132,7 @@ export function Sheet({ floor, selection, tol, busy, onClose, onSave }: SheetPro
         );
       body = (
         <BoxBody
-          key={`${floor.key}:${el._key}:${floor._rev ?? ""}`}
+          key={`${floor.key}:${el._key}:${floor._rev ?? ""}:${JSON.stringify([el.actual ?? null, "w" in el ? el.w : null, "h" in el ? el.h : null, "gx" in el ? el.gx : null, "gy" in el ? el.gy : null])}`}
           floor={floor}
           list={selection.list}
           el={el}
@@ -309,6 +310,14 @@ function BoxBody({
             It is there
           </button>
         </div>
+      ) : opening ? (
+        <>
+          <OpeningSizeBlock floor={floor} el={opening} busy={busy} onSave={onSave} />
+          <details className={s.more}>
+            <summary>Position from the grid lines (string lines)</summary>
+            <FacesBlock floor={floor} list={list} el={el} busy={busy} onSave={onSave} compact />
+          </details>
+        </>
       ) : tape ? (
         <details className={s.more}>
           <summary>Position from the grid lines (string lines)</summary>
@@ -322,9 +331,6 @@ function BoxBody({
         <FacesBlock floor={floor} list={list} el={el} busy={busy} onSave={onSave} />
       )}
 
-      {opening && !opening.removed && (
-        <p className={s.hint}>To move it, drag it on the plan. Then fine-tune the numbers here.</p>
-      )}
       {opening && <OpeningExtras floor={floor} el={opening} busy={busy} onSave={onSave} onClose={onClose} />}
 
       <NoteBlock list={list} el={el} busy={busy} onSave={onSave} />
@@ -887,6 +893,130 @@ function FacesBlock({
           </button>
         )}
       </div>
+    </div>
+  );
+}
+
+// ---- a void as it is: its size, and how far it is from the columns around it ------------------
+
+function OpeningSizeBlock({ floor, el, busy, onSave }: { floor: Floor; el: OpeningEl; busy: boolean; onSave: SaveFn }) {
+  const cur = (el.actual ?? el.design) as Faces | null;
+  const neighbours = openingNeighbours(floor, el);
+  const [w, setW] = useState(cur ? mm(cur.r - cur.l) : "");
+  const [h, setH] = useState(cur ? mm(cur.b - cur.t) : "");
+  const [dist, setDist] = useState<Record<string, string>>({});
+  const [error, setError] = useState("");
+  if (!cur) return null;
+  const name = el.name;
+  const SIDE: Record<string, string> = { left: "Left", right: "Right", up: "Above", down: "Below" };
+
+  const save = async () => {
+    const wv = parseMm(w);
+    const hv = parseMm(h);
+    if (wv === null || hv === null || wv < 20 || hv < 20) return setError("Type the width and depth in mm.");
+    // Distances to the columns move the void; the size grows from its top-left corner.
+    let dx = 0;
+    let dy = 0;
+    const moves: string[] = [];
+    for (const n of neighbours) {
+      const t = (dist[n.side] ?? "").trim();
+      if (!t) continue;
+      const v = parseMm(t);
+      if (v === null || v < 0) return setError(`The distance to ${itemName(n.item)} doesn't look right.`);
+      if (Math.abs(v - n.distance) < 0.5) continue;
+      if (n.side === "left") dx = v - n.distance;
+      if (n.side === "up") dy = v - n.distance;
+      // To the right / below: the far face is set, so the void moves the other way.
+      if (n.side === "right") dx = n.distance - v - (wv - (cur.r - cur.l));
+      if (n.side === "down") dy = n.distance - v - (hv - (cur.b - cur.t));
+      moves.push(`${mm(v)} from ${itemRef(n.item)}`);
+    }
+    const next: Faces = { l: cur.l + dx, t: cur.t + dy, r: cur.l + dx + wv, b: cur.t + dy + hv };
+    const same = next.l === cur.l && next.r === cur.r && next.t === cur.t && next.b === cur.b;
+    if (same) return setError("Nothing new to save.");
+    setError("");
+    const bits = [`${mm(wv)} × ${mm(hv)}`, ...moves];
+    await onSave(
+      [
+        { path: pathOf("openings", el._key, "actual"), value: next },
+        { path: pathOf("openings", el._key, "at"), value: new Date().toISOString() },
+      ],
+      `${name}: ${bits.join(", ")}`,
+      el._key,
+    );
+  };
+
+  return (
+    <div className={s.tape} data-tape-scope>
+      <div className={s.blockTitle}>Size, mm</div>
+      <div className={s.tapeGrid}>
+        <label className={s.tapeField} htmlFor="void-w">
+          <span>
+            Width <small>across</small>
+          </span>
+          <input
+            id="void-w"
+            className={s.num}
+            {...MM_INPUT}
+            value={w}
+            onChange={(e) => setW(e.target.value)}
+            onFocus={(e) => e.target.select()}
+          />
+        </label>
+        <label className={s.tapeField} htmlFor="void-h">
+          <span>
+            Depth <small>down the page</small>
+          </span>
+          <input
+            id="void-h"
+            className={s.num}
+            {...MM_INPUT}
+            value={h}
+            onChange={(e) => setH(e.target.value)}
+            onFocus={(e) => e.target.select()}
+          />
+        </label>
+      </div>
+      {el.design && (
+        <p className={s.hint}>
+          Drawing {mm(el.design.r - el.design.l)} × {mm(el.design.b - el.design.t)}.
+        </p>
+      )}
+      {neighbours.length > 0 && (
+        <>
+          <div className={s.blockTitle} style={{ marginTop: 10 }}>
+            Distance to the columns around it, mm
+          </div>
+          <div className={s.gapList}>
+            {neighbours.map((n) => (
+              <label key={n.side} className={s.gapRow} htmlFor={`void-n-${n.side}`}>
+                <span>
+                  <b>{SIDE[n.side]}</b> · {itemName(n.item)}
+                  <small>now {mm(n.distance)}, face to face</small>
+                </span>
+                <input
+                  id={`void-n-${n.side}`}
+                  className={s.num}
+                  {...MM_INPUT}
+                  placeholder={mm(n.distance)}
+                  value={dist[n.side] ?? ""}
+                  onChange={(e) => setDist((all) => ({ ...all, [n.side]: e.target.value }))}
+                  onFocus={(e) => e.target.select()}
+                />
+              </label>
+            ))}
+          </div>
+        </>
+      )}
+      {error && <p className={s.error}>{error}</p>}
+      <div className={s.row} style={{ marginTop: 10 }}>
+        <button type="button" className={s.btnPrimary} disabled={busy} onClick={save}>
+          Save
+        </button>
+      </div>
+      <p className={s.hint}>
+        Or on the plan: drag the void to move it, drag a corner to resize it. A new size keeps its top-left corner.
+      </p>
     </div>
   );
 }

@@ -290,6 +290,21 @@ export function AsBuiltApp({ initialFloors, initialKey, initialTab, realRecord }
     );
   };
 
+  const resizeOpening = async (key: string, faces: { l: number; r: number; t: number; b: number }) => {
+    if (!floor) return;
+    const el = floor.openings.find((o) => o._key === key);
+    if (!el) return;
+    await save(
+      floor.key,
+      [
+        { path: pathOf("openings", key, "actual"), value: faces },
+        { path: pathOf("openings", key, "at"), value: new Date().toISOString() },
+      ],
+      `${el.name}: resized to ${Math.round(faces.r - faces.l)} × ${Math.round(faces.b - faces.t)}`,
+      key,
+    );
+  };
+
   if (!floor) return <div className={s.empty}>No floors yet.</div>;
 
   const counts = (f: Floor) => {
@@ -402,6 +417,7 @@ export function AsBuiltApp({ initialFloors, initialKey, initialTab, realRecord }
               full={full}
               onToggleFull={() => setFull((f) => !f)}
               onMoveOpening={(key, dx, dy) => void moveOpening(key, dx, dy)}
+              onResizeOpening={(key, faces) => void resizeOpening(key, faces)}
               floorNav={{
                 up: [...floors].sort((a, b) => a.order - b.order).find((f) => f.order > floor.order) ?? null,
                 down: [...floors].sort((a, b) => b.order - a.order).find((f) => f.order < floor.order) ?? null,

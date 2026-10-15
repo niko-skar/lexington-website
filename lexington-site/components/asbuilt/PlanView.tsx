@@ -12,6 +12,7 @@ import {
   chainOf,
   edgeDeviation,
   edgeReaches,
+  openingNeighbours,
   edgeSegment,
   extentsOf,
   gapsOf,
@@ -24,7 +25,17 @@ import {
   type Point,
   type Status,
 } from "@/lib/asbuilt/geometry";
-import type { BoxEl, BoxList, ColumnEl, CoreEl, Floor, OpeningEl, Selection, Tolerance } from "@/lib/asbuilt/types";
+import type {
+  BoxEl,
+  BoxList,
+  ColumnEl,
+  CoreEl,
+  Faces,
+  Floor,
+  OpeningEl,
+  Selection,
+  Tolerance,
+} from "@/lib/asbuilt/types";
 
 import s from "./AsBuilt.module.css";
 
@@ -52,6 +63,28 @@ interface Props {
   floorNav: { up: Floor | null; down: Floor | null; go: (key: string) => void };
   /** A selected void was dragged this far (mm, snapped) and let go. */
   onMoveOpening: (key: string, dx: number, dy: number) => void;
+  /** A selected void was resized by a corner: its new faces. */
+  onResizeOpening: (key: string, faces: Faces) => void;
+}
+
+type Corner = "tl" | "tr" | "bl" | "br";
+interface Drag {
+  key: string;
+  dx: number;
+  dy: number;
+  /** Set when a corner is being dragged (resizing); otherwise the whole void moves. */
+  corner?: Corner;
+}
+
+/** A void's faces after a move or a corner drag (never smaller than 50 mm). */
+function draggedFaces(cur: Faces, d: Drag): Faces {
+  if (!d.corner) return { l: cur.l + d.dx, r: cur.r + d.dx, t: cur.t + d.dy, b: cur.b + d.dy };
+  const out = { ...cur };
+  if (d.corner === "tl" || d.corner === "bl") out.l = Math.min(cur.l + d.dx, cur.r - 50);
+  if (d.corner === "tr" || d.corner === "br") out.r = Math.max(cur.r + d.dx, cur.l + 50);
+  if (d.corner === "tl" || d.corner === "tr") out.t = Math.min(cur.t + d.dy, cur.b - 50);
+  if (d.corner === "bl" || d.corner === "br") out.b = Math.max(cur.b + d.dy, cur.t + 50);
+  return out;
 }
 
 /** How finely a dragged void snaps (mm), by how far in the plan is zoomed. */
@@ -133,6 +166,7 @@ export function PlanView({
   onToggleFull,
   floorNav,
   onMoveOpening,
+  onResizeOpening,
 }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ w: 0, h: 0 });
@@ -140,14 +174,14 @@ export function PlanView({
   const [userView, setUserView] = useState<View | null>(null);
   const [showBelow, setShowBelow] = useState(false);
   // A void being dragged: shown moved while the finger is down, saved when it lifts.
-  const [drag, setDrag] = useState<{ key: string; dx: number; dy: number } | null>(null);
-  const dragRef = useRef<{ key: string; dx: number; dy: number } | null>(null);
+  const [drag, setDrag] = useState<Drag | null>(null);
+  const dragRef = useRef<Drag | null>(null);
   const floor = useMemo(() => {
     if (!drag) return baseFloor;
     const el = baseFloor.openings.find((o) => o._key === drag.key);
     const cur = el ? (el.actual ?? el.design) : null;
     if (!el || !cur) return baseFloor;
-    const moved = { l: cur.l + drag.dx, r: cur.r + drag.dx, t: cur.t + drag.dy, b: cur.b + drag.dy };
+    const moved = draggedFaces(cur, drag);
     return applyChanges(baseFloor, [{ path: pathOf("openings", drag.key, "actual"), value: moved }]);
   }, [baseFloor, drag]);
   const viewRef = useRef<View | null>(null);
@@ -730,8 +764,82 @@ export function PlanView({
             }
           });
         };
-        faceDims("x", lx, [b.x0, b.x1], sy(b.y1) + 22);
-        faceDims("y", ly, [b.y0, b.y1], sx(b.x1) + 18);
+        if (selection.list === "openings") {
+          // A void is shown as it is: its own width and depth, and how far it is from the columns around it.
+          const x0 = sx(b.x0);
+          const x1 = sx(b.x1);
+          const y0 = sy(b.y0);
+          const y1 = sy(b.y1);
+          const hot = `${s.dimText} ${s.dimHot}`;
+          over.push(
+            <line key="vw" x1={x0} x2={x1} y1={y0 - 12} y2={y0 - 12} className={s.dimLine} />,
+            tick(x0, y0 - 12, "vwa"),
+            tick(x1, y0 - 12, "vwb"),
+            <text key="vwt" x={(x0 + x1) / 2} y={y0 - 21} className={hot}>
+              {mm(b.x1 - b.x0)}
+            </text>,
+            <line key="vh" x1={x0 - 12} x2={x0 - 12} y1={y0} y2={y1} className={s.dimLine} />,
+            tick(x0 - 12, y0, "vha"),
+            tick(x0 - 12, y1, "vhb"),
+            <text
+              key="vht"
+              x={x0 - 21}
+              y={(y0 + y1) / 2}
+              transform={`rotate(-90 ${x0 - 21} ${(y0 + y1) / 2})`}
+              className={hot}
+            >
+              {mm(b.y1 - b.y0)}
+            </text>,
+          );
+          for (const n of openingNeighbours(floor, el as OpeningEl)) {
+            const across = n.side === "left" || n.side === "right";
+            const a = across ? sx(n.from) : sy(n.from);
+            const c = across ? sx(n.to) : sy(n.to);
+            const at = across ? sy(n.at) : sx(n.at);
+            if (Math.abs(c - a) < 10) continue;
+            const key = `vn${n.side}`;
+            const label = mm(n.distance);
+            if (across) {
+              over.push(
+                <line key={`${key}l`} x1={a} x2={c} y1={at} y2={at} className={s.colGapLine} />,
+                tick(a, at, `${key}a`),
+                tick(c, at, `${key}b`),
+                <text key={`${key}t`} x={(a + c) / 2} y={at - 8} className={hot}>
+                  {label}
+                </text>,
+              );
+            } else {
+              over.push(
+                <line key={`${key}l`} x1={at} x2={at} y1={a} y2={c} className={s.colGapLine} />,
+                tick(at, a, `${key}a`),
+                tick(at, c, `${key}b`),
+                <text
+                  key={`${key}t`}
+                  x={at + 8}
+                  y={(a + c) / 2}
+                  transform={`rotate(-90 ${at + 8} ${(a + c) / 2})`}
+                  className={hot}
+                >
+                  {label}
+                </text>,
+              );
+            }
+          }
+          // Corner handles to drag (resize).
+          if (!(el as OpeningEl).removed) {
+            for (const [key, cx, cy] of [
+              ["htl", x0, y0],
+              ["htr", x1, y0],
+              ["hbl", x0, y1],
+              ["hbr", x1, y1],
+            ] as const) {
+              over.push(<rect key={key} x={cx - 6} y={cy - 6} width={12} height={12} className={s.handle} />);
+            }
+          }
+        } else {
+          faceDims("x", lx, [b.x0, b.x1], sy(b.y1) + 22);
+          faceDims("y", ly, [b.y0, b.y1], sx(b.x1) + 18);
+        }
       }
     }
 
@@ -823,8 +931,8 @@ export function PlanView({
     moved: boolean;
     start: View;
     pinch?: { d: number; mx: number; my: number };
-    /** Dragging the selected void instead of moving the plan. */
-    move?: { key: string };
+    /** Dragging the selected void (or one of its corners) instead of moving the plan. */
+    move?: { key: string; corner?: Corner };
   } | null>(null);
 
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -845,7 +953,17 @@ export function PlanView({
           const mx = v.x + (e.clientX - r.left) / v.k;
           const my = v.y + (e.clientY - r.top) / v.k;
           const pad = 10 / v.k;
-          if (mx >= b.x0 - pad && mx <= b.x1 + pad && my >= b.y0 - pad && my <= b.y1 + pad) {
+          // A corner handle first (they sit just outside the corners), then the void itself.
+          const reach = 16 / v.k;
+          const corners: [Corner, number, number][] = [
+            ["tl", b.x0, b.y0],
+            ["tr", b.x1, b.y0],
+            ["bl", b.x0, b.y1],
+            ["br", b.x1, b.y1],
+          ];
+          const hit = corners.find(([, cx, cy]) => Math.hypot(mx - cx, my - cy) <= reach);
+          if (hit) gesture.current.move = { key: selection.key, corner: hit[0] };
+          else if (mx >= b.x0 - pad && mx <= b.x1 + pad && my >= b.y0 - pad && my <= b.y1 + pad) {
             gesture.current.move = { key: selection.key };
           }
         }
@@ -891,10 +1009,11 @@ export function PlanView({
     g.moved = true;
     if (g.move) {
       const step = dragSnap(g.start.k);
-      const next = {
+      const next: Drag = {
         key: g.move.key,
         dx: Math.round(dx / g.start.k / step) * step,
         dy: Math.round(dy / g.start.k / step) * step,
+        corner: g.move.corner,
       };
       const prev = dragRef.current;
       if (!prev || prev.dx !== next.dx || prev.dy !== next.dy) {
@@ -916,7 +1035,13 @@ export function PlanView({
       const d = dragRef.current;
       dragRef.current = null;
       // Saving updates the floor in this same moment, so the preview can go straight away.
-      if (d && (d.dx || d.dy)) onMoveOpening(d.key, d.dx, d.dy);
+      if (d && (d.dx || d.dy)) {
+        if (d.corner) {
+          const el = baseFloor.openings.find((o) => o._key === d.key);
+          const cur = el ? (el.actual ?? el.design) : null;
+          if (cur) onResizeOpening(d.key, draggedFaces(cur, d));
+        } else onMoveOpening(d.key, d.dx, d.dy);
+      }
       setDrag(null);
       return;
     }

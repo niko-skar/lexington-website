@@ -238,6 +238,12 @@
   cursor: grabbing;
 }
 
+.handle {
+  fill: var(--paper);
+  stroke: var(--clay);
+  stroke-width: 2;
+}
+
 /* The plan over the whole screen (phones): a floor switcher floats at the top. */
 .board.boardFull,
 .boardPlacing.boardFull {

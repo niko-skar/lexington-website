@@ -8,6 +8,7 @@ import type {
   Faces,
   Floor,
   GridLine,
+  OpeningEl,
   SlabEdge,
   TapeMeasures,
   Tolerance,
@@ -446,6 +447,53 @@ export function edgeReaches(floor: Floor, maxReach = 3000): EdgeReach[] {
     }
   });
   return out;
+}
+
+export interface OpeningNeighbour {
+  side: "left" | "right" | "up" | "down";
+  item: TapeItem;
+  /** Face to face, mm. */
+  distance: number;
+  /** Where the void's face and the column's face are (across or down the page), and where along them to draw. */
+  from: number;
+  to: number;
+  at: number;
+}
+
+/** The nearest column, wall or lift core on each side of a void (side by side with it, or nearly), within 4 m. */
+export function openingNeighbours(floor: Floor, el: OpeningEl, maxReach = 4000): OpeningNeighbour[] {
+  const b = boxOf(floor, el, "actual");
+  if (!b) return [];
+  const best = new Map<OpeningNeighbour["side"], OpeningNeighbour>();
+  for (const list of ["columns", "cores"] as const) {
+    for (const t of floor[list] as TapeEl[]) {
+      const ib = boxOf(floor, t, "actual");
+      if (!ib) continue;
+      // Side by side, or nearly (up to 1.5 m apart the other way): the distance is still worth showing.
+      const overlapY = Math.min(b.y1, ib.y1) - Math.max(b.y0, ib.y0);
+      const overlapX = Math.min(b.x1, ib.x1) - Math.max(b.x0, ib.x0);
+      const NEAR = 1500;
+      const consider = (side: OpeningNeighbour["side"], distance: number, from: number, to: number, at: number) => {
+        if (distance < 0 || distance > maxReach) return;
+        const cur = best.get(side);
+        if (!cur || distance < cur.distance)
+          best.set(side, { side, item: { list, el: t }, distance: round1(distance), from, to, at });
+      };
+      if (overlapY > -NEAR) {
+        const at = overlapY > 0 ? (Math.max(b.y0, ib.y0) + Math.min(b.y1, ib.y1)) / 2 : (b.y0 + b.y1) / 2;
+        if (ib.x1 <= b.x0 + 0.5) consider("left", b.x0 - ib.x1, b.x0, ib.x1, at);
+        if (ib.x0 >= b.x1 - 0.5) consider("right", ib.x0 - b.x1, b.x1, ib.x0, at);
+      }
+      if (overlapX > -NEAR) {
+        const at = overlapX > 0 ? (Math.max(b.x0, ib.x0) + Math.min(b.x1, ib.x1)) / 2 : (b.x0 + b.x1) / 2;
+        if (ib.y1 <= b.y0 + 0.5) consider("up", b.y0 - ib.y1, b.y0, ib.y1, at);
+        if (ib.y0 >= b.y1 - 0.5) consider("down", ib.y0 - b.y1, b.y1, ib.y0, at);
+      }
+    }
+  }
+  return (["left", "right", "up", "down"] as const)
+    .map((sd) => best.get(sd))
+    .filter((n): n is OpeningNeighbour => Boolean(n));
 }
 
 export function edgeDeviation(floor: Floor, edge: SlabEdge): number | null {
