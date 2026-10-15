@@ -322,6 +322,9 @@ function BoxBody({
         <FacesBlock floor={floor} list={list} el={el} busy={busy} onSave={onSave} />
       )}
 
+      {opening && !opening.removed && (
+        <p className={s.hint}>To move it, drag it on the plan. Then fine-tune the numbers here.</p>
+      )}
       {opening && <OpeningExtras floor={floor} el={opening} busy={busy} onSave={onSave} onClose={onClose} />}
 
       <NoteBlock list={list} el={el} busy={busy} onSave={onSave} />

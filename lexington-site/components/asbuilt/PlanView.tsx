@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { mm } from "@/lib/asbuilt/format";
+import { applyChanges, pathOf } from "@/lib/asbuilt/paths";
 import {
   allBoxes,
   boxOf,
@@ -49,7 +50,12 @@ interface Props {
   onToggleFull: () => void;
   /** The floors above and below, for the switcher in full screen. */
   floorNav: { up: Floor | null; down: Floor | null; go: (key: string) => void };
+  /** A selected void was dragged this far (mm, snapped) and let go. */
+  onMoveOpening: (key: string, dx: number, dy: number) => void;
 }
+
+/** How finely a dragged void snaps (mm), by how far in the plan is zoomed. */
+const dragSnap = (k: number) => (k >= 0.12 ? 5 : k >= 0.05 ? 10 : 25);
 
 /** On screens narrower than this the panel is a sheet over the bottom of the screen. */
 const SHEET_BELOW = 1000;
@@ -114,7 +120,7 @@ function distToSegment(p: Point, a: Point, b: Point): number {
 }
 
 export function PlanView({
-  floor,
+  floor: baseFloor,
   below,
   tol,
   selection,
@@ -126,12 +132,24 @@ export function PlanView({
   full,
   onToggleFull,
   floorNav,
+  onMoveOpening,
 }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ w: 0, h: 0 });
   // Null until the person moves the plan: until then it simply fits the floor.
   const [userView, setUserView] = useState<View | null>(null);
   const [showBelow, setShowBelow] = useState(false);
+  // A void being dragged: shown moved while the finger is down, saved when it lifts.
+  const [drag, setDrag] = useState<{ key: string; dx: number; dy: number } | null>(null);
+  const dragRef = useRef<{ key: string; dx: number; dy: number } | null>(null);
+  const floor = useMemo(() => {
+    if (!drag) return baseFloor;
+    const el = baseFloor.openings.find((o) => o._key === drag.key);
+    const cur = el ? (el.actual ?? el.design) : null;
+    if (!el || !cur) return baseFloor;
+    const moved = { l: cur.l + drag.dx, r: cur.r + drag.dx, t: cur.t + drag.dy, b: cur.b + drag.dy };
+    return applyChanges(baseFloor, [{ path: pathOf("openings", drag.key, "actual"), value: moved }]);
+  }, [baseFloor, drag]);
   const viewRef = useRef<View | null>(null);
   const pendingView = useRef<View | null>(null);
   const frame = useRef(0);
@@ -148,7 +166,8 @@ export function PlanView({
     return () => ro.disconnect();
   }, []);
 
-  const ext = useMemo(() => extentsOf(floor), [floor]);
+  // From the saved floor, so dragging a void never shifts the whole view.
+  const ext = useMemo(() => extentsOf(baseFloor), [baseFloor]);
 
   /**
    * "all" shows the whole floor. "height" fills the board top to bottom and starts at
@@ -804,6 +823,8 @@ export function PlanView({
     moved: boolean;
     start: View;
     pinch?: { d: number; mx: number; my: number };
+    /** Dragging the selected void instead of moving the plan. */
+    move?: { key: string };
   } | null>(null);
 
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -815,7 +836,24 @@ export function PlanView({
     const pts = [...pointers.current.values()];
     if (pts.length === 1) {
       gesture.current = { x: e.clientX, y: e.clientY, t: performance.now(), moved: false, start: v };
+      // A finger that comes down on the selected void drags the void, not the plan.
+      if (selection?.kind === "box" && selection.list === "openings" && !placing) {
+        const el = baseFloor.openings.find((o) => o._key === selection.key);
+        const b = el && !el.removed ? boxOf(baseFloor, el, "actual") : null;
+        if (b) {
+          const r = e.currentTarget.getBoundingClientRect();
+          const mx = v.x + (e.clientX - r.left) / v.k;
+          const my = v.y + (e.clientY - r.top) / v.k;
+          const pad = 10 / v.k;
+          if (mx >= b.x0 - pad && mx <= b.x1 + pad && my >= b.y0 - pad && my <= b.y1 + pad) {
+            gesture.current.move = { key: selection.key };
+          }
+        }
+      }
     } else if (pts.length === 2) {
+      // A second finger turns a drag into a pinch: put the void back.
+      dragRef.current = null;
+      setDrag(null);
       const r = e.currentTarget.getBoundingClientRect();
       const [a, b] = pts;
       gesture.current = {
@@ -851,6 +889,20 @@ export function PlanView({
     const dy = e.clientY - g.y;
     if (!g.moved && Math.hypot(dx, dy) < TAP_MOVE_PX) return;
     g.moved = true;
+    if (g.move) {
+      const step = dragSnap(g.start.k);
+      const next = {
+        key: g.move.key,
+        dx: Math.round(dx / g.start.k / step) * step,
+        dy: Math.round(dy / g.start.k / step) * step,
+      };
+      const prev = dragRef.current;
+      if (!prev || prev.dx !== next.dx || prev.dy !== next.dy) {
+        dragRef.current = next;
+        setDrag(next);
+      }
+      return;
+    }
     queueView({ k: g.start.k, x: g.start.x - dx / g.start.k, y: g.start.y - dy / g.start.k });
   };
 
@@ -858,6 +910,16 @@ export function PlanView({
     if (!pointers.current.has(e.pointerId)) return;
     pointers.current.delete(e.pointerId);
     const g = gesture.current;
+    if (pointers.current.size === 0 && g?.move && g.moved) {
+      // Let go of a dragged void: save where it landed.
+      gesture.current = null;
+      const d = dragRef.current;
+      dragRef.current = null;
+      // Saving updates the floor in this same moment, so the preview can go straight away.
+      if (d && (d.dx || d.dy)) onMoveOpening(d.key, d.dx, d.dy);
+      setDrag(null);
+      return;
+    }
     if (pointers.current.size === 0) {
       gesture.current = null;
       if (g && !g.moved && !g.pinch && performance.now() - g.t < TAP_MS) {
@@ -994,7 +1056,7 @@ export function PlanView({
     <div>
       <div
         ref={wrapRef}
-        className={`${placing ? s.boardPlacing : s.board}${full ? ` ${s.boardFull}` : ""}`}
+        className={`${placing ? s.boardPlacing : s.board}${full ? ` ${s.boardFull}` : ""}${drag ? ` ${s.boardDragging}` : ""}`}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}

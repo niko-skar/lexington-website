@@ -4,8 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useToast } from "@/components/crm/Toasts";
 import { saveAsBuiltAction } from "@/lib/actions/asbuilt";
-import { gridRef } from "@/lib/asbuilt/format";
-import { gridLines, linePos } from "@/lib/asbuilt/geometry";
+import { gridRef, moveText } from "@/lib/asbuilt/format";
+import { boxOf, centreOf, gridLines, linePos } from "@/lib/asbuilt/geometry";
 import { applyChanges, pathOf } from "@/lib/asbuilt/paths";
 import { floorBelow } from "@/lib/asbuilt/setout";
 import {
@@ -242,6 +242,54 @@ export function AsBuiltApp({ initialFloors, initialKey, initialTab, realRecord }
     if (ok) setSelection({ kind: "box", list: "openings", key });
   };
 
+  const moveOpening = async (key: string, dx: number, dy: number) => {
+    if (!floor) return;
+    const el = floor.openings.find((o) => o._key === key);
+    const cur = el ? (el.actual ?? el.design) : null;
+    if (!el || !cur) return;
+    const faces = { l: cur.l + dx, r: cur.r + dx, t: cur.t + dy, b: cur.b + dy };
+    const text = `${el.name}: moved ${moveText(dx, dy)}`;
+    const now = new Date().toISOString();
+    if (el.added) {
+      // Made on site: hang it on the grid lines nearest to where it now is.
+      const b = boxOf(floor, el, "actual");
+      const nearest = (axis: "x" | "y", v: number) =>
+        gridLines(floor, axis).reduce((best, l) =>
+          Math.abs((linePos(floor, axis, l.id, "actual") ?? 0) - v) <
+          Math.abs((linePos(floor, axis, best.id, "actual") ?? 0) - v)
+            ? l
+            : best,
+        );
+      if (b) {
+        const [cx, cy] = centreOf(b);
+        const lx = nearest("x", cx + dx);
+        const ly = nearest("y", cy + dy);
+        const px = linePos(floor, "x", lx.id, "actual") ?? 0;
+        const py = linePos(floor, "y", ly.id, "actual") ?? 0;
+        const ox = linePos(floor, "x", el.x, "actual") ?? 0;
+        const oy = linePos(floor, "y", el.y, "actual") ?? 0;
+        const moved = {
+          ...el,
+          x: lx.id,
+          y: ly.id,
+          actual: { l: faces.l + ox - px, r: faces.r + ox - px, t: faces.t + oy - py, b: faces.b + oy - py },
+          at: now,
+        };
+        await save(floor.key, [{ path: pathOf("openings", key), value: moved }], text, key);
+        return;
+      }
+    }
+    await save(
+      floor.key,
+      [
+        { path: pathOf("openings", key, "actual"), value: faces },
+        { path: pathOf("openings", key, "at"), value: now },
+      ],
+      text,
+      key,
+    );
+  };
+
   if (!floor) return <div className={s.empty}>No floors yet.</div>;
 
   const counts = (f: Floor) => {
@@ -353,6 +401,7 @@ export function AsBuiltApp({ initialFloors, initialKey, initialTab, realRecord }
               onCancelPlace={() => setPlacing(false)}
               full={full}
               onToggleFull={() => setFull((f) => !f)}
+              onMoveOpening={(key, dx, dy) => void moveOpening(key, dx, dy)}
               floorNav={{
                 up: [...floors].sort((a, b) => a.order - b.order).find((f) => f.order > floor.order) ?? null,
                 down: [...floors].sort((a, b) => b.order - a.order).find((f) => f.order < floor.order) ?? null,

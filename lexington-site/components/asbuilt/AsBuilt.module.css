@@ -234,6 +234,10 @@
   cursor: crosshair;
 }
 
+.boardDragging {
+  cursor: grabbing;
+}
+
 /* The plan over the whole screen (phones): a floor switcher floats at the top. */
 .board.boardFull,
 .boardPlacing.boardFull {
