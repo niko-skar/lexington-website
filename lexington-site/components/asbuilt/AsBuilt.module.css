@@ -234,6 +234,74 @@
   cursor: crosshair;
 }
 
+/* The plan over the whole screen (phones): a floor switcher floats at the top. */
+.board.boardFull,
+.boardPlacing.boardFull {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  height: 100dvh;
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+}
+
+.fullBar {
+  position: absolute;
+  top: max(10px, env(safe-area-inset-top));
+  left: 50%;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--navy);
+  color: var(--paper);
+  box-shadow: 0 6px 20px rgba(21, 24, 26, 0.25);
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.fullBar button {
+  min-width: 42px;
+  min-height: 42px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(247, 244, 236, 0.12);
+  color: var(--paper);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.fullBar button:disabled {
+  opacity: 0.35;
+}
+
+.fullBar span {
+  padding: 0 8px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.fullBar .fullDone {
+  padding: 0 14px;
+  background: var(--clay);
+}
+
+/* With the plan full screen on a computer, the side panel floats over it. */
+@media (min-width: 1000px) {
+  .appFull .panel {
+    position: fixed;
+    top: 12px;
+    right: 12px;
+    z-index: 40;
+    width: 380px;
+  }
+}
+
 @media (max-width: 720px) {
   .board {
     height: 62dvh;
@@ -487,6 +555,23 @@
   stroke: var(--clay-lt);
   stroke-width: 1;
   opacity: 0.8;
+}
+
+.sizeLine {
+  stroke: #9aa3a6;
+  stroke-width: 1;
+}
+
+.sizeText {
+  font-size: 10px;
+  fill: #6b7072;
+  text-anchor: middle;
+  dominant-baseline: central;
+  font-variant-numeric: tabular-nums;
+  paint-order: stroke;
+  stroke: var(--ab-board);
+  stroke-width: 3px;
+  stroke-linejoin: round;
 }
 
 .colGapText {
@@ -1102,6 +1187,27 @@ textarea.text {
   color: var(--paper);
 }
 
+.lineActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+/* On a phone the Save button stays at the bottom of the screen while you work down the line. */
+@media (max-width: 720px) {
+  .lineActions {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    margin: 0 -12px -12px;
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--stone-lt);
+    background: var(--paper);
+    box-shadow: 0 -6px 16px rgba(21, 24, 26, 0.06);
+  }
+}
+
 .lineEditor {
   display: grid;
   gap: 12px;
@@ -1578,6 +1684,64 @@ textarea.text {
   font-size: 14px;
   color: #5b6062;
   text-align: center;
+}
+
+/* Phones: a tighter top so the plan and the numbers get the room. */
+@media (max-width: 720px) {
+  .app {
+    padding-top: 10px;
+  }
+
+  .top {
+    gap: 4px 12px;
+    margin-bottom: 6px;
+  }
+
+  .title {
+    font-size: 21px;
+  }
+
+  .downloads {
+    gap: 10px;
+    font-size: 12px;
+  }
+
+  .floor {
+    min-width: 50px;
+    padding: 6px 8px 5px;
+  }
+
+  .tab {
+    padding: 10px 9px;
+    font-size: 12px;
+  }
+
+  .about {
+    font-size: 12.5px;
+  }
+}
+
+/* The bottom sheet gets a grab bar and a smaller heading on phones. */
+@media (max-width: 999px) {
+  .panelHead {
+    padding-top: 18px;
+  }
+
+  .panelHead::before {
+    content: "";
+    position: absolute;
+    top: 7px;
+    left: 50%;
+    width: 40px;
+    height: 4px;
+    margin-left: -20px;
+    border-radius: 2px;
+    background: var(--stone);
+  }
+
+  .panelName {
+    font-size: 19px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

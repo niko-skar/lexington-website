@@ -355,6 +355,99 @@ export function edgeSegment(corners: Point[], index: number): [Point, Point] {
   return [corners[(index - 1 + n) % n], corners[index]];
 }
 
+/** Is the point inside the slab outline? (Even-odd rule.) */
+export function insideOutline(pt: Point, poly: Point[]): boolean {
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i, i += 1) {
+    const [xi, yi] = poly[i];
+    const [xj, yj] = poly[j];
+    if (yi > pt[1] !== yj > pt[1] && pt[0] < ((xj - xi) * (pt[1] - yi)) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+
+export interface EdgeReach {
+  edge: SlabEdge;
+  item: TapeItem;
+  /** The face of the column that looks at the edge. */
+  face: "l" | "r" | "t" | "b";
+  /** Where the face and the edge are (mm across or down the page), and where along them the dimension sits. */
+  from: number;
+  to: number;
+  at: number;
+  /** Face to edge, as things stand and on the drawing. */
+  distance: number;
+  design: number | null;
+}
+
+/**
+ * How far each slab edge is from the columns in front of it: for every edge, the
+ * columns and walls facing it within 3 m, inside the slab, with nothing in between.
+ */
+export function edgeReaches(floor: Floor, maxReach = 3000): EdgeReach[] {
+  const corners = slabCorners(floor, "actual");
+  const designCorners = slabCorners(floor, "design");
+  if (!corners || !floor.slab) return [];
+  const items: { it: TapeItem; b: Box; d: Box | null }[] = [];
+  for (const list of ["columns", "cores"] as const) {
+    for (const el of floor[list] as TapeEl[]) {
+      const b = boxOf(floor, el, "actual");
+      if (b) items.push({ it: { list, el }, b, d: boxOf(floor, el, "design") });
+    }
+  }
+  const out: EdgeReach[] = [];
+  floor.slab.edges.forEach((edge, i) => {
+    const [p, q] = edgeSegment(corners, i);
+    const across = edge.axis === "y";
+    // A horizontal edge (axis y) sits at one y and runs across; a vertical one sits at one x.
+    const pos = across ? p[1] : p[0];
+    const lo = Math.min(across ? p[0] : p[1], across ? q[0] : q[1]);
+    const hi = Math.max(across ? p[0] : p[1], across ? q[0] : q[1]);
+    const designPos = designCorners
+      ? across
+        ? edgeSegment(designCorners, i)[0][1]
+        : edgeSegment(designCorners, i)[0][0]
+      : null;
+    for (const { it, b, d } of items) {
+      const [cx, cy] = centreOf(b);
+      const along = across ? cx : cy;
+      if (along < lo || along > hi) continue;
+      if (!insideOutline([cx, cy], corners)) continue;
+      const near = across ? b.y0 : b.x0;
+      const far = across ? b.y1 : b.x1;
+      let face: EdgeReach["face"];
+      let from: number;
+      if (pos <= near) {
+        face = across ? "t" : "l";
+        from = near;
+      } else if (pos >= far) {
+        face = across ? "b" : "r";
+        from = far;
+      } else continue;
+      const distance = Math.abs(pos - from);
+      if (distance < 1 || distance > maxReach) continue;
+      // Nothing standing between this column and the edge.
+      const blocked = items.some(({ it: o, b: ob }) => {
+        if (o.el._key === it.el._key && o.list === it.list) return false;
+        const oAlongLo = across ? ob.x0 : ob.y0;
+        const oAlongHi = across ? ob.x1 : ob.y1;
+        if (along < oAlongLo || along > oAlongHi) return false;
+        const oNear = across ? ob.y0 : ob.x0;
+        const oFar = across ? ob.y1 : ob.x1;
+        return from > pos ? oFar <= from && oNear >= pos : oNear >= from && oFar <= pos;
+      });
+      if (blocked) continue;
+      let design: number | null = null;
+      if (d && designPos !== null) {
+        const dFace = face === "t" ? d.y0 : face === "b" ? d.y1 : face === "l" ? d.x0 : d.x1;
+        design = round1(Math.abs(designPos - dFace));
+      }
+      out.push({ edge, item: it, face, from, to: pos, at: along, distance: round1(distance), design });
+    }
+  });
+  return out;
+}
+
 export function edgeDeviation(floor: Floor, edge: SlabEdge): number | null {
   if (edge.actual === null || edge.actual === undefined) return null;
   const a = edgePos(floor, edge, "actual");

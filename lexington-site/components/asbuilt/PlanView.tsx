@@ -10,6 +10,7 @@ import {
   chainLines,
   chainOf,
   edgeDeviation,
+  edgeReaches,
   edgeSegment,
   extentsOf,
   gapsOf,
@@ -43,7 +44,17 @@ interface Props {
   onPlace: (x: number, y: number) => void;
   onStartPlace: () => void;
   onCancelPlace: () => void;
+  /** The plan fills the whole screen (phones). */
+  full: boolean;
+  onToggleFull: () => void;
+  /** The floors above and below, for the switcher in full screen. */
+  floorNav: { up: Floor | null; down: Floor | null; go: (key: string) => void };
 }
+
+/** On screens narrower than this the panel is a sheet over the bottom of the screen. */
+const SHEET_BELOW = 1000;
+/** The share of the screen height the bottom sheet covers (see .panel in the CSS). */
+const SHEET_SHARE = 0.58;
 
 interface HitLabel {
   sel: Selection;
@@ -54,6 +65,9 @@ interface HitLabel {
 }
 
 const MIN_K = 0.002;
+/** Pixels per mm from which the finer dimensions show: up and down gaps, column to slab edge, sizes. */
+const ZOOM_DETAIL = 0.04;
+const ZOOM_SIZES = 0.09;
 const MAX_K = 2.5;
 const TAP_MOVE_PX = 7;
 const TAP_MS = 600;
@@ -85,7 +99,7 @@ const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v
 function sameSel(a: Selection | null, b: Selection): boolean {
   if (!a || a.kind !== b.kind) return false;
   if (a.kind === "box" && b.kind === "box") return a.list === b.list && a.key === b.key;
-  if (a.kind === "edge" && b.kind === "edge") return a.key === b.key;
+  if (a.kind === "edge" && b.kind === "edge") return a.key === b.key && a.via?.key === b.via?.key;
   if (a.kind === "gap" && b.kind === "gap") return a.axis === b.axis && a.to === b.to;
   if (a.kind === "colgap" && b.kind === "colgap") return a.axis === b.axis && a.key === b.key;
   return false;
@@ -109,6 +123,9 @@ export function PlanView({
   onPlace,
   onStartPlace,
   onCancelPlace,
+  full,
+  onToggleFull,
+  floorNav,
 }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ w: 0, h: 0 });
@@ -214,7 +231,8 @@ export function PlanView({
 
     const xLines = gridLines(floor, "x");
     const yLines = gridLines(floor, "y");
-    const bubbleY = Math.max(sy(ext.y0) - 58, 37);
+    // Room at the top for the full-screen floor switcher.
+    const bubbleY = Math.max(sy(ext.y0) - 58, full ? 78 : 37);
     const chainY = bubbleY + 26;
     const bubbleX = Math.max(sx(ext.x0) - 58, 37);
     const chainX = bubbleX + 26;
@@ -271,7 +289,8 @@ export function PlanView({
     }
 
     // Bands behind the pinned bubbles and chains, so the plan can slide under them.
-    if (bubbleY <= 37.5) over.push(<rect key="bandT" x={0} y={0} width={W} height={chainY + 12} className={s.band} />);
+    if (bubbleY <= (full ? 78.5 : 37.5))
+      over.push(<rect key="bandT" x={0} y={0} width={W} height={chainY + 12} className={s.band} />);
     if (bubbleX <= 37.5) over.push(<rect key="bandL" x={0} y={0} width={chainX + 12} height={H} className={s.band} />);
 
     const tick = (x: number, y: number, key: string) => (
@@ -504,7 +523,118 @@ export function PlanView({
         }
       };
       for (const id of chainLines(floor, "x")) drawChain("x", id);
-      if (chosen && "x" in chosen) drawChain("y", chosen.x);
+      // Zoomed in: down every lettered line too. Further out, only the chosen column's line.
+      if (k >= ZOOM_DETAIL) for (const id of chainLines(floor, "y")) drawChain("y", id);
+      else if (chosen && "x" in chosen) drawChain("y", chosen.x);
+    }
+
+    // Zoomed in: how far each slab edge is from the column face in front of it.
+    if (k >= ZOOM_DETAIL) {
+      for (const r of edgeReaches(floor)) {
+        const across = r.edge.axis === "y";
+        const a = across ? sy(r.from) : sx(r.from);
+        const b2 = across ? sy(r.to) : sx(r.to);
+        if (Math.abs(b2 - a) < 16) continue;
+        // A little to one side of the column's middle, clear of its own size.
+        const box = boxOf(floor, r.item.el, "actual");
+        const half = box ? ((across ? box.x1 - box.x0 : box.y1 - box.y0) * k) / 4 : 0;
+        const at = (across ? sx(r.at) : sy(r.at)) + Math.min(12, half);
+        if (across ? at < -10 || at > W + 10 : at < -10 || at > H + 10) continue;
+        const sel: Selection = { kind: "edge", key: r.edge._key, via: { list: r.item.list, key: r.item.el._key } };
+        const hot = sameSel(selection, sel);
+        const measured = r.edge.actual !== null && r.edge.actual !== undefined;
+        const cls = hot
+          ? `${s.dimText} ${s.dimHot}`
+          : measured && r.design !== null
+            ? DIM_CLASS[statusFor(Math.abs(r.distance - r.design), tol)]
+            : s.colGapText;
+        const label = mm(r.distance);
+        const key = `er${r.edge._key}${r.item.el._key}`;
+        const lo = Math.min(a, b2);
+        const len = Math.abs(b2 - a);
+        if (across) {
+          over.push(
+            <line key={`${key}l`} x1={at} x2={at} y1={a} y2={b2} className={s.colGapLine} />,
+            tick(at, a, `${key}a`),
+            tick(at, b2, `${key}b`),
+          );
+          if (len >= label.length * 6.4 + 6)
+            over.push(
+              <text
+                key={`${key}t`}
+                x={at + 8}
+                y={lo + len / 2}
+                transform={`rotate(-90 ${at + 8} ${lo + len / 2})`}
+                className={cls}
+              >
+                {label}
+              </text>,
+            );
+          hits.push({ sel, x: at - 6, y: lo, w: 22, h: len });
+        } else {
+          over.push(
+            <line key={`${key}l`} x1={a} x2={b2} y1={at} y2={at} className={s.colGapLine} />,
+            tick(a, at, `${key}a`),
+            tick(b2, at, `${key}b`),
+          );
+          if (len >= label.length * 6.4 + 6)
+            over.push(
+              <text key={`${key}t`} x={lo + len / 2} y={at - 7} className={cls}>
+                {label}
+              </text>,
+            );
+          hits.push({ sel, x: lo, y: at - 16, w: len, h: 22 });
+        }
+      }
+    }
+
+    // Zoomed right in: every column's width (above it) and depth (to its left).
+    if (k >= ZOOM_SIZES) {
+      for (const list of ["columns", "cores"] as const) {
+        for (const el of floor[list] as BoxEl[]) {
+          const b = boxOf(floor, el, "actual");
+          if (!b) continue;
+          const x0 = sx(b.x0);
+          const x1 = sx(b.x1);
+          const y0 = sy(b.y0);
+          const y1 = sy(b.y1);
+          if (x1 < -20 || x0 > W + 20 || y1 < -20 || y0 > H + 20) continue;
+          const taped =
+            (el as { w?: number | null; h?: number | null }).w != null || (el as { h?: number | null }).h != null;
+          const cls = taped ? `${s.dimText} ${s.dimMeasured}` : s.sizeText;
+          const sel: Selection = { kind: "box", list, key: el._key };
+          const wl = mm(b.x1 - b.x0);
+          const hl = mm(b.y1 - b.y0);
+          const key = `sz${list}${el._key}`;
+          over.push(
+            <line key={`${key}w`} x1={x0} x2={x1} y1={y0 - 8} y2={y0 - 8} className={s.sizeLine} />,
+            tick(x0, y0 - 8, `${key}wa`),
+            tick(x1, y0 - 8, `${key}wb`),
+            <line key={`${key}h`} x1={x0 - 8} x2={x0 - 8} y1={y0} y2={y1} className={s.sizeLine} />,
+            tick(x0 - 8, y0, `${key}ha`),
+            tick(x0 - 8, y1, `${key}hb`),
+          );
+          if (x1 - x0 >= wl.length * 6 + 4)
+            over.push(
+              <text key={`${key}wt`} x={(x0 + x1) / 2} y={y0 - 16} className={cls}>
+                {wl}
+              </text>,
+            );
+          if (y1 - y0 >= hl.length * 6 + 4)
+            over.push(
+              <text
+                key={`${key}ht`}
+                x={x0 - 16}
+                y={(y0 + y1) / 2}
+                transform={`rotate(-90 ${x0 - 16} ${(y0 + y1) / 2})`}
+                className={cls}
+              >
+                {hl}
+              </text>,
+            );
+          hits.push({ sel, x: x0, y: y0 - 22, w: x1 - x0, h: 16 }, { sel, x: x0 - 22, y: y0, w: 16, h: y1 - y0 });
+        }
+      }
     }
 
     // Names of things, once there is room for them.
@@ -587,9 +717,30 @@ export function PlanView({
     }
 
     return { under, over, hits };
-  }, [view, size.w, size.h, floor, ext, selection, tol]);
+  }, [view, size.w, size.h, floor, ext, selection, tol, full]);
 
   // ---- tapping ----
+  // On a phone the panel slides up over the bottom of the screen: if the tapped thing would end
+  // up under it, slide the plan up so it stays in sight. Waits a moment in case it's a double tap.
+  const revealTimer = useRef(0);
+  const reveal = useCallback(
+    (clientY: number) => {
+      if (typeof window === "undefined" || window.innerWidth >= SHEET_BELOW) return;
+      window.clearTimeout(revealTimer.current);
+      revealTimer.current = window.setTimeout(() => {
+        const v = pendingView.current ?? viewRef.current;
+        if (!v) return;
+        const sheetTop = window.innerHeight * (1 - SHEET_SHARE);
+        if (clientY < sheetTop - 40) return;
+        const target = Math.max(sheetTop * 0.55, 90);
+        queueView({ ...v, y: v.y + (clientY - target) / v.k });
+      }, 330);
+    },
+    [queueView],
+  );
+
+  useEffect(() => () => window.clearTimeout(revealTimer.current), []);
+
   const handleTap = useCallback(
     (clientX: number, clientY: number) => {
       const el = wrapRef.current;
@@ -607,6 +758,7 @@ export function PlanView({
       for (const h of drawing?.hits ?? []) {
         if (px >= h.x - 4 && px <= h.x + h.w + 4 && py >= h.y - 4 && py <= h.y + h.h + 4) {
           onSelect(h.sel);
+          reveal(clientY);
           return;
         }
       }
@@ -637,12 +789,14 @@ export function PlanView({
         });
       }
       onSelect(best ? best.sel : null);
+      if (best) reveal(clientY);
     },
-    [placing, onPlace, onSelect, drawing, floor],
+    [placing, onPlace, onSelect, drawing, floor, reveal],
   );
 
   // ---- dragging, pinching, tapping ----
   const pointers = useRef(new Map<number, { x: number; y: number }>());
+  const lastTap = useRef<{ t: number; x: number; y: number } | null>(null);
   const gesture = useRef<{
     x: number;
     y: number;
@@ -706,7 +860,20 @@ export function PlanView({
     const g = gesture.current;
     if (pointers.current.size === 0) {
       gesture.current = null;
-      if (g && !g.moved && !g.pinch && performance.now() - g.t < TAP_MS) handleTap(e.clientX, e.clientY);
+      if (g && !g.moved && !g.pinch && performance.now() - g.t < TAP_MS) {
+        // A second tap straight after the first zooms in there (like a map).
+        const now = performance.now();
+        const last = lastTap.current;
+        if (last && now - last.t < 320 && Math.hypot(e.clientX - last.x, e.clientY - last.y) < 32) {
+          lastTap.current = null;
+          window.clearTimeout(revealTimer.current);
+          const r = e.currentTarget.getBoundingClientRect();
+          zoomAt(2, e.clientX - r.left, e.clientY - r.top);
+          return;
+        }
+        lastTap.current = { t: now, x: e.clientX, y: e.clientY };
+        handleTap(e.clientX, e.clientY);
+      }
     } else if (pointers.current.size === 1 && g?.pinch) {
       // One finger left after a pinch: carry on panning from here.
       const [p] = [...pointers.current.values()];
@@ -827,7 +994,7 @@ export function PlanView({
     <div>
       <div
         ref={wrapRef}
-        className={placing ? s.boardPlacing : s.board}
+        className={`${placing ? s.boardPlacing : s.board}${full ? ` ${s.boardFull}` : ""}`}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
@@ -884,6 +1051,30 @@ export function PlanView({
           </div>
         )}
 
+        {full && (
+          <div className={s.fullBar}>
+            <button
+              type="button"
+              disabled={!floorNav.down}
+              onClick={() => floorNav.down && floorNav.go(floorNav.down.key)}
+              aria-label={floorNav.down ? `Go down to the ${floorNav.down.name}` : "No floor below"}
+            >
+              ▼
+            </button>
+            <span>{floor.name}</span>
+            <button
+              type="button"
+              disabled={!floorNav.up}
+              onClick={() => floorNav.up && floorNav.go(floorNav.up.key)}
+              aria-label={floorNav.up ? `Go up to the ${floorNav.up.name}` : "No floor above"}
+            >
+              ▲
+            </button>
+            <button type="button" className={s.fullDone} onClick={onToggleFull}>
+              Done
+            </button>
+          </div>
+        )}
         <div className={s.boardTools}>
           {!placing && floor.slab && (
             <button type="button" className={`${s.btn} ${s.btnSmall}`} onClick={onStartPlace}>
@@ -911,6 +1102,11 @@ export function PlanView({
           <button type="button" className={s.fitBtn} onClick={refit} aria-label="Fit the whole floor">
             Fit
           </button>
+          {!full && (
+            <button type="button" className={s.iconBtn} onClick={onToggleFull} aria-label="Full screen">
+              ⤢
+            </button>
+          )}
         </div>
       </div>
       <div className={s.legend}>

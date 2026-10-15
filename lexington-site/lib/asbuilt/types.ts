@@ -149,7 +149,8 @@ export type BoxEl = ColumnEl | CoreEl | OpeningEl;
 
 export type Selection =
   | { kind: "box"; list: BoxList; key: string }
-  | { kind: "edge"; key: string }
+  /** `via`: opened from a column's distance to this edge, so it can be typed from that column's face. */
+  | { kind: "edge"; key: string; via?: { list: "columns" | "cores"; key: string } }
   | { kind: "gap"; axis: Axis; to: string }
   /** The gap between two columns: `key` is the later one (it holds the gap). */
   | { kind: "colgap"; axis: Axis; list: "columns" | "cores"; key: string };

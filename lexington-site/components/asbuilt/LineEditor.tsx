@@ -8,6 +8,7 @@ import { pathOf } from "@/lib/asbuilt/paths";
 import type { Axis, Change, Floor, Selection, Tolerance } from "@/lib/asbuilt/types";
 
 import s from "./AsBuilt.module.css";
+import { MM_INPUT } from "./keys";
 import { clearFromCentres, itemName, parseMm, StatusChip, type SaveFn } from "./Sheet";
 
 interface Props {
@@ -208,7 +209,7 @@ function LineEditor({
   const arrow = axis === "x" ? "↔" : "↕";
 
   return (
-    <div className={s.lineEditor}>
+    <div className={s.lineEditor} data-tape-scope>
       <div className={s.row} style={{ justifyContent: "space-between" }}>
         <span className={s.side} role="group" aria-label="Gaps measured as">
           <button
@@ -244,7 +245,7 @@ function LineEditor({
                   ? s.numChanged
                   : s.num
               }
-              inputMode="decimal"
+              {...MM_INPUT}
               aria-label={`${itemName(it)} ${label}`}
               placeholder={sz ? mm(which === "w" ? sz.dw : sz.dh) : ""}
               value={cur[which]}
@@ -286,7 +287,7 @@ function LineEditor({
                         ? s.numChanged
                         : s.num
                     }
-                    inputMode="decimal"
+                    {...MM_INPUT}
                     aria-label={`Gap from ${itemName(g.prev)} to ${itemName(g.next)}`}
                     placeholder={mm(centres ? g.cc : g.actual)}
                     value={gapTexts[g.next.el._key] ?? ""}
@@ -301,7 +302,7 @@ function LineEditor({
       </ol>
 
       {error && <p className={s.error}>{error}</p>}
-      <div className={s.row}>
+      <div className={s.lineActions}>
         <button type="button" className={s.btnPrimary} disabled={busy} onClick={save}>
           Save this line
         </button>

@@ -74,6 +74,7 @@ export function AsBuiltApp({ initialFloors, initialKey, initialTab, realRecord }
   const [selection, setSelection] = useState<Selection | null>(null);
   const [saving, setSaving] = useState(0);
   const [placing, setPlacing] = useState(false);
+  const [full, setFull] = useState(false);
   const [settings, setSettings] = useLocalSetting<Settings>("lexington.asbuilt.settings", DEFAULT_SETTINGS);
   const toast = useToast();
   const floorRow = useRef<HTMLElement>(null);
@@ -91,6 +92,22 @@ export function AsBuiltApp({ initialFloors, initialKey, initialTab, realRecord }
   useEffect(() => {
     floorRow.current?.querySelector('[aria-pressed="true"]')?.scrollIntoView({ block: "nearest", inline: "center" });
   }, [floorKey]);
+
+  // Full-screen plan: the page behind doesn't scroll, and Esc leaves it.
+  useEffect(() => {
+    if (!full) return;
+    const html = document.documentElement;
+    const before = html.style.overflow;
+    html.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setFull(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      html.style.overflow = before;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [full]);
 
   // Keep the address in step, so a refresh (or a saved link) opens the same floor and tab.
   useEffect(() => {
@@ -182,6 +199,7 @@ export function AsBuiltApp({ initialFloors, initialKey, initialTab, realRecord }
 
   const chooseTab = (key: AsBuiltTab) => {
     setTab(key);
+    if (key !== "plan") setFull(false);
     if (key !== "plan") setPlacing(false);
   };
 
@@ -243,7 +261,7 @@ export function AsBuiltApp({ initialFloors, initialKey, initialTab, realRecord }
   ) : null;
 
   return (
-    <div className={s.app}>
+    <div className={full ? `${s.app} ${s.appFull}` : s.app}>
       {!realRecord && (
         <div className={s.devBanner}>
           Test copy: anything saved here is kept apart from the real record, so try things freely.
@@ -333,6 +351,13 @@ export function AsBuiltApp({ initialFloors, initialKey, initialTab, realRecord }
                 setPlacing(true);
               }}
               onCancelPlace={() => setPlacing(false)}
+              full={full}
+              onToggleFull={() => setFull((f) => !f)}
+              floorNav={{
+                up: [...floors].sort((a, b) => a.order - b.order).find((f) => f.order > floor.order) ?? null,
+                down: [...floors].sort((a, b) => b.order - a.order).find((f) => f.order < floor.order) ?? null,
+                go: chooseFloor,
+              }}
             />
           )}
           {tab === "list" && (

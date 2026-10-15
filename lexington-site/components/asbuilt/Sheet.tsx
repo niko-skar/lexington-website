@@ -18,6 +18,7 @@ import {
   boxStatus,
   deviationOf,
   edgeDeviation,
+  edgeReaches,
   edgeSegment,
   findBox,
   gapsAround,
@@ -52,6 +53,7 @@ import type {
 } from "@/lib/asbuilt/types";
 
 import s from "./AsBuilt.module.css";
+import { MM_INPUT } from "./keys";
 
 export type SaveFn = (changes: Change[], text: string, el?: string) => Promise<boolean>;
 
@@ -142,7 +144,8 @@ export function Sheet({ floor, selection, tol, busy, onClose, onSave }: SheetPro
   } else if (selection.kind === "edge") {
     const edge = floor.slab?.edges.find((e) => e._key === selection.key);
     if (edge) {
-      kind = "Slab edge";
+      const via = selection.via ? findBox(floor, selection.via.list, selection.via.key) : undefined;
+      kind = via ? `Slab edge, from ${boxTitle(selection.via!.list, via)}` : "Slab edge";
       title = offsetText(edge.axis, edge.actual ?? edge.design, edge.ref);
       const dev = edgeDeviation(floor, edge);
       chip = (
@@ -153,9 +156,10 @@ export function Sheet({ floor, selection, tol, busy, onClose, onSave }: SheetPro
       );
       body = (
         <EdgeBody
-          key={`${floor.key}:${edge._key}:${floor._rev ?? ""}`}
+          key={`${floor.key}:${edge._key}:${selection.via?.key ?? ""}:${floor._rev ?? ""}`}
           floor={floor}
           edgeKey={edge._key}
+          via={selection.via}
           busy={busy}
           onSave={onSave}
         />
@@ -484,7 +488,7 @@ function TapeBlock({
       <input
         id={id}
         className={value.trim() && parseMm(value) !== drawn ? s.numChanged : s.num}
-        inputMode="decimal"
+        {...MM_INPUT}
         placeholder={mm(drawn)}
         value={value}
         onChange={(e) => set(e.target.value)}
@@ -494,7 +498,7 @@ function TapeBlock({
   );
 
   return (
-    <div className={s.tape}>
+    <div className={s.tape} data-tape-scope>
       <div className={s.blockTitle}>Size, mm</div>
       <div className={s.tapeGrid}>
         {sizeField("tape-w", "Width", "across", w, setW, size.dw)}
@@ -547,7 +551,7 @@ function TapeBlock({
               <input
                 id={`gap-${key}`}
                 className={(gaps[key] ?? "").trim() && parseMm(gaps[key]) !== drawn ? s.numChanged : s.num}
-                inputMode="decimal"
+                {...MM_INPUT}
                 placeholder={mm(now)}
                 value={gaps[key] ?? ""}
                 onChange={(e) => setGaps((all) => ({ ...all, [key]: e.target.value }))}
@@ -666,7 +670,7 @@ function ColGapBody({
         <input
           id="colgap-v"
           className={s.num}
-          inputMode="decimal"
+          {...MM_INPUT}
           placeholder={mm(centres ? gap.cc : gap.actual)}
           value={text}
           onChange={(e) => setText(e.target.value)}
@@ -835,7 +839,7 @@ function FacesBlock({
               <input
                 id={`face-${f}`}
                 className={differs ? s.numChanged : s.num}
-                inputMode="decimal"
+                {...MM_INPUT}
                 value={faces[f].text}
                 onChange={(e) => setFaces((all) => ({ ...all, [f]: { ...all[f], text: e.target.value } }))}
                 onFocus={(e) => e.target.select()}
@@ -1027,11 +1031,27 @@ function nearestLine(floor: Floor, axis: Axis, v: number): string {
   return best?.id ?? "";
 }
 
-function EdgeBody({ floor, edgeKey, busy, onSave }: { floor: Floor; edgeKey: string; busy: boolean; onSave: SaveFn }) {
+function EdgeBody({
+  floor,
+  edgeKey,
+  via,
+  busy,
+  onSave,
+}: {
+  floor: Floor;
+  edgeKey: string;
+  via?: { list: TapeList; key: string };
+  busy: boolean;
+  onSave: SaveFn;
+}) {
   const edge = floor.slab?.edges.find((e) => e._key === edgeKey);
   const current = edge ? (edge.actual ?? edge.design) : 0;
+  const reach = via
+    ? edgeReaches(floor).find((r) => r.edge._key === edgeKey && r.item.list === via.list && r.item.el._key === via.key)
+    : undefined;
   const [text, setText] = useState(mm(Math.abs(current)));
   const [neg, setNeg] = useState(current === 0 ? (edge?.design ?? 0) < 0 : current < 0);
+  const [fromText, setFromText] = useState("");
   if (!edge || !floor.slab) return null;
 
   const corners = slabCorners(floor, "actual");
@@ -1057,8 +1077,71 @@ function EdgeBody({ floor, edgeKey, busy, onSave }: { floor: Floor; edgeKey: str
     );
   };
 
+  // Typed from the column face: the edge sits that far from the face, on the edge's side.
+  const fromTyped = parseMm(fromText);
+  const fromValue = (() => {
+    if (!reach || fromTyped === null) return null;
+    const line = floor.grid.find((g) => g.axis === edge.axis && g.id === edge.ref);
+    if (!line) return null;
+    const pos = reach.to > reach.from ? reach.from + fromTyped : reach.from - fromTyped;
+    return Math.round((pos - (line.design + (line.shift ?? 0))) * 10) / 10;
+  })();
+  const saveFromColumn = async () => {
+    if (!reach || fromValue === null || fromTyped === null) return;
+    const who = reach.item.list === "columns" ? gridRef(reach.item.el) : reach.item.el.name;
+    await onSave(
+      [
+        { path: pathOf("slab.edges", edge._key, "actual"), value: fromValue },
+        { path: pathOf("slab.edges", edge._key, "at"), value: nowIso() },
+      ],
+      `Slab edge by ${span}: ${mm(fromTyped)} from ${who} (${offsetText(edge.axis, fromValue, edge.ref)})`,
+      edge._key,
+    );
+  };
+
   return (
     <>
+      {reach && (
+        <div className={s.tape}>
+          <div className={s.blockTitle}>From the column face to the edge, mm</div>
+          <label className={s.gapRow} htmlFor="edge-from">
+            <span>
+              <b>{reach.item.list === "columns" ? boxTitle("columns", reach.item.el) : reach.item.el.name}</b>
+              <small>
+                drawing {reach.design === null ? "?" : mm(reach.design)} · now {mm(reach.distance)}
+              </small>
+            </span>
+            <input
+              id="edge-from"
+              className={s.num}
+              inputMode="numeric"
+              pattern="[0-9]*"
+              enterKeyHint="done"
+              placeholder={mm(reach.distance)}
+              value={fromText}
+              onChange={(e) => setFromText(e.target.value)}
+              onFocus={(e) => e.target.select()}
+            />
+          </label>
+          {fromValue !== null && (
+            <div className={s.derived}>
+              The edge is then {offsetText(edge.axis, fromValue, edge.ref)}
+              {Math.round(fromValue) !== Math.round(edge.design) ? ` (drawing ${mm(Math.abs(edge.design))})` : ""}.
+            </div>
+          )}
+          <div className={s.row}>
+            <button
+              type="button"
+              className={s.btnPrimary}
+              disabled={busy || fromValue === null}
+              onClick={saveFromColumn}
+            >
+              Save
+            </button>
+          </div>
+          <p className={s.hint}>Or set it from the grid line below.</p>
+        </div>
+      )}
       <p className={s.fact}>
         <span className={s.factStrong}>Drawing:</span> {offsetText(edge.axis, edge.design, edge.ref)}
         {span && `, running ${span}`}.
@@ -1079,7 +1162,7 @@ function EdgeBody({ floor, edgeKey, busy, onSave }: { floor: Floor; edgeKey: str
           <input
             id="edge-v"
             className={s.num}
-            inputMode="decimal"
+            {...MM_INPUT}
             value={text}
             onChange={(e) => setText(e.target.value)}
             onFocus={(e) => e.target.select()}
@@ -1209,7 +1292,7 @@ function GapBody({
         <input
           id="gap-v"
           className={s.num}
-          inputMode="decimal"
+          {...MM_INPUT}
           value={text}
           onChange={(e) => setText(e.target.value)}
           onFocus={(e) => e.target.select()}
