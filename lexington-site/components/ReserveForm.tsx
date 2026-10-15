@@ -257,11 +257,13 @@ export function ReserveForm({ units, contactPhone, contactEmail, whatsappHref }:
             <ol className={styles.doneSteps}>
               <li>Open the form and check your name and details.</li>
               <li>
-                Phone us on <a href={`tel:${contactPhone.replace(/[^\d+]/g, "")}`}>{contactPhone}</a> to confirm the bank
-                details, then send the US${RESERVATION_FEE_USD.toLocaleString("en-US")} by bank transfer, in US dollars.
+                One of our sales advisors will contact you to agree how you would like to pay the US$
+                {RESERVATION_FEE_USD.toLocaleString("en-US")} reservation fee, and will send you the bank details that match.
               </li>
               <li>
-                Email your proof of payment to <a href={`mailto:${contactEmail}`}>{contactEmail}</a>.
+                Before you send any money, phone us on <a href={`tel:${contactPhone.replace(/[^\d+]/g, "")}`}>{contactPhone}</a>{" "}
+                to confirm the bank details. Then email your proof of payment to{" "}
+                <a href={`mailto:${contactEmail}`}>{contactEmail}</a>.
               </li>
               <li>We&rsquo;ll confirm your residence in writing, and your payment receipt follows once the payment has arrived.</li>
             </ol>
@@ -696,8 +698,8 @@ export function ReserveForm({ units, contactPhone, contactEmail, whatsappHref }:
             <div className="eyebrow">Reservation fee</div>
             <p className={styles.feeAmount}>US${RESERVATION_FEE_USD.toLocaleString("en-US")}</p>
             <p>
-              Paid by bank transfer, in US dollars. When you press the button we email you the reservation fee form with the
-              bank details. Nothing is charged on this website.
+              When you press the button we email you the reservation fee form. A sales advisor then agrees with you how
+              you would like to pay and sends you the bank details. Nothing is charged on this website.
             </p>
           </div>
 

@@ -19,7 +19,6 @@ import {
 } from "@/lib/reservation/config";
 import { allow, connectionKey } from "@/lib/reservation/limit";
 import { buildReservationFormPdf } from "@/lib/reservation/pdf";
-import { getReservationSettings } from "@/lib/reservation/settings";
 import {
   answerRows,
   crmSummary,
@@ -94,10 +93,7 @@ export async function submitReservation(
     );
   }
 
-  const [siteSettings, settings] = await Promise.all([
-    client.fetch<SiteSettings>(siteSettingsQuery),
-    getReservationSettings(),
-  ]);
+  const siteSettings = await client.fetch<SiteSettings>(siteSettingsQuery);
 
   // The unit they picked: check it is real and still available right now.
   let unit: Unit | null = null;
@@ -134,42 +130,29 @@ export async function submitReservation(
     source: CRM_SOURCE_FROM_HEARD[input.heard] ?? "website",
     summary: crmSummary(input, facts),
     tasks: [
-      { text: `Get in touch with ${first}: they asked to reserve (see the notes)`, dueInDays: 0, waitingOn: "me" },
+      { text: `Get in touch with ${first}: agree how they will pay the reservation fee, then send them the bank details`, dueInDays: 0, waitingOn: "me" },
       { text: `Check whether ${first} has sent the US$${RESERVATION_FEE_USD.toLocaleString("en-US")} reservation fee`, dueInDays: 3, waitingOn: "them" },
     ],
   });
   const crmUrl = leadId ? `${SITE_URL}/admin/crm/${leadId}` : undefined;
 
-  // The form itself.
+  // The form itself. It carries no bank details: which account to pay into depends on
+  // how the buyer wants to pay, so a sales advisor agrees that with them and sends them.
   let pdf: Uint8Array | null = null;
   let held = ""; // why the form was not sent, in plain words
-  if (!settings) {
-    held = "the reservation form settings (bank details) aren't complete, so no form could be made";
-  } else {
-    try {
-      pdf = await buildReservationFormPdf({
-        buyerName: input.name,
-        unitNumber: unit?.unitNumber,
-        apartmentFact: type?.fact ?? "To be confirmed",
-        apartmentLine: type?.line ?? "Apartment to be confirmed",
-        amountUSD: RESERVATION_FEE_USD,
-        issuedOn: new Date().toISOString().slice(0, 10),
-        bank: {
-          owner: settings.accountOwner,
-          bank: settings.bankName,
-          account: settings.accountNumber,
-          routing: settings.routingNumber,
-          address: settings.accountAddress,
-          extra: settings.extraLines,
-          reference: settings.paymentReference,
-        },
-        contact: { phone: siteSettings.contactPhone, email: siteSettings.contactEmail, address: siteSettings.officeAddress },
-      });
-    } catch (err) {
-      console.error("Could not build the reservation form:", err);
-      held = "the reservation form could not be made";
-    }
-    if (pdf && !settings.autoSend) held = "automatic sending is switched off in the reservation form settings";
+  try {
+    pdf = await buildReservationFormPdf({
+      buyerName: input.name,
+      unitNumber: unit?.unitNumber,
+      apartmentFact: type?.fact ?? "To be confirmed",
+      apartmentLine: type?.line ?? "Apartment to be confirmed",
+      amountUSD: RESERVATION_FEE_USD,
+      issuedOn: new Date().toISOString().slice(0, 10),
+      contact: { phone: siteSettings.contactPhone, email: siteSettings.contactEmail, address: siteSettings.officeAddress },
+    });
+  } catch (err) {
+    console.error("Could not build the reservation form:", err);
+    held = "the reservation form could not be made";
   }
 
   const apiKey = process.env.RESEND_API_KEY;
@@ -209,7 +192,7 @@ export async function submitReservation(
 
   // 2) The sales inbox: everything they answered, and the form to forward if it didn't go out.
   const outcome = formEmailed
-    ? `The reservation fee form was emailed to ${input.email}.`
+    ? `The reservation fee form was emailed to ${input.email}. It has no bank details on it: next, agree with ${first} how they want to pay, then send them the bank details.`
     : buyerMailOk
       ? `The form was NOT sent automatically (${held}). They were told a sales advisor will send it. ${pdf ? "The form is attached: forward it to them." : ""}`.trim()
       : `The email to ${input.email} did NOT go out. Send them the reservation form by hand. ${pdf ? "It is attached." : "(No form could be made either.)"}`.trim();

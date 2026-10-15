@@ -6,9 +6,13 @@ import { PDFDocument, StandardFonts, rgb, type PDFFont } from "pdf-lib";
 // the first buyer on 9 Oct 2026, now filled in automatically from the website
 // flow. If the receipt's look is ever changed, change this to match.
 //
-// Deliberately NOT on the form: refund, hold-period or "credited to the price"
-// terms (none have been given for reservations), and the seller's signature (it
-// goes on a form only when Niko asks for it).
+// Deliberately NOT on the form:
+//  - bank details (14 Oct 2026, Niko: which account to pay into depends on how the
+//    buyer wants to pay, so a sales advisor agrees that with them and sends the
+//    details separately; the form only says so);
+//  - refund, hold-period or "credited to the price" terms (none have been given
+//    for reservations);
+//  - the seller's signature (it goes on a form only when Niko asks for it).
 
 const NAVY = rgb(62 / 255, 89 / 255, 108 / 255);
 const PAPER = rgb(247 / 255, 244 / 255, 236 / 255);
@@ -25,8 +29,6 @@ const PAGE_H = 841.89;
 const MARGIN = 48;
 const CONTENT_W = PAGE_W - MARGIN * 2;
 const FOOTER_TOP = 76;
-/** More lines than this in the bank box and the signing space no longer fits above the footer. */
-export const MAX_EXTRA_LINES = 3;
 
 const MONTHS = [
   "January", "February", "March", "April", "May", "June",
@@ -51,16 +53,6 @@ export interface ReservationFormData {
   amountUSD: number;
   /** YYYY-MM-DD */
   issuedOn: string;
-  bank: {
-    owner: string;
-    bank: string;
-    account: string;
-    routing: string;
-    address: string;
-    /** Extra lines (international wire details and the like), printed under the address. */
-    extra?: Array<{ label: string; value: string }>;
-    reference: string;
-  };
   contact: { phone?: string; email?: string; address?: string };
 }
 
@@ -162,7 +154,7 @@ export async function buildReservationFormPdf(
   const facts: Array<[string, string]> = [
     ["Date issued", longDate(data.issuedOn)],
     ["Apartment", data.apartmentFact],
-    ["Pay by", "Bank transfer, US dollars"],
+    ["Payment", "Agreed with you first"],
   ];
   facts.forEach(([name, value], i) => {
     const x = MARGIN + i * (CONTENT_W / 3);
@@ -186,7 +178,8 @@ export async function buildReservationFormPdf(
   page.drawRectangle({ x: MARGIN, y: y - amountH, width: CONTENT_W, height: amountH, color: PAPER_DIM, borderColor: STONE, borderWidth: 0.6 });
   label("Reservation fee", MARGIN + 22, y - 24);
   draw(`USD ${money(data.amountUSD)}`, MARGIN + 22, y - 54, serifBold, 34);
-  draw("This fee secures your residence at The Lexington. Pay it by bank transfer, in US dollars.", MARGIN + 22, y - 72, sans, 9.5, GREY);
+  const secures = fit("This fee secures your residence at The Lexington. Your sales advisor agrees with you how to pay it.", sans, 9.5, CONTENT_W - 44, 8);
+  draw(secures.text, MARGIN + 22, y - 72, sans, secures.size, GREY);
 
   // ---- your details ----
   y -= amountH + 30;
@@ -216,46 +209,46 @@ export async function buildReservationFormPdf(
   rule(y);
 
   // ---- how to pay ----
+  // No bank details on the form: which account to pay into depends on how the buyer
+  // wants to pay, so a sales advisor agrees that with them first and sends the details.
   y -= 24;
   label("How to pay", MARGIN, y);
-  const rows: Array<[string, string]> = [
-    ["Account owner", data.bank.owner],
-    ["Bank", data.bank.bank],
-    ["Account number", data.bank.account],
-    ["Routing number", data.bank.routing],
-    ["Account address", data.bank.address],
-    ...(data.bank.extra ?? []).slice(0, MAX_EXTRA_LINES).map((e) => [e.label, e.value] as [string, string]),
-    ["Payment reference", data.bank.reference],
+  const phoneLine = data.contact.phone
+    ? `Phone us on ${data.contact.phone} to confirm the bank details before you send any money.`
+    : "Please confirm the bank details with us before you send any money.";
+  const proofLine = data.contact.email ? ` Then email your proof of payment to ${data.contact.email}.` : " Then send us your proof of payment.";
+  const steps: Array<[string, string]> = [
+    ["Next step", "Your sales advisor will contact you to agree how you would like to pay. They will then send you the bank details that match."],
+    ["Before you pay", phoneLine + proofLine],
   ];
-  // The bank lines shrink a little when there are extra ones, so the page still fits.
-  const rowH = rows.length <= 6 ? 18 : Math.max(13.5, 18 - (rows.length - 6) * 1.6);
-  const boxTop = y - 12;
-  const boxH = rows.length * rowH + 16;
-  page.drawRectangle({ x: MARGIN, y: boxTop - boxH, width: CONTENT_W, height: boxH, color: PAPER, borderColor: STONE, borderWidth: 0.6 });
-  rows.forEach(([name, value], i) => {
-    const ry = boxTop - 22 - i * rowH;
-    label(name, MARGIN + 18, ry);
-    const strong = name === "Account number" || name === "Routing number";
-    const f = fit(value, strong ? sansBold : sans, strong ? 12.5 : 11, CONTENT_W - 170 - 18, 8.5);
-    draw(f.text, MARGIN + 170, ry - 1, strong ? sansBold : sans, f.size, INK);
+  const valueX = MARGIN + 170;
+  const valueW = CONTENT_W - 170 - 18;
+  const LINE = 14;
+  const wrapped = steps.map(([, text]) => wrap(text, sans, 10.5, valueW));
+  let lastBaseline = 24; // distance from the top of the box to the last line of text
+  wrapped.forEach((lines, i) => {
+    lastBaseline += (lines.length - 1) * LINE + (i < wrapped.length - 1 ? LINE + 10 : 0);
   });
-  y = boxTop - boxH - 15;
-  const safety = wrap(
-    `Before you send money, please phone us on ${data.contact.phone ?? ""} to confirm these details. Then email your proof of payment to ${data.contact.email ?? ""}.`,
-    sans, 8.5, CONTENT_W
-  );
-  safety.forEach((line, i) => draw(line, MARGIN, y - i * 12, sans, 8.5, GREY));
-  y -= safety.length * 12 + 12;
+  const boxTop = y - 12;
+  const boxH = lastBaseline + 16;
+  page.drawRectangle({ x: MARGIN, y: boxTop - boxH, width: CONTENT_W, height: boxH, color: PAPER, borderColor: STONE, borderWidth: 0.6 });
+  let ry = boxTop - 24;
+  steps.forEach(([name], i) => {
+    label(name, MARGIN + 18, ry);
+    wrapped[i].forEach((line, j) => draw(line, valueX, ry - 1 - j * LINE, sans, 10.5, INK));
+    ry -= wrapped[i].length * LINE + 10;
+  });
+  y = boxTop - boxH - 24;
 
   // ---- agreement and signatures ----
   const agree = wrap(
-    `I would like to reserve the apartment described above at The Lexington and will pay the reservation fee of USD ${money(data.amountUSD)} using the bank details on this form. I understand that the unit number will be confirmed in writing, and that the full terms of my purchase will be set out in the Sale and Purchase Agreement.`,
+    `I would like to reserve the apartment described above at The Lexington and will pay the reservation fee of USD ${money(data.amountUSD)} using the bank details my sales advisor sends me. I understand that the unit number will be confirmed in writing, and that the full terms of my purchase will be set out in the Sale and Purchase Agreement.`,
     sans, 8.5, CONTENT_W
   );
   agree.forEach((line, i) => draw(line, MARGIN, y - i * 12, sans, 8.5, INK));
   y -= agree.length * 12;
-  // Room to sign is 40pt, squeezed (never below 30pt) when a long bank box leaves less.
-  y -= Math.max(30, Math.min(40, y - (FOOTER_TOP + 21)));
+  // Room to sign is 48pt, squeezed (never below 30pt) if the page is ever short of space.
+  y -= Math.max(30, Math.min(48, y - (FOOTER_TOP + 21)));
   const sigW = (CONTENT_W - 30) / 2;
   const leftX = MARGIN;
   const rightX = MARGIN + sigW + 30;

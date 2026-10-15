@@ -11,7 +11,6 @@ import { buyerAccount } from "./buyerAccount";
 import { standardAgreements } from "./standardAgreements";
 import { lead } from "./lead";
 import { receipt } from "./receipt";
-import { reservationSettings } from "./reservationSettings";
 
 export const schemaTypes = [
   unit,
@@ -30,4 +29,4 @@ export const schemaTypes = [
 // public schema above so nobody can create a buyer record while
 // browsing the public workspace, and so this sensitive data never
 // touches the publicly-readable production dataset.
-export const buyersSchemaTypes = [buyerAccount, standardAgreements, lead, receipt, reservationSettings];
+export const buyersSchemaTypes = [buyerAccount, standardAgreements, lead, receipt];

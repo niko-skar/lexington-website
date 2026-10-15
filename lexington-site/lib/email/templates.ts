@@ -304,8 +304,9 @@ function factsBox(rows: Array<[string, string]>) {
 }
 
 // Sent to the buyer the moment they finish the reservation questions; the PDF
-// reservation fee form travels as an attachment. The bank details are in the PDF
-// only, not in this email's text.
+// reservation fee form travels as an attachment. There are no bank details in it
+// or in this email: a sales advisor agrees with the buyer how they want to pay and
+// sends the matching details afterwards.
 export function reservationFormEmail({
   name,
   residenceText,
@@ -323,8 +324,8 @@ export function reservationFormEmail({
   const firstName = name.trim().split(/\s+/)[0] || name;
   const steps = [
     "Open the attached form and check your name and details.",
-    `Phone us on ${siteSettings.contactPhone} to confirm the bank details. Then send the ${amountText} by bank transfer, in US dollars.`,
-    `Email your proof of payment to ${siteSettings.contactEmail}.`,
+    "One of our sales advisors will contact you to agree how you would like to pay the reservation fee, and will send you the bank details that match.",
+    `Before you send any money, phone us on ${siteSettings.contactPhone} to confirm the bank details. Then email your proof of payment to ${siteSettings.contactEmail}.`,
     "We will confirm your residence in writing, and a payment receipt follows once your payment has been received.",
   ];
 
@@ -342,7 +343,7 @@ export function reservationFormEmail({
     ${factsBox([
       ["Residence", residenceText],
       ["Reservation fee", amountText],
-      ["Pay by", "Bank transfer, in US dollars"],
+      ["Payment", "We agree it with you first"],
     ])}
     <tr>
       <td style="padding:0 40px 8px;">
@@ -375,9 +376,9 @@ export function reservationFormEmail({
   };
 }
 
-// Sent instead of the form when it can't go out automatically (switched off in
-// the settings, or the bank details aren't complete): the request is safe and a
-// person will send the form.
+// Sent instead of the form when it can't go out automatically (the form could not
+// be made, or the email service refused it): the request is safe and a person will
+// send the form.
 export function reservationReceivedEmail({
   name,
   residenceText,

@@ -57,8 +57,8 @@ export default async function ReservePage() {
                 <div className="eyebrow">What happens next</div>
                 <ol className={styles.steps}>
                   <li>Tell us about you and the residence you want.</li>
-                  <li>We email you the reservation fee form ({fee}) with the bank details.</li>
-                  <li>You pay by bank transfer, in US dollars, and email us the proof of payment.</li>
+                  <li>We email you the reservation fee form ({fee}) straight away.</li>
+                  <li>A sales advisor contacts you to agree how you would like to pay, and sends you the bank details.</li>
                   <li>We confirm your residence in writing, and your payment receipt follows.</li>
                 </ol>
               </div>

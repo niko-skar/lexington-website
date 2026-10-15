@@ -228,7 +228,7 @@ export default async function HomePage() {
             </h2>
             <p style={{ maxWidth: 560, margin: "18px auto 0", color: "#555", fontSize: 16.5 }}>
               Flexible self-finance and mortgage payment plans are available,
-              with early-payment discounts of up to 12.5%.
+              with early-payment discounts of up to 15%.
             </p>
             <div style={{ marginTop: 32 }}>
               <Button href="/reserve" variant="clay">
