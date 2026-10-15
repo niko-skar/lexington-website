@@ -7,6 +7,8 @@ import {
   allBoxes,
   boxOf,
   boxStatus,
+  chainLines,
+  chainOf,
   edgeDeviation,
   edgeSegment,
   extentsOf,
@@ -15,6 +17,7 @@ import {
   linePos,
   slabCorners,
   statusFor,
+  tapeGaps,
   type Box,
   type Point,
   type Status,
@@ -84,6 +87,7 @@ function sameSel(a: Selection | null, b: Selection): boolean {
   if (a.kind === "box" && b.kind === "box") return a.list === b.list && a.key === b.key;
   if (a.kind === "edge" && b.kind === "edge") return a.key === b.key;
   if (a.kind === "gap" && b.kind === "gap") return a.axis === b.axis && a.to === b.to;
+  if (a.kind === "colgap" && b.kind === "colgap") return a.axis === b.axis && a.key === b.key;
   return false;
 }
 
@@ -231,6 +235,9 @@ export function PlanView({
         hotLines.add(`x:${el.x}`);
         hotLines.add(`y:${el.y}`);
       }
+    } else if (selection?.kind === "colgap") {
+      const el = (floor[selection.list] as BoxEl[]).find((e) => e._key === selection.key);
+      if (el) hotLines.add(selection.axis === "x" ? `y:${el.y}` : `x:${el.x}`);
     }
 
     // Grid lines (under the drawing).
@@ -423,6 +430,83 @@ export function PlanView({
       });
     }
 
+    // Gaps between columns, face to face: along every row, and down the line of the chosen column.
+    if (k >= 0.012) {
+      const chosen =
+        selection?.kind === "box" || selection?.kind === "colgap"
+          ? (floor[selection.list] as BoxEl[]).find((e) => e._key === selection.key)
+          : undefined;
+      const drawChain = (axis: "x" | "y", lineId: string) => {
+        const gaps = tapeGaps(floor, axis, lineId);
+        if (!gaps.length) return;
+        // Just outside the row: below its lowest face (or right of a line's furthest face).
+        let edge = -Infinity;
+        for (const it of chainOf(floor, axis, lineId)) {
+          const b = boxOf(floor, it.el, "actual");
+          if (b) edge = Math.max(edge, axis === "x" ? b.y1 : b.x1);
+        }
+        const at = (axis === "x" ? sy(edge) : sx(edge)) + 13;
+        for (const g of gaps) {
+          const pb = boxOf(floor, g.prev.el, "actual");
+          const nb = boxOf(floor, g.next.el, "actual");
+          if (!pb || !nb) continue;
+          const a = axis === "x" ? sx(pb.x1) : sy(pb.y1);
+          const b = axis === "x" ? sx(nb.x0) : sy(nb.y0);
+          if (b - a < 30) continue;
+          if (
+            axis === "x"
+              ? b < -10 || a > W + 10 || at < -10 || at > H + 10
+              : b < -10 || a > H + 10 || at < -10 || at > W + 10
+          )
+            continue;
+          const sel: Selection = { kind: "colgap", axis, list: g.next.list, key: g.next.el._key };
+          const hot = sameSel(selection, sel);
+          const cls = hot
+            ? `${s.dimText} ${s.dimHot}`
+            : g.measured
+              ? DIM_CLASS[statusFor(Math.abs(g.actual - g.design), tol)]
+              : s.colGapText;
+          const label = mm(g.actual);
+          const key = `cg${axis}${g.next.el._key}`;
+          if (axis === "x") {
+            over.push(
+              <line key={`${key}l`} x1={a} x2={b} y1={at} y2={at} className={s.colGapLine} />,
+              tick(a, at, `${key}a`),
+              tick(b, at, `${key}b`),
+            );
+            if (b - a >= label.length * 6.6 + 8)
+              over.push(
+                <text key={`${key}t`} x={(a + b) / 2} y={at - 7} className={cls}>
+                  {label}
+                </text>,
+              );
+            hits.push({ sel, x: a, y: at - 17, w: b - a, h: 24 });
+          } else {
+            over.push(
+              <line key={`${key}l`} y1={a} y2={b} x1={at} x2={at} className={s.colGapLine} />,
+              tick(at, a, `${key}a`),
+              tick(at, b, `${key}b`),
+            );
+            if (b - a >= label.length * 6.6 + 8)
+              over.push(
+                <text
+                  key={`${key}t`}
+                  x={at + 8}
+                  y={(a + b) / 2}
+                  transform={`rotate(-90 ${at + 8} ${(a + b) / 2})`}
+                  className={cls}
+                >
+                  {label}
+                </text>,
+              );
+            hits.push({ sel, x: at - 6, y: a, w: 22, h: b - a });
+          }
+        }
+      };
+      for (const id of chainLines(floor, "x")) drawChain("x", id);
+      if (chosen && "x" in chosen) drawChain("y", chosen.x);
+    }
+
     // Names of things, once there is room for them.
     if (k >= 0.04) {
       for (const { list, el } of allBoxes(floor)) {
@@ -430,7 +514,10 @@ export function PlanView({
         if (!b) continue;
         const cx = sx((b.x0 + b.x1) / 2);
         if (list === "columns") {
-          const name = (el as ColumnEl).name;
+          const c = el as ColumnEl;
+          // A taped size shows next to the type, e.g. "C1 310×600".
+          const sized = c.w != null || c.h != null;
+          const name = sized && k >= 0.06 ? `${c.name} ${mm(b.x1 - b.x0)}×${mm(b.y1 - b.y0)}` : c.name;
           over.push(
             <text key={`n${el._key}`} x={cx} y={sy(b.y1) + 9} className={s.elLabel}>
               {name}

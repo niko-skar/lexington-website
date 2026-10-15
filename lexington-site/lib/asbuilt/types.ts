@@ -49,7 +49,24 @@ export interface SlabEdge {
   at?: string | null;
 }
 
-export interface ColumnEl {
+/**
+ * What gets taped on site (Niko, 15 Oct 2026): each column's size, and the clear gap
+ * from the column before it along its row (gx, along a lettered-grid row) and along its
+ * line (gy, down a lettered line). A gap is stored on the later column of the pair.
+ * Positions follow from these: each column sits its gap past the one before it.
+ */
+export interface TapeMeasures {
+  /** Width across the page (x), mm. */
+  w?: number | null;
+  /** Depth down the page (y), mm. */
+  h?: number | null;
+  /** Clear gap, face to face, from the previous column along the same row. */
+  gx?: number | null;
+  /** Clear gap, face to face, from the previous column down the same line. */
+  gy?: number | null;
+}
+
+export interface ColumnEl extends TapeMeasures {
   _key: string;
   /** Type mark on the drawings: C1, C1a, SW4 ... */
   name: string;
@@ -64,7 +81,7 @@ export interface ColumnEl {
   note?: string | null;
 }
 
-export interface CoreEl {
+export interface CoreEl extends TapeMeasures {
   _key: string;
   name: string;
   x: string;
@@ -131,7 +148,11 @@ export type BoxList = "columns" | "cores" | "openings";
 export type BoxEl = ColumnEl | CoreEl | OpeningEl;
 
 export type Selection =
-  { kind: "box"; list: BoxList; key: string } | { kind: "edge"; key: string } | { kind: "gap"; axis: Axis; to: string };
+  | { kind: "box"; list: BoxList; key: string }
+  | { kind: "edge"; key: string }
+  | { kind: "gap"; axis: Axis; to: string }
+  /** The gap between two columns: `key` is the later one (it holds the gap). */
+  | { kind: "colgap"; axis: Axis; list: "columns" | "cores"; key: string };
 
 /** One stored change: a path into the floor document and its new value (null = remove). */
 export interface Change {

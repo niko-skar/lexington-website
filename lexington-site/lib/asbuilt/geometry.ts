@@ -1,4 +1,17 @@
-import type { Axis, BoxEl, BoxList, ColumnEl, CoreFaces, Faces, Floor, GridLine, SlabEdge, Tolerance } from "./types";
+import type {
+  Axis,
+  BoxEl,
+  BoxList,
+  ColumnEl,
+  CoreEl,
+  CoreFaces,
+  Faces,
+  Floor,
+  GridLine,
+  SlabEdge,
+  TapeMeasures,
+  Tolerance,
+} from "./types";
 
 /** "design" = the drawing; "actual" = as built where measured, the drawing elsewhere. */
 export type Mode = "design" | "actual";
@@ -87,16 +100,183 @@ export function boxFromFaces(floor: Floor, el: { x: string; y: string }, faces: 
 }
 
 export function boxOf(floor: Floor, el: BoxEl, mode: Mode): Box | null {
+  if (mode === "actual") {
+    const list = tapeListOf(el);
+    if (list) {
+      const resolved = resolvedBoxes(floor).get(`${list}:${el._key}`);
+      return resolved ? { ...resolved } : null;
+    }
+  }
   const faces = facesOf(el, mode);
   return faces ? boxFromFaces(floor, el, faces, mode) : null;
+}
+
+// ---- taped on site: sizes and the gaps between columns ------------------------------
+
+export type TapeList = "columns" | "cores";
+export type TapeEl = ColumnEl | CoreEl;
+export interface TapeItem {
+  list: TapeList;
+  el: TapeEl;
+}
+
+/** Columns and walls (kind column/wall) and lift cores (with a wall thickness) are taped; openings are not. */
+export function tapeListOf(el: BoxEl): TapeList | null {
+  if ("kind" in el && (el.kind === "column" || el.kind === "wall")) return "columns";
+  if (el.design && "wall" in el.design) return "cores";
+  return null;
+}
+
+const has = (v: number | null | undefined): v is number => v !== null && v !== undefined;
+
+/**
+ * Columns, walls and lift cores standing on one grid line, in order along it.
+ * axis "x": the row on numbered line `lineId` (B, C, D ... left to right);
+ * axis "y": the line down lettered line `lineId` (2, 3, 4 ... top to bottom).
+ */
+export function chainOf(floor: Floor, axis: Axis, lineId: string): TapeItem[] {
+  const items: TapeItem[] = [
+    ...floor.columns.map((el) => ({ list: "columns" as const, el })),
+    ...floor.cores.map((el) => ({ list: "cores" as const, el })),
+  ].filter(({ el }) => (axis === "x" ? el.y : el.x) === lineId);
+  const at = (it: TapeItem) => {
+    const b = boxFromFaces(floor, it.el, it.el.design, "design");
+    return b ? centreOf(b)[axis === "x" ? 0 : 1] : 0;
+  };
+  return items.sort((a, b) => at(a) - at(b));
+}
+
+/** The lines with two or more things standing on them, so there is a gap to tape. */
+export function chainLines(floor: Floor, axis: Axis): string[] {
+  const lines = gridLines(floor, axis === "x" ? "y" : "x");
+  return lines.map((l) => l.id).filter((id) => chainOf(floor, axis, id).length >= 2);
+}
+
+const resolvedCache = new WeakMap<Floor, Map<string, Box>>();
+
+/**
+ * Where every column, wall and lift core really is. Start from the grid lines (the
+ * faces measured from them, or the drawing), give each its measured size, then walk
+ * along each row and down each line: a column with a measured gap sits that gap past
+ * the one before it, so changing one gap carries on to the columns after it.
+ */
+export function resolvedBoxes(floor: Floor): Map<string, Box> {
+  const cached = resolvedCache.get(floor);
+  if (cached) return cached;
+  const boxes = new Map<string, Box>();
+  const lists: TapeList[] = ["columns", "cores"];
+  for (const list of lists) {
+    for (const el of floor[list] as TapeEl[]) {
+      const b = boxFromFaces(floor, el, el.actual ?? el.design, "actual");
+      if (!b) continue;
+      const [cx, cy] = centreOf(b);
+      if (has(el.w)) {
+        b.x0 = cx - el.w / 2;
+        b.x1 = cx + el.w / 2;
+      }
+      if (has(el.h)) {
+        b.y0 = cy - el.h / 2;
+        b.y1 = cy + el.h / 2;
+      }
+      boxes.set(`${list}:${el._key}`, b);
+    }
+  }
+  for (const axis of ["x", "y"] as const) {
+    for (const lineId of chainLines(floor, axis)) {
+      const chain = chainOf(floor, axis, lineId);
+      for (let i = 1; i < chain.length; i += 1) {
+        const gap = axis === "x" ? chain[i].el.gx : chain[i].el.gy;
+        if (!has(gap)) continue;
+        const prev = boxes.get(`${chain[i - 1].list}:${chain[i - 1].el._key}`);
+        const cur = boxes.get(`${chain[i].list}:${chain[i].el._key}`);
+        if (!prev || !cur) continue;
+        if (axis === "x") {
+          const w = cur.x1 - cur.x0;
+          cur.x0 = prev.x1 + gap;
+          cur.x1 = cur.x0 + w;
+        } else {
+          const h = cur.y1 - cur.y0;
+          cur.y0 = prev.y1 + gap;
+          cur.y1 = cur.y0 + h;
+        }
+      }
+    }
+  }
+  resolvedCache.set(floor, boxes);
+  return boxes;
+}
+
+export interface TapeGap {
+  axis: Axis;
+  prev: TapeItem;
+  next: TapeItem;
+  /** Clear gap, face to face, on the drawing. */
+  design: number;
+  /** Clear gap as things stand (as built where measured). */
+  actual: number;
+  /** Centre to centre, as things stand and on the drawing. */
+  cc: number;
+  ccDesign: number;
+  /** The gap itself was taped (it is stored on `next`). */
+  measured: boolean;
+}
+
+/** Every gap along one row (axis x) or down one line (axis y). */
+export function tapeGaps(floor: Floor, axis: Axis, lineId: string): TapeGap[] {
+  const chain = chainOf(floor, axis, lineId);
+  const out: TapeGap[] = [];
+  const lo = axis === "x" ? "x0" : "y0";
+  const hi = axis === "x" ? "x1" : "y1";
+  const c = axis === "x" ? 0 : 1;
+  for (let i = 1; i < chain.length; i += 1) {
+    const prev = chain[i - 1];
+    const next = chain[i];
+    const pa = boxOf(floor, prev.el, "actual");
+    const na = boxOf(floor, next.el, "actual");
+    const pd = boxOf(floor, prev.el, "design");
+    const nd = boxOf(floor, next.el, "design");
+    if (!pa || !na || !pd || !nd) continue;
+    out.push({
+      axis,
+      prev,
+      next,
+      design: round1(nd[lo] - pd[hi]),
+      actual: round1(na[lo] - pa[hi]),
+      cc: round1(centreOf(na)[c] - centreOf(pa)[c]),
+      ccDesign: round1(centreOf(nd)[c] - centreOf(pd)[c]),
+      measured: has(axis === "x" ? next.el.gx : next.el.gy),
+    });
+  }
+  return out;
+}
+
+/** The gaps on either side of one column: along its row (x) and down its line (y). */
+export function gapsAround(floor: Floor, el: TapeEl): { axis: Axis; before?: TapeGap; after?: TapeGap }[] {
+  return (["x", "y"] as const).map((axis) => {
+    const gaps = tapeGaps(floor, axis, axis === "x" ? el.y : el.x);
+    return {
+      axis,
+      before: gaps.find((g) => g.next.el._key === el._key),
+      after: gaps.find((g) => g.prev.el._key === el._key),
+    };
+  });
+}
+
+/** Width (x) and depth (y) as things stand, and on the drawing. */
+export function sizeOf(floor: Floor, el: TapeEl): { w: number; h: number; dw: number; dh: number } | null {
+  const a = boxOf(floor, el, "actual");
+  const d = boxOf(floor, el, "design");
+  if (!a || !d) return null;
+  return { w: round1(a.x1 - a.x0), h: round1(a.y1 - a.y0), dw: round1(d.x1 - d.x0), dh: round1(d.y1 - d.y0) };
 }
 
 export function centreOf(box: Box): Point {
   return [(box.x0 + box.x1) / 2, (box.y0 + box.y1) / 2];
 }
 
-export function isMeasured(el: { actual?: unknown }): boolean {
-  return el.actual !== null && el.actual !== undefined;
+/** Anything measured on this item: its faces from the grid, its size, or the gap to it. */
+export function isMeasured(el: { actual?: unknown } & TapeMeasures): boolean {
+  return (el.actual !== null && el.actual !== undefined) || has(el.w) || has(el.h) || has(el.gx) || has(el.gy);
 }
 
 export interface Deviation {
@@ -180,54 +360,6 @@ export function edgeDeviation(floor: Floor, edge: SlabEdge): number | null {
   const a = edgePos(floor, edge, "actual");
   const d = edgePos(floor, edge, "design");
   return a === null || d === null ? null : round1(a - d);
-}
-
-// ---- neighbours along the grid ---------------------------------------------------
-
-export interface Neighbour {
-  el: ColumnEl;
-  /** Which side of the column it is on. */
-  side: "left" | "right" | "up" | "down";
-  /** Centre to centre, as things stand (as built where measured). */
-  actual: number;
-  design: number;
-}
-
-/** The nearest column or wall on each side, along this column's own grid lines. */
-export function neighboursOf(floor: Floor, el: ColumnEl): Neighbour[] {
-  const me = boxOf(floor, el, "actual");
-  const meD = boxOf(floor, el, "design");
-  if (!me || !meD) return [];
-  const [mx, my] = centreOf(me);
-  const [dmx, dmy] = centreOf(meD);
-  const out: Neighbour[] = [];
-  const pick = (side: Neighbour["side"], candidates: ColumnEl[], axis: 0 | 1, sign: 1 | -1) => {
-    let best: Neighbour | null = null;
-    for (const c of candidates) {
-      if (c._key === el._key) continue;
-      const b = boxOf(floor, c, "actual");
-      const bd = boxOf(floor, c, "design");
-      if (!b || !bd) continue;
-      const along = (centreOf(b)[axis] - (axis === 0 ? mx : my)) * sign;
-      if (along <= 0) continue;
-      if (!best || along < best.actual) {
-        best = {
-          el: c,
-          side,
-          actual: round1(along),
-          design: round1((centreOf(bd)[axis] - (axis === 0 ? dmx : dmy)) * sign),
-        };
-      }
-    }
-    if (best) out.push(best);
-  };
-  const row = floor.columns.filter((c) => c.y === el.y);
-  const col = floor.columns.filter((c) => c.x === el.x);
-  pick("left", row, 0, -1);
-  pick("right", row, 0, 1);
-  pick("up", col, 1, -1);
-  pick("down", col, 1, 1);
-  return out;
 }
 
 // ---- whole floor -------------------------------------------------------------------

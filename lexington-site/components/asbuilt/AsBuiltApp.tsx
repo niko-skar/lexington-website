@@ -30,7 +30,7 @@ export type AsBuiltTab = "plan" | "list" | "setout" | "history";
 
 const TABS: { key: AsBuiltTab; label: string }[] = [
   { key: "plan", label: "Plan" },
-  { key: "list", label: "List" },
+  { key: "list", label: "Measure" },
   { key: "setout", label: "Set out" },
   { key: "history", label: "History" },
 ];
@@ -109,7 +109,9 @@ export function AsBuiltApp({ initialFloors, initialKey, initialTab, realRecord }
       const redraw = () => {
         const base = known.get(key);
         if (!base) return;
-        const shown = pending.current.filter((p) => p.key === key).reduce((acc, p) => applyChanges(acc, p.changes), base);
+        const shown = pending.current
+          .filter((p) => p.key === key)
+          .reduce((acc, p) => applyChanges(acc, p.changes), base);
         setFloors((all) => all.map((f) => (f.key === key ? shown : f)));
       };
       const id = nextId.current++;
@@ -337,8 +339,10 @@ export function AsBuiltApp({ initialFloors, initialKey, initialTab, realRecord }
             <ListView
               floor={floor}
               tol={settings.tol}
+              busy={saving > 0}
               selection={selection}
               onSelect={setSelection}
+              onSave={saveHere}
               onAddVoid={() => {
                 setTab("plan");
                 setSelection(null);

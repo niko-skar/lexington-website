@@ -4,6 +4,7 @@ import { boxTitle, gridRef, KIND_LABEL, mm, offsetText } from "@/lib/asbuilt/for
 import {
   boxOf,
   boxStatus,
+  isMeasured,
   deviationOf,
   edgeDeviation,
   edgeSegment,
@@ -15,13 +16,16 @@ import {
 import type { Axis, BoxEl, BoxList, Floor, Selection, Tolerance } from "@/lib/asbuilt/types";
 
 import s from "./AsBuilt.module.css";
-import { StatusChip } from "./Sheet";
+import { MeasureLines } from "./LineEditor";
+import { StatusChip, type SaveFn } from "./Sheet";
 
 interface Props {
   floor: Floor;
   tol: Tolerance;
+  busy: boolean;
   selection: Selection | null;
   onSelect: (sel: Selection) => void;
+  onSave: SaveFn;
   onAddVoid: () => void;
 }
 
@@ -38,7 +42,7 @@ function nearest(floor: Floor, axis: Axis, v: number): string {
   return best?.id ?? "";
 }
 
-export function ListView({ floor, tol, selection, onSelect, onAddVoid }: Props) {
+export function ListView({ floor, tol, busy, selection, onSelect, onSave, onAddVoid }: Props) {
   const isOn = (list: BoxList, key: string) =>
     selection?.kind === "box" && selection.list === list && selection.key === key;
   const boxItem = (list: BoxList, el: BoxEl, sub: string) => {
@@ -64,16 +68,7 @@ export function ListView({ floor, tol, selection, onSelect, onAddVoid }: Props) 
     );
   };
 
-  const rows = gridLines(floor, "y");
-  const byRow = rows
-    .map((line) => ({
-      line,
-      items: floor.columns
-        .filter((c) => c.y === line.id)
-        .sort((a, b) => (boxOf(floor, a, "design")?.x0 ?? 0) - (boxOf(floor, b, "design")?.x0 ?? 0)),
-    }))
-    .filter((r) => r.items.length);
-  const measured = [...floor.columns, ...floor.cores].filter((e) => e.actual).length;
+  const measured = [...floor.columns, ...floor.cores].filter((e) => isMeasured(e)).length;
   const total = floor.columns.length + floor.cores.length;
   const off = [...floor.columns, ...floor.cores].filter((e) => boxStatus(floor, e, tol) === "off").length;
   const corners = slabCorners(floor, "actual");
@@ -94,25 +89,7 @@ export function ListView({ floor, tol, selection, onSelect, onAddVoid }: Props) 
         )}
       </div>
 
-      {byRow.map(({ line, items }) => (
-        <section key={line.id} className={s.group}>
-          <h3 className={s.groupTitle}>
-            Along grid {line.id}{" "}
-            <small>
-              {items.length} {items.length === 1 ? "item" : "items"}
-            </small>
-          </h3>
-          <div className={s.items}>
-            {items.map((c) =>
-              boxItem(
-                "columns",
-                c,
-                `${c.kind === "wall" ? "wall" : "column"} ${sizeText(floor, c)}${c.ends ? " · stops above" : ""}`,
-              ),
-            )}
-          </div>
-        </section>
-      ))}
+      <MeasureLines floor={floor} tol={tol} busy={busy} onSave={onSave} onSelect={onSelect} />
 
       {floor.cores.length > 0 && (
         <section className={s.group}>

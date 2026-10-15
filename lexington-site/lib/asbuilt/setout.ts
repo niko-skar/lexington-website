@@ -1,5 +1,5 @@
-import { boxOf, centreOf, findBox, isMeasured, linePos, round1, type Box } from "./geometry";
-import type { BoxEl, BoxList, Faces, Floor, Tolerance } from "./types";
+import { boxOf, centreOf, chainLines, chainOf, findBox, isMeasured, linePos, round1, type Box } from "./geometry";
+import type { Axis, BoxEl, BoxList, Faces, Floor, Tolerance } from "./types";
 
 /**
  * Setting out a floor's columns so they sit on the ones below (Niko, 15 Oct
@@ -99,6 +99,59 @@ export function setOutRows(floor: Floor, below: Floor | null, tol: Tolerance, pu
     }
   }
   return rows;
+}
+
+export interface SetOutLink {
+  prev: SetOutRow;
+  next: SetOutRow;
+  /** Face to face, where to set the next one from the one before it. */
+  gap: number;
+  /** Centre to centre. */
+  cc: number;
+  /** The same gap on this floor’s drawing. */
+  drawn: number;
+}
+
+export interface SetOutLine {
+  axis: Axis;
+  lineId: string;
+  first: SetOutRow;
+  links: SetOutLink[];
+}
+
+/**
+ * The set-out the way it is done on site: along each row (axis x) and down each
+ * line (axis y), the first column from the string line, then every gap face to
+ * face from the column before.
+ */
+export function setOutLines(floor: Floor, rows: SetOutRow[], axis: Axis): SetOutLine[] {
+  const byKey = new Map(rows.map((r) => [`${r.list}:${r.key}`, r]));
+  const lo = axis === "x" ? "x0" : "y0";
+  const hi = axis === "x" ? "x1" : "y1";
+  const c = axis === "x" ? 0 : 1;
+  const out: SetOutLine[] = [];
+  for (const lineId of chainLines(floor, axis)) {
+    const chain = chainOf(floor, axis, lineId)
+      .map((it) => byKey.get(`${it.list}:${it.el._key}`))
+      .filter((r): r is SetOutRow => Boolean(r));
+    if (chain.length < 2) continue;
+    const links: SetOutLink[] = [];
+    for (let i = 1; i < chain.length; i += 1) {
+      const prev = chain[i - 1];
+      const next = chain[i];
+      const pd = boxOf(floor, prev.el, "design");
+      const nd = boxOf(floor, next.el, "design");
+      links.push({
+        prev,
+        next,
+        gap: round1(next.box[lo] - prev.box[hi]),
+        cc: round1(centreOf(next.box)[c] - centreOf(prev.box)[c]),
+        drawn: pd && nd ? round1(nd[lo] - pd[hi]) : 0,
+      });
+    }
+    out.push({ axis, lineId, first: chain[0], links });
+  }
+  return out;
 }
 
 /** The floor directly below, by order. */

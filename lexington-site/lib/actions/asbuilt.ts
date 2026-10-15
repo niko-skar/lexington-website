@@ -127,6 +127,18 @@ function cleanValue(p: ParsedPath, value: unknown, floor: Floor, current: unknow
     case "kind":
       if (!KINDS.includes(value as OpeningKind)) throw new Refused("That kind of opening isn't known.");
       return value;
+    case "w":
+    case "h": {
+      const v = num(value, 30000);
+      if (v < 50) throw new Refused("A column that small can't be right. Sizes are in mm: 31 cm is 310.");
+      return v;
+    }
+    case "gx":
+    case "gy": {
+      const v = num(value, 40000);
+      if (v < 0) throw new Refused("A gap can't be less than 0.");
+      return v;
+    }
   }
   return null;
 }

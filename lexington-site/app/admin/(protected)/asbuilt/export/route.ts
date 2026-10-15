@@ -1,7 +1,20 @@
 import { NextResponse } from "next/server";
 
 import { boxTitle, gridRef, when } from "@/lib/asbuilt/format";
-import { boxOf, centreOf, edgePos, gapsOf } from "@/lib/asbuilt/geometry";
+import {
+  boxOf,
+  centreOf,
+  chainLines,
+  edgePos,
+  gapsOf,
+  isMeasured,
+  linePos,
+  sizeOf,
+  tapeGaps,
+  tapeListOf,
+  type TapeEl,
+  type TapeItem,
+} from "@/lib/asbuilt/geometry";
 import { isRealRecord, readAllFloorsFull } from "@/lib/asbuilt/store";
 import type { BoxEl, BoxList, Faces, Floor } from "@/lib/asbuilt/types";
 import { getAdminSession } from "@/lib/auth/session";
@@ -59,11 +72,62 @@ function floorRows(floor: Floor): (string | number | null)[][] {
       const name = boxTitle(list, el);
       const at = el.at ? when(el.at) : "";
       const note = el.note ?? ("removed" in el && el.removed ? "Marked not built" : "");
+      // Where it really is (taped gaps and sizes included), as faces from its own grid lines.
+      const real = isMeasured(el) ? boxOf(floor, el, "actual") : null;
+      const lx = linePos(floor, "x", el.x, "actual");
+      const ly = linePos(floor, "y", el.y, "actual");
+      const builtFace = (f: "l" | "r" | "t" | "b") =>
+        !real || lx === null || ly === null
+          ? null
+          : f === "l"
+            ? real.x0 - lx
+            : f === "r"
+              ? real.x1 - lx
+              : f === "t"
+                ? real.y0 - ly
+                : real.y1 - ly;
+      const tape = tapeListOf(el);
+      if (tape) {
+        const sz = sizeOf(floor, el as TapeEl);
+        const t = el as TapeEl;
+        rows.push([
+          floor.name,
+          name,
+          gridRef(el),
+          "Width, across (taped)",
+          sz?.dw ?? null,
+          t.w ?? null,
+          diff(t.w ?? null, sz?.dw ?? null),
+          at,
+          note,
+        ]);
+        rows.push([
+          floor.name,
+          name,
+          gridRef(el),
+          "Depth, down the page (taped)",
+          sz?.dh ?? null,
+          t.h ?? null,
+          diff(t.h ?? null, sz?.dh ?? null),
+          at,
+          note,
+        ]);
+      }
       for (const f of ["l", "r", "t", "b"] as const) {
         const line = f === "l" || f === "r" ? el.x : el.y;
         const d = el.design ? el.design[f] : null;
-        const a = el.actual ? el.actual[f] : null;
-        rows.push([floor.name, name, gridRef(el), `${FACE_WORDS[f]} from grid ${line} (+ = ${f === "l" || f === "r" ? "right" : "down"})`, d, a, diff(a, d), at, note]);
+        const a = builtFace(f);
+        rows.push([
+          floor.name,
+          name,
+          gridRef(el),
+          `${FACE_WORDS[f]} from grid ${line} (+ = ${f === "l" || f === "r" ? "right" : "down"})`,
+          d,
+          a,
+          diff(a, d),
+          at,
+          note,
+        ]);
       }
       if (list === "cores") {
         const d = el.design ? (el.design as { wall: number }).wall : null;
@@ -71,7 +135,7 @@ function floorRows(floor: Floor): (string | number | null)[][] {
         rows.push([floor.name, name, gridRef(el), "Wall thickness", d, a, diff(a, d), at, note]);
       }
       const db = el.design ? boxOf(floor, el, "design") : null;
-      const ab = el.actual ? boxOf(floor, el, "actual") : null;
+      const ab = isMeasured(el) ? boxOf(floor, el, "actual") : null;
       const dc = db ? centreOf(db) : null;
       const ac = ab ? centreOf(ab) : null;
       rows.push([
@@ -96,6 +160,26 @@ function floorRows(floor: Floor): (string | number | null)[][] {
         at,
         "",
       ]);
+    }
+  }
+
+  // The gaps between columns, face to face, along each row and down each line.
+  const ref = (it: TapeItem) => (it.list === "columns" ? gridRef(it.el) : it.el.name);
+  for (const axis of ["x", "y"] as const) {
+    for (const lineId of chainLines(floor, axis)) {
+      for (const g of tapeGaps(floor, axis, lineId)) {
+        rows.push([
+          floor.name,
+          `Gap ${ref(g.prev)} to ${ref(g.next)}`,
+          lineId,
+          axis === "x" ? `Along grid ${lineId}, face to face (taped)` : `Down grid ${lineId}, face to face (taped)`,
+          g.design,
+          g.measured ? g.actual : null,
+          g.measured ? g.actual - g.design : null,
+          g.next.el.at ? when(g.next.el.at) : "",
+          "",
+        ]);
+      }
     }
   }
 

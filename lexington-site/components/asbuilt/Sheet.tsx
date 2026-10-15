@@ -20,15 +20,20 @@ import {
   edgeDeviation,
   edgeSegment,
   findBox,
+  gapsAround,
   gapsOf,
   gridLines,
   isMeasured,
-  neighboursOf,
   shiftsForGap,
+  sizeOf,
   slabCorners,
   statusFor,
-  type Neighbour,
+  tapeGaps,
+  tapeListOf,
   type Status,
+  type TapeEl,
+  type TapeItem,
+  type TapeList,
 } from "@/lib/asbuilt/geometry";
 import { pathOf } from "@/lib/asbuilt/paths";
 import type {
@@ -79,13 +84,29 @@ export function StatusChip({ status, worst }: { status: Status; worst: number | 
 }
 
 const nowIso = () => new Date().toISOString();
+const has = (v: number | null | undefined): v is number => v !== null && v !== undefined;
 
 /** A number typed by hand: "1,250" or " 300 " both work. */
-function parseMm(text: string): number | null {
+export function parseMm(text: string): number | null {
   const t = text.replace(/[,\s]/g, "");
   if (!t) return null;
   const v = Number(t);
   return Number.isFinite(v) ? Math.round(v * 10) / 10 : null;
+}
+
+/** "C1 at D/3", or a lift core's name. */
+export function itemName(it: TapeItem): string {
+  return it.list === "columns" ? `${(it.el as ColumnEl).name} at ${gridRef(it.el)}` : it.el.name;
+}
+
+/** "D/3", or a lift core's name. */
+export function itemRef(it: TapeItem): string {
+  return it.list === "columns" ? gridRef(it.el) : it.el.name;
+}
+
+/** A centre-to-centre distance as the clear gap that is stored (face to face). */
+export function clearFromCentres(cc: number, sizeA: number, sizeB: number): number {
+  return Math.round((cc - sizeA / 2 - sizeB / 2) * 10) / 10;
 }
 
 export function Sheet({ floor, selection, tol, busy, onClose, onSave }: SheetProps) {
@@ -140,7 +161,7 @@ export function Sheet({ floor, selection, tol, busy, onClose, onSave }: SheetPro
         />
       );
     }
-  } else {
+  } else if (selection.kind === "gap") {
     const gap = gapsOf(floor, selection.axis).find((g) => g.to.id === selection.to);
     if (gap) {
       kind = "Grid spacing";
@@ -153,6 +174,33 @@ export function Sheet({ floor, selection, tol, busy, onClose, onSave }: SheetPro
           floor={floor}
           axis={selection.axis}
           toId={gap.to.id}
+          busy={busy}
+          onSave={onSave}
+        />
+      );
+    }
+  } else {
+    const next = findBox(floor, selection.list, selection.key) as TapeEl | undefined;
+    const gap = next
+      ? tapeGaps(floor, selection.axis, selection.axis === "x" ? next.y : next.x).find(
+          (g) => g.next.el._key === selection.key,
+        )
+      : undefined;
+    if (gap) {
+      kind =
+        selection.axis === "x"
+          ? `Between columns, along grid ${gap.next.el.y}`
+          : `Between columns, down grid ${gap.next.el.x}`;
+      title = `${itemRef(gap.prev)} to ${itemRef(gap.next)}`;
+      const diff = Math.abs(gap.actual - gap.design);
+      chip = <StatusChip status={gap.measured ? statusFor(diff, tol) : "none"} worst={gap.measured ? diff : null} />;
+      body = (
+        <ColGapBody
+          key={`${floor.key}:${selection.axis}:${selection.key}:${floor._rev ?? ""}`}
+          floor={floor}
+          axis={selection.axis}
+          list={selection.list}
+          nextKey={selection.key}
           busy={busy}
           onSave={onSave}
         />
@@ -219,11 +267,478 @@ function BoxBody({
   onSave: SaveFn;
   onClose: () => void;
 }) {
+  const tape = tapeListOf(el);
+  const opening = list === "openings" ? (el as OpeningEl) : null;
+  const design = el.design;
+  const isCore = list === "cores";
+
+  return (
+    <>
+      {design && (
+        <p className={s.fact}>
+          <span className={s.factStrong}>Drawing:</span> {mm(design.r - design.l)} × {mm(design.b - design.t)},{" "}
+          {offsetText("x", design.l, el.x)} to {offsetText("x", design.r, el.x)}; {offsetText("y", design.t, el.y)} to{" "}
+          {offsetText("y", design.b, el.y)}.{isCore && ` Walls ${mm((design as CoreFaces).wall)} thick.`}
+          {(el as ColumnEl).ends && " It stops at the slab above."}
+        </p>
+      )}
+      {!design && <p className={s.fact}>Added on site: not on the drawings.</p>}
+      {isMeasured(el) && el.at && <p className={s.fact}>Last measured {when(el.at)}.</p>}
+
+      {tape && <TapeBlock floor={floor} list={tape} el={el as TapeEl} busy={busy} onSave={onSave} />}
+
+      {opening?.removed ? (
+        <div className={s.row}>
+          <span className={s.fact}>Marked as not built (or filled in).</span>
+          <button
+            type="button"
+            className={s.btn}
+            disabled={busy}
+            onClick={() =>
+              onSave(
+                [{ path: pathOf("openings", el._key, "removed"), value: null }],
+                `${boxTitle(list, el)}: put back (it is there)`,
+                el._key,
+              )
+            }
+          >
+            It is there
+          </button>
+        </div>
+      ) : tape ? (
+        <details className={s.more}>
+          <summary>Position from the grid lines (string lines)</summary>
+          <p className={s.hint} style={{ margin: "6px 0 10px" }}>
+            Only needed where you tape a column from the string lines, for example the first one on a line. The gaps
+            above place the rest.
+          </p>
+          <FacesBlock floor={floor} list={list} el={el} busy={busy} onSave={onSave} compact />
+        </details>
+      ) : (
+        <FacesBlock floor={floor} list={list} el={el} busy={busy} onSave={onSave} />
+      )}
+
+      {opening && <OpeningExtras floor={floor} el={opening} busy={busy} onSave={onSave} onClose={onClose} />}
+
+      <NoteBlock list={list} el={el} busy={busy} onSave={onSave} />
+    </>
+  );
+}
+
+// ---- taped on site: the size, and the gaps to the columns either side --------------------
+
+const TAPE_SIDES: { axis: Axis; side: "before" | "after"; label: string }[] = [
+  { axis: "x", side: "before", label: "Left" },
+  { axis: "x", side: "after", label: "Right" },
+  { axis: "y", side: "before", label: "Above" },
+  { axis: "y", side: "after", label: "Below" },
+];
+
+function TapeBlock({
+  floor,
+  list,
+  el,
+  busy,
+  onSave,
+}: {
+  floor: Floor;
+  list: TapeList;
+  el: TapeEl;
+  busy: boolean;
+  onSave: SaveFn;
+}) {
+  const isCore = list === "cores";
+  const size = sizeOf(floor, el);
+  const around = gapsAround(floor, el);
+  const gapAt = (axis: Axis, side: "before" | "after") => around.find((a) => a.axis === axis)?.[side];
+  const recorded = (axis: Axis, side: "before" | "after", centres: boolean) => {
+    const g = gapAt(axis, side);
+    return g && g.measured ? mm(centres ? g.cc : g.actual) : "";
+  };
+  const gapTexts = (centres: boolean) =>
+    Object.fromEntries(TAPE_SIDES.map(({ axis, side }) => [`${axis}${side}`, recorded(axis, side, centres)]));
+
+  const [centres, setCentres] = useState(false);
+  const [w, setW] = useState(has(el.w) ? mm(el.w) : "");
+  const [h, setH] = useState(has(el.h) ? mm(el.h) : "");
+  const [wall, setWall] = useState(isCore ? mm(((el.actual ?? el.design) as CoreFaces).wall) : "");
+  const [gaps, setGaps] = useState<Record<string, string>>(() => gapTexts(false));
+  const [error, setError] = useState("");
+  if (!size) return null;
+  const title = boxTitle(list, el);
+
+  const switchMode = (next: boolean) => {
+    setCentres(next);
+    setGaps(gapTexts(next));
+  };
+
+  // This column's sizes after the save, for turning centre-to-centre into clear gaps.
+  const myW = parseMm(w) ?? size.w;
+  const myH = parseMm(h) ?? size.h;
+
+  const build = (): { changes: Change[]; parts: string[] } | string => {
+    const changes: Change[] = [];
+    const parts: string[] = [];
+    const sizes = [
+      ["w", w, el.w, "width"],
+      ["h", h, el.h, "depth"],
+    ] as const;
+    for (const [field, text, stored, label] of sizes) {
+      const v = parseMm(text);
+      if (text.trim() && v === null) return `The ${label} isn't a number.`;
+      if (v !== null && v < 50) return `A ${label} of ${v} mm can't be right. Sizes are in mm: 31 cm is 310.`;
+      if (v !== null && (!has(stored) || Math.abs(v - stored) >= 0.05)) {
+        changes.push({ path: pathOf(list, el._key, field), value: v });
+        parts.push(`${label} ${mm(v)}`);
+      } else if (v === null && has(stored)) {
+        changes.push({ path: pathOf(list, el._key, field), value: null });
+        parts.push(`${label} cleared`);
+      }
+    }
+    if (isCore) {
+      const v = parseMm(wall);
+      const cur = (el.actual ?? el.design) as CoreFaces;
+      if (wall.trim() && (v === null || v < 50)) return "The wall thickness doesn't look right.";
+      if (v !== null && Math.abs(v - cur.wall) >= 0.05) {
+        changes.push({ path: pathOf(list, el._key, "actual"), value: { ...cur, wall: v } });
+        parts.push(`walls ${mm(v)}`);
+      }
+    }
+    for (const { axis, side } of TAPE_SIDES) {
+      const g = gapAt(axis, side);
+      if (!g) continue;
+      const other = side === "before" ? g.prev : g.next;
+      // The gap belongs to the later of the two.
+      const holder: TapeItem = side === "before" ? { list, el } : g.next;
+      const field = axis === "x" ? "gx" : "gy";
+      const stored = holder.el[field];
+      const text = gaps[`${axis}${side}`] ?? "";
+      let v = parseMm(text);
+      if (text.trim() && v === null) return `The gap to ${itemName(other)} isn't a number.`;
+      if (v !== null && centres) {
+        const os = sizeOf(floor, other.el);
+        v = clearFromCentres(v, axis === "x" ? myW : myH, os ? (axis === "x" ? os.w : os.h) : 0);
+      }
+      if (v !== null && v < 0) return `The gap to ${itemName(other)} comes out below 0: check the number.`;
+      if (v !== null && (!has(stored) || Math.abs(v - stored) >= 0.05)) {
+        changes.push({ path: pathOf(holder.list, holder.el._key, field), value: v });
+        parts.push(`gap to ${itemRef(other)} ${mm(v)}`);
+      } else if (v === null && has(stored)) {
+        changes.push({ path: pathOf(holder.list, holder.el._key, field), value: null });
+        parts.push(`gap to ${itemRef(other)} cleared`);
+      }
+    }
+    return { changes, parts };
+  };
+
+  const save = async () => {
+    const built = build();
+    if (typeof built === "string") {
+      setError(built);
+      return;
+    }
+    if (!built.changes.length) {
+      setError("Nothing new to save: type a size or a gap first.");
+      return;
+    }
+    setError("");
+    built.changes.push({ path: pathOf(list, el._key, "at"), value: nowIso() });
+    await onSave(built.changes, `${title}: ${built.parts.join(", ")}`, el._key);
+  };
+
+  const asDrawn = async () => {
+    const changes: Change[] = [
+      { path: pathOf(list, el._key, "w"), value: size.dw },
+      { path: pathOf(list, el._key, "h"), value: size.dh },
+    ];
+    for (const axis of ["x", "y"] as const) {
+      const g = gapAt(axis, "before");
+      if (g) changes.push({ path: pathOf(list, el._key, axis === "x" ? "gx" : "gy"), value: g.design });
+    }
+    changes.push({ path: pathOf(list, el._key, "at"), value: nowIso() });
+    await onSave(changes, `${title}: checked, size and gaps as drawn`, el._key);
+  };
+
+  const clear = async () => {
+    const fields = ["w", "h", "gx", "gy", "actual", "at"] as const;
+    await onSave(
+      fields.map((f) => ({ path: pathOf(list, el._key, f), value: null })),
+      `${title}: measurements cleared`,
+      el._key,
+    );
+  };
+
+  const shaft = isCore ? (parseMm(wall) ?? (el.design as CoreFaces).wall) : 0;
+  const sizeField = (
+    id: string,
+    label: string,
+    sub: string,
+    value: string,
+    set: (v: string) => void,
+    drawn: number,
+  ) => (
+    <label className={s.tapeField} htmlFor={id}>
+      <span>
+        {label} <small>{sub}</small>
+      </span>
+      <input
+        id={id}
+        className={value.trim() && parseMm(value) !== drawn ? s.numChanged : s.num}
+        inputMode="decimal"
+        placeholder={mm(drawn)}
+        value={value}
+        onChange={(e) => set(e.target.value)}
+        onFocus={(e) => e.target.select()}
+      />
+    </label>
+  );
+
+  return (
+    <div className={s.tape}>
+      <div className={s.blockTitle}>Size, mm</div>
+      <div className={s.tapeGrid}>
+        {sizeField("tape-w", "Width", "across", w, setW, size.dw)}
+        {sizeField("tape-h", "Depth", "down the page", h, setH, size.dh)}
+        {isCore && sizeField("tape-wall", "Walls", "thick", wall, setWall, (el.design as CoreFaces).wall)}
+      </div>
+      <p className={s.hint}>
+        Drawing {mm(size.dw)} × {mm(size.dh)}. Leave a box empty if it isn&rsquo;t measured yet.
+        {isCore && ` Lift shaft inside ${mm(myW - 2 * shaft)} × ${mm(myH - 2 * shaft)}.`}
+      </p>
+
+      <div className={s.blockTitle} style={{ marginTop: 14 }}>
+        Gaps to the next columns, mm
+      </div>
+      <span className={s.side} role="group" aria-label="Measured as">
+        <button
+          type="button"
+          className={!centres ? s.sideOn : s.sideBtn}
+          aria-pressed={!centres}
+          onClick={() => switchMode(false)}
+        >
+          Face to face
+        </button>
+        <button
+          type="button"
+          className={centres ? s.sideOn : s.sideBtn}
+          aria-pressed={centres}
+          onClick={() => switchMode(true)}
+        >
+          Centre to centre
+        </button>
+      </span>
+      <div className={s.gapList}>
+        {TAPE_SIDES.map(({ axis, side, label }) => {
+          const g = gapAt(axis, side);
+          if (!g) return null;
+          const other = side === "before" ? g.prev : g.next;
+          const now = centres ? g.cc : g.actual;
+          const drawn = centres ? g.ccDesign : g.design;
+          const key = `${axis}${side}`;
+          return (
+            <label key={key} className={s.gapRow} htmlFor={`gap-${key}`}>
+              <span>
+                <b>{label}</b> · {itemName(other)}
+                <small>
+                  drawing {mm(drawn)}
+                  {Math.round(now) !== Math.round(drawn) ? ` · now ${mm(now)}` : ""}
+                </small>
+              </span>
+              <input
+                id={`gap-${key}`}
+                className={(gaps[key] ?? "").trim() && parseMm(gaps[key]) !== drawn ? s.numChanged : s.num}
+                inputMode="decimal"
+                placeholder={mm(now)}
+                value={gaps[key] ?? ""}
+                onChange={(e) => setGaps((all) => ({ ...all, [key]: e.target.value }))}
+                onFocus={(e) => e.target.select()}
+              />
+            </label>
+          );
+        })}
+        {!TAPE_SIDES.some(({ axis, side }) => gapAt(axis, side)) && (
+          <p className={s.hint}>Nothing else stands on this column&rsquo;s grid lines.</p>
+        )}
+      </div>
+      {error && <p className={s.error}>{error}</p>}
+      <div className={s.row} style={{ marginTop: 12 }}>
+        <button type="button" className={s.btnPrimary} disabled={busy} onClick={save}>
+          Save measurements
+        </button>
+        <button type="button" className={s.btnGood} disabled={busy} onClick={asDrawn}>
+          Same as drawing
+        </button>
+        {isMeasured(el) && (
+          <button type="button" className={s.btnQuiet} disabled={busy} onClick={clear}>
+            Clear
+          </button>
+        )}
+      </div>
+      <p className={s.hint} style={{ marginTop: 8 }}>
+        A gap moves the later column of the two. Columns further along that have their own gap taped move with it.
+      </p>
+    </div>
+  );
+}
+
+// ---- the gap between two columns ----------------------------------------------------------
+
+function ColGapBody({
+  floor,
+  axis,
+  list,
+  nextKey,
+  busy,
+  onSave,
+}: {
+  floor: Floor;
+  axis: Axis;
+  list: TapeList;
+  nextKey: string;
+  busy: boolean;
+  onSave: SaveFn;
+}) {
+  const next = findBox(floor, list, nextKey) as TapeEl | undefined;
+  const gap = next
+    ? tapeGaps(floor, axis, axis === "x" ? next.y : next.x).find((g) => g.next.el._key === nextKey)
+    : undefined;
+  const [centres, setCentres] = useState(false);
+  const [text, setText] = useState(gap && gap.measured ? mm(gap.actual) : "");
+  if (!gap || !next) return null;
+  const field = axis === "x" ? "gx" : "gy";
+  const ps = sizeOf(floor, gap.prev.el);
+  const ns = sizeOf(floor, gap.next.el);
+  const along = (sz: ReturnType<typeof sizeOf>) => (sz ? (axis === "x" ? sz.w : sz.h) : 0);
+  const typed = parseMm(text);
+  const value = typed === null ? null : centres ? clearFromCentres(typed, along(ps), along(ns)) : typed;
+  const line = axis === "x" ? `along grid ${next.y}` : `down grid ${next.x}`;
+
+  const switchMode = (c: boolean) => {
+    setCentres(c);
+    setText(gap.measured ? mm(c ? gap.cc : gap.actual) : "");
+  };
+
+  const save = async () => {
+    if (value === null || value < 0) return;
+    await onSave(
+      [
+        { path: pathOf(gap.next.list, nextKey, field), value },
+        { path: pathOf(gap.next.list, nextKey, "at"), value: nowIso() },
+      ],
+      `Gap ${itemRef(gap.prev)} to ${itemRef(gap.next)} ${line}: ${mm(value)} face to face${
+        Math.round(value) !== Math.round(gap.design) ? ` (drawing ${mm(gap.design)})` : ""
+      }`,
+      nextKey,
+    );
+  };
+
+  return (
+    <>
+      <p className={s.fact}>
+        From <span className={s.factStrong}>{itemName(gap.prev)}</span> to{" "}
+        <span className={s.factStrong}>{itemName(gap.next)}</span>, {line}. Drawing: {mm(gap.design)} face to face (
+        {mm(gap.ccDesign)} centre to centre).
+        {gap.measured && ` Taped: ${mm(gap.actual)} face to face.`}
+      </p>
+      <span className={s.side} role="group" aria-label="Measured as">
+        <button
+          type="button"
+          className={!centres ? s.sideOn : s.sideBtn}
+          aria-pressed={!centres}
+          onClick={() => switchMode(false)}
+        >
+          Face to face
+        </button>
+        <button
+          type="button"
+          className={centres ? s.sideOn : s.sideBtn}
+          aria-pressed={centres}
+          onClick={() => switchMode(true)}
+        >
+          Centre to centre
+        </button>
+      </span>
+      <label className={s.gapRow} htmlFor="colgap-v">
+        <span>
+          <b>Gap</b>
+          <small>{centres ? "centre to centre" : "face to face"}, mm</small>
+        </span>
+        <input
+          id="colgap-v"
+          className={s.num}
+          inputMode="decimal"
+          placeholder={mm(centres ? gap.cc : gap.actual)}
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onFocus={(e) => e.target.select()}
+        />
+      </label>
+      {value !== null && Math.round(value) !== Math.round(gap.design) && (
+        <div className={s.derived}>
+          {signedMm(value - gap.design)} mm against the drawing ({mm(value)} face to face)
+        </div>
+      )}
+      <div className={s.row}>
+        <button type="button" className={s.btnPrimary} disabled={busy || value === null || value < 0} onClick={save}>
+          Save
+        </button>
+        {gap.measured && (
+          <button
+            type="button"
+            className={s.btnQuiet}
+            disabled={busy}
+            onClick={() =>
+              onSave(
+                [{ path: pathOf(gap.next.list, nextKey, field), value: null }],
+                `Gap ${itemRef(gap.prev)} to ${itemRef(gap.next)} ${line}: cleared`,
+                nextKey,
+              )
+            }
+          >
+            Clear
+          </button>
+        )}
+      </div>
+      <p className={s.hint}>
+        Saving moves {itemName(gap.next)}, and the columns after it that have their own gap taped.
+      </p>
+    </>
+  );
+}
+
+// ---- position from the grid lines (faces) ---------------------------------------------------
+
+function FacesBlock({
+  floor,
+  list,
+  el,
+  busy,
+  onSave,
+  compact = false,
+}: {
+  floor: Floor;
+  list: BoxList;
+  el: BoxEl;
+  busy: boolean;
+  onSave: SaveFn;
+  /** Inside a column's panel: just the position, no "same as drawing" or "clear" of its own. */
+  compact?: boolean;
+}) {
   const isCore = list === "cores";
   const design = el.design;
-  const current = (el.actual ?? el.design) as Faces | CoreFaces | null;
-  const [faces, setFaces] = useState(() => initialFaces(current ?? { l: -500, r: 500, t: -500, b: 500 }, design));
-  const [wallText, setWallText] = useState(() => (isCore ? mm((current as CoreFaces).wall) : ""));
+  const current = boxOf(floor, el, "actual");
+  const lx = floor.grid.find((g) => g.axis === "x" && g.id === el.x);
+  const ly = floor.grid.find((g) => g.axis === "y" && g.id === el.y);
+  const start: Faces | null =
+    current && lx && ly
+      ? {
+          l: current.x0 - (lx.design + (lx.shift ?? 0)),
+          r: current.x1 - (lx.design + (lx.shift ?? 0)),
+          t: current.y0 - (ly.design + (ly.shift ?? 0)),
+          b: current.y1 - (ly.design + (ly.shift ?? 0)),
+        }
+      : (el.actual ?? el.design);
+  const [faces, setFaces] = useState(() => initialFaces(start ?? { l: -500, r: 500, t: -500, b: 500 }, design));
   const [error, setError] = useState("");
   const title = boxTitle(list, el);
 
@@ -236,29 +751,16 @@ function BoxBody({
     }
     return out;
   })();
-  const wall = isCore ? parseMm(wallText) : null;
-  const valid =
-    parsed !== null &&
-    parsed.r - parsed.l >= 20 &&
-    parsed.b - parsed.t >= 20 &&
-    (!isCore || (wall !== null && wall > 0));
+  const valid = parsed !== null && parsed.r - parsed.l >= 20 && parsed.b - parsed.t >= 20;
 
-  // What the typed numbers would mean, before saving.
   let preview: React.ReactNode = null;
   if (parsed && valid) {
-    const w = parsed.r - parsed.l;
-    const h = parsed.b - parsed.t;
-    const parts = [`Size ${mm(w)} × ${mm(h)}`];
+    const parts = [`Size ${mm(parsed.r - parsed.l)} × ${mm(parsed.b - parsed.t)}`];
     if (design) {
-      const dw = w - (design.r - design.l);
-      const dh = h - (design.b - design.t);
-      if (Math.round(dw) || Math.round(dh))
-        parts.push(`drawing ${mm(design.r - design.l)} × ${mm(design.b - design.t)}`);
       const dx = (parsed.l + parsed.r) / 2 - (design.l + design.r) / 2;
       const dy = (parsed.t + parsed.b) / 2 - (design.t + design.b) / 2;
       parts.push(`centre ${moveText(dx, dy)}`);
     }
-    if (isCore && wall) parts.push(`lift shaft inside ${mm(w - 2 * wall)} × ${mm(h - 2 * wall)}`);
     preview = <div className={s.derived}>{parts.join(" · ")}</div>;
   } else if (parsed) {
     preview = (
@@ -272,23 +774,23 @@ function BoxBody({
       return;
     }
     setError("");
-    const value = isCore ? { ...parsed, wall: wall as number } : parsed;
-    const w = parsed.r - parsed.l;
-    const h = parsed.b - parsed.t;
-    let text = `${title}: measured ${mm(w)} × ${mm(h)}`;
+    const wall = isCore ? ((el.actual ?? el.design) as CoreFaces).wall : undefined;
+    const value = isCore ? { ...parsed, wall } : parsed;
+    const changes: Change[] = [{ path: pathOf(list, el._key, "actual"), value }];
+    // Faces from the string lines fix the position and the size outright.
+    if (compact) {
+      for (const f of ["w", "h", "gx", "gy"] as const) {
+        if (has((el as TapeEl)[f])) changes.push({ path: pathOf(list, el._key, f), value: null });
+      }
+    }
+    changes.push({ path: pathOf(list, el._key, "at"), value: nowIso() });
+    let text = `${title}: from the grid lines ${mm(parsed.r - parsed.l)} × ${mm(parsed.b - parsed.t)}`;
     if (design) {
       const dx = (parsed.l + parsed.r) / 2 - (design.l + design.r) / 2;
       const dy = (parsed.t + parsed.b) / 2 - (design.t + design.b) / 2;
       text += `, ${moveText(dx, dy)}`;
     }
-    await onSave(
-      [
-        { path: pathOf(list, el._key, "actual"), value },
-        { path: pathOf(list, el._key, "at"), value: nowIso() },
-      ],
-      text,
-      el._key,
-    );
+    await onSave(changes, text, el._key);
   };
 
   const asDrawn = async () => {
@@ -314,244 +816,70 @@ function BoxBody({
     );
   };
 
-  const opening = list === "openings" ? (el as OpeningEl) : null;
-  const designBox = design ? boxOf(floor, el, "design") : null;
-  const facesSummary = (f: Faces) =>
-    `${offsetText("x", f.l, el.x)} to ${offsetText("x", f.r, el.x)}; ${offsetText("y", f.t, el.y)} to ${offsetText("y", f.b, el.y)}`;
-
-  return (
-    <>
-      {design && designBox && (
-        <p className={s.fact}>
-          <span className={s.factStrong}>Drawing:</span> {mm(design.r - design.l)} × {mm(design.b - design.t)}, faces{" "}
-          {facesSummary(design)}.{isCore && ` Walls ${mm((design as CoreFaces).wall)} thick.`}
-          {(el as ColumnEl).ends && " It stops at the slab above."}
-        </p>
-      )}
-      {!design && <p className={s.fact}>Added on site: not on the drawings.</p>}
-      {isMeasured(el) && el.at && <p className={s.fact}>Measured {when(el.at)}.</p>}
-
-      {opening?.removed ? (
-        <div className={s.row}>
-          <span className={s.fact}>Marked as not built (or filled in).</span>
-          <button
-            type="button"
-            className={s.btn}
-            disabled={busy}
-            onClick={() =>
-              onSave(
-                [{ path: pathOf("openings", el._key, "removed"), value: null }],
-                `${title}: put back (it is there)`,
-                el._key,
-              )
-            }
-          >
-            It is there
-          </button>
-        </div>
-      ) : (
-        <div>
-          <div className={s.blockTitle}>As built, from the grid lines (mm)</div>
-          <div className={s.faceGrid}>
-            {FACE_ROWS.map(({ f, label, axis }) => {
-              const line = axis === "x" ? el.x : el.y;
-              const v = parseMm(faces[f].text);
-              const signed = v === null ? null : faces[f].neg ? -v : v;
-              const differs = design && signed !== null && Math.round(signed) !== Math.round(design[f]);
-              const words = axis === "x" ? ["left", "right"] : ["above", "below"];
-              return (
-                <div key={f} className={s.faceRow}>
-                  <label className={s.faceLabel} htmlFor={`face-${f}`}>
-                    {label}
-                    <small>from grid {line}</small>
-                  </label>
-                  <input
-                    id={`face-${f}`}
-                    className={differs ? s.numChanged : s.num}
-                    inputMode="decimal"
-                    value={faces[f].text}
-                    onChange={(e) => setFaces((all) => ({ ...all, [f]: { ...all[f], text: e.target.value } }))}
-                    onFocus={(e) => e.target.select()}
-                    aria-describedby={design ? `face-${f}-drawing` : undefined}
-                  />
-                  <span className={s.side} role="group" aria-label={`${label}: which side of grid ${line}`}>
-                    {words.map((word, i) => (
-                      <button
-                        key={word}
-                        type="button"
-                        className={faces[f].neg === (i === 0) ? s.sideOn : s.sideBtn}
-                        aria-pressed={faces[f].neg === (i === 0)}
-                        onClick={() => setFaces((all) => ({ ...all, [f]: { ...all[f], neg: i === 0 } }))}
-                      >
-                        {word}
-                      </button>
-                    ))}
-                  </span>
-                  {design && (
-                    <span id={`face-${f}-drawing`} className={s.hint} style={{ gridColumn: "2 / 4", marginTop: -4 }}>
-                      drawing: {offsetText(axis, design[f], line)}
-                    </span>
-                  )}
-                </div>
-              );
-            })}
-            {isCore && (
-              <div className={s.faceRow}>
-                <label className={s.faceLabel} htmlFor="face-wall">
-                  Wall thickness
-                </label>
-                <input
-                  id="face-wall"
-                  className={s.num}
-                  inputMode="decimal"
-                  value={wallText}
-                  onChange={(e) => setWallText(e.target.value)}
-                  onFocus={(e) => e.target.select()}
-                />
-                <span />
-              </div>
-            )}
-          </div>
-          <div style={{ marginTop: 10 }}>{preview}</div>
-          {error && <p className={s.error}>{error}</p>}
-          <div className={s.row} style={{ marginTop: 12 }}>
-            <button type="button" className={s.btnPrimary} disabled={busy || !valid} onClick={save}>
-              Save measurements
-            </button>
-            {design && (
-              <button type="button" className={s.btnGood} disabled={busy} onClick={asDrawn}>
-                Same as drawing
-              </button>
-            )}
-            {isMeasured(el) && design && (
-              <button type="button" className={s.btnQuiet} disabled={busy} onClick={clear}>
-                Clear
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-
-      {list === "columns" && !opening && (
-        <NeighboursBlock floor={floor} el={el as ColumnEl} busy={busy} onSave={onSave} />
-      )}
-
-      {opening && <OpeningExtras floor={floor} el={opening} busy={busy} onSave={onSave} onClose={onClose} />}
-
-      <NoteBlock list={list} el={el} busy={busy} onSave={onSave} />
-    </>
-  );
-}
-
-// ---- distances to the next columns along the grid -------------------------------------
-
-const SIDE_WORD: Record<Neighbour["side"], string> = {
-  left: "To the left",
-  right: "To the right",
-  up: "Above (up the page)",
-  down: "Below (down the page)",
-};
-
-function NeighboursBlock({ floor, el, busy, onSave }: { floor: Floor; el: ColumnEl; busy: boolean; onSave: SaveFn }) {
-  const [mode, setMode] = useState<"gap" | "centre">("gap");
-  const [texts, setTexts] = useState<Record<string, string>>({});
-  const neighbours = neighboursOf(floor, el);
-  const me = boxOf(floor, el, "actual");
-  const meD = boxOf(floor, el, "design");
-  if (!neighbours.length || !me || !meD) return null;
-
-  const gapOf = (n: Neighbour, mode2: "actual" | "design") => {
-    const a = mode2 === "actual" ? me : meD;
-    const b = boxOf(floor, n.el, mode2);
-    if (!b) return 0;
-    if (n.side === "left") return a.x0 - b.x1;
-    if (n.side === "right") return b.x0 - a.x1;
-    if (n.side === "up") return a.y0 - b.y1;
-    return b.y0 - a.y1;
-  };
-
-  const move = async (n: Neighbour) => {
-    const typed = parseMm(texts[n.side] ?? "");
-    if (typed === null) return;
-    const now = mode === "gap" ? gapOf(n, "actual") : n.actual;
-    const delta = typed - now;
-    if (!Math.round(delta * 10)) return;
-    // Lengthening the distance pushes this column away from that one.
-    const dir = n.side === "left" || n.side === "up" ? 1 : -1;
-    const cur = (el.actual ?? el.design) as Faces;
-    const next: Faces =
-      n.side === "left" || n.side === "right"
-        ? { ...cur, l: cur.l + dir * delta, r: cur.r + dir * delta }
-        : { ...cur, t: cur.t + dir * delta, b: cur.b + dir * delta };
-    const how = mode === "gap" ? "clear gap" : "centre to centre";
-    await onSave(
-      [
-        { path: pathOf("columns", el._key, "actual"), value: next },
-        { path: pathOf("columns", el._key, "at"), value: nowIso() },
-      ],
-      `${boxTitle("columns", el)}: ${mm(typed)} ${how} from ${n.el.name} at ${gridRef(n.el)}`,
-      el._key,
-    );
-    setTexts((t) => ({ ...t, [n.side]: "" }));
-  };
-
   return (
     <div>
-      <div className={s.blockTitle}>Distance to the next column</div>
-      <div className={s.row} style={{ marginBottom: 8 }}>
-        <span className={s.side} role="group" aria-label="Measure as">
-          <button
-            type="button"
-            className={mode === "gap" ? s.sideOn : s.sideBtn}
-            aria-pressed={mode === "gap"}
-            onClick={() => setMode("gap")}
-          >
-            Clear gap
-          </button>
-          <button
-            type="button"
-            className={mode === "centre" ? s.sideOn : s.sideBtn}
-            aria-pressed={mode === "centre"}
-            onClick={() => setMode("centre")}
-          >
-            Centre to centre
-          </button>
-        </span>
-      </div>
-      <div className={s.neighbours}>
-        {neighbours.map((n) => {
-          const now = mode === "gap" ? gapOf(n, "actual") : n.actual;
-          const drawn = mode === "gap" ? gapOf(n, "design") : n.design;
+      {!compact && <div className={s.blockTitle}>As built, from the grid lines (mm)</div>}
+      <div className={s.faceGrid}>
+        {FACE_ROWS.map(({ f, label, axis }) => {
+          const line = axis === "x" ? el.x : el.y;
+          const v = parseMm(faces[f].text);
+          const signed = v === null ? null : faces[f].neg ? -v : v;
+          const differs = design && signed !== null && Math.round(signed) !== Math.round(design[f]);
+          const words = axis === "x" ? ["left", "right"] : ["above", "below"];
           return (
-            <div key={n.side} className={s.neighbour}>
-              <div>
-                {SIDE_WORD[n.side]}: {n.el.name} at {gridRef(n.el)}
-                <small>
-                  now {mm(now)}
-                  {Math.round(now) !== Math.round(drawn) ? ` · drawing ${mm(drawn)}` : " · as drawn"}
-                </small>
-              </div>
+            <div key={f} className={s.faceRow}>
+              <label className={s.faceLabel} htmlFor={`face-${f}`}>
+                {label}
+                <small>from grid {line}</small>
+              </label>
               <input
-                className={s.num}
+                id={`face-${f}`}
+                className={differs ? s.numChanged : s.num}
                 inputMode="decimal"
-                placeholder={mm(now)}
-                value={texts[n.side] ?? ""}
-                onChange={(e) => setTexts((t) => ({ ...t, [n.side]: e.target.value }))}
-                aria-label={`Measured ${mode === "gap" ? "clear gap" : "centre to centre"} to ${n.el.name} at ${gridRef(n.el)}`}
+                value={faces[f].text}
+                onChange={(e) => setFaces((all) => ({ ...all, [f]: { ...all[f], text: e.target.value } }))}
+                onFocus={(e) => e.target.select()}
+                aria-describedby={design ? `face-${f}-drawing` : undefined}
               />
-              <button
-                type="button"
-                className={`${s.btn} ${s.btnSmall}`}
-                disabled={busy || parseMm(texts[n.side] ?? "") === null}
-                onClick={() => move(n)}
-              >
-                Set
-              </button>
+              <span className={s.side} role="group" aria-label={`${label}: which side of grid ${line}`}>
+                {words.map((word, i) => (
+                  <button
+                    key={word}
+                    type="button"
+                    className={faces[f].neg === (i === 0) ? s.sideOn : s.sideBtn}
+                    aria-pressed={faces[f].neg === (i === 0)}
+                    onClick={() => setFaces((all) => ({ ...all, [f]: { ...all[f], neg: i === 0 } }))}
+                  >
+                    {word}
+                  </button>
+                ))}
+              </span>
+              {design && (
+                <span id={`face-${f}-drawing`} className={s.hint} style={{ gridColumn: "2 / 4", marginTop: -4 }}>
+                  drawing: {offsetText(axis, design[f], line)}
+                </span>
+              )}
             </div>
           );
         })}
       </div>
-      <p className={s.hint}>Setting a distance moves this column, not the other one.</p>
+      <div style={{ marginTop: 10 }}>{preview}</div>
+      {error && <p className={s.error}>{error}</p>}
+      <div className={s.row} style={{ marginTop: 12 }}>
+        <button type="button" className={compact ? s.btn : s.btnPrimary} disabled={busy || !valid} onClick={save}>
+          {compact ? "Save position" : "Save measurements"}
+        </button>
+        {!compact && design && (
+          <button type="button" className={s.btnGood} disabled={busy} onClick={asDrawn}>
+            Same as drawing
+          </button>
+        )}
+        {!compact && isMeasured(el) && design && (
+          <button type="button" className={s.btnQuiet} disabled={busy} onClick={clear}>
+            Clear
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -891,7 +1219,7 @@ function GapBody({
       <p className={s.hint}>
         This moves line {toId}
         {after.length > 1 ? ` and every line after it (${after.slice(1).join(", ")})` : ""}, with everything set out
-        from them. To record one column, tap the column instead.
+        from them. To record the gap between two columns, tap the number between them instead.
       </p>
       <div className={s.row}>
         <button

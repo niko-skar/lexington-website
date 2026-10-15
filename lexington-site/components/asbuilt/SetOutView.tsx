@@ -1,7 +1,9 @@
 "use client";
 
+import { Fragment, useState } from "react";
+
 import { boxTitle, gridRef, mm, moveText, offsetText } from "@/lib/asbuilt/format";
-import { floorBelow, setOutRows, type SetOutRow } from "@/lib/asbuilt/setout";
+import { floorBelow, setOutLines, setOutRows, type SetOutLine, type SetOutRow } from "@/lib/asbuilt/setout";
 import type { Floor, Selection, Tolerance } from "@/lib/asbuilt/types";
 
 import s from "./AsBuilt.module.css";
@@ -27,16 +29,133 @@ function csvCell(v: string | number): string {
   return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;
 }
 
+const sizeText = (r: SetOutRow) => `${mm(r.target.r - r.target.l)} × ${mm(r.target.b - r.target.t)}`;
+
+function LineBlock({ line, onSelect }: { line: SetOutLine; onSelect: (sel: Selection) => void }) {
+  const first = line.first;
+  const arrow = line.axis === "x" ? "↔" : "↕";
+  const start =
+    line.axis === "x"
+      ? `left face ${offsetText("x", first.target.l, first.el.x)}`
+      : `top face ${offsetText("y", first.target.t, first.el.y)}`;
+  const name = (r: SetOutRow) => (
+    <button type="button" className={s.lineName} onClick={() => onSelect({ kind: "box", list: r.list, key: r.key })}>
+      {boxTitle(r.list, r.el)}
+    </button>
+  );
+  // Only the ones that follow a measured column below get a mark; the rest are the drawing.
+  const from = (r: SetOutRow) => (r.basis === "measured" ? <span className={s.soBuilt}>on the one below</span> : null);
+  const all = [first, ...line.links.map((l) => l.next)];
+  const built = all.filter((r) => r.basis === "measured").length;
+  return (
+    <div className={s.soLine}>
+      <div className={s.soLineHead}>
+        {line.axis === "x" ? `Along grid ${line.lineId}` : `Down grid ${line.lineId}`}
+        <small>
+          {built === 0
+            ? "all from the drawing: nothing below measured yet"
+            : built === all.length
+              ? "all on the columns below, as built"
+              : `${built} of ${all.length} on the columns below, the rest from the drawing`}
+        </small>
+      </div>
+      <ol className={s.soList}>
+        <li className={s.soItem}>
+          {name(first)}
+          <span className={s.soSize}>{sizeText(first)}</span>
+          <span className={s.soStart}>Start: {start}</span>
+          {from(first)}
+        </li>
+        {line.links.map((link) => {
+          const differs = Math.round(link.gap) !== Math.round(link.drawn);
+          return (
+            <Fragment key={link.next.key}>
+              <li className={s.soGap}>
+                <span className={s.lineArrow} aria-hidden="true">
+                  {arrow}
+                </span>
+                <span>
+                  <b style={differs ? { color: "var(--brass-text)" } : undefined}>{mm(link.gap)}</b> face to face
+                  <small>
+                    {mm(link.cc)} centre to centre{differs ? ` · drawing ${mm(link.drawn)}` : ""}
+                  </small>
+                </span>
+              </li>
+              <li className={s.soItem}>
+                {name(link.next)}
+                <span className={s.soSize}>{sizeText(link.next)}</span>
+                {from(link.next)}
+              </li>
+            </Fragment>
+          );
+        })}
+      </ol>
+    </div>
+  );
+}
+
 export function SetOutView({ floors, floor, tol, pullBack, onTol, onPullBack, onSelect }: Props) {
+  const [mode, setMode] = useState<"lines" | "faces">("lines");
   const below = floorBelow(floors, floor);
   const rows = setOutRows(floor, below, tol, pullBack);
+  const rowLines = setOutLines(floor, rows, "x");
+  const colLines = setOutLines(floor, rows, "y");
   const counts = {
     measured: rows.filter((r) => r.basis === "measured").length,
     drawing: rows.filter((r) => r.basis === "drawing").length,
     none: rows.filter((r) => r.basis === "nothing-below").length,
   };
 
+  const downloadLines = () => {
+    const head = [
+      "Line",
+      "From",
+      "To",
+      "Gap face to face",
+      "Centre to centre",
+      "Drawing gap",
+      "Size of the new one",
+      "Start",
+    ];
+    const out: string[] = [];
+    for (const line of [...rowLines, ...colLines]) {
+      const label = line.axis === "x" ? `Along grid ${line.lineId}` : `Down grid ${line.lineId}`;
+      const f = line.first;
+      const start =
+        line.axis === "x"
+          ? `left face ${offsetText("x", f.target.l, f.el.x)}`
+          : `top face ${offsetText("y", f.target.t, f.el.y)}`;
+      out.push(
+        [label, "", boxTitle(f.list, f.el), "", "", "", sizeText(f).replace("×", "x"), start].map(csvCell).join(","),
+      );
+      for (const link of line.links) {
+        out.push(
+          [
+            label,
+            boxTitle(link.prev.list, link.prev.el),
+            boxTitle(link.next.list, link.next.el),
+            mm(link.gap),
+            mm(link.cc),
+            mm(link.drawn),
+            sizeText(link.next).replace("×", "x"),
+            "",
+          ]
+            .map(csvCell)
+            .join(","),
+        );
+      }
+    }
+    const blob = new Blob([`\ufeff${[head.join(","), ...out].join("\r\n")}`], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Lexington set-out ${floor.name} (between columns).csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const download = () => {
+    if (mode === "lines") return downloadLines();
     const head = [
       "Item",
       "Grid",
@@ -92,6 +211,27 @@ export function SetOutView({ floors, floor, tol, pullBack, onTol, onPullBack, on
           <>The {floor.name} is the lowest floor in the record, so these are the drawing positions.</>
         )}
       </p>
+
+      <div className={s.row} style={{ marginBottom: 12 }}>
+        <span className={s.side} role="group" aria-label="Show the set-out">
+          <button
+            type="button"
+            className={mode === "lines" ? s.sideOn : s.sideBtn}
+            aria-pressed={mode === "lines"}
+            onClick={() => setMode("lines")}
+          >
+            Between columns
+          </button>
+          <button
+            type="button"
+            className={mode === "faces" ? s.sideOn : s.sideBtn}
+            aria-pressed={mode === "faces"}
+            onClick={() => setMode("faces")}
+          >
+            From the grid lines
+          </button>
+        </span>
+      </div>
 
       <div className={s.settings}>
         <label>
@@ -150,7 +290,36 @@ export function SetOutView({ floors, floor, tol, pullBack, onTol, onPullBack, on
         </div>
       )}
 
-      {rows.length > 0 && (
+      {mode === "lines" && (
+        <>
+          {rowLines.length > 0 && (
+            <section className={s.group}>
+              <h3 className={s.groupTitle}>
+                Along each numbered line <small>first one from the string line, then each gap</small>
+              </h3>
+              <div className={s.soLines}>
+                {rowLines.map((line) => (
+                  <LineBlock key={line.lineId} line={line} onSelect={onSelect} />
+                ))}
+              </div>
+            </section>
+          )}
+          {colLines.length > 0 && (
+            <section className={s.group}>
+              <h3 className={s.groupTitle}>
+                Down each lettered line <small>top to bottom</small>
+              </h3>
+              <div className={s.soLines}>
+                {colLines.map((line) => (
+                  <LineBlock key={line.lineId} line={line} onSelect={onSelect} />
+                ))}
+              </div>
+            </section>
+          )}
+        </>
+      )}
+
+      {mode === "faces" && rows.length > 0 && (
         <div className={s.cards}>
           {rows.map((r) => (
             <div key={`${r.list}${r.key}`} className={s.card}>
@@ -196,7 +365,7 @@ export function SetOutView({ floors, floor, tol, pullBack, onTol, onPullBack, on
 
       {rows.length === 0 ? (
         <div className={s.empty}>No columns on this floor.</div>
-      ) : (
+      ) : mode === "lines" ? null : (
         <div className={`${s.tableWrap} ${s.wideOnly}`}>
           <table className={s.table}>
             <thead>
