@@ -13,6 +13,7 @@ const NAV_LINKS = [
   { href: "/admin/crm", label: "Prospects" },
   { href: "/admin", label: "Buyers" },
   { href: "/admin/dashboard", label: "Dashboard" },
+  { href: "/admin/asbuilt", label: "As-built" },
 ];
 
 export default function AdminProtectedLayout({ children }: { children: React.ReactNode }) {

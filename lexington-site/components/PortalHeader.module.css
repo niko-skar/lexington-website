@@ -90,4 +90,9 @@
     gap: 20px;
     overflow-x: auto;
   }
+
+  .nav a {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
 }

@@ -1,0 +1,6190 @@
+{
+ "version": 1,
+ "floors": [
+  {
+   "key": "g",
+   "name": "Ground floor",
+   "short": "G",
+   "order": 0,
+   "level": 300,
+   "grid": [
+    {
+     "_key": "xB",
+     "id": "B",
+     "axis": "x",
+     "design": 0
+    },
+    {
+     "_key": "xB1",
+     "id": "B1",
+     "axis": "x",
+     "design": 1600
+    },
+    {
+     "_key": "xB2",
+     "id": "B2",
+     "axis": "x",
+     "design": 3000
+    },
+    {
+     "_key": "xC",
+     "id": "C",
+     "axis": "x",
+     "design": 6150
+    },
+    {
+     "_key": "xD",
+     "id": "D",
+     "axis": "x",
+     "design": 12300
+    },
+    {
+     "_key": "xE",
+     "id": "E",
+     "axis": "x",
+     "design": 14300
+    },
+    {
+     "_key": "xF",
+     "id": "F",
+     "axis": "x",
+     "design": 16700
+    },
+    {
+     "_key": "xG",
+     "id": "G",
+     "axis": "x",
+     "design": 22850
+    },
+    {
+     "_key": "xH",
+     "id": "H",
+     "axis": "x",
+     "design": 29000
+    },
+    {
+     "_key": "xJ",
+     "id": "J",
+     "axis": "x",
+     "design": 31400
+    },
+    {
+     "_key": "xK",
+     "id": "K",
+     "axis": "x",
+     "design": 33400
+    },
+    {
+     "_key": "xL",
+     "id": "L",
+     "axis": "x",
+     "design": 39550
+    },
+    {
+     "_key": "xM",
+     "id": "M",
+     "axis": "x",
+     "design": 45700
+    },
+    {
+     "_key": "xN",
+     "id": "N",
+     "axis": "x",
+     "design": 50800
+    },
+    {
+     "_key": "y2",
+     "id": "2",
+     "axis": "y",
+     "design": 0
+    },
+    {
+     "_key": "y2A",
+     "id": "2A",
+     "axis": "y",
+     "design": 1175
+    },
+    {
+     "_key": "y2b",
+     "id": "2b",
+     "axis": "y",
+     "design": 5175
+    },
+    {
+     "_key": "y3",
+     "id": "3",
+     "axis": "y",
+     "design": 5750
+    },
+    {
+     "_key": "y4",
+     "id": "4",
+     "axis": "y",
+     "design": 7400
+    },
+    {
+     "_key": "y5",
+     "id": "5",
+     "axis": "y",
+     "design": 11375
+    },
+    {
+     "_key": "y6",
+     "id": "6",
+     "axis": "y",
+     "design": 13475
+    },
+    {
+     "_key": "y7",
+     "id": "7",
+     "axis": "y",
+     "design": 16350
+    },
+    {
+     "_key": "y7a",
+     "id": "7a",
+     "axis": "y",
+     "design": 17850
+    },
+    {
+     "_key": "y7b",
+     "id": "7b",
+     "axis": "y",
+     "design": 18200
+    }
+   ],
+   "slab": null,
+   "columns": [
+    {
+     "_key": "B2",
+     "name": "C2",
+     "kind": "column",
+     "x": "B",
+     "y": "2",
+     "design": {
+      "l": -75,
+      "r": 225,
+      "t": -100,
+      "b": 500
+     }
+    },
+    {
+     "_key": "C2",
+     "name": "C2",
+     "kind": "column",
+     "x": "C",
+     "y": "2",
+     "design": {
+      "l": -225,
+      "r": 75,
+      "t": -100,
+      "b": 500
+     }
+    },
+    {
+     "_key": "B3",
+     "name": "C2",
+     "kind": "column",
+     "x": "B",
+     "y": "3",
+     "design": {
+      "l": -75,
+      "r": 225,
+      "t": -275,
+      "b": 325
+     }
+    },
+    {
+     "_key": "C3",
+     "name": "SW5",
+     "kind": "wall",
+     "x": "C",
+     "y": "3",
+     "design": {
+      "l": -225,
+      "r": 75,
+      "t": -1175,
+      "b": 325
+     }
+    },
+    {
+     "_key": "D3",
+     "name": "C1",
+     "kind": "column",
+     "x": "D",
+     "y": "3",
+     "design": {
+      "l": -300,
+      "r": 300,
+      "t": -100,
+      "b": 200
+     }
+    },
+    {
+     "_key": "F3",
+     "name": "C1",
+     "kind": "column",
+     "x": "F",
+     "y": "3",
+     "design": {
+      "l": -300,
+      "r": 300,
+      "t": -100,
+      "b": 200
+     }
+    },
+    {
+     "_key": "G3",
+     "name": "SW4",
+     "kind": "wall",
+     "x": "G",
+     "y": "3",
+     "design": {
+      "l": -750,
+      "r": 750,
+      "t": -100,
+      "b": 200
+     }
+    },
+    {
+     "_key": "H3",
+     "name": "C1",
+     "kind": "column",
+     "x": "H",
+     "y": "3",
+     "design": {
+      "l": -300,
+      "r": 300,
+      "t": -100,
+      "b": 200
+     }
+    },
+    {
+     "_key": "K3",
+     "name": "C1",
+     "kind": "column",
+     "x": "K",
+     "y": "3",
+     "design": {
+      "l": -300,
+      "r": 300,
+      "t": -100,
+      "b": 200
+     }
+    },
+    {
+     "_key": "L3",
+     "name": "C1",
+     "kind": "column",
+     "x": "L",
+     "y": "3",
+     "design": {
+      "l": -300,
+      "r": 300,
+      "t": -100,
+      "b": 200
+     }
+    },
+    {
+     "_key": "M3",
+     "name": "C1",
+     "kind": "column",
+     "x": "M",
+     "y": "3",
+     "design": {
+      "l": -300,
+      "r": 300,
+      "t": -100,
+      "b": 200
+     }
+    },
+    {
+     "_key": "N3",
+     "name": "SW6",
+     "kind": "wall",
+     "x": "N",
+     "y": "3",
+     "design": {
+      "l": -1350,
+      "r": 150,
+      "t": -100,
+      "b": 200
+     }
+    },
+    {
+     "_key": "B4",
+     "name": "C3",
+     "kind": "column",
+     "x": "B",
+     "y": "4",
+     "design": {
+      "l": -75,
+      "r": 225,
+      "t": -400,
+      "b": 200
+     }
+    },
+    {
+     "_key": "C4",
+     "name": "C1a",
+     "kind": "column",
+     "x": "C",
+     "y": "4",
+     "design": {
+      "l": -225,
+      "r": 75,
+      "t": -400,
+      "b": 200
+     }
+    },
+    {
+     "_key": "B5",
+     "name": "C2",
+     "kind": "column",
+     "x": "B",
+     "y": "5",
+     "design": {
+      "l": -75,
+      "r": 225,
+      "t": -500,
+      "b": 100
+     }
+    },
+    {
+     "_key": "C5",
+     "name": "C1a",
+     "kind": "column",
+     "x": "C",
+     "y": "5",
+     "design": {
+      "l": -225,
+      "r": 75,
+      "t": -150,
+      "b": 450
+     }
+    },
+    {
+     "_key": "F5",
+     "name": "C1",
+     "kind": "column",
+     "x": "F",
+     "y": "5",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -150,
+      "b": 450
+     }
+    },
+    {
+     "_key": "G5",
+     "name": "C6",
+     "kind": "column",
+     "x": "G",
+     "y": "5",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -150,
+      "b": 650
+     }
+    },
+    {
+     "_key": "H5",
+     "name": "C1",
+     "kind": "column",
+     "x": "H",
+     "y": "5",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -150,
+      "b": 450
+     }
+    },
+    {
+     "_key": "L5",
+     "name": "C6",
+     "kind": "column",
+     "x": "L",
+     "y": "5",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -150,
+      "b": 650
+     }
+    },
+    {
+     "_key": "M5",
+     "name": "SW7",
+     "kind": "wall",
+     "x": "M",
+     "y": "5",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -150,
+      "b": 2475
+     }
+    },
+    {
+     "_key": "N5",
+     "name": "C2",
+     "kind": "column",
+     "x": "N",
+     "y": "5",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -150,
+      "b": 450
+     }
+    },
+    {
+     "_key": "B7",
+     "name": "C4",
+     "kind": "column",
+     "x": "B",
+     "y": "7",
+     "design": {
+      "l": -75,
+      "r": 225,
+      "t": -500,
+      "b": 100
+     },
+     "ends": true
+    },
+    {
+     "_key": "C7",
+     "name": "C1a",
+     "kind": "column",
+     "x": "C",
+     "y": "7",
+     "design": {
+      "l": -225,
+      "r": 75,
+      "t": -500,
+      "b": 100
+     }
+    },
+    {
+     "_key": "D7",
+     "name": "C1b",
+     "kind": "column",
+     "x": "D",
+     "y": "7",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -500,
+      "b": 100
+     }
+    },
+    {
+     "_key": "F7",
+     "name": "C1b",
+     "kind": "column",
+     "x": "F",
+     "y": "7",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -500,
+      "b": 100
+     }
+    },
+    {
+     "_key": "G7",
+     "name": "C6",
+     "kind": "column",
+     "x": "G",
+     "y": "7",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -700,
+      "b": 100
+     }
+    },
+    {
+     "_key": "H7",
+     "name": "C1b",
+     "kind": "column",
+     "x": "H",
+     "y": "7",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -500,
+      "b": 100
+     }
+    },
+    {
+     "_key": "K7",
+     "name": "C1b",
+     "kind": "column",
+     "x": "K",
+     "y": "7",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -500,
+      "b": 100
+     }
+    },
+    {
+     "_key": "L7",
+     "name": "C6",
+     "kind": "column",
+     "x": "L",
+     "y": "7",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -700,
+      "b": 100
+     }
+    },
+    {
+     "_key": "M7",
+     "name": "C1b",
+     "kind": "column",
+     "x": "M",
+     "y": "7",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -500,
+      "b": 100
+     }
+    },
+    {
+     "_key": "N7",
+     "name": "C2",
+     "kind": "column",
+     "x": "N",
+     "y": "7",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -500,
+      "b": 100
+     }
+    }
+   ],
+   "cores": [
+    {
+     "_key": "lift1",
+     "name": "Lift 1",
+     "x": "D",
+     "y": "5",
+     "design": {
+      "l": -150,
+      "r": 2150,
+      "t": -150,
+      "b": 2475,
+      "wall": 300
+     },
+     "door": {
+      "side": "b",
+      "from": 490,
+      "width": 1320
+     }
+    },
+    {
+     "_key": "lift2",
+     "name": "Lift 2",
+     "x": "J",
+     "y": "5",
+     "design": {
+      "l": -150,
+      "r": 2150,
+      "t": -150,
+      "b": 2475,
+      "wall": 300
+     },
+     "door": {
+      "side": "b",
+      "from": 490,
+      "width": 1320
+     }
+    }
+   ],
+   "openings": [],
+   "source": "Columns from the new 1st floor drawing (10 Oct 2026): the columns that stand on the ground floor and hold up the 1st floor. There is no new ground floor slab drawing, so no slab edge is drawn here.",
+   "notes": [
+    "Grid 4 to 5 is written 3975 on the new plans, but it is drawn 4000 and the sections say 4000 (3 to 5 = 5650). The app uses 3975: measure it on site."
+   ]
+  },
+  {
+   "key": "1",
+   "name": "1st floor",
+   "short": "1",
+   "order": 1,
+   "level": 3900,
+   "grid": [
+    {
+     "_key": "xB",
+     "id": "B",
+     "axis": "x",
+     "design": 0
+    },
+    {
+     "_key": "xB1",
+     "id": "B1",
+     "axis": "x",
+     "design": 1600
+    },
+    {
+     "_key": "xB2",
+     "id": "B2",
+     "axis": "x",
+     "design": 3000
+    },
+    {
+     "_key": "xC",
+     "id": "C",
+     "axis": "x",
+     "design": 6150
+    },
+    {
+     "_key": "xD",
+     "id": "D",
+     "axis": "x",
+     "design": 12300
+    },
+    {
+     "_key": "xE",
+     "id": "E",
+     "axis": "x",
+     "design": 14300
+    },
+    {
+     "_key": "xF",
+     "id": "F",
+     "axis": "x",
+     "design": 16700
+    },
+    {
+     "_key": "xG",
+     "id": "G",
+     "axis": "x",
+     "design": 22850
+    },
+    {
+     "_key": "xH",
+     "id": "H",
+     "axis": "x",
+     "design": 29000
+    },
+    {
+     "_key": "xJ",
+     "id": "J",
+     "axis": "x",
+     "design": 31400
+    },
+    {
+     "_key": "xK",
+     "id": "K",
+     "axis": "x",
+     "design": 33400
+    },
+    {
+     "_key": "xL",
+     "id": "L",
+     "axis": "x",
+     "design": 39550
+    },
+    {
+     "_key": "xM",
+     "id": "M",
+     "axis": "x",
+     "design": 45700
+    },
+    {
+     "_key": "xN",
+     "id": "N",
+     "axis": "x",
+     "design": 50800
+    },
+    {
+     "_key": "y2",
+     "id": "2",
+     "axis": "y",
+     "design": 0
+    },
+    {
+     "_key": "y2A",
+     "id": "2A",
+     "axis": "y",
+     "design": 1175
+    },
+    {
+     "_key": "y2b",
+     "id": "2b",
+     "axis": "y",
+     "design": 5175
+    },
+    {
+     "_key": "y3",
+     "id": "3",
+     "axis": "y",
+     "design": 5750
+    },
+    {
+     "_key": "y4",
+     "id": "4",
+     "axis": "y",
+     "design": 7400
+    },
+    {
+     "_key": "y5",
+     "id": "5",
+     "axis": "y",
+     "design": 11375
+    },
+    {
+     "_key": "y6",
+     "id": "6",
+     "axis": "y",
+     "design": 13475
+    },
+    {
+     "_key": "y7",
+     "id": "7",
+     "axis": "y",
+     "design": 16350
+    },
+    {
+     "_key": "y7a",
+     "id": "7a",
+     "axis": "y",
+     "design": 17850
+    },
+    {
+     "_key": "y7b",
+     "id": "7b",
+     "axis": "y",
+     "design": 18200
+    }
+   ],
+   "slab": {
+    "edges": [
+     {
+      "_key": "e0",
+      "axis": "y",
+      "ref": "2",
+      "design": -100
+     },
+     {
+      "_key": "e1",
+      "axis": "x",
+      "ref": "C",
+      "design": 1575
+     },
+     {
+      "_key": "e2",
+      "axis": "y",
+      "ref": "3",
+      "design": -650
+     },
+     {
+      "_key": "e3",
+      "axis": "x",
+      "ref": "N",
+      "design": 975
+     },
+     {
+      "_key": "e4",
+      "axis": "y",
+      "ref": "5",
+      "design": 25
+     },
+     {
+      "_key": "e5",
+      "axis": "x",
+      "ref": "N",
+      "design": 675
+     },
+     {
+      "_key": "e6",
+      "axis": "y",
+      "ref": "6",
+      "design": 25
+     },
+     {
+      "_key": "e7",
+      "axis": "x",
+      "ref": "N",
+      "design": 150
+     },
+     {
+      "_key": "e8",
+      "axis": "y",
+      "ref": "7",
+      "design": 1850,
+      "note": "Written 1850, drawn 1925 (the 2nd floor says 1925)"
+     },
+     {
+      "_key": "e9",
+      "axis": "x",
+      "ref": "M",
+      "design": -150
+     },
+     {
+      "_key": "e10",
+      "axis": "y",
+      "ref": "7",
+      "design": 1375
+     },
+     {
+      "_key": "e11",
+      "axis": "x",
+      "ref": "L",
+      "design": 150
+     },
+     {
+      "_key": "e12",
+      "axis": "y",
+      "ref": "7",
+      "design": 1850,
+      "note": "Written 1850, drawn 1925 (the 2nd floor says 1925)"
+     },
+     {
+      "_key": "e13",
+      "axis": "x",
+      "ref": "K",
+      "design": -150
+     },
+     {
+      "_key": "e14",
+      "axis": "y",
+      "ref": "7",
+      "design": 1575
+     },
+     {
+      "_key": "e15",
+      "axis": "x",
+      "ref": "H",
+      "design": 150
+     },
+     {
+      "_key": "e16",
+      "axis": "y",
+      "ref": "7",
+      "design": 1850
+     },
+     {
+      "_key": "e17",
+      "axis": "x",
+      "ref": "G",
+      "design": -150
+     },
+     {
+      "_key": "e18",
+      "axis": "y",
+      "ref": "7",
+      "design": 1050
+     },
+     {
+      "_key": "e19",
+      "axis": "x",
+      "ref": "F",
+      "design": -150
+     },
+     {
+      "_key": "e20",
+      "axis": "y",
+      "ref": "7",
+      "design": 100
+     },
+     {
+      "_key": "e21",
+      "axis": "x",
+      "ref": "D",
+      "design": 150
+     },
+     {
+      "_key": "e22",
+      "axis": "y",
+      "ref": "7",
+      "design": 1850
+     },
+     {
+      "_key": "e23",
+      "axis": "x",
+      "ref": "B",
+      "design": -575
+     }
+    ]
+   },
+   "columns": [
+    {
+     "_key": "B2",
+     "name": "C2",
+     "kind": "column",
+     "x": "B",
+     "y": "2",
+     "design": {
+      "l": -75,
+      "r": 225,
+      "t": -100,
+      "b": 500
+     }
+    },
+    {
+     "_key": "C2",
+     "name": "C2",
+     "kind": "column",
+     "x": "C",
+     "y": "2",
+     "design": {
+      "l": -225,
+      "r": 75,
+      "t": -100,
+      "b": 500
+     }
+    },
+    {
+     "_key": "B3",
+     "name": "C2",
+     "kind": "column",
+     "x": "B",
+     "y": "3",
+     "design": {
+      "l": -75,
+      "r": 225,
+      "t": -275,
+      "b": 325
+     }
+    },
+    {
+     "_key": "C3",
+     "name": "SW5",
+     "kind": "wall",
+     "x": "C",
+     "y": "3",
+     "design": {
+      "l": -225,
+      "r": 75,
+      "t": -1175,
+      "b": 325
+     }
+    },
+    {
+     "_key": "D3",
+     "name": "C1",
+     "kind": "column",
+     "x": "D",
+     "y": "3",
+     "design": {
+      "l": -300,
+      "r": 300,
+      "t": -100,
+      "b": 200
+     }
+    },
+    {
+     "_key": "F3",
+     "name": "C1",
+     "kind": "column",
+     "x": "F",
+     "y": "3",
+     "design": {
+      "l": -300,
+      "r": 300,
+      "t": -100,
+      "b": 200
+     }
+    },
+    {
+     "_key": "G3",
+     "name": "SW4",
+     "kind": "wall",
+     "x": "G",
+     "y": "3",
+     "design": {
+      "l": -750,
+      "r": 750,
+      "t": -100,
+      "b": 200
+     }
+    },
+    {
+     "_key": "H3",
+     "name": "C1",
+     "kind": "column",
+     "x": "H",
+     "y": "3",
+     "design": {
+      "l": -300,
+      "r": 300,
+      "t": -100,
+      "b": 200
+     }
+    },
+    {
+     "_key": "K3",
+     "name": "C1",
+     "kind": "column",
+     "x": "K",
+     "y": "3",
+     "design": {
+      "l": -300,
+      "r": 300,
+      "t": -100,
+      "b": 200
+     }
+    },
+    {
+     "_key": "L3",
+     "name": "C1",
+     "kind": "column",
+     "x": "L",
+     "y": "3",
+     "design": {
+      "l": -300,
+      "r": 300,
+      "t": -100,
+      "b": 200
+     }
+    },
+    {
+     "_key": "M3",
+     "name": "C1",
+     "kind": "column",
+     "x": "M",
+     "y": "3",
+     "design": {
+      "l": -300,
+      "r": 300,
+      "t": -100,
+      "b": 200
+     }
+    },
+    {
+     "_key": "N3",
+     "name": "SW6",
+     "kind": "wall",
+     "x": "N",
+     "y": "3",
+     "design": {
+      "l": -1350,
+      "r": 150,
+      "t": -100,
+      "b": 200
+     }
+    },
+    {
+     "_key": "B4",
+     "name": "C3",
+     "kind": "column",
+     "x": "B",
+     "y": "4",
+     "design": {
+      "l": -75,
+      "r": 225,
+      "t": -400,
+      "b": 200
+     }
+    },
+    {
+     "_key": "C4",
+     "name": "C1a",
+     "kind": "column",
+     "x": "C",
+     "y": "4",
+     "design": {
+      "l": -225,
+      "r": 75,
+      "t": -400,
+      "b": 200
+     }
+    },
+    {
+     "_key": "B5",
+     "name": "C2",
+     "kind": "column",
+     "x": "B",
+     "y": "5",
+     "design": {
+      "l": -75,
+      "r": 225,
+      "t": -450,
+      "b": 150
+     }
+    },
+    {
+     "_key": "C5",
+     "name": "C1a",
+     "kind": "column",
+     "x": "C",
+     "y": "5",
+     "design": {
+      "l": -225,
+      "r": 75,
+      "t": -150,
+      "b": 450
+     }
+    },
+    {
+     "_key": "F5",
+     "name": "C1",
+     "kind": "column",
+     "x": "F",
+     "y": "5",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -150,
+      "b": 450
+     }
+    },
+    {
+     "_key": "G5",
+     "name": "C6",
+     "kind": "column",
+     "x": "G",
+     "y": "5",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -150,
+      "b": 650
+     }
+    },
+    {
+     "_key": "H5",
+     "name": "C1",
+     "kind": "column",
+     "x": "H",
+     "y": "5",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -150,
+      "b": 450
+     }
+    },
+    {
+     "_key": "L5",
+     "name": "C6",
+     "kind": "column",
+     "x": "L",
+     "y": "5",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -150,
+      "b": 650
+     }
+    },
+    {
+     "_key": "M5",
+     "name": "SW7",
+     "kind": "wall",
+     "x": "M",
+     "y": "5",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -150,
+      "b": 2475
+     }
+    },
+    {
+     "_key": "N5",
+     "name": "C2",
+     "kind": "column",
+     "x": "N",
+     "y": "5",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -150,
+      "b": 450
+     }
+    },
+    {
+     "_key": "C7",
+     "name": "C1a",
+     "kind": "column",
+     "x": "C",
+     "y": "7",
+     "design": {
+      "l": -225,
+      "r": 75,
+      "t": -500,
+      "b": 100
+     }
+    },
+    {
+     "_key": "D7",
+     "name": "C1b",
+     "kind": "column",
+     "x": "D",
+     "y": "7",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -500,
+      "b": 100
+     }
+    },
+    {
+     "_key": "F7",
+     "name": "C1b",
+     "kind": "column",
+     "x": "F",
+     "y": "7",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -500,
+      "b": 100
+     }
+    },
+    {
+     "_key": "G7",
+     "name": "C6",
+     "kind": "column",
+     "x": "G",
+     "y": "7",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -700,
+      "b": 100
+     }
+    },
+    {
+     "_key": "H7",
+     "name": "C1b",
+     "kind": "column",
+     "x": "H",
+     "y": "7",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -500,
+      "b": 100
+     }
+    },
+    {
+     "_key": "K7",
+     "name": "C1b",
+     "kind": "column",
+     "x": "K",
+     "y": "7",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -500,
+      "b": 100
+     }
+    },
+    {
+     "_key": "L7",
+     "name": "C6",
+     "kind": "column",
+     "x": "L",
+     "y": "7",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -700,
+      "b": 100
+     }
+    },
+    {
+     "_key": "M7",
+     "name": "C1b",
+     "kind": "column",
+     "x": "M",
+     "y": "7",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -500,
+      "b": 100
+     }
+    },
+    {
+     "_key": "N7",
+     "name": "C2",
+     "kind": "column",
+     "x": "N",
+     "y": "7",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -500,
+      "b": 100
+     }
+    }
+   ],
+   "cores": [
+    {
+     "_key": "lift1",
+     "name": "Lift 1",
+     "x": "D",
+     "y": "5",
+     "design": {
+      "l": -150,
+      "r": 2150,
+      "t": -150,
+      "b": 2475,
+      "wall": 300
+     },
+     "door": {
+      "side": "b",
+      "from": 490,
+      "width": 1320
+     }
+    },
+    {
+     "_key": "lift2",
+     "name": "Lift 2",
+     "x": "J",
+     "y": "5",
+     "design": {
+      "l": -150,
+      "r": 2150,
+      "t": -150,
+      "b": 2475,
+      "wall": 300
+     },
+     "door": {
+      "side": "b",
+      "from": 490,
+      "width": 1320
+     }
+    }
+   ],
+   "openings": [
+    {
+     "_key": "o1",
+     "kind": "void",
+     "name": "Opening by B/3",
+     "x": "B",
+     "y": "3",
+     "design": {
+      "l": 225,
+      "r": 700,
+      "t": 150,
+      "b": 575
+     }
+    },
+    {
+     "_key": "o2",
+     "kind": "void",
+     "name": "Opening by E/3",
+     "x": "E",
+     "y": "3",
+     "design": {
+      "l": -500,
+      "r": 150,
+      "t": -650,
+      "b": -100
+     }
+    },
+    {
+     "_key": "o3",
+     "kind": "void",
+     "name": "Opening by J/3",
+     "x": "J",
+     "y": "3",
+     "design": {
+      "l": -875,
+      "r": -225,
+      "t": -650,
+      "b": -100
+     }
+    },
+    {
+     "_key": "o4",
+     "kind": "void",
+     "name": "Opening by L/3",
+     "x": "L",
+     "y": "3",
+     "design": {
+      "l": -1000,
+      "r": -150,
+      "t": -650,
+      "b": -100
+     }
+    },
+    {
+     "_key": "stair1",
+     "kind": "stair",
+     "name": "Stair 1",
+     "x": "E",
+     "y": "5",
+     "design": {
+      "l": 150,
+      "r": 2250,
+      "t": 0,
+      "b": 3175
+     }
+    },
+    {
+     "_key": "stair2",
+     "kind": "stair",
+     "name": "Stair 2",
+     "x": "H",
+     "y": "5",
+     "design": {
+      "l": 150,
+      "r": 2250,
+      "t": 0,
+      "b": 3175
+     }
+    },
+    {
+     "_key": "pool",
+     "kind": "pool",
+     "name": "Pool (inside)",
+     "x": "B",
+     "y": "4",
+     "design": {
+      "l": 1900,
+      "r": 5925,
+      "t": 200,
+      "b": 8775
+     }
+    }
+   ],
+   "source": "Slab from the new 1st floor drawing (10 Oct 2026). Columns from the new 2nd floor drawing (12 Oct 2026): the columns that stand on this floor and hold up the 2nd floor.",
+   "notes": [
+    "Grid 4 to 5 is written 3975 on the new plans, but it is drawn 4000 and the sections say 4000 (3 to 5 = 5650). The app uses 3975: measure it on site.",
+    "The balconies between K–L and M–N are written 1850 from grid 7 but drawn 1925. The app uses 1850: measure them."
+   ]
+  },
+  {
+   "key": "2",
+   "name": "2nd floor",
+   "short": "2",
+   "order": 2,
+   "level": 7200,
+   "grid": [
+    {
+     "_key": "xB",
+     "id": "B",
+     "axis": "x",
+     "design": 0
+    },
+    {
+     "_key": "xC",
+     "id": "C",
+     "axis": "x",
+     "design": 6150
+    },
+    {
+     "_key": "xD",
+     "id": "D",
+     "axis": "x",
+     "design": 12300
+    },
+    {
+     "_key": "xE",
+     "id": "E",
+     "axis": "x",
+     "design": 14300
+    },
+    {
+     "_key": "xF",
+     "id": "F",
+     "axis": "x",
+     "design": 16700
+    },
+    {
+     "_key": "xG",
+     "id": "G",
+     "axis": "x",
+     "design": 22850
+    },
+    {
+     "_key": "xH",
+     "id": "H",
+     "axis": "x",
+     "design": 29000
+    },
+    {
+     "_key": "xJ",
+     "id": "J",
+     "axis": "x",
+     "design": 31400
+    },
+    {
+     "_key": "xK",
+     "id": "K",
+     "axis": "x",
+     "design": 33400
+    },
+    {
+     "_key": "xL",
+     "id": "L",
+     "axis": "x",
+     "design": 39550
+    },
+    {
+     "_key": "xM",
+     "id": "M",
+     "axis": "x",
+     "design": 45700
+    },
+    {
+     "_key": "xN",
+     "id": "N",
+     "axis": "x",
+     "design": 50800
+    },
+    {
+     "_key": "y2",
+     "id": "2",
+     "axis": "y",
+     "design": 0
+    },
+    {
+     "_key": "y2b",
+     "id": "2b",
+     "axis": "y",
+     "design": 5175
+    },
+    {
+     "_key": "y3",
+     "id": "3",
+     "axis": "y",
+     "design": 5750
+    },
+    {
+     "_key": "y4",
+     "id": "4",
+     "axis": "y",
+     "design": 7400
+    },
+    {
+     "_key": "y5",
+     "id": "5",
+     "axis": "y",
+     "design": 11375
+    },
+    {
+     "_key": "y6",
+     "id": "6",
+     "axis": "y",
+     "design": 13475
+    },
+    {
+     "_key": "y7",
+     "id": "7",
+     "axis": "y",
+     "design": 16350
+    },
+    {
+     "_key": "y7a",
+     "id": "7a",
+     "axis": "y",
+     "design": 17850
+    },
+    {
+     "_key": "y7b",
+     "id": "7b",
+     "axis": "y",
+     "design": 18200
+    }
+   ],
+   "slab": {
+    "edges": [
+     {
+      "_key": "e0",
+      "axis": "y",
+      "ref": "2",
+      "design": -100
+     },
+     {
+      "_key": "e1",
+      "axis": "x",
+      "ref": "C",
+      "design": 1550,
+      "note": "Written 1550, drawn 1575 (the 1st floor says 1575)"
+     },
+     {
+      "_key": "e2",
+      "axis": "y",
+      "ref": "3",
+      "design": -650
+     },
+     {
+      "_key": "e3",
+      "axis": "x",
+      "ref": "N",
+      "design": 975
+     },
+     {
+      "_key": "e4",
+      "axis": "y",
+      "ref": "5",
+      "design": 25
+     },
+     {
+      "_key": "e5",
+      "axis": "x",
+      "ref": "N",
+      "design": 675
+     },
+     {
+      "_key": "e6",
+      "axis": "y",
+      "ref": "6",
+      "design": 25
+     },
+     {
+      "_key": "e7",
+      "axis": "x",
+      "ref": "N",
+      "design": 150
+     },
+     {
+      "_key": "e8",
+      "axis": "y",
+      "ref": "7",
+      "design": 1925
+     },
+     {
+      "_key": "e9",
+      "axis": "x",
+      "ref": "M",
+      "design": -150
+     },
+     {
+      "_key": "e10",
+      "axis": "y",
+      "ref": "7",
+      "design": 1375
+     },
+     {
+      "_key": "e11",
+      "axis": "x",
+      "ref": "L",
+      "design": 150
+     },
+     {
+      "_key": "e12",
+      "axis": "y",
+      "ref": "7",
+      "design": 1925
+     },
+     {
+      "_key": "e13",
+      "axis": "x",
+      "ref": "K",
+      "design": -150
+     },
+     {
+      "_key": "e14",
+      "axis": "y",
+      "ref": "7",
+      "design": 1575
+     },
+     {
+      "_key": "e15",
+      "axis": "x",
+      "ref": "H",
+      "design": 150
+     },
+     {
+      "_key": "e16",
+      "axis": "y",
+      "ref": "7",
+      "design": 1925
+     },
+     {
+      "_key": "e17",
+      "axis": "x",
+      "ref": "G",
+      "design": -150
+     },
+     {
+      "_key": "e18",
+      "axis": "y",
+      "ref": "7",
+      "design": 1050
+     },
+     {
+      "_key": "e19",
+      "axis": "x",
+      "ref": "D",
+      "design": 150
+     },
+     {
+      "_key": "e20",
+      "axis": "y",
+      "ref": "7",
+      "design": 1925
+     },
+     {
+      "_key": "e21",
+      "axis": "x",
+      "ref": "C",
+      "design": -225
+     },
+     {
+      "_key": "e22",
+      "axis": "y",
+      "ref": "5",
+      "design": 150
+     },
+     {
+      "_key": "e23",
+      "axis": "x",
+      "ref": "B",
+      "design": -500,
+      "note": "Written 500, drawn 575 (the 1st floor says 575)"
+     }
+    ]
+   },
+   "columns": [
+    {
+     "_key": "B2",
+     "name": "C2",
+     "kind": "column",
+     "x": "B",
+     "y": "2",
+     "design": {
+      "l": -75,
+      "r": 225,
+      "t": -100,
+      "b": 500
+     }
+    },
+    {
+     "_key": "C2",
+     "name": "C2",
+     "kind": "column",
+     "x": "C",
+     "y": "2",
+     "design": {
+      "l": -225,
+      "r": 75,
+      "t": -100,
+      "b": 500
+     }
+    },
+    {
+     "_key": "B3",
+     "name": "C2",
+     "kind": "column",
+     "x": "B",
+     "y": "3",
+     "design": {
+      "l": -75,
+      "r": 225,
+      "t": -275,
+      "b": 325
+     }
+    },
+    {
+     "_key": "C3",
+     "name": "SW5",
+     "kind": "wall",
+     "x": "C",
+     "y": "3",
+     "design": {
+      "l": -225,
+      "r": 75,
+      "t": -1175,
+      "b": 325
+     }
+    },
+    {
+     "_key": "D3",
+     "name": "C1",
+     "kind": "column",
+     "x": "D",
+     "y": "3",
+     "design": {
+      "l": -300,
+      "r": 300,
+      "t": -100,
+      "b": 200
+     }
+    },
+    {
+     "_key": "F3",
+     "name": "C1",
+     "kind": "column",
+     "x": "F",
+     "y": "3",
+     "design": {
+      "l": -300,
+      "r": 300,
+      "t": -100,
+      "b": 200
+     }
+    },
+    {
+     "_key": "G3",
+     "name": "SW4",
+     "kind": "wall",
+     "x": "G",
+     "y": "3",
+     "design": {
+      "l": -750,
+      "r": 750,
+      "t": -100,
+      "b": 200
+     }
+    },
+    {
+     "_key": "H3",
+     "name": "C1",
+     "kind": "column",
+     "x": "H",
+     "y": "3",
+     "design": {
+      "l": -300,
+      "r": 300,
+      "t": -100,
+      "b": 200
+     }
+    },
+    {
+     "_key": "K3",
+     "name": "C1",
+     "kind": "column",
+     "x": "K",
+     "y": "3",
+     "design": {
+      "l": -300,
+      "r": 300,
+      "t": -100,
+      "b": 200
+     }
+    },
+    {
+     "_key": "L3",
+     "name": "C1",
+     "kind": "column",
+     "x": "L",
+     "y": "3",
+     "design": {
+      "l": -300,
+      "r": 300,
+      "t": -100,
+      "b": 200
+     }
+    },
+    {
+     "_key": "M3",
+     "name": "C1",
+     "kind": "column",
+     "x": "M",
+     "y": "3",
+     "design": {
+      "l": -300,
+      "r": 300,
+      "t": -100,
+      "b": 200
+     }
+    },
+    {
+     "_key": "N3",
+     "name": "SW6",
+     "kind": "wall",
+     "x": "N",
+     "y": "3",
+     "design": {
+      "l": -1350,
+      "r": 150,
+      "t": -100,
+      "b": 200
+     }
+    },
+    {
+     "_key": "B4",
+     "name": "C3",
+     "kind": "column",
+     "x": "B",
+     "y": "4",
+     "design": {
+      "l": -75,
+      "r": 225,
+      "t": -400,
+      "b": 200
+     }
+    },
+    {
+     "_key": "C4",
+     "name": "C1a",
+     "kind": "column",
+     "x": "C",
+     "y": "4",
+     "design": {
+      "l": -225,
+      "r": 75,
+      "t": -400,
+      "b": 200
+     }
+    },
+    {
+     "_key": "B5",
+     "name": "C2",
+     "kind": "column",
+     "x": "B",
+     "y": "5",
+     "design": {
+      "l": -75,
+      "r": 225,
+      "t": -450,
+      "b": 150
+     }
+    },
+    {
+     "_key": "C5",
+     "name": "C1a",
+     "kind": "column",
+     "x": "C",
+     "y": "5",
+     "design": {
+      "l": -225,
+      "r": 75,
+      "t": -150,
+      "b": 450
+     }
+    },
+    {
+     "_key": "F5",
+     "name": "C1",
+     "kind": "column",
+     "x": "F",
+     "y": "5",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -150,
+      "b": 450
+     }
+    },
+    {
+     "_key": "G5",
+     "name": "C6",
+     "kind": "column",
+     "x": "G",
+     "y": "5",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -150,
+      "b": 650
+     }
+    },
+    {
+     "_key": "H5",
+     "name": "C1",
+     "kind": "column",
+     "x": "H",
+     "y": "5",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -150,
+      "b": 450
+     }
+    },
+    {
+     "_key": "L5",
+     "name": "C6",
+     "kind": "column",
+     "x": "L",
+     "y": "5",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -150,
+      "b": 650
+     }
+    },
+    {
+     "_key": "M5",
+     "name": "SW7",
+     "kind": "wall",
+     "x": "M",
+     "y": "5",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -150,
+      "b": 2475
+     }
+    },
+    {
+     "_key": "N5",
+     "name": "C2",
+     "kind": "column",
+     "x": "N",
+     "y": "5",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -150,
+      "b": 450
+     }
+    },
+    {
+     "_key": "C7",
+     "name": "C1a",
+     "kind": "column",
+     "x": "C",
+     "y": "7",
+     "design": {
+      "l": -225,
+      "r": 75,
+      "t": -500,
+      "b": 100
+     }
+    },
+    {
+     "_key": "D7",
+     "name": "C1b",
+     "kind": "column",
+     "x": "D",
+     "y": "7",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -500,
+      "b": 100
+     }
+    },
+    {
+     "_key": "F7",
+     "name": "C1b",
+     "kind": "column",
+     "x": "F",
+     "y": "7",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -500,
+      "b": 100
+     }
+    },
+    {
+     "_key": "G7",
+     "name": "C6",
+     "kind": "column",
+     "x": "G",
+     "y": "7",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -700,
+      "b": 100
+     }
+    },
+    {
+     "_key": "H7",
+     "name": "C1b",
+     "kind": "column",
+     "x": "H",
+     "y": "7",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -500,
+      "b": 100
+     }
+    },
+    {
+     "_key": "K7",
+     "name": "C1b",
+     "kind": "column",
+     "x": "K",
+     "y": "7",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -500,
+      "b": 100
+     }
+    },
+    {
+     "_key": "L7",
+     "name": "C6",
+     "kind": "column",
+     "x": "L",
+     "y": "7",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -700,
+      "b": 100
+     }
+    },
+    {
+     "_key": "M7",
+     "name": "C1b",
+     "kind": "column",
+     "x": "M",
+     "y": "7",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -500,
+      "b": 100
+     }
+    },
+    {
+     "_key": "N7",
+     "name": "C2",
+     "kind": "column",
+     "x": "N",
+     "y": "7",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -500,
+      "b": 100
+     }
+    }
+   ],
+   "cores": [
+    {
+     "_key": "lift1",
+     "name": "Lift 1",
+     "x": "D",
+     "y": "5",
+     "design": {
+      "l": -150,
+      "r": 2150,
+      "t": -150,
+      "b": 2475,
+      "wall": 300
+     },
+     "door": {
+      "side": "b",
+      "from": 490,
+      "width": 1320
+     }
+    },
+    {
+     "_key": "lift2",
+     "name": "Lift 2",
+     "x": "J",
+     "y": "5",
+     "design": {
+      "l": -150,
+      "r": 2150,
+      "t": -150,
+      "b": 2475,
+      "wall": 300
+     },
+     "door": {
+      "side": "b",
+      "from": 490,
+      "width": 1320
+     }
+    }
+   ],
+   "openings": [
+    {
+     "_key": "stair1",
+     "kind": "stair",
+     "name": "Stair 1",
+     "x": "E",
+     "y": "5",
+     "design": {
+      "l": 150,
+      "r": 2250,
+      "t": 0,
+      "b": 3175
+     }
+    },
+    {
+     "_key": "stair2",
+     "kind": "stair",
+     "name": "Stair 2",
+     "x": "H",
+     "y": "5",
+     "design": {
+      "l": 150,
+      "r": 2250,
+      "t": 0,
+      "b": 3175
+     }
+    }
+   ],
+   "source": "Slab from the new 2nd floor drawing (12 Oct 2026). Columns copied from it too: the new 3rd floor drawing hasn't come yet, and the old drawings used the same columns for these two floors.",
+   "notes": [
+    "Grid 4 to 5 is written 3975 on the new plans, but it is drawn 4000 and the sections say 4000 (3 to 5 = 5650). The app uses 3975: measure it on site.",
+    "The B–C block's left edge is written 500 from grid B but drawn 575 (575 on the 1st floor). The app uses 500.",
+    "The B–C block's right edge is written 1550 from grid C but drawn 1575 (1575 on the 1st floor). The app uses 1550."
+   ]
+  },
+  {
+   "key": "3",
+   "name": "3rd floor",
+   "short": "3",
+   "order": 3,
+   "level": 10500,
+   "grid": [
+    {
+     "_key": "xB",
+     "id": "B",
+     "axis": "x",
+     "design": 0
+    },
+    {
+     "_key": "xC",
+     "id": "C",
+     "axis": "x",
+     "design": 6150
+    },
+    {
+     "_key": "xD",
+     "id": "D",
+     "axis": "x",
+     "design": 12300
+    },
+    {
+     "_key": "xE",
+     "id": "E",
+     "axis": "x",
+     "design": 14300
+    },
+    {
+     "_key": "xF",
+     "id": "F",
+     "axis": "x",
+     "design": 16700
+    },
+    {
+     "_key": "xG",
+     "id": "G",
+     "axis": "x",
+     "design": 22850
+    },
+    {
+     "_key": "xH",
+     "id": "H",
+     "axis": "x",
+     "design": 29000
+    },
+    {
+     "_key": "xJ",
+     "id": "J",
+     "axis": "x",
+     "design": 31400
+    },
+    {
+     "_key": "xK",
+     "id": "K",
+     "axis": "x",
+     "design": 33400
+    },
+    {
+     "_key": "xL",
+     "id": "L",
+     "axis": "x",
+     "design": 39550
+    },
+    {
+     "_key": "xM",
+     "id": "M",
+     "axis": "x",
+     "design": 45700
+    },
+    {
+     "_key": "xN",
+     "id": "N",
+     "axis": "x",
+     "design": 50800
+    },
+    {
+     "_key": "y2",
+     "id": "2",
+     "axis": "y",
+     "design": 0
+    },
+    {
+     "_key": "y2b",
+     "id": "2b",
+     "axis": "y",
+     "design": 5175
+    },
+    {
+     "_key": "y3",
+     "id": "3",
+     "axis": "y",
+     "design": 5750
+    },
+    {
+     "_key": "y4",
+     "id": "4",
+     "axis": "y",
+     "design": 7400
+    },
+    {
+     "_key": "y5",
+     "id": "5",
+     "axis": "y",
+     "design": 11375
+    },
+    {
+     "_key": "y6",
+     "id": "6",
+     "axis": "y",
+     "design": 13475
+    },
+    {
+     "_key": "y7",
+     "id": "7",
+     "axis": "y",
+     "design": 16350
+    },
+    {
+     "_key": "y7a",
+     "id": "7a",
+     "axis": "y",
+     "design": 17850
+    },
+    {
+     "_key": "y7b",
+     "id": "7b",
+     "axis": "y",
+     "design": 18200
+    }
+   ],
+   "slab": {
+    "edges": [
+     {
+      "_key": "e0",
+      "axis": "y",
+      "ref": "2",
+      "design": -100
+     },
+     {
+      "_key": "e1",
+      "axis": "x",
+      "ref": "C",
+      "design": 1550,
+      "note": "Written 1550, drawn 1575 (the 1st floor says 1575)"
+     },
+     {
+      "_key": "e2",
+      "axis": "y",
+      "ref": "3",
+      "design": -650
+     },
+     {
+      "_key": "e3",
+      "axis": "x",
+      "ref": "N",
+      "design": 975
+     },
+     {
+      "_key": "e4",
+      "axis": "y",
+      "ref": "5",
+      "design": 25
+     },
+     {
+      "_key": "e5",
+      "axis": "x",
+      "ref": "N",
+      "design": 675
+     },
+     {
+      "_key": "e6",
+      "axis": "y",
+      "ref": "6",
+      "design": 25
+     },
+     {
+      "_key": "e7",
+      "axis": "x",
+      "ref": "N",
+      "design": 150
+     },
+     {
+      "_key": "e8",
+      "axis": "y",
+      "ref": "7",
+      "design": 1925
+     },
+     {
+      "_key": "e9",
+      "axis": "x",
+      "ref": "M",
+      "design": -150
+     },
+     {
+      "_key": "e10",
+      "axis": "y",
+      "ref": "7",
+      "design": 1375
+     },
+     {
+      "_key": "e11",
+      "axis": "x",
+      "ref": "L",
+      "design": 150
+     },
+     {
+      "_key": "e12",
+      "axis": "y",
+      "ref": "7",
+      "design": 1925
+     },
+     {
+      "_key": "e13",
+      "axis": "x",
+      "ref": "K",
+      "design": -150
+     },
+     {
+      "_key": "e14",
+      "axis": "y",
+      "ref": "7",
+      "design": 1575
+     },
+     {
+      "_key": "e15",
+      "axis": "x",
+      "ref": "H",
+      "design": 150
+     },
+     {
+      "_key": "e16",
+      "axis": "y",
+      "ref": "7",
+      "design": 1925
+     },
+     {
+      "_key": "e17",
+      "axis": "x",
+      "ref": "G",
+      "design": -150
+     },
+     {
+      "_key": "e18",
+      "axis": "y",
+      "ref": "7",
+      "design": 1050
+     },
+     {
+      "_key": "e19",
+      "axis": "x",
+      "ref": "D",
+      "design": 150
+     },
+     {
+      "_key": "e20",
+      "axis": "y",
+      "ref": "7",
+      "design": 1925
+     },
+     {
+      "_key": "e21",
+      "axis": "x",
+      "ref": "C",
+      "design": -225
+     },
+     {
+      "_key": "e22",
+      "axis": "y",
+      "ref": "5",
+      "design": 150
+     },
+     {
+      "_key": "e23",
+      "axis": "x",
+      "ref": "B",
+      "design": -500,
+      "note": "Written 500, drawn 575 (the 1st floor says 575)"
+     }
+    ]
+   },
+   "columns": [
+    {
+     "_key": "B2",
+     "name": "C2",
+     "kind": "column",
+     "x": "B",
+     "y": "2",
+     "design": {
+      "l": -75,
+      "r": 225,
+      "t": -100,
+      "b": 500
+     }
+    },
+    {
+     "_key": "C2",
+     "name": "C2",
+     "kind": "column",
+     "x": "C",
+     "y": "2",
+     "design": {
+      "l": -225,
+      "r": 75,
+      "t": -100,
+      "b": 500
+     }
+    },
+    {
+     "_key": "B3",
+     "name": "C2",
+     "kind": "column",
+     "x": "B",
+     "y": "3",
+     "design": {
+      "l": -75,
+      "r": 225,
+      "t": -275,
+      "b": 325
+     }
+    },
+    {
+     "_key": "C3",
+     "name": "SW5",
+     "kind": "wall",
+     "x": "C",
+     "y": "3",
+     "design": {
+      "l": -225,
+      "r": 75,
+      "t": -1175,
+      "b": 325
+     }
+    },
+    {
+     "_key": "D3",
+     "name": "C1",
+     "kind": "column",
+     "x": "D",
+     "y": "3",
+     "design": {
+      "l": -300,
+      "r": 300,
+      "t": -100,
+      "b": 200
+     }
+    },
+    {
+     "_key": "F3",
+     "name": "C1",
+     "kind": "column",
+     "x": "F",
+     "y": "3",
+     "design": {
+      "l": -300,
+      "r": 300,
+      "t": -100,
+      "b": 200
+     }
+    },
+    {
+     "_key": "G3",
+     "name": "SW4",
+     "kind": "wall",
+     "x": "G",
+     "y": "3",
+     "design": {
+      "l": -750,
+      "r": 750,
+      "t": -100,
+      "b": 200
+     }
+    },
+    {
+     "_key": "H3",
+     "name": "C1",
+     "kind": "column",
+     "x": "H",
+     "y": "3",
+     "design": {
+      "l": -300,
+      "r": 300,
+      "t": -100,
+      "b": 200
+     }
+    },
+    {
+     "_key": "K3",
+     "name": "C1",
+     "kind": "column",
+     "x": "K",
+     "y": "3",
+     "design": {
+      "l": -300,
+      "r": 300,
+      "t": -100,
+      "b": 200
+     }
+    },
+    {
+     "_key": "L3",
+     "name": "C1",
+     "kind": "column",
+     "x": "L",
+     "y": "3",
+     "design": {
+      "l": -300,
+      "r": 300,
+      "t": -100,
+      "b": 200
+     }
+    },
+    {
+     "_key": "M3",
+     "name": "C1",
+     "kind": "column",
+     "x": "M",
+     "y": "3",
+     "design": {
+      "l": -300,
+      "r": 300,
+      "t": -100,
+      "b": 200
+     }
+    },
+    {
+     "_key": "N3",
+     "name": "SW6",
+     "kind": "wall",
+     "x": "N",
+     "y": "3",
+     "design": {
+      "l": -1350,
+      "r": 150,
+      "t": -100,
+      "b": 200
+     }
+    },
+    {
+     "_key": "B4",
+     "name": "C3",
+     "kind": "column",
+     "x": "B",
+     "y": "4",
+     "design": {
+      "l": -75,
+      "r": 225,
+      "t": -400,
+      "b": 200
+     }
+    },
+    {
+     "_key": "C4",
+     "name": "C1a",
+     "kind": "column",
+     "x": "C",
+     "y": "4",
+     "design": {
+      "l": -225,
+      "r": 75,
+      "t": -400,
+      "b": 200
+     }
+    },
+    {
+     "_key": "B5",
+     "name": "C2",
+     "kind": "column",
+     "x": "B",
+     "y": "5",
+     "design": {
+      "l": -75,
+      "r": 225,
+      "t": -450,
+      "b": 150
+     }
+    },
+    {
+     "_key": "C5",
+     "name": "C1a",
+     "kind": "column",
+     "x": "C",
+     "y": "5",
+     "design": {
+      "l": -225,
+      "r": 75,
+      "t": -150,
+      "b": 450
+     }
+    },
+    {
+     "_key": "F5",
+     "name": "C1",
+     "kind": "column",
+     "x": "F",
+     "y": "5",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -150,
+      "b": 450
+     }
+    },
+    {
+     "_key": "G5",
+     "name": "C6",
+     "kind": "column",
+     "x": "G",
+     "y": "5",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -150,
+      "b": 650
+     }
+    },
+    {
+     "_key": "H5",
+     "name": "C1",
+     "kind": "column",
+     "x": "H",
+     "y": "5",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -150,
+      "b": 450
+     }
+    },
+    {
+     "_key": "L5",
+     "name": "C6",
+     "kind": "column",
+     "x": "L",
+     "y": "5",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -150,
+      "b": 650
+     }
+    },
+    {
+     "_key": "M5",
+     "name": "SW7",
+     "kind": "wall",
+     "x": "M",
+     "y": "5",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -150,
+      "b": 2475
+     }
+    },
+    {
+     "_key": "N5",
+     "name": "C2",
+     "kind": "column",
+     "x": "N",
+     "y": "5",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -150,
+      "b": 450
+     }
+    },
+    {
+     "_key": "C7",
+     "name": "C1a",
+     "kind": "column",
+     "x": "C",
+     "y": "7",
+     "design": {
+      "l": -225,
+      "r": 75,
+      "t": -500,
+      "b": 100
+     }
+    },
+    {
+     "_key": "D7",
+     "name": "C1b",
+     "kind": "column",
+     "x": "D",
+     "y": "7",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -500,
+      "b": 100
+     }
+    },
+    {
+     "_key": "F7",
+     "name": "C1b",
+     "kind": "column",
+     "x": "F",
+     "y": "7",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -500,
+      "b": 100
+     }
+    },
+    {
+     "_key": "G7",
+     "name": "C6",
+     "kind": "column",
+     "x": "G",
+     "y": "7",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -700,
+      "b": 100
+     }
+    },
+    {
+     "_key": "H7",
+     "name": "C1b",
+     "kind": "column",
+     "x": "H",
+     "y": "7",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -500,
+      "b": 100
+     }
+    },
+    {
+     "_key": "K7",
+     "name": "C1b",
+     "kind": "column",
+     "x": "K",
+     "y": "7",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -500,
+      "b": 100
+     }
+    },
+    {
+     "_key": "L7",
+     "name": "C6",
+     "kind": "column",
+     "x": "L",
+     "y": "7",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -700,
+      "b": 100
+     }
+    },
+    {
+     "_key": "M7",
+     "name": "C1b",
+     "kind": "column",
+     "x": "M",
+     "y": "7",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -500,
+      "b": 100
+     }
+    },
+    {
+     "_key": "N7",
+     "name": "C2",
+     "kind": "column",
+     "x": "N",
+     "y": "7",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -500,
+      "b": 100
+     }
+    }
+   ],
+   "cores": [
+    {
+     "_key": "lift1",
+     "name": "Lift 1",
+     "x": "D",
+     "y": "5",
+     "design": {
+      "l": -150,
+      "r": 2150,
+      "t": -150,
+      "b": 2475,
+      "wall": 300
+     },
+     "door": {
+      "side": "b",
+      "from": 490,
+      "width": 1320
+     }
+    },
+    {
+     "_key": "lift2",
+     "name": "Lift 2",
+     "x": "J",
+     "y": "5",
+     "design": {
+      "l": -150,
+      "r": 2150,
+      "t": -150,
+      "b": 2475,
+      "wall": 300
+     },
+     "door": {
+      "side": "b",
+      "from": 490,
+      "width": 1320
+     }
+    }
+   ],
+   "openings": [
+    {
+     "_key": "stair1",
+     "kind": "stair",
+     "name": "Stair 1",
+     "x": "E",
+     "y": "5",
+     "design": {
+      "l": 150,
+      "r": 2250,
+      "t": 0,
+      "b": 3175
+     }
+    },
+    {
+     "_key": "stair2",
+     "kind": "stair",
+     "name": "Stair 2",
+     "x": "H",
+     "y": "5",
+     "design": {
+      "l": 150,
+      "r": 2250,
+      "t": 0,
+      "b": 3175
+     }
+    }
+   ],
+   "source": "No new drawing for this floor yet, so everything is copied from the new 2nd floor drawing. The old drawings showed this floor the same as the 2nd. Update it when the engineer sends this floor's drawing.",
+   "notes": [
+    "Grid 4 to 5 is written 3975 on the new plans, but it is drawn 4000 and the sections say 4000 (3 to 5 = 5650). The app uses 3975: measure it on site."
+   ]
+  },
+  {
+   "key": "4",
+   "name": "4th floor",
+   "short": "4",
+   "order": 4,
+   "level": 13800,
+   "grid": [
+    {
+     "_key": "xB",
+     "id": "B",
+     "axis": "x",
+     "design": 0
+    },
+    {
+     "_key": "xC",
+     "id": "C",
+     "axis": "x",
+     "design": 6150
+    },
+    {
+     "_key": "xD",
+     "id": "D",
+     "axis": "x",
+     "design": 12300
+    },
+    {
+     "_key": "xE",
+     "id": "E",
+     "axis": "x",
+     "design": 14300
+    },
+    {
+     "_key": "xF",
+     "id": "F",
+     "axis": "x",
+     "design": 16700
+    },
+    {
+     "_key": "xG",
+     "id": "G",
+     "axis": "x",
+     "design": 22850
+    },
+    {
+     "_key": "xH",
+     "id": "H",
+     "axis": "x",
+     "design": 29000
+    },
+    {
+     "_key": "xJ",
+     "id": "J",
+     "axis": "x",
+     "design": 31400
+    },
+    {
+     "_key": "xK",
+     "id": "K",
+     "axis": "x",
+     "design": 33400
+    },
+    {
+     "_key": "xL",
+     "id": "L",
+     "axis": "x",
+     "design": 39550
+    },
+    {
+     "_key": "xM",
+     "id": "M",
+     "axis": "x",
+     "design": 45700
+    },
+    {
+     "_key": "xN",
+     "id": "N",
+     "axis": "x",
+     "design": 50800
+    },
+    {
+     "_key": "y2",
+     "id": "2",
+     "axis": "y",
+     "design": 0
+    },
+    {
+     "_key": "y2b",
+     "id": "2b",
+     "axis": "y",
+     "design": 5175
+    },
+    {
+     "_key": "y3",
+     "id": "3",
+     "axis": "y",
+     "design": 5750
+    },
+    {
+     "_key": "y4",
+     "id": "4",
+     "axis": "y",
+     "design": 7400
+    },
+    {
+     "_key": "y5",
+     "id": "5",
+     "axis": "y",
+     "design": 11375
+    },
+    {
+     "_key": "y6",
+     "id": "6",
+     "axis": "y",
+     "design": 13475
+    },
+    {
+     "_key": "y7",
+     "id": "7",
+     "axis": "y",
+     "design": 16350
+    },
+    {
+     "_key": "y7a",
+     "id": "7a",
+     "axis": "y",
+     "design": 17850
+    },
+    {
+     "_key": "y7b",
+     "id": "7b",
+     "axis": "y",
+     "design": 18200
+    }
+   ],
+   "slab": {
+    "edges": [
+     {
+      "_key": "e0",
+      "axis": "y",
+      "ref": "2",
+      "design": -100
+     },
+     {
+      "_key": "e1",
+      "axis": "x",
+      "ref": "C",
+      "design": 1550,
+      "note": "Written 1550, drawn 1575 (the 1st floor says 1575)"
+     },
+     {
+      "_key": "e2",
+      "axis": "y",
+      "ref": "3",
+      "design": -650
+     },
+     {
+      "_key": "e3",
+      "axis": "x",
+      "ref": "N",
+      "design": 975
+     },
+     {
+      "_key": "e4",
+      "axis": "y",
+      "ref": "5",
+      "design": 25
+     },
+     {
+      "_key": "e5",
+      "axis": "x",
+      "ref": "N",
+      "design": 675
+     },
+     {
+      "_key": "e6",
+      "axis": "y",
+      "ref": "6",
+      "design": 25
+     },
+     {
+      "_key": "e7",
+      "axis": "x",
+      "ref": "N",
+      "design": 150
+     },
+     {
+      "_key": "e8",
+      "axis": "y",
+      "ref": "7",
+      "design": 1925
+     },
+     {
+      "_key": "e9",
+      "axis": "x",
+      "ref": "M",
+      "design": -150
+     },
+     {
+      "_key": "e10",
+      "axis": "y",
+      "ref": "7",
+      "design": 1375
+     },
+     {
+      "_key": "e11",
+      "axis": "x",
+      "ref": "L",
+      "design": 150
+     },
+     {
+      "_key": "e12",
+      "axis": "y",
+      "ref": "7",
+      "design": 1925
+     },
+     {
+      "_key": "e13",
+      "axis": "x",
+      "ref": "K",
+      "design": -150
+     },
+     {
+      "_key": "e14",
+      "axis": "y",
+      "ref": "7",
+      "design": 1575
+     },
+     {
+      "_key": "e15",
+      "axis": "x",
+      "ref": "H",
+      "design": 150
+     },
+     {
+      "_key": "e16",
+      "axis": "y",
+      "ref": "7",
+      "design": 1925
+     },
+     {
+      "_key": "e17",
+      "axis": "x",
+      "ref": "G",
+      "design": -150
+     },
+     {
+      "_key": "e18",
+      "axis": "y",
+      "ref": "7",
+      "design": 1050
+     },
+     {
+      "_key": "e19",
+      "axis": "x",
+      "ref": "D",
+      "design": 150
+     },
+     {
+      "_key": "e20",
+      "axis": "y",
+      "ref": "7",
+      "design": 1925
+     },
+     {
+      "_key": "e21",
+      "axis": "x",
+      "ref": "C",
+      "design": -225
+     },
+     {
+      "_key": "e22",
+      "axis": "y",
+      "ref": "5",
+      "design": 150
+     },
+     {
+      "_key": "e23",
+      "axis": "x",
+      "ref": "B",
+      "design": -500,
+      "note": "Written 500, drawn 575 (the 1st floor says 575)"
+     }
+    ]
+   },
+   "columns": [
+    {
+     "_key": "B2",
+     "name": "C2",
+     "kind": "column",
+     "x": "B",
+     "y": "2",
+     "design": {
+      "l": -75,
+      "r": 225,
+      "t": -100,
+      "b": 500
+     }
+    },
+    {
+     "_key": "C2",
+     "name": "C2",
+     "kind": "column",
+     "x": "C",
+     "y": "2",
+     "design": {
+      "l": -225,
+      "r": 75,
+      "t": -100,
+      "b": 500
+     }
+    },
+    {
+     "_key": "B3",
+     "name": "C2",
+     "kind": "column",
+     "x": "B",
+     "y": "3",
+     "design": {
+      "l": -75,
+      "r": 225,
+      "t": -275,
+      "b": 325
+     }
+    },
+    {
+     "_key": "C3",
+     "name": "SW5",
+     "kind": "wall",
+     "x": "C",
+     "y": "3",
+     "design": {
+      "l": -225,
+      "r": 75,
+      "t": -1175,
+      "b": 325
+     }
+    },
+    {
+     "_key": "D3",
+     "name": "C1",
+     "kind": "column",
+     "x": "D",
+     "y": "3",
+     "design": {
+      "l": -300,
+      "r": 300,
+      "t": -100,
+      "b": 200
+     }
+    },
+    {
+     "_key": "F3",
+     "name": "C1",
+     "kind": "column",
+     "x": "F",
+     "y": "3",
+     "design": {
+      "l": -300,
+      "r": 300,
+      "t": -100,
+      "b": 200
+     }
+    },
+    {
+     "_key": "G3",
+     "name": "SW4",
+     "kind": "wall",
+     "x": "G",
+     "y": "3",
+     "design": {
+      "l": -750,
+      "r": 750,
+      "t": -100,
+      "b": 200
+     }
+    },
+    {
+     "_key": "H3",
+     "name": "C1",
+     "kind": "column",
+     "x": "H",
+     "y": "3",
+     "design": {
+      "l": -300,
+      "r": 300,
+      "t": -100,
+      "b": 200
+     }
+    },
+    {
+     "_key": "K3",
+     "name": "C1",
+     "kind": "column",
+     "x": "K",
+     "y": "3",
+     "design": {
+      "l": -300,
+      "r": 300,
+      "t": -100,
+      "b": 200
+     }
+    },
+    {
+     "_key": "L3",
+     "name": "C1",
+     "kind": "column",
+     "x": "L",
+     "y": "3",
+     "design": {
+      "l": -300,
+      "r": 300,
+      "t": -100,
+      "b": 200
+     }
+    },
+    {
+     "_key": "M3",
+     "name": "C1",
+     "kind": "column",
+     "x": "M",
+     "y": "3",
+     "design": {
+      "l": -300,
+      "r": 300,
+      "t": -100,
+      "b": 200
+     }
+    },
+    {
+     "_key": "N3",
+     "name": "SW6",
+     "kind": "wall",
+     "x": "N",
+     "y": "3",
+     "design": {
+      "l": -1350,
+      "r": 150,
+      "t": -100,
+      "b": 200
+     }
+    },
+    {
+     "_key": "B4",
+     "name": "C3",
+     "kind": "column",
+     "x": "B",
+     "y": "4",
+     "design": {
+      "l": -75,
+      "r": 225,
+      "t": -400,
+      "b": 200
+     }
+    },
+    {
+     "_key": "C4",
+     "name": "C1a",
+     "kind": "column",
+     "x": "C",
+     "y": "4",
+     "design": {
+      "l": -225,
+      "r": 75,
+      "t": -400,
+      "b": 200
+     }
+    },
+    {
+     "_key": "B5",
+     "name": "C2",
+     "kind": "column",
+     "x": "B",
+     "y": "5",
+     "design": {
+      "l": -75,
+      "r": 225,
+      "t": -450,
+      "b": 150
+     }
+    },
+    {
+     "_key": "C5",
+     "name": "C1a",
+     "kind": "column",
+     "x": "C",
+     "y": "5",
+     "design": {
+      "l": -225,
+      "r": 75,
+      "t": -150,
+      "b": 450
+     }
+    },
+    {
+     "_key": "F5",
+     "name": "C1",
+     "kind": "column",
+     "x": "F",
+     "y": "5",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -150,
+      "b": 450
+     }
+    },
+    {
+     "_key": "G5",
+     "name": "C6",
+     "kind": "column",
+     "x": "G",
+     "y": "5",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -150,
+      "b": 650
+     }
+    },
+    {
+     "_key": "H5",
+     "name": "C1",
+     "kind": "column",
+     "x": "H",
+     "y": "5",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -150,
+      "b": 450
+     }
+    },
+    {
+     "_key": "L5",
+     "name": "C6",
+     "kind": "column",
+     "x": "L",
+     "y": "5",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -150,
+      "b": 650
+     }
+    },
+    {
+     "_key": "M5",
+     "name": "SW7",
+     "kind": "wall",
+     "x": "M",
+     "y": "5",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -150,
+      "b": 2475
+     }
+    },
+    {
+     "_key": "N5",
+     "name": "C2",
+     "kind": "column",
+     "x": "N",
+     "y": "5",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -150,
+      "b": 450
+     }
+    },
+    {
+     "_key": "C7",
+     "name": "C1a",
+     "kind": "column",
+     "x": "C",
+     "y": "7",
+     "design": {
+      "l": -225,
+      "r": 75,
+      "t": -500,
+      "b": 100
+     }
+    },
+    {
+     "_key": "D7",
+     "name": "C1b",
+     "kind": "column",
+     "x": "D",
+     "y": "7",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -500,
+      "b": 100
+     }
+    },
+    {
+     "_key": "F7",
+     "name": "C1b",
+     "kind": "column",
+     "x": "F",
+     "y": "7",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -500,
+      "b": 100
+     }
+    },
+    {
+     "_key": "G7",
+     "name": "C6",
+     "kind": "column",
+     "x": "G",
+     "y": "7",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -700,
+      "b": 100
+     }
+    },
+    {
+     "_key": "H7",
+     "name": "C1b",
+     "kind": "column",
+     "x": "H",
+     "y": "7",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -500,
+      "b": 100
+     }
+    },
+    {
+     "_key": "K7",
+     "name": "C1b",
+     "kind": "column",
+     "x": "K",
+     "y": "7",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -500,
+      "b": 100
+     }
+    },
+    {
+     "_key": "L7",
+     "name": "C6",
+     "kind": "column",
+     "x": "L",
+     "y": "7",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -700,
+      "b": 100
+     }
+    },
+    {
+     "_key": "M7",
+     "name": "C1b",
+     "kind": "column",
+     "x": "M",
+     "y": "7",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -500,
+      "b": 100
+     }
+    },
+    {
+     "_key": "N7",
+     "name": "C2",
+     "kind": "column",
+     "x": "N",
+     "y": "7",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -500,
+      "b": 100
+     }
+    }
+   ],
+   "cores": [
+    {
+     "_key": "lift1",
+     "name": "Lift 1",
+     "x": "D",
+     "y": "5",
+     "design": {
+      "l": -150,
+      "r": 2150,
+      "t": -150,
+      "b": 2475,
+      "wall": 300
+     },
+     "door": {
+      "side": "b",
+      "from": 490,
+      "width": 1320
+     }
+    },
+    {
+     "_key": "lift2",
+     "name": "Lift 2",
+     "x": "J",
+     "y": "5",
+     "design": {
+      "l": -150,
+      "r": 2150,
+      "t": -150,
+      "b": 2475,
+      "wall": 300
+     },
+     "door": {
+      "side": "b",
+      "from": 490,
+      "width": 1320
+     }
+    }
+   ],
+   "openings": [
+    {
+     "_key": "stair1",
+     "kind": "stair",
+     "name": "Stair 1",
+     "x": "E",
+     "y": "5",
+     "design": {
+      "l": 150,
+      "r": 2250,
+      "t": 0,
+      "b": 3175
+     }
+    },
+    {
+     "_key": "stair2",
+     "kind": "stair",
+     "name": "Stair 2",
+     "x": "H",
+     "y": "5",
+     "design": {
+      "l": 150,
+      "r": 2250,
+      "t": 0,
+      "b": 3175
+     }
+    }
+   ],
+   "source": "No new drawing for this floor yet, so everything is copied from the new 2nd floor drawing. The old drawing for this level (then called the 3rd floor) had a smaller B–C block, so check that part. Update it when the engineer sends this floor's drawing.",
+   "notes": [
+    "Grid 4 to 5 is written 3975 on the new plans, but it is drawn 4000 and the sections say 4000 (3 to 5 = 5650). The app uses 3975: measure it on site."
+   ]
+  },
+  {
+   "key": "5",
+   "name": "5th floor",
+   "short": "5",
+   "order": 5,
+   "level": 17100,
+   "grid": [
+    {
+     "_key": "xB",
+     "id": "B",
+     "axis": "x",
+     "design": 0
+    },
+    {
+     "_key": "xC",
+     "id": "C",
+     "axis": "x",
+     "design": 6150
+    },
+    {
+     "_key": "xD",
+     "id": "D",
+     "axis": "x",
+     "design": 12300
+    },
+    {
+     "_key": "xE",
+     "id": "E",
+     "axis": "x",
+     "design": 14300
+    },
+    {
+     "_key": "xF",
+     "id": "F",
+     "axis": "x",
+     "design": 16700
+    },
+    {
+     "_key": "xG",
+     "id": "G",
+     "axis": "x",
+     "design": 22850
+    },
+    {
+     "_key": "xH",
+     "id": "H",
+     "axis": "x",
+     "design": 29000
+    },
+    {
+     "_key": "xJ",
+     "id": "J",
+     "axis": "x",
+     "design": 31400
+    },
+    {
+     "_key": "xK",
+     "id": "K",
+     "axis": "x",
+     "design": 33400
+    },
+    {
+     "_key": "xL",
+     "id": "L",
+     "axis": "x",
+     "design": 39550
+    },
+    {
+     "_key": "xM",
+     "id": "M",
+     "axis": "x",
+     "design": 45700
+    },
+    {
+     "_key": "xN",
+     "id": "N",
+     "axis": "x",
+     "design": 50800
+    },
+    {
+     "_key": "y2",
+     "id": "2",
+     "axis": "y",
+     "design": 0
+    },
+    {
+     "_key": "y2b",
+     "id": "2b",
+     "axis": "y",
+     "design": 5175
+    },
+    {
+     "_key": "y3",
+     "id": "3",
+     "axis": "y",
+     "design": 5750
+    },
+    {
+     "_key": "y4",
+     "id": "4",
+     "axis": "y",
+     "design": 7400
+    },
+    {
+     "_key": "y5",
+     "id": "5",
+     "axis": "y",
+     "design": 11375
+    },
+    {
+     "_key": "y6",
+     "id": "6",
+     "axis": "y",
+     "design": 13475
+    },
+    {
+     "_key": "y7",
+     "id": "7",
+     "axis": "y",
+     "design": 16350
+    },
+    {
+     "_key": "y7a",
+     "id": "7a",
+     "axis": "y",
+     "design": 17850
+    },
+    {
+     "_key": "y7b",
+     "id": "7b",
+     "axis": "y",
+     "design": 18200
+    }
+   ],
+   "slab": {
+    "edges": [
+     {
+      "_key": "e0",
+      "axis": "y",
+      "ref": "2",
+      "design": -100
+     },
+     {
+      "_key": "e1",
+      "axis": "x",
+      "ref": "C",
+      "design": 1550,
+      "note": "Written 1550, drawn 1575 (the 1st floor says 1575)"
+     },
+     {
+      "_key": "e2",
+      "axis": "y",
+      "ref": "3",
+      "design": -650
+     },
+     {
+      "_key": "e3",
+      "axis": "x",
+      "ref": "N",
+      "design": 975
+     },
+     {
+      "_key": "e4",
+      "axis": "y",
+      "ref": "5",
+      "design": 25
+     },
+     {
+      "_key": "e5",
+      "axis": "x",
+      "ref": "N",
+      "design": 675
+     },
+     {
+      "_key": "e6",
+      "axis": "y",
+      "ref": "6",
+      "design": 25
+     },
+     {
+      "_key": "e7",
+      "axis": "x",
+      "ref": "N",
+      "design": 150
+     },
+     {
+      "_key": "e8",
+      "axis": "y",
+      "ref": "7",
+      "design": 1925
+     },
+     {
+      "_key": "e9",
+      "axis": "x",
+      "ref": "M",
+      "design": -150
+     },
+     {
+      "_key": "e10",
+      "axis": "y",
+      "ref": "7",
+      "design": 1375
+     },
+     {
+      "_key": "e11",
+      "axis": "x",
+      "ref": "L",
+      "design": 150
+     },
+     {
+      "_key": "e12",
+      "axis": "y",
+      "ref": "7",
+      "design": 1925
+     },
+     {
+      "_key": "e13",
+      "axis": "x",
+      "ref": "K",
+      "design": -150
+     },
+     {
+      "_key": "e14",
+      "axis": "y",
+      "ref": "7",
+      "design": 1575
+     },
+     {
+      "_key": "e15",
+      "axis": "x",
+      "ref": "H",
+      "design": 150
+     },
+     {
+      "_key": "e16",
+      "axis": "y",
+      "ref": "7",
+      "design": 1925
+     },
+     {
+      "_key": "e17",
+      "axis": "x",
+      "ref": "G",
+      "design": -150
+     },
+     {
+      "_key": "e18",
+      "axis": "y",
+      "ref": "7",
+      "design": 1050
+     },
+     {
+      "_key": "e19",
+      "axis": "x",
+      "ref": "D",
+      "design": 150
+     },
+     {
+      "_key": "e20",
+      "axis": "y",
+      "ref": "7",
+      "design": 1925
+     },
+     {
+      "_key": "e21",
+      "axis": "x",
+      "ref": "C",
+      "design": -225
+     },
+     {
+      "_key": "e22",
+      "axis": "y",
+      "ref": "5",
+      "design": 150
+     },
+     {
+      "_key": "e23",
+      "axis": "x",
+      "ref": "B",
+      "design": -500,
+      "note": "Written 500, drawn 575 (the 1st floor says 575)"
+     }
+    ]
+   },
+   "columns": [
+    {
+     "_key": "B2",
+     "name": "C2",
+     "kind": "column",
+     "x": "B",
+     "y": "2",
+     "design": {
+      "l": -75,
+      "r": 225,
+      "t": -100,
+      "b": 500
+     }
+    },
+    {
+     "_key": "C2",
+     "name": "C2",
+     "kind": "column",
+     "x": "C",
+     "y": "2",
+     "design": {
+      "l": -225,
+      "r": 75,
+      "t": -100,
+      "b": 500
+     }
+    },
+    {
+     "_key": "B3",
+     "name": "C2",
+     "kind": "column",
+     "x": "B",
+     "y": "3",
+     "design": {
+      "l": -75,
+      "r": 225,
+      "t": -275,
+      "b": 325
+     }
+    },
+    {
+     "_key": "C3",
+     "name": "SW5",
+     "kind": "wall",
+     "x": "C",
+     "y": "3",
+     "design": {
+      "l": -225,
+      "r": 75,
+      "t": -1175,
+      "b": 325
+     }
+    },
+    {
+     "_key": "D3",
+     "name": "C1",
+     "kind": "column",
+     "x": "D",
+     "y": "3",
+     "design": {
+      "l": -300,
+      "r": 300,
+      "t": -100,
+      "b": 200
+     }
+    },
+    {
+     "_key": "F3",
+     "name": "C1",
+     "kind": "column",
+     "x": "F",
+     "y": "3",
+     "design": {
+      "l": -300,
+      "r": 300,
+      "t": -100,
+      "b": 200
+     }
+    },
+    {
+     "_key": "G3",
+     "name": "SW4",
+     "kind": "wall",
+     "x": "G",
+     "y": "3",
+     "design": {
+      "l": -750,
+      "r": 750,
+      "t": -100,
+      "b": 200
+     }
+    },
+    {
+     "_key": "H3",
+     "name": "C1",
+     "kind": "column",
+     "x": "H",
+     "y": "3",
+     "design": {
+      "l": -300,
+      "r": 300,
+      "t": -100,
+      "b": 200
+     }
+    },
+    {
+     "_key": "K3",
+     "name": "C1",
+     "kind": "column",
+     "x": "K",
+     "y": "3",
+     "design": {
+      "l": -300,
+      "r": 300,
+      "t": -100,
+      "b": 200
+     }
+    },
+    {
+     "_key": "L3",
+     "name": "C1",
+     "kind": "column",
+     "x": "L",
+     "y": "3",
+     "design": {
+      "l": -300,
+      "r": 300,
+      "t": -100,
+      "b": 200
+     }
+    },
+    {
+     "_key": "M3",
+     "name": "C1",
+     "kind": "column",
+     "x": "M",
+     "y": "3",
+     "design": {
+      "l": -300,
+      "r": 300,
+      "t": -100,
+      "b": 200
+     }
+    },
+    {
+     "_key": "N3",
+     "name": "SW6",
+     "kind": "wall",
+     "x": "N",
+     "y": "3",
+     "design": {
+      "l": -1350,
+      "r": 150,
+      "t": -100,
+      "b": 200
+     }
+    },
+    {
+     "_key": "B4",
+     "name": "C3",
+     "kind": "column",
+     "x": "B",
+     "y": "4",
+     "design": {
+      "l": -75,
+      "r": 225,
+      "t": -400,
+      "b": 200
+     }
+    },
+    {
+     "_key": "C4",
+     "name": "C1a",
+     "kind": "column",
+     "x": "C",
+     "y": "4",
+     "design": {
+      "l": -225,
+      "r": 75,
+      "t": -400,
+      "b": 200
+     }
+    },
+    {
+     "_key": "B5",
+     "name": "C2",
+     "kind": "column",
+     "x": "B",
+     "y": "5",
+     "design": {
+      "l": -75,
+      "r": 225,
+      "t": -450,
+      "b": 150
+     }
+    },
+    {
+     "_key": "C5",
+     "name": "C1a",
+     "kind": "column",
+     "x": "C",
+     "y": "5",
+     "design": {
+      "l": -225,
+      "r": 75,
+      "t": -150,
+      "b": 450
+     }
+    },
+    {
+     "_key": "F5",
+     "name": "C1",
+     "kind": "column",
+     "x": "F",
+     "y": "5",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -150,
+      "b": 450
+     }
+    },
+    {
+     "_key": "G5",
+     "name": "C6",
+     "kind": "column",
+     "x": "G",
+     "y": "5",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -150,
+      "b": 650
+     }
+    },
+    {
+     "_key": "H5",
+     "name": "C1",
+     "kind": "column",
+     "x": "H",
+     "y": "5",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -150,
+      "b": 450
+     }
+    },
+    {
+     "_key": "L5",
+     "name": "C6",
+     "kind": "column",
+     "x": "L",
+     "y": "5",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -150,
+      "b": 650
+     }
+    },
+    {
+     "_key": "M5",
+     "name": "SW7",
+     "kind": "wall",
+     "x": "M",
+     "y": "5",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -150,
+      "b": 2475
+     }
+    },
+    {
+     "_key": "N5",
+     "name": "C2",
+     "kind": "column",
+     "x": "N",
+     "y": "5",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -150,
+      "b": 450
+     }
+    },
+    {
+     "_key": "C7",
+     "name": "C1a",
+     "kind": "column",
+     "x": "C",
+     "y": "7",
+     "design": {
+      "l": -225,
+      "r": 75,
+      "t": -500,
+      "b": 100
+     }
+    },
+    {
+     "_key": "D7",
+     "name": "C1b",
+     "kind": "column",
+     "x": "D",
+     "y": "7",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -500,
+      "b": 100
+     }
+    },
+    {
+     "_key": "F7",
+     "name": "C1b",
+     "kind": "column",
+     "x": "F",
+     "y": "7",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -500,
+      "b": 100
+     }
+    },
+    {
+     "_key": "G7",
+     "name": "C6",
+     "kind": "column",
+     "x": "G",
+     "y": "7",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -700,
+      "b": 100
+     }
+    },
+    {
+     "_key": "H7",
+     "name": "C1b",
+     "kind": "column",
+     "x": "H",
+     "y": "7",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -500,
+      "b": 100
+     }
+    },
+    {
+     "_key": "K7",
+     "name": "C1b",
+     "kind": "column",
+     "x": "K",
+     "y": "7",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -500,
+      "b": 100
+     }
+    },
+    {
+     "_key": "L7",
+     "name": "C6",
+     "kind": "column",
+     "x": "L",
+     "y": "7",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -700,
+      "b": 100
+     }
+    },
+    {
+     "_key": "M7",
+     "name": "C1b",
+     "kind": "column",
+     "x": "M",
+     "y": "7",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -500,
+      "b": 100
+     }
+    },
+    {
+     "_key": "N7",
+     "name": "C2",
+     "kind": "column",
+     "x": "N",
+     "y": "7",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -500,
+      "b": 100
+     }
+    }
+   ],
+   "cores": [
+    {
+     "_key": "lift1",
+     "name": "Lift 1",
+     "x": "D",
+     "y": "5",
+     "design": {
+      "l": -150,
+      "r": 2150,
+      "t": -150,
+      "b": 2475,
+      "wall": 300
+     },
+     "door": {
+      "side": "b",
+      "from": 490,
+      "width": 1320
+     }
+    },
+    {
+     "_key": "lift2",
+     "name": "Lift 2",
+     "x": "J",
+     "y": "5",
+     "design": {
+      "l": -150,
+      "r": 2150,
+      "t": -150,
+      "b": 2475,
+      "wall": 300
+     },
+     "door": {
+      "side": "b",
+      "from": 490,
+      "width": 1320
+     }
+    }
+   ],
+   "openings": [
+    {
+     "_key": "stair1",
+     "kind": "stair",
+     "name": "Stair 1",
+     "x": "E",
+     "y": "5",
+     "design": {
+      "l": 150,
+      "r": 2250,
+      "t": 0,
+      "b": 3175
+     }
+    },
+    {
+     "_key": "stair2",
+     "kind": "stair",
+     "name": "Stair 2",
+     "x": "H",
+     "y": "5",
+     "design": {
+      "l": 150,
+      "r": 2250,
+      "t": 0,
+      "b": 3175
+     }
+    }
+   ],
+   "source": "No new drawing for this floor yet, so everything is copied from the new 2nd floor drawing. The old drawing for this level (then called the 4th floor) had a smaller B–C block, so check that part. Update it when the engineer sends this floor's drawing.",
+   "notes": [
+    "Grid 4 to 5 is written 3975 on the new plans, but it is drawn 4000 and the sections say 4000 (3 to 5 = 5650). The app uses 3975: measure it on site."
+   ]
+  },
+  {
+   "key": "6",
+   "name": "6th floor",
+   "short": "6",
+   "order": 6,
+   "level": 20400,
+   "grid": [
+    {
+     "_key": "xB",
+     "id": "B",
+     "axis": "x",
+     "design": 0
+    },
+    {
+     "_key": "xC",
+     "id": "C",
+     "axis": "x",
+     "design": 6150
+    },
+    {
+     "_key": "xD",
+     "id": "D",
+     "axis": "x",
+     "design": 12300
+    },
+    {
+     "_key": "xE",
+     "id": "E",
+     "axis": "x",
+     "design": 14300
+    },
+    {
+     "_key": "xF",
+     "id": "F",
+     "axis": "x",
+     "design": 16700
+    },
+    {
+     "_key": "xG",
+     "id": "G",
+     "axis": "x",
+     "design": 22850
+    },
+    {
+     "_key": "xH",
+     "id": "H",
+     "axis": "x",
+     "design": 29000
+    },
+    {
+     "_key": "xJ",
+     "id": "J",
+     "axis": "x",
+     "design": 31400
+    },
+    {
+     "_key": "xK",
+     "id": "K",
+     "axis": "x",
+     "design": 33400
+    },
+    {
+     "_key": "xL",
+     "id": "L",
+     "axis": "x",
+     "design": 39550
+    },
+    {
+     "_key": "xM",
+     "id": "M",
+     "axis": "x",
+     "design": 45700
+    },
+    {
+     "_key": "xN",
+     "id": "N",
+     "axis": "x",
+     "design": 50800
+    },
+    {
+     "_key": "y2",
+     "id": "2",
+     "axis": "y",
+     "design": 0
+    },
+    {
+     "_key": "y2b",
+     "id": "2b",
+     "axis": "y",
+     "design": 5175
+    },
+    {
+     "_key": "y3",
+     "id": "3",
+     "axis": "y",
+     "design": 5750
+    },
+    {
+     "_key": "y4",
+     "id": "4",
+     "axis": "y",
+     "design": 7400
+    },
+    {
+     "_key": "y5",
+     "id": "5",
+     "axis": "y",
+     "design": 11375
+    },
+    {
+     "_key": "y6",
+     "id": "6",
+     "axis": "y",
+     "design": 13475
+    },
+    {
+     "_key": "y7",
+     "id": "7",
+     "axis": "y",
+     "design": 16350
+    },
+    {
+     "_key": "y7a",
+     "id": "7a",
+     "axis": "y",
+     "design": 17850
+    },
+    {
+     "_key": "y7b",
+     "id": "7b",
+     "axis": "y",
+     "design": 18200
+    }
+   ],
+   "slab": {
+    "edges": [
+     {
+      "_key": "e0",
+      "axis": "y",
+      "ref": "2",
+      "design": -100
+     },
+     {
+      "_key": "e1",
+      "axis": "x",
+      "ref": "C",
+      "design": 1550,
+      "note": "Written 1550, drawn 1575 (the 1st floor says 1575)"
+     },
+     {
+      "_key": "e2",
+      "axis": "y",
+      "ref": "3",
+      "design": -650
+     },
+     {
+      "_key": "e3",
+      "axis": "x",
+      "ref": "N",
+      "design": 975
+     },
+     {
+      "_key": "e4",
+      "axis": "y",
+      "ref": "5",
+      "design": 25
+     },
+     {
+      "_key": "e5",
+      "axis": "x",
+      "ref": "N",
+      "design": 675
+     },
+     {
+      "_key": "e6",
+      "axis": "y",
+      "ref": "6",
+      "design": 25
+     },
+     {
+      "_key": "e7",
+      "axis": "x",
+      "ref": "N",
+      "design": 150
+     },
+     {
+      "_key": "e8",
+      "axis": "y",
+      "ref": "7",
+      "design": 1925
+     },
+     {
+      "_key": "e9",
+      "axis": "x",
+      "ref": "M",
+      "design": -150
+     },
+     {
+      "_key": "e10",
+      "axis": "y",
+      "ref": "7",
+      "design": 1375
+     },
+     {
+      "_key": "e11",
+      "axis": "x",
+      "ref": "L",
+      "design": 150
+     },
+     {
+      "_key": "e12",
+      "axis": "y",
+      "ref": "7",
+      "design": 1925
+     },
+     {
+      "_key": "e13",
+      "axis": "x",
+      "ref": "K",
+      "design": -150
+     },
+     {
+      "_key": "e14",
+      "axis": "y",
+      "ref": "7",
+      "design": 1575
+     },
+     {
+      "_key": "e15",
+      "axis": "x",
+      "ref": "H",
+      "design": 150
+     },
+     {
+      "_key": "e16",
+      "axis": "y",
+      "ref": "7",
+      "design": 1925
+     },
+     {
+      "_key": "e17",
+      "axis": "x",
+      "ref": "G",
+      "design": -150
+     },
+     {
+      "_key": "e18",
+      "axis": "y",
+      "ref": "7",
+      "design": 1050
+     },
+     {
+      "_key": "e19",
+      "axis": "x",
+      "ref": "D",
+      "design": 150
+     },
+     {
+      "_key": "e20",
+      "axis": "y",
+      "ref": "7",
+      "design": 1925
+     },
+     {
+      "_key": "e21",
+      "axis": "x",
+      "ref": "C",
+      "design": -225
+     },
+     {
+      "_key": "e22",
+      "axis": "y",
+      "ref": "5",
+      "design": 150
+     },
+     {
+      "_key": "e23",
+      "axis": "x",
+      "ref": "B",
+      "design": -500,
+      "note": "Written 500, drawn 575 (the 1st floor says 575)"
+     }
+    ]
+   },
+   "columns": [
+    {
+     "_key": "B2",
+     "name": "C2",
+     "kind": "column",
+     "x": "B",
+     "y": "2",
+     "design": {
+      "l": -75,
+      "r": 225,
+      "t": -100,
+      "b": 500
+     }
+    },
+    {
+     "_key": "C2",
+     "name": "C2",
+     "kind": "column",
+     "x": "C",
+     "y": "2",
+     "design": {
+      "l": -225,
+      "r": 75,
+      "t": -100,
+      "b": 500
+     }
+    },
+    {
+     "_key": "B3",
+     "name": "C2",
+     "kind": "column",
+     "x": "B",
+     "y": "3",
+     "design": {
+      "l": -75,
+      "r": 225,
+      "t": -275,
+      "b": 325
+     }
+    },
+    {
+     "_key": "C3",
+     "name": "SW5",
+     "kind": "wall",
+     "x": "C",
+     "y": "3",
+     "design": {
+      "l": -225,
+      "r": 75,
+      "t": -1175,
+      "b": 325
+     }
+    },
+    {
+     "_key": "D3",
+     "name": "C1",
+     "kind": "column",
+     "x": "D",
+     "y": "3",
+     "design": {
+      "l": -300,
+      "r": 300,
+      "t": -100,
+      "b": 200
+     }
+    },
+    {
+     "_key": "F3",
+     "name": "C1",
+     "kind": "column",
+     "x": "F",
+     "y": "3",
+     "design": {
+      "l": -300,
+      "r": 300,
+      "t": -100,
+      "b": 200
+     }
+    },
+    {
+     "_key": "G3",
+     "name": "SW4",
+     "kind": "wall",
+     "x": "G",
+     "y": "3",
+     "design": {
+      "l": -750,
+      "r": 750,
+      "t": -100,
+      "b": 200
+     }
+    },
+    {
+     "_key": "H3",
+     "name": "C1",
+     "kind": "column",
+     "x": "H",
+     "y": "3",
+     "design": {
+      "l": -300,
+      "r": 300,
+      "t": -100,
+      "b": 200
+     }
+    },
+    {
+     "_key": "K3",
+     "name": "C1",
+     "kind": "column",
+     "x": "K",
+     "y": "3",
+     "design": {
+      "l": -300,
+      "r": 300,
+      "t": -100,
+      "b": 200
+     }
+    },
+    {
+     "_key": "L3",
+     "name": "C1",
+     "kind": "column",
+     "x": "L",
+     "y": "3",
+     "design": {
+      "l": -300,
+      "r": 300,
+      "t": -100,
+      "b": 200
+     }
+    },
+    {
+     "_key": "M3",
+     "name": "C1",
+     "kind": "column",
+     "x": "M",
+     "y": "3",
+     "design": {
+      "l": -300,
+      "r": 300,
+      "t": -100,
+      "b": 200
+     }
+    },
+    {
+     "_key": "N3",
+     "name": "SW6",
+     "kind": "wall",
+     "x": "N",
+     "y": "3",
+     "design": {
+      "l": -1350,
+      "r": 150,
+      "t": -100,
+      "b": 200
+     }
+    },
+    {
+     "_key": "B4",
+     "name": "C3",
+     "kind": "column",
+     "x": "B",
+     "y": "4",
+     "design": {
+      "l": -75,
+      "r": 225,
+      "t": -400,
+      "b": 200
+     }
+    },
+    {
+     "_key": "C4",
+     "name": "C1a",
+     "kind": "column",
+     "x": "C",
+     "y": "4",
+     "design": {
+      "l": -225,
+      "r": 75,
+      "t": -400,
+      "b": 200
+     }
+    },
+    {
+     "_key": "B5",
+     "name": "C2",
+     "kind": "column",
+     "x": "B",
+     "y": "5",
+     "design": {
+      "l": -75,
+      "r": 225,
+      "t": -450,
+      "b": 150
+     }
+    },
+    {
+     "_key": "C5",
+     "name": "C1a",
+     "kind": "column",
+     "x": "C",
+     "y": "5",
+     "design": {
+      "l": -225,
+      "r": 75,
+      "t": -150,
+      "b": 450
+     }
+    },
+    {
+     "_key": "F5",
+     "name": "C1",
+     "kind": "column",
+     "x": "F",
+     "y": "5",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -150,
+      "b": 450
+     }
+    },
+    {
+     "_key": "G5",
+     "name": "C6",
+     "kind": "column",
+     "x": "G",
+     "y": "5",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -150,
+      "b": 650
+     }
+    },
+    {
+     "_key": "H5",
+     "name": "C1",
+     "kind": "column",
+     "x": "H",
+     "y": "5",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -150,
+      "b": 450
+     }
+    },
+    {
+     "_key": "L5",
+     "name": "C6",
+     "kind": "column",
+     "x": "L",
+     "y": "5",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -150,
+      "b": 650
+     }
+    },
+    {
+     "_key": "M5",
+     "name": "SW7",
+     "kind": "wall",
+     "x": "M",
+     "y": "5",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -150,
+      "b": 2475
+     }
+    },
+    {
+     "_key": "N5",
+     "name": "C2",
+     "kind": "column",
+     "x": "N",
+     "y": "5",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -150,
+      "b": 450
+     }
+    },
+    {
+     "_key": "C7",
+     "name": "C1a",
+     "kind": "column",
+     "x": "C",
+     "y": "7",
+     "design": {
+      "l": -225,
+      "r": 75,
+      "t": -500,
+      "b": 100
+     }
+    },
+    {
+     "_key": "D7",
+     "name": "C1b",
+     "kind": "column",
+     "x": "D",
+     "y": "7",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -500,
+      "b": 100
+     }
+    },
+    {
+     "_key": "F7",
+     "name": "C1b",
+     "kind": "column",
+     "x": "F",
+     "y": "7",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -500,
+      "b": 100
+     }
+    },
+    {
+     "_key": "G7",
+     "name": "C6",
+     "kind": "column",
+     "x": "G",
+     "y": "7",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -700,
+      "b": 100
+     }
+    },
+    {
+     "_key": "H7",
+     "name": "C1b",
+     "kind": "column",
+     "x": "H",
+     "y": "7",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -500,
+      "b": 100
+     }
+    },
+    {
+     "_key": "K7",
+     "name": "C1b",
+     "kind": "column",
+     "x": "K",
+     "y": "7",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -500,
+      "b": 100
+     }
+    },
+    {
+     "_key": "L7",
+     "name": "C6",
+     "kind": "column",
+     "x": "L",
+     "y": "7",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -700,
+      "b": 100
+     }
+    },
+    {
+     "_key": "M7",
+     "name": "C1b",
+     "kind": "column",
+     "x": "M",
+     "y": "7",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -500,
+      "b": 100
+     }
+    },
+    {
+     "_key": "N7",
+     "name": "C2",
+     "kind": "column",
+     "x": "N",
+     "y": "7",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -500,
+      "b": 100
+     }
+    }
+   ],
+   "cores": [
+    {
+     "_key": "lift1",
+     "name": "Lift 1",
+     "x": "D",
+     "y": "5",
+     "design": {
+      "l": -150,
+      "r": 2150,
+      "t": -150,
+      "b": 2475,
+      "wall": 300
+     },
+     "door": {
+      "side": "b",
+      "from": 490,
+      "width": 1320
+     }
+    },
+    {
+     "_key": "lift2",
+     "name": "Lift 2",
+     "x": "J",
+     "y": "5",
+     "design": {
+      "l": -150,
+      "r": 2150,
+      "t": -150,
+      "b": 2475,
+      "wall": 300
+     },
+     "door": {
+      "side": "b",
+      "from": 490,
+      "width": 1320
+     }
+    }
+   ],
+   "openings": [
+    {
+     "_key": "stair1",
+     "kind": "stair",
+     "name": "Stair 1",
+     "x": "E",
+     "y": "5",
+     "design": {
+      "l": 150,
+      "r": 2250,
+      "t": 0,
+      "b": 3175
+     }
+    },
+    {
+     "_key": "stair2",
+     "kind": "stair",
+     "name": "Stair 2",
+     "x": "H",
+     "y": "5",
+     "design": {
+      "l": 150,
+      "r": 2250,
+      "t": 0,
+      "b": 3175
+     }
+    }
+   ],
+   "source": "No new drawing for this floor yet, so everything is copied from the new 2nd floor drawing. The old drawing for this level (then called the 5th floor) had a smaller B–C block, so check that part. Update it when the engineer sends this floor's drawing.",
+   "notes": [
+    "Grid 4 to 5 is written 3975 on the new plans, but it is drawn 4000 and the sections say 4000 (3 to 5 = 5650). The app uses 3975: measure it on site."
+   ]
+  },
+  {
+   "key": "7",
+   "name": "7th floor",
+   "short": "7",
+   "order": 7,
+   "level": 23700,
+   "grid": [
+    {
+     "_key": "xB",
+     "id": "B",
+     "axis": "x",
+     "design": 0
+    },
+    {
+     "_key": "xC",
+     "id": "C",
+     "axis": "x",
+     "design": 6150
+    },
+    {
+     "_key": "xD",
+     "id": "D",
+     "axis": "x",
+     "design": 12300
+    },
+    {
+     "_key": "xE",
+     "id": "E",
+     "axis": "x",
+     "design": 14300
+    },
+    {
+     "_key": "xF",
+     "id": "F",
+     "axis": "x",
+     "design": 16700
+    },
+    {
+     "_key": "xG",
+     "id": "G",
+     "axis": "x",
+     "design": 22850
+    },
+    {
+     "_key": "xH",
+     "id": "H",
+     "axis": "x",
+     "design": 29000
+    },
+    {
+     "_key": "xJ",
+     "id": "J",
+     "axis": "x",
+     "design": 31400
+    },
+    {
+     "_key": "xK",
+     "id": "K",
+     "axis": "x",
+     "design": 33400
+    },
+    {
+     "_key": "xL",
+     "id": "L",
+     "axis": "x",
+     "design": 39550
+    },
+    {
+     "_key": "xM",
+     "id": "M",
+     "axis": "x",
+     "design": 45700
+    },
+    {
+     "_key": "xN",
+     "id": "N",
+     "axis": "x",
+     "design": 50800
+    },
+    {
+     "_key": "y2",
+     "id": "2",
+     "axis": "y",
+     "design": 0
+    },
+    {
+     "_key": "y2b",
+     "id": "2b",
+     "axis": "y",
+     "design": 5175
+    },
+    {
+     "_key": "y3",
+     "id": "3",
+     "axis": "y",
+     "design": 5750
+    },
+    {
+     "_key": "y4",
+     "id": "4",
+     "axis": "y",
+     "design": 7400
+    },
+    {
+     "_key": "y5",
+     "id": "5",
+     "axis": "y",
+     "design": 11375
+    },
+    {
+     "_key": "y6",
+     "id": "6",
+     "axis": "y",
+     "design": 13475
+    },
+    {
+     "_key": "y7",
+     "id": "7",
+     "axis": "y",
+     "design": 16350
+    },
+    {
+     "_key": "y7a",
+     "id": "7a",
+     "axis": "y",
+     "design": 17850
+    },
+    {
+     "_key": "y7b",
+     "id": "7b",
+     "axis": "y",
+     "design": 18200
+    }
+   ],
+   "slab": {
+    "edges": [
+     {
+      "_key": "e0",
+      "axis": "y",
+      "ref": "2",
+      "design": -100
+     },
+     {
+      "_key": "e1",
+      "axis": "x",
+      "ref": "C",
+      "design": 1550,
+      "note": "Written 1550, drawn 1575 (the 1st floor says 1575)"
+     },
+     {
+      "_key": "e2",
+      "axis": "y",
+      "ref": "3",
+      "design": -650
+     },
+     {
+      "_key": "e3",
+      "axis": "x",
+      "ref": "N",
+      "design": 975
+     },
+     {
+      "_key": "e4",
+      "axis": "y",
+      "ref": "5",
+      "design": 25
+     },
+     {
+      "_key": "e5",
+      "axis": "x",
+      "ref": "N",
+      "design": 675
+     },
+     {
+      "_key": "e6",
+      "axis": "y",
+      "ref": "6",
+      "design": 25
+     },
+     {
+      "_key": "e7",
+      "axis": "x",
+      "ref": "N",
+      "design": 150
+     },
+     {
+      "_key": "e8",
+      "axis": "y",
+      "ref": "7",
+      "design": 1925
+     },
+     {
+      "_key": "e9",
+      "axis": "x",
+      "ref": "M",
+      "design": -150
+     },
+     {
+      "_key": "e10",
+      "axis": "y",
+      "ref": "7",
+      "design": 1375
+     },
+     {
+      "_key": "e11",
+      "axis": "x",
+      "ref": "L",
+      "design": 150
+     },
+     {
+      "_key": "e12",
+      "axis": "y",
+      "ref": "7",
+      "design": 1925
+     },
+     {
+      "_key": "e13",
+      "axis": "x",
+      "ref": "K",
+      "design": -150
+     },
+     {
+      "_key": "e14",
+      "axis": "y",
+      "ref": "7",
+      "design": 1575
+     },
+     {
+      "_key": "e15",
+      "axis": "x",
+      "ref": "H",
+      "design": 150
+     },
+     {
+      "_key": "e16",
+      "axis": "y",
+      "ref": "7",
+      "design": 1925
+     },
+     {
+      "_key": "e17",
+      "axis": "x",
+      "ref": "G",
+      "design": -150
+     },
+     {
+      "_key": "e18",
+      "axis": "y",
+      "ref": "7",
+      "design": 1050
+     },
+     {
+      "_key": "e19",
+      "axis": "x",
+      "ref": "D",
+      "design": 150
+     },
+     {
+      "_key": "e20",
+      "axis": "y",
+      "ref": "7",
+      "design": 1925
+     },
+     {
+      "_key": "e21",
+      "axis": "x",
+      "ref": "C",
+      "design": -225
+     },
+     {
+      "_key": "e22",
+      "axis": "y",
+      "ref": "5",
+      "design": 150
+     },
+     {
+      "_key": "e23",
+      "axis": "x",
+      "ref": "B",
+      "design": -500,
+      "note": "Written 500, drawn 575 (the 1st floor says 575)"
+     }
+    ]
+   },
+   "columns": [
+    {
+     "_key": "C3",
+     "name": "SW5",
+     "kind": "wall",
+     "x": "C",
+     "y": "3",
+     "design": {
+      "l": -225,
+      "r": 75,
+      "t": -1175,
+      "b": 325
+     }
+    },
+    {
+     "_key": "D3",
+     "name": "C1",
+     "kind": "column",
+     "x": "D",
+     "y": "3",
+     "design": {
+      "l": -300,
+      "r": 300,
+      "t": -100,
+      "b": 200
+     }
+    },
+    {
+     "_key": "F3",
+     "name": "C1",
+     "kind": "column",
+     "x": "F",
+     "y": "3",
+     "design": {
+      "l": -300,
+      "r": 300,
+      "t": -100,
+      "b": 200
+     }
+    },
+    {
+     "_key": "H3",
+     "name": "C1",
+     "kind": "column",
+     "x": "H",
+     "y": "3",
+     "design": {
+      "l": -300,
+      "r": 300,
+      "t": -100,
+      "b": 200
+     }
+    },
+    {
+     "_key": "K3",
+     "name": "C1",
+     "kind": "column",
+     "x": "K",
+     "y": "3",
+     "design": {
+      "l": -300,
+      "r": 300,
+      "t": -100,
+      "b": 200
+     }
+    },
+    {
+     "_key": "L3",
+     "name": "C1",
+     "kind": "column",
+     "x": "L",
+     "y": "3",
+     "design": {
+      "l": -300,
+      "r": 300,
+      "t": -100,
+      "b": 200
+     }
+    },
+    {
+     "_key": "M3",
+     "name": "C1",
+     "kind": "column",
+     "x": "M",
+     "y": "3",
+     "design": {
+      "l": -300,
+      "r": 300,
+      "t": -100,
+      "b": 200
+     }
+    },
+    {
+     "_key": "C4",
+     "name": "C1a",
+     "kind": "column",
+     "x": "C",
+     "y": "4",
+     "design": {
+      "l": -225,
+      "r": 75,
+      "t": -400,
+      "b": 200
+     }
+    },
+    {
+     "_key": "C5",
+     "name": "C1a",
+     "kind": "column",
+     "x": "C",
+     "y": "5",
+     "design": {
+      "l": -225,
+      "r": 75,
+      "t": -150,
+      "b": 450
+     }
+    },
+    {
+     "_key": "F5",
+     "name": "C1",
+     "kind": "column",
+     "x": "F",
+     "y": "5",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -150,
+      "b": 450
+     }
+    },
+    {
+     "_key": "G5",
+     "name": "C6",
+     "kind": "column",
+     "x": "G",
+     "y": "5",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -150,
+      "b": 650
+     }
+    },
+    {
+     "_key": "H5",
+     "name": "C1",
+     "kind": "column",
+     "x": "H",
+     "y": "5",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -150,
+      "b": 450
+     }
+    },
+    {
+     "_key": "L5",
+     "name": "C6",
+     "kind": "column",
+     "x": "L",
+     "y": "5",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -150,
+      "b": 650
+     }
+    },
+    {
+     "_key": "M5",
+     "name": "SW7",
+     "kind": "wall",
+     "x": "M",
+     "y": "5",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -150,
+      "b": 2475
+     }
+    },
+    {
+     "_key": "C7",
+     "name": "C1a",
+     "kind": "column",
+     "x": "C",
+     "y": "7",
+     "design": {
+      "l": -225,
+      "r": 75,
+      "t": -500,
+      "b": 100
+     }
+    },
+    {
+     "_key": "D7",
+     "name": "C1b",
+     "kind": "column",
+     "x": "D",
+     "y": "7",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -500,
+      "b": 100
+     }
+    },
+    {
+     "_key": "F7",
+     "name": "C1b",
+     "kind": "column",
+     "x": "F",
+     "y": "7",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -500,
+      "b": 100
+     }
+    },
+    {
+     "_key": "G7",
+     "name": "C6",
+     "kind": "column",
+     "x": "G",
+     "y": "7",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -700,
+      "b": 100
+     }
+    },
+    {
+     "_key": "H7",
+     "name": "C1b",
+     "kind": "column",
+     "x": "H",
+     "y": "7",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -500,
+      "b": 100
+     }
+    },
+    {
+     "_key": "K7",
+     "name": "C1b",
+     "kind": "column",
+     "x": "K",
+     "y": "7",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -500,
+      "b": 100
+     }
+    },
+    {
+     "_key": "L7",
+     "name": "C6",
+     "kind": "column",
+     "x": "L",
+     "y": "7",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -700,
+      "b": 100
+     }
+    },
+    {
+     "_key": "M7",
+     "name": "C1b",
+     "kind": "column",
+     "x": "M",
+     "y": "7",
+     "design": {
+      "l": -150,
+      "r": 150,
+      "t": -500,
+      "b": 100
+     }
+    }
+   ],
+   "cores": [
+    {
+     "_key": "lift1",
+     "name": "Lift 1",
+     "x": "D",
+     "y": "5",
+     "design": {
+      "l": -150,
+      "r": 2150,
+      "t": -150,
+      "b": 2475,
+      "wall": 300
+     },
+     "door": {
+      "side": "b",
+      "from": 490,
+      "width": 1320
+     }
+    },
+    {
+     "_key": "lift2",
+     "name": "Lift 2",
+     "x": "J",
+     "y": "5",
+     "design": {
+      "l": -150,
+      "r": 2150,
+      "t": -150,
+      "b": 2475,
+      "wall": 300
+     },
+     "door": {
+      "side": "b",
+      "from": 490,
+      "width": 1320
+     }
+    }
+   ],
+   "openings": [
+    {
+     "_key": "stair1",
+     "kind": "stair",
+     "name": "Stair 1",
+     "x": "E",
+     "y": "5",
+     "design": {
+      "l": 150,
+      "r": 2250,
+      "t": 0,
+      "b": 3175
+     }
+    },
+    {
+     "_key": "stair2",
+     "kind": "stair",
+     "name": "Stair 2",
+     "x": "H",
+     "y": "5",
+     "design": {
+      "l": 150,
+      "r": 2250,
+      "t": 0,
+      "b": 3175
+     }
+    },
+    {
+     "_key": "ph1",
+     "kind": "stair",
+     "name": "Penthouse stair C–D",
+     "x": "C",
+     "y": "7",
+     "design": {
+      "l": 75,
+      "r": 1375,
+      "t": -3875,
+      "b": -100
+     }
+    },
+    {
+     "_key": "ph2",
+     "kind": "stair",
+     "name": "Penthouse stair L–M (top)",
+     "x": "M",
+     "y": "7",
+     "design": {
+      "l": -1250,
+      "r": -150,
+      "t": -3900,
+      "b": -500
+     }
+    },
+    {
+     "_key": "ph3",
+     "kind": "stair",
+     "name": "Penthouse stair L–M (bottom)",
+     "x": "M",
+     "y": "7",
+     "design": {
+      "l": -3150,
+      "r": -1250,
+      "t": -1700,
+      "b": -500
+     }
+    }
+   ],
+   "source": "No new drawing for this floor yet. Slab copied from the new 2nd floor drawing. The penthouse stairs come from the old 'Rooftop (sixth floor)' drawing and the columns from the old roof drawing (Jan 2025): with the extra storey those levels now sit one floor higher. Rough guide only.",
+   "notes": [
+    "Grid 4 to 5 is written 3975 on the new plans, but it is drawn 4000 and the sections say 4000 (3 to 5 = 5650). The app uses 3975: measure it on site."
+   ]
+  },
+  {
+   "key": "roof",
+   "name": "Roof",
+   "short": "R",
+   "order": 8,
+   "level": 27000,
+   "grid": [
+    {
+     "_key": "xC",
+     "id": "C",
+     "axis": "x",
+     "design": 6150
+    },
+    {
+     "_key": "xD",
+     "id": "D",
+     "axis": "x",
+     "design": 12300
+    },
+    {
+     "_key": "xE",
+     "id": "E",
+     "axis": "x",
+     "design": 14300
+    },
+    {
+     "_key": "xF",
+     "id": "F",
+     "axis": "x",
+     "design": 16700
+    },
+    {
+     "_key": "xG",
+     "id": "G",
+     "axis": "x",
+     "design": 22850
+    },
+    {
+     "_key": "xH",
+     "id": "H",
+     "axis": "x",
+     "design": 29000
+    },
+    {
+     "_key": "xJ",
+     "id": "J",
+     "axis": "x",
+     "design": 31400
+    },
+    {
+     "_key": "xK",
+     "id": "K",
+     "axis": "x",
+     "design": 33400
+    },
+    {
+     "_key": "xL",
+     "id": "L",
+     "axis": "x",
+     "design": 39550
+    },
+    {
+     "_key": "xM",
+     "id": "M",
+     "axis": "x",
+     "design": 45700
+    },
+    {
+     "_key": "y3",
+     "id": "3",
+     "axis": "y",
+     "design": 5750
+    },
+    {
+     "_key": "y4",
+     "id": "4",
+     "axis": "y",
+     "design": 7400
+    },
+    {
+     "_key": "y5",
+     "id": "5",
+     "axis": "y",
+     "design": 11375
+    },
+    {
+     "_key": "y6",
+     "id": "6",
+     "axis": "y",
+     "design": 13475
+    },
+    {
+     "_key": "y7",
+     "id": "7",
+     "axis": "y",
+     "design": 16350
+    }
+   ],
+   "slab": {
+    "edges": [
+     {
+      "_key": "e0",
+      "axis": "y",
+      "ref": "3",
+      "design": -100
+     },
+     {
+      "_key": "e1",
+      "axis": "x",
+      "ref": "F",
+      "design": 100
+     },
+     {
+      "_key": "e2",
+      "axis": "y",
+      "ref": "5",
+      "design": -150
+     },
+     {
+      "_key": "e3",
+      "axis": "x",
+      "ref": "H",
+      "design": -100
+     },
+     {
+      "_key": "e4",
+      "axis": "y",
+      "ref": "3",
+      "design": -100
+     },
+     {
+      "_key": "e5",
+      "axis": "x",
+      "ref": "M",
+      "design": 100
+     },
+     {
+      "_key": "e6",
+      "axis": "y",
+      "ref": "7",
+      "design": 1475
+     },
+     {
+      "_key": "e7",
+      "axis": "x",
+      "ref": "K",
+      "design": -50
+     },
+     {
+      "_key": "e8",
+      "axis": "y",
+      "ref": "7",
+      "design": 1200
+     },
+     {
+      "_key": "e9",
+      "axis": "x",
+      "ref": "H",
+      "design": 100
+     },
+     {
+      "_key": "e10",
+      "axis": "y",
+      "ref": "7",
+      "design": 1700
+     },
+     {
+      "_key": "e11",
+      "axis": "x",
+      "ref": "F",
+      "design": -100
+     },
+     {
+      "_key": "e12",
+      "axis": "y",
+      "ref": "7",
+      "design": 1075
+     },
+     {
+      "_key": "e13",
+      "axis": "x",
+      "ref": "D",
+      "design": 150
+     },
+     {
+      "_key": "e14",
+      "axis": "y",
+      "ref": "7",
+      "design": 1925
+     },
+     {
+      "_key": "e15",
+      "axis": "x",
+      "ref": "C",
+      "design": -125
+     }
+    ]
+   },
+   "columns": [],
+   "cores": [
+    {
+     "_key": "lift1",
+     "name": "Lift 1",
+     "x": "D",
+     "y": "5",
+     "design": {
+      "l": -150,
+      "r": 2150,
+      "t": -150,
+      "b": 2475,
+      "wall": 300
+     },
+     "door": {
+      "side": "b",
+      "from": 490,
+      "width": 1320
+     }
+    },
+    {
+     "_key": "lift2",
+     "name": "Lift 2",
+     "x": "J",
+     "y": "5",
+     "design": {
+      "l": -150,
+      "r": 2150,
+      "t": -150,
+      "b": 2475,
+      "wall": 300
+     },
+     "door": {
+      "side": "b",
+      "from": 490,
+      "width": 1320
+     }
+    }
+   ],
+   "openings": [],
+   "source": "From the old roof drawing (Jan 2025), moved onto the new grid line by line. Rough guide only: update it when the new roof drawing comes.",
+   "notes": []
+  }
+ ]
+}
