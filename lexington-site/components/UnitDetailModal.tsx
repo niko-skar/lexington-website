@@ -8,7 +8,7 @@ import { trackAction } from "@/lib/visits/client";
 import { urlFor } from "@/lib/sanity/image";
 import { formatFloor, formatUSD } from "@/lib/format";
 import { floorTierName, isTierClamped, priceAtTier, tierAddon } from "@/lib/pricing";
-import { Penthouse3DPlan, levelOfPlan } from "./Penthouse3D";
+import { Unit3DPlan, has3DModel, levelOfPlan } from "./Penthouse3D";
 import { StatusBadge } from "./StatusBadge";
 import { useDialog } from "./useDialog";
 import styles from "./UnitDetailModal.module.css";
@@ -46,7 +46,7 @@ export function UnitDetailModal({
     trackAction("unit", unit.unitNumber);
   }, [unit.unitNumber]);
 
-  const has3D = unit.unitNumber === "PH2b";
+  const has3D = has3DModel(unit.unitNumber);
   const clamped = isTierClamped(unit, selectedTier, tiers);
   const addon = tierAddon(unit, selectedTier, tiers);
 
@@ -87,11 +87,11 @@ export function UnitDetailModal({
           <StatusBadge status={unit.status} />
         </div>
 
-        {/* The 3D plan is of PH2b only (the other penthouse has a different layout): the first thing under the price. */}
+        {/* The units with a 3D model (PH2b, 405B) get their 3D plan as the first thing under the price. */}
         {has3D && (
           <>
             <div className={styles.planLabel}>3D floor plan</div>
-            <Penthouse3DPlan startLevel={levelOfPlan(floorPlans[0]?.alt)} />
+            <Unit3DPlan unitNumber={unit.unitNumber} startLevel={levelOfPlan(unit.unitNumber, floorPlans[0]?.alt)} />
             {floorPlans.length > 0 && <div className={styles.planLabel}>2D floor plans</div>}
           </>
         )}

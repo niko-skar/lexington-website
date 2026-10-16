@@ -8,24 +8,56 @@ import { Reveal } from "./Reveal";
 import { useDialog } from "./useDialog";
 import styles from "./Penthouse3D.module.css";
 
-// The 3D model is a self-contained script in /public/3d (built from the penthouse-3d project). It is only
+// The 3D models are one self-contained script in /public/3d (built from the penthouse-3d project). It is only
 // downloaded when someone asks for it, so the page itself stays as light as before.
 // Bump the number after the script is rebuilt so browsers fetch the new one.
-const VIEWER_SRC = "/3d/ph2b.iife.js?v=9";
+const VIEWER_SRC = "/3d/ph2b.iife.js?v=10";
 const POSTER_SRC = "/3d/ph2b-poster.jpg";
 
-// The floor plan of each floor as the 3D model itself sees it from straight above (night view), in the two shapes the plan
-// box takes. It is on screen the moment the pop-up opens and stays until the live 3D view has started, so there is never an
-// empty box: the live view starts from the very same camera and just takes over.
-export type PlanLevel = "lower" | "upper";
-const PLAN_POSTER: Record<PlanLevel, { wide: string; phone: string }> = {
-  lower: { wide: "/3d/ph2b-plan-lower.jpg", phone: "/3d/ph2b-plan-lower-m.jpg" },
-  upper: { wide: "/3d/ph2b-plan-upper.jpg", phone: "/3d/ph2b-plan-upper-m.jpg" },
+// The units with a 3D model, by unit number: the name the script knows the model by, how the page names it, its floors, and
+// the plan picture of each floor as the model itself sees it from straight above (night view), in the two shapes the plan box
+// takes. The picture is on screen the moment the pop-up opens and stays until the live 3D view has started, so there is never
+// an empty box: the live view starts from the very same camera and just takes over.
+export type PlanLevel = "lower" | "upper" | "main";
+interface Model3D {
+  viewerId: string;
+  name: string;
+  levels: PlanLevel[];
+  posters: Partial<Record<PlanLevel, { wide: string; phone: string }>>;
+}
+const MODELS: Record<string, Model3D> = {
+  PH2b: {
+    viewerId: "ph2b",
+    name: "penthouse PH2b",
+    levels: ["lower", "upper"],
+    posters: {
+      lower: { wide: "/3d/ph2b-plan-lower.jpg", phone: "/3d/ph2b-plan-lower-m.jpg" },
+      upper: { wide: "/3d/ph2b-plan-upper.jpg", phone: "/3d/ph2b-plan-upper-m.jpg" },
+    },
+  },
+  "405B": {
+    viewerId: "u405b",
+    name: "apartment 405B",
+    levels: ["main"],
+    posters: { main: { wide: "/3d/u405b-plan.jpg?v=1", phone: "/3d/u405b-plan-m.jpg?v=1" } },
+  },
 };
 
-// The floor plans of the duplex penthouses are captioned "... lower floor" / "... upper floor (rooftop level)".
-export function levelOfPlan(alt: string | undefined): PlanLevel {
+export function has3DModel(unitNumber: string): boolean {
+  return unitNumber in MODELS;
+}
+
+// The floor the plan box opens on. The floor plans of the duplex penthouses are captioned "... lower floor" /
+// "... upper floor (rooftop level)"; a one-floor apartment has only the one.
+export function levelOfPlan(unitNumber: string, alt: string | undefined): PlanLevel {
+  const levels = MODELS[unitNumber]?.levels ?? ["main"];
+  if (levels.length === 1) return levels[0];
   return /upper|rooftop/i.test(alt ?? "") ? "upper" : "lower";
+}
+
+function posterOf(unitNumber: string, level: PlanLevel) {
+  const m = MODELS[unitNumber];
+  return m?.posters[level] ?? m?.posters[m.levels[0]];
 }
 
 interface Viewer {
@@ -34,6 +66,7 @@ interface Viewer {
 }
 interface ViewerApi {
   mountPH2b: (host: HTMLElement, options: Record<string, unknown>) => Promise<Viewer>;
+  mountUnit: (host: HTMLElement, id: string, options: Record<string, unknown>) => Promise<Viewer>;
 }
 type ViewerEvent = { mode?: string; time?: string; action?: string; level?: string; message?: string };
 
@@ -58,16 +91,17 @@ function loadViewer(): Promise<ViewerApi> {
   return pending;
 }
 
-function track(action: string) {
-  pushEvent({ event: "model_3d", model: "PH2b", action });
+function track(action: string, model = "PH2b") {
+  pushEvent({ event: "model_3d", model, action });
 }
 
 // Start fetching the script (and the plan picture) as soon as someone shows interest, so the click feels instant.
-export function warm3D(level?: PlanLevel) {
+export function warm3D(unitNumber?: string, level?: PlanLevel) {
   loadViewer().catch(() => {});
-  if (level && typeof window !== "undefined") {
+  const poster = unitNumber && level ? posterOf(unitNumber, level) : undefined;
+  if (poster && typeof window !== "undefined") {
     const phone = window.matchMedia("(max-width: 640px)").matches;
-    new window.Image().src = PLAN_POSTER[level][phone ? "phone" : "wide"];
+    new window.Image().src = poster[phone ? "phone" : "wide"];
   }
 }
 
@@ -156,30 +190,34 @@ export function Penthouse3DModal({ onClose }: { onClose: () => void }) {
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
-// The 3D floor plan inside the PH2b floor-plan pop-up. It opens on the plan picture (the model seen from straight above), the
-// 3D view loads behind it, and when that is ready it fades in on the same camera: from then on the visitor can turn it,
-// zoom, switch floor, walk inside, switch day and night, or take it full screen.
-export function Penthouse3DPlan({ startLevel }: { startLevel: PlanLevel }) {
+// The 3D floor plan inside a unit's floor-plan pop-up (the units in MODELS). It opens on the plan picture (the model seen from
+// straight above), the 3D view loads behind it, and when that is ready it fades in on the same camera: from then on the
+// visitor can turn it, zoom, switch floor, walk inside, switch day and night, or take it full screen.
+export function Unit3DPlan({ unitNumber, startLevel }: { unitNumber: string; startLevel: PlanLevel }) {
   const liveRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<Viewer | null>(null);
   const [phase, setPhase] = useState<"loading" | "ready" | "failed">("loading");
   const coarse = useCoarsePointer();
   const [locked, setLocked] = useState(true); // only matters on touch screens
+  const model = MODELS[unitNumber];
+  const floors = model.levels.length > 1;
+  const poster = posterOf(unitNumber, startLevel);
 
   useEffect(() => {
     const live = liveRef.current;
-    if (!live) return;
+    const m = MODELS[unitNumber];
+    if (!live || !m) return;
     const host = document.createElement("div");
     host.className = styles.planHost;
     live.appendChild(host);
     let cancelled = false;
     let errored = false;
-    track("plan_open");
+    track("plan_open", unitNumber);
 
     loadViewer()
       .then((api) =>
-        api.mountPH2b(host, {
-          initialLevel: startLevel,
+        api.mountUnit(host, m.viewerId, {
+          ...(m.levels.length > 1 ? { initialLevel: startLevel } : {}),
           initialView: "top", // the plan view, from straight above
           autoRotate: false,
           hideTitle: true, // the pop-up already says which unit this is
@@ -188,9 +226,9 @@ export function Penthouse3DPlan({ startLevel }: { startLevel: PlanLevel }) {
           onEvent: (name: string, data?: ViewerEvent) => {
             if (cancelled) return;
             if (name === "error") errored = true;
-            else if (name === "mode" && data?.mode === "walk") track("plan_walk_inside");
-            else if (name === "level") track(`plan_${data?.level}`);
-            else if (name === "time") track(data?.time === "evening" ? "plan_night" : "plan_daytime");
+            else if (name === "mode" && data?.mode === "walk") track("plan_walk_inside", unitNumber);
+            else if (name === "level") track(`plan_${data?.level}`, unitNumber);
+            else if (name === "time") track(data?.time === "evening" ? "plan_night" : "plan_daytime", unitNumber);
           },
         })
       )
@@ -203,7 +241,7 @@ export function Penthouse3DPlan({ startLevel }: { startLevel: PlanLevel }) {
         if (errored) setPhase("failed");
         else {
           setPhase("ready");
-          track("plan_ready");
+          track("plan_ready", unitNumber);
         }
       })
       .catch(() => {
@@ -216,7 +254,7 @@ export function Penthouse3DPlan({ startLevel }: { startLevel: PlanLevel }) {
       viewerRef.current = null;
       host.remove();
     };
-  }, [startLevel]);
+  }, [unitNumber, startLevel]);
 
   const gated = coarse && locked && phase === "ready";
 
@@ -225,17 +263,19 @@ export function Penthouse3DPlan({ startLevel }: { startLevel: PlanLevel }) {
       <div
         className={`${styles.planStage} ${phase === "ready" ? styles.planReady : ""}`}
         role="region"
-        aria-label="3D floor plan of penthouse PH2b"
+        aria-label={`3D floor plan of ${model.name}`}
       >
-        <picture className={styles.planPosterWrap}>
-          <source media="(max-width: 640px)" srcSet={PLAN_POSTER[startLevel].phone} />
-          <img
-            className={styles.planPoster}
-            src={PLAN_POSTER[startLevel].wide}
-            alt={`Floor plan of the ${startLevel} floor of penthouse PH2b, seen from above`}
-            fetchPriority="high"
-          />
-        </picture>
+        {poster && (
+          <picture className={styles.planPosterWrap}>
+            <source media="(max-width: 640px)" srcSet={poster.phone} />
+            <img
+              className={styles.planPoster}
+              src={poster.wide}
+              alt={floors ? `Floor plan of the ${startLevel} floor of ${model.name}, seen from above` : `Floor plan of ${model.name}, seen from above`}
+              fetchPriority="high"
+            />
+          </picture>
+        )}
         <div ref={liveRef} className={styles.planLive} />
         {phase === "loading" && (
           <div className={styles.planBadge} role="status">
@@ -250,7 +290,7 @@ export function Penthouse3DPlan({ startLevel }: { startLevel: PlanLevel }) {
             className={styles.planGate}
             onClick={() => {
               setLocked(false);
-              track("plan_unlock");
+              track("plan_unlock", unitNumber);
             }}
           >
             <span>Tap to explore in 3D</span>
@@ -264,15 +304,15 @@ export function Penthouse3DPlan({ startLevel }: { startLevel: PlanLevel }) {
       </div>
       <div className={styles.planFoot}>
         <p className={styles.planHint}>
-          Drag to turn it, scroll to zoom, use the buttons to change floor or step inside. An illustrative model: furniture, finishes and
-          views are indicative, and dimensions are approximate.
+          Drag to turn it, scroll to zoom, use the buttons to {floors ? "change floor or step inside" : "step inside"}. An illustrative
+          model: furniture, finishes and views are indicative, and dimensions are approximate.
         </p>
         {phase === "ready" && (
           <button
             type="button"
             className={styles.planFull}
             onClick={() => {
-              track("plan_fullscreen");
+              track("plan_fullscreen", unitNumber);
               viewerRef.current?.toggleFullscreen?.();
             }}
           >

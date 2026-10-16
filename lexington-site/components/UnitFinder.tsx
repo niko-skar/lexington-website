@@ -14,7 +14,7 @@ import { floorTierName, isTierClamped, priceAtTier, tierAddon } from "@/lib/pric
 import { StatusBadge } from "./StatusBadge";
 import { UnitDetailModal } from "./UnitDetailModal";
 import { CompareModal } from "./CompareModal";
-import { levelOfPlan, warm3D } from "./Penthouse3D";
+import { has3DModel, levelOfPlan, warm3D } from "./Penthouse3D";
 import { PackageTiers } from "./PackageTiers";
 import styles from "./UnitFinder.module.css";
 
@@ -26,10 +26,11 @@ type SortDir = "asc" | "desc";
 
 const MAX_COMPARE = 4;
 
-// PH2b has a 3D floor plan in its pop-up: start fetching it as soon as someone points at the row or card.
-const has3D = (u: Unit) => u.unitNumber === "PH2b";
+// Units with a 3D model (PH2b, 405B) have a 3D floor plan in their pop-up: start fetching it as soon as someone points at the
+// row or card.
+const has3D = (u: Unit) => has3DModel(u.unitNumber);
 function warmFor(u: Unit) {
-  if (has3D(u)) warm3D(levelOfPlan(u.floorPlans?.[0]?.alt));
+  if (has3D(u)) warm3D(u.unitNumber, levelOfPlan(u.unitNumber, u.floorPlans?.[0]?.alt));
 }
 
 // Alphabetical order happens to already read available < reserved < sold,
