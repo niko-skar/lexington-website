@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useSyncExternalStore } from "react";
 
 import type {
   BedroomType,
@@ -32,6 +32,9 @@ const has3D = (u: Unit) => has3DModel(u.unitNumber);
 function warmFor(u: Unit) {
   if (has3D(u)) warm3D(u.unitNumber, levelOfPlan(u.unitNumber, u.floorPlans?.[0]?.alt));
 }
+
+// The page address doesn't change while it is open, so there is nothing to listen to.
+const noSubscription = () => () => {};
 
 // Alphabetical order happens to already read available < reserved < sold,
 // but spelling it out keeps that from being an accident future edits break.
@@ -66,6 +69,21 @@ export function UnitFinder({ units, tiers }: UnitFinderProps) {
   // units arrived in, unchanged until someone clicks a header.
   const [sortColumn, setSortColumn] = useState<SortColumn | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>("asc");
+
+  // A link can open one unit's pop-up straight away, e.g. /residences?unit=405B (to send someone a unit's floor plan or its 3D
+  // model). Read once the page is in the browser (the page itself is the same for everyone); closing the pop-up leaves the
+  // address alone.
+  const linkedNumber = useSyncExternalStore(
+    noSubscription,
+    () => new URLSearchParams(window.location.search).get("unit"),
+    () => null
+  );
+  const [linkClosed, setLinkClosed] = useState(false);
+  const linkedUnit =
+    !linkClosed && linkedNumber
+      ? units.find((u) => u.unitNumber.toLowerCase() === linkedNumber.trim().toLowerCase()) ?? null
+      : null;
+  const openUnit = selectedUnit ?? linkedUnit;
 
   const floors = useMemo(
     () => Array.from(new Set(units.map((u) => u.floor))).sort((a, b) => a - b),
@@ -364,14 +382,17 @@ export function UnitFinder({ units, tiers }: UnitFinderProps) {
         <p className={styles.empty}>No units match these filters.</p>
       )}
 
-      {selectedUnit && (
+      {openUnit && (
         <UnitDetailModal
-          unit={selectedUnit}
-          floorPlans={selectedUnit.floorPlans ?? []}
-          locationPlan={selectedUnit.locationPlan}
+          unit={openUnit}
+          floorPlans={openUnit.floorPlans ?? []}
+          locationPlan={openUnit.locationPlan}
           tiers={tiers}
           selectedTier={selectedTier}
-          onClose={() => setSelectedUnit(null)}
+          onClose={() => {
+            setSelectedUnit(null);
+            setLinkClosed(true);
+          }}
         />
       )}
 
