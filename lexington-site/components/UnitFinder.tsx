@@ -10,6 +10,8 @@ import type {
   UnitStatus,
 } from "@/lib/sanity/types";
 import { formatFloor, formatUSD } from "@/lib/format";
+import { formatArea, type AreaUnit } from "@/lib/area";
+import { setAreaUnit, useAreaUnit } from "./useAreaUnit";
 import { floorTierName, isTierClamped, priceAtTier, tierAddon } from "@/lib/pricing";
 import { StatusBadge } from "./StatusBadge";
 import { UnitDetailModal } from "./UnitDetailModal";
@@ -69,6 +71,7 @@ export function UnitFinder({ units, tiers }: UnitFinderProps) {
   // units arrived in, unchanged until someone clicks a header.
   const [sortColumn, setSortColumn] = useState<SortColumn | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const areaUnit = useAreaUnit();
 
   // A link can open one unit's pop-up straight away, e.g. /residences?unit=405B (to send someone a unit's floor plan or its 3D
   // model). Read once the page is in the browser (the page itself is the same for everyone); closing the pop-up leaves the
@@ -217,6 +220,23 @@ export function UnitFinder({ units, tiers }: UnitFinderProps) {
             ))}
           </div>
         </div>
+
+        {/* Sizes in square metres or square feet: every size on the page follows it, and the browser remembers it. */}
+        <div className={styles.filterGroup}>
+          <span className={styles.filterLabel} id="area-unit-label">Area in</span>
+          <div className={styles.pills} role="group" aria-labelledby="area-unit-label">
+            {(["sqm", "sqft"] as AreaUnit[]).map((a) => (
+              <button
+                key={a}
+                className={areaUnit === a ? styles.pillActive : styles.pill}
+                aria-pressed={areaUnit === a}
+                onClick={() => setAreaUnit(a)}
+              >
+                {a === "sqm" ? "sqm" : "sq ft"}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       <div className={styles.count}>
@@ -292,7 +312,7 @@ export function UnitFinder({ units, tiers }: UnitFinderProps) {
                   <td>{u.unitNumber}</td>
                   <td>{formatFloor(u.floor)}</td>
                   <td>{u.bedroomType}</td>
-                  <td>{u.areaSqm} sqm</td>
+                  <td>{formatArea(u.areaSqm, areaUnit)}</td>
                   <td className={styles.price}>
                     {formatUSD(priceAtTier(u, selectedTier, tiers))}
                     {clamped ? (
@@ -344,7 +364,7 @@ export function UnitFinder({ units, tiers }: UnitFinderProps) {
                 <StatusBadge status={u.status} />
               </div>
               <div className={styles.cardMeta}>
-                Floor {formatFloor(u.floor)} · {u.bedroomType} · {u.areaSqm} sqm
+                Floor {formatFloor(u.floor)} · {u.bedroomType} · {formatArea(u.areaSqm, areaUnit)}
               </div>
               <div className={styles.cardPrice}>
                 {formatUSD(priceAtTier(u, selectedTier, tiers))}

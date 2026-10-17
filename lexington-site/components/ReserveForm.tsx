@@ -7,6 +7,8 @@ import { useFormStatus } from "react-dom";
 import { submitReservation, type ReserveFormState } from "@/lib/actions/reserve";
 import { trackLead } from "@/lib/analytics";
 import { formatFloor, formatUSD } from "@/lib/format";
+import { formatArea } from "@/lib/area";
+import { useAreaUnit } from "./useAreaUnit";
 import {
   BUYING_AS,
   CONTACT_VIA,
@@ -149,6 +151,7 @@ export function ReserveForm({ units, contactPhone, contactEmail, whatsappHref }:
   const [state, formAction] = useActionState(submitReservation, initialState);
   const [step, setStep] = useState(1);
   const [values, setValues] = useState<Values>(EMPTY);
+  const areaUnit = useAreaUnit();
   const [errors, setErrors] = useState<Errors>({});
   const [seen, setSeen] = useState<ReserveFormState>(state);
   // Which advert or link brought them here (utm_ parts only), and when the form
@@ -563,7 +566,7 @@ export function ReserveForm({ units, contactPhone, contactEmail, whatsappHref }:
                     />
                     <span className={styles.unitMain}>Unit {u.unitNumber}</span>
                     <span className={styles.unitMeta}>
-                      {u.floor === 0 ? "Ground floor" : `Floor ${formatFloor(u.floor)}`} · {u.areaSqm} sqm · from {formatUSD(u.priceUSD)}
+                      {u.floor === 0 ? "Ground floor" : `Floor ${formatFloor(u.floor)}`} · {formatArea(u.areaSqm, areaUnit)} · from {formatUSD(u.priceUSD)}
                     </span>
                   </label>
                 ))}

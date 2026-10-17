@@ -7,6 +7,8 @@ import type { GalleryImage, PackageTier, PackageTierKey, Unit, UnitLocationPlan 
 import { trackAction } from "@/lib/visits/client";
 import { urlFor } from "@/lib/sanity/image";
 import { formatFloor, formatUSD } from "@/lib/format";
+import { formatArea } from "@/lib/area";
+import { useAreaUnit } from "./useAreaUnit";
 import { floorTierName, isTierClamped, priceAtTier, tierAddon } from "@/lib/pricing";
 import { Unit3DPlan, has3DModel, levelOfPlan } from "./Penthouse3D";
 import { StatusBadge } from "./StatusBadge";
@@ -40,6 +42,7 @@ export function UnitDetailModal({
   onClose,
 }: UnitDetailModalProps) {
   const dialogRef = useDialog<HTMLDivElement>(onClose);
+  const areaUnit = useAreaUnit();
 
   // The dashboard's "Units opened most" (each unit counts once per visit).
   useEffect(() => {
@@ -69,7 +72,7 @@ export function UnitDetailModal({
           <div>
             <div className={styles.unitNumber}>{unit.unitNumber}</div>
             <div className={styles.meta}>
-              Floor {formatFloor(unit.floor)} · {unit.bedroomType} · {unit.areaSqm} sqm
+              Floor {formatFloor(unit.floor)} · {unit.bedroomType} · {formatArea(unit.areaSqm, areaUnit)}
             </div>
             <div className={styles.price}>
               {formatUSD(priceAtTier(unit, selectedTier, tiers))}

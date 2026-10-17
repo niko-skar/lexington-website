@@ -1,6 +1,8 @@
 "use client";
 
 import type { PackageTier, PackageTierKey } from "@/lib/sanity/types";
+import { areaUnitLabel, formatRatePerArea } from "@/lib/area";
+import { useAreaUnit } from "./useAreaUnit";
 import styles from "./PackageTiers.module.css";
 
 function CheckIcon() {
@@ -24,6 +26,7 @@ interface PackageTiersProps {
 }
 
 export function PackageTiers({ tiers, selected, onSelect }: PackageTiersProps) {
+  const areaUnit = useAreaUnit();
   if (tiers.length === 0) return null;
 
   return (
@@ -57,8 +60,8 @@ export function PackageTiers({ tiers, selected, onSelect }: PackageTiersProps) {
                 </>
               ) : (
                 <>
-                  +${tier.ratePerSqm.toLocaleString()}
-                  <small>per sqm</small>
+                  +{formatRatePerArea(tier.ratePerSqm, areaUnit)}
+                  <small>per {areaUnitLabel(areaUnit)}</small>
                 </>
               )}
             </div>

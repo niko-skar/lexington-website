@@ -4,6 +4,8 @@ import Image from "next/image";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { pushEvent } from "@/lib/analytics";
+import { formatArea } from "@/lib/area";
+import { useAreaUnit } from "./useAreaUnit";
 import { Reveal } from "./Reveal";
 import { useDialog } from "./useDialog";
 import styles from "./Penthouse3D.module.css";
@@ -327,6 +329,7 @@ export function Unit3DPlan({ unitNumber, startLevel }: { unitNumber: string; sta
 // ---------------------------------------------------------------------------------------------------------------------
 export function Penthouse3DSection({ areaSqm }: { areaSqm?: number }) {
   const [open, setOpen] = useState(false);
+  const areaUnit = useAreaUnit();
 
   function openViewer() {
     track("open");
@@ -368,7 +371,7 @@ export function Penthouse3DSection({ areaSqm }: { areaSqm?: number }) {
           <h2 className={styles.title}>Step inside penthouse PH2b.</h2>
           <div className={styles.body}>
             <p>
-              PH2b is a three-bedroom duplex penthouse{areaSqm ? ` of ${areaSqm} sqm` : ""}, on two floors.
+              PH2b is a three-bedroom duplex penthouse{areaSqm ? ` of ${formatArea(areaSqm, areaUnit)}` : ""}, on two floors.
               Turn the model around, step between the floors, switch between night and day, or walk
               through it yourself and take the stairs.
             </p>

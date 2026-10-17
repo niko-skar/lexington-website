@@ -5,6 +5,8 @@ import { useEffect, type ReactNode } from "react";
 import type { PackageTier, Unit } from "@/lib/sanity/types";
 import { trackAction } from "@/lib/visits/client";
 import { formatFloor, formatUSD } from "@/lib/format";
+import { formatArea, type AreaUnit } from "@/lib/area";
+import { useAreaUnit } from "./useAreaUnit";
 import { floorTierName, isTierClamped, priceAtTier, tierAddon } from "@/lib/pricing";
 import { StatusBadge } from "./StatusBadge";
 import { useDialog } from "./useDialog";
@@ -16,15 +18,16 @@ interface CompareModalProps {
   onClose: () => void;
 }
 
-const baseRows: { label: string; render: (u: Unit) => ReactNode }[] = [
+const baseRows: { label: string; render: (u: Unit, area: AreaUnit) => ReactNode }[] = [
   { label: "Floor", render: (u) => formatFloor(u.floor) },
   { label: "Type", render: (u) => u.bedroomType },
-  { label: "Area", render: (u) => `${u.areaSqm} sqm` },
+  { label: "Area", render: (u, area) => formatArea(u.areaSqm, area) },
   { label: "Status", render: (u) => <StatusBadge status={u.status} /> },
 ];
 
 export function CompareModal({ units, tiers, onClose }: CompareModalProps) {
   const dialogRef = useDialog<HTMLDivElement>(onClose);
+  const areaUnit = useAreaUnit();
 
   useEffect(() => {
     trackAction("compare");
@@ -64,7 +67,7 @@ export function CompareModal({ units, tiers, onClose }: CompareModalProps) {
                 <tr key={row.label}>
                   <td className={styles.rowLabel}>{row.label}</td>
                   {units.map((u) => (
-                    <td key={u._id}>{row.render(u)}</td>
+                    <td key={u._id}>{row.render(u, areaUnit)}</td>
                   ))}
                 </tr>
               ))}
@@ -97,7 +100,7 @@ export function CompareModal({ units, tiers, onClose }: CompareModalProps) {
                 <tr key={row.label}>
                   <td className={styles.rowLabel}>{row.label}</td>
                   {units.map((u) => (
-                    <td key={u._id}>{row.render(u)}</td>
+                    <td key={u._id}>{row.render(u, areaUnit)}</td>
                   ))}
                 </tr>
               ))}
