@@ -11,7 +11,7 @@ import styles from "./Penthouse3D.module.css";
 // The 3D models are one self-contained script in /public/3d (built from the penthouse-3d project). It is only
 // downloaded when someone asks for it, so the page itself stays as light as before.
 // Bump the number after the script is rebuilt so browsers fetch the new one.
-const VIEWER_SRC = "/3d/ph2b.iife.js?v=10";
+const VIEWER_SRC = "/3d/ph2b.iife.js?v=11";
 const POSTER_SRC = "/3d/ph2b-poster.jpg";
 
 // The units with a 3D model, by unit number: the name the script knows the model by, how the page names it, its floors, and
