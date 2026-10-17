@@ -24,7 +24,7 @@ export interface StageDef {
 export const STAGES: StageDef[] = [
   { key: "new", label: "New enquiry", tone: "attention" },
   { key: "contacted", label: "Contacted", tone: "open" },
-  { key: "viewing", label: "Viewing booked", tone: "open" },
+  { key: "viewing", label: "Advanced negotiations", tone: "open" }, // (was "Viewing booked"; the stored key stays "viewing")
   { key: "contract", label: "Offer / contract", tone: "open" },
   { key: "reserved", label: "Reserved", tone: "won" },
   { key: "paying", label: "Paying", tone: "won" },
