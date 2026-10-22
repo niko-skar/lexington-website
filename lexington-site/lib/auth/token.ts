@@ -13,6 +13,9 @@ export interface SessionPayload {
   /** Set only at login, from the account's role in the buyers dataset -- lets a
    *  buyer-portal login for an admin account also open /admin. */
   isAdmin?: boolean;
+  /** Set only at login for a "site" account (the foreman): it opens the site to-do list
+   *  at /todo and nothing else -- not /account, not /admin. */
+  site?: boolean;
 }
 
 function getSecretKey() {
@@ -39,6 +42,7 @@ export async function verifySessionToken(token: string): Promise<SessionPayload 
       role: payload.role,
       email: typeof payload.email === "string" ? payload.email : undefined,
       isAdmin: payload.isAdmin === true,
+      site: payload.site === true,
     };
   } catch {
     // Expired, tampered, or malformed -- treat exactly like "not logged in"

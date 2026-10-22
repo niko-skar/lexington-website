@@ -46,6 +46,10 @@ export async function loginAction(
   }
 
   const isAdmin = buyer.role === "admin";
-  await createBuyerSession(buyer.email, isAdmin);
-  redirect(isAdmin ? "/admin/crm" : "/account");
+  const isSite = buyer.role === "site";
+  // The site to-do list signs in through this same action (hidden next=/todo); a buyer
+  // still goes to their own portal whichever form they used.
+  const backToTodo = String(formData.get("next") || "") === "/todo";
+  await createBuyerSession(buyer.email, isAdmin, isSite);
+  redirect(isSite || (isAdmin && backToTodo) ? "/todo" : isAdmin ? "/admin/crm" : "/account");
 }

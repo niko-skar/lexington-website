@@ -53,7 +53,7 @@ export default async function AdminBuyerPage({ params }: { params: Promise<{ id:
       <div className={styles.eyebrow}>Buyer</div>
       <h1 className={styles.title}>{buyer.name}</h1>
       <p className={styles.empty} style={{ marginBottom: "var(--space-7)" }}>
-        {buyer.email} · Unit {buyer.unitNumber}
+        {buyer.email} · {buyer.role === "site" ? "Site to-do only (opens /todo)" : buyer.role === "admin" ? "Admin account" : `Unit ${buyer.unitNumber}`}
       </p>
 
       <div className={styles.section}>

@@ -99,12 +99,13 @@ export const buyerAccount = defineType({
       name: "role",
       title: "Role",
       description:
-        'Leave as Buyer for customers. "Admin" accounts sign in at the normal login page but land in the admin area (CRM) and have no unit or payments.',
+        'Leave as Buyer for customers. "Admin" accounts sign in at the normal login page but land in the admin area (CRM) and have no unit or payments. "Site to-do only" is for the foreman: the login opens the site to-do list (/todo) and nothing else.',
       type: "string",
       options: {
         list: [
           { title: "Buyer", value: "buyer" },
           { title: "Admin", value: "admin" },
+          { title: "Site to-do only", value: "site" },
         ],
         layout: "radio",
       },
@@ -115,19 +116,21 @@ export const buyerAccount = defineType({
       title: "Unit number",
       type: "string",
       description: 'Must match a real unit\'s "Unit number" exactly, e.g. "302A". Not a reference — units live in a different dataset.',
-      hidden: ({ document }) => document?.role === "admin",
+      hidden: ({ document }) => document?.role === "admin" || document?.role === "site",
       validation: (Rule) =>
-        Rule.custom((value, context) => (context.document?.role === "admin" || value ? true : "Required for buyers")),
+        Rule.custom((value, context) =>
+          context.document?.role === "admin" || context.document?.role === "site" || value ? true : "Required for buyers"
+        ),
     }),
     defineField({
       name: "contractPriceUSD",
       title: "Contract price (USD)",
       description: "This buyer's actual agreed price, which may differ from the public list price. Balance is calculated as this minus the sum of payments below.",
       type: "number",
-      hidden: ({ document }) => document?.role === "admin",
+      hidden: ({ document }) => document?.role === "admin" || document?.role === "site",
       validation: (Rule) =>
         Rule.custom((value, context) =>
-          context.document?.role === "admin" || (typeof value === "number" && value > 0)
+          context.document?.role === "admin" || context.document?.role === "site" || (typeof value === "number" && value > 0)
             ? true
             : "Required for buyers (must be positive)"
         ),

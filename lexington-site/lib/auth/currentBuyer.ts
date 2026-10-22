@@ -36,6 +36,10 @@ export async function requireCurrentBuyer(): Promise<{ buyer: BuyerAccount; unit
   if (buyer.role === "admin") {
     redirect("/admin/crm");
   }
+  // Site to-do accounts (the foreman) only have the list at /todo.
+  if (buyer.role === "site") {
+    redirect("/todo");
+  }
 
   const unit = await client.fetch<Unit | null>(unitByNumberQuery, { unitNumber: buyer.unitNumber });
 

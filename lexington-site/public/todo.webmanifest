@@ -1,0 +1,17 @@
+{
+  "name": "Lexington Site To-Do",
+  "short_name": "Site to-do",
+  "description": "Jobs on site with a photo and a note; tick them off when they're done.",
+  "id": "/todo",
+  "start_url": "/todo",
+  "scope": "/todo",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f7f4ec",
+  "theme_color": "#15181a",
+  "icons": [
+    { "src": "/todo/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/todo/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/todo/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
