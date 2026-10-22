@@ -8,6 +8,7 @@ import {
   allBoxes,
   boxOf,
   boxStatus,
+  chainLineOf,
   chainLines,
   chainOf,
   edgeDeviation,
@@ -578,7 +579,14 @@ export function PlanView({
       for (const id of chainLines(floor, "x")) drawChain("x", id);
       // Zoomed in: down every lettered line too. Further out, only the chosen column's line.
       if (k >= ZOOM_DETAIL) for (const id of chainLines(floor, "y")) drawChain("y", id);
-      else if (chosen && "x" in chosen) drawChain("y", chosen.x);
+      else if (chosen && "x" in chosen)
+        drawChain(
+          "y",
+          // (a lift core on its own line is measured along the line through it, see chainLineOf)
+          selection?.kind !== "edge" && selection?.kind !== "gap" && selection?.list === "cores"
+            ? chainLineOf(floor, "y", { list: "cores", el: chosen as CoreEl })
+            : chosen.x,
+        );
     }
 
     // Zoomed in: how far each slab edge is from the column face in front of it.

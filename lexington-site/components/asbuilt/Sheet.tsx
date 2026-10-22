@@ -16,6 +16,7 @@ import {
 import {
   boxOf,
   boxStatus,
+  chainLineOf,
   deviationOf,
   edgeDeviation,
   edgeReaches,
@@ -186,16 +187,13 @@ export function Sheet({ floor, selection, tol, busy, onClose, onSave }: SheetPro
     }
   } else {
     const next = findBox(floor, selection.list, selection.key) as TapeEl | undefined;
+    const lineId = next ? chainLineOf(floor, selection.axis, { list: selection.list, el: next }) : "";
     const gap = next
-      ? tapeGaps(floor, selection.axis, selection.axis === "x" ? next.y : next.x).find(
-          (g) => g.next.el._key === selection.key,
-        )
+      ? tapeGaps(floor, selection.axis, lineId).find((g) => g.next.el._key === selection.key)
       : undefined;
     if (gap) {
-      kind =
-        selection.axis === "x"
-          ? `Between columns, along grid ${gap.next.el.y}`
-          : `Between columns, down grid ${gap.next.el.x}`;
+      const between = gap.prev.list === "cores" || gap.next.list === "cores" ? "Column to lift core" : "Between columns";
+      kind = selection.axis === "x" ? `${between}, along grid ${lineId}` : `${between}, down grid ${lineId}`;
       title = `${itemRef(gap.prev)} to ${itemRef(gap.next)}`;
       const diff = Math.abs(gap.actual - gap.design);
       chip = <StatusChip status={gap.measured ? statusFor(diff, tol) : "none"} worst={gap.measured ? diff : null} />;
@@ -612,9 +610,8 @@ function ColGapBody({
   onSave: SaveFn;
 }) {
   const next = findBox(floor, list, nextKey) as TapeEl | undefined;
-  const gap = next
-    ? tapeGaps(floor, axis, axis === "x" ? next.y : next.x).find((g) => g.next.el._key === nextKey)
-    : undefined;
+  const lineId = next ? chainLineOf(floor, axis, { list, el: next }) : "";
+  const gap = next ? tapeGaps(floor, axis, lineId).find((g) => g.next.el._key === nextKey) : undefined;
   const [centres, setCentres] = useState(false);
   const [text, setText] = useState(gap && gap.measured ? mm(gap.actual) : "");
   if (!gap || !next) return null;
@@ -624,7 +621,7 @@ function ColGapBody({
   const along = (sz: ReturnType<typeof sizeOf>) => (sz ? (axis === "x" ? sz.w : sz.h) : 0);
   const typed = parseMm(text);
   const value = typed === null ? null : centres ? clearFromCentres(typed, along(ps), along(ns)) : typed;
-  const line = axis === "x" ? `along grid ${next.y}` : `down grid ${next.x}`;
+  const line = axis === "x" ? `along grid ${lineId}` : `down grid ${lineId}`;
 
   const switchMode = (c: boolean) => {
     setCentres(c);

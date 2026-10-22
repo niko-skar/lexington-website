@@ -131,6 +131,36 @@ export function tapeListOf(el: BoxEl): TapeList | null {
 const has = (v: number | null | undefined): v is number => v !== null && v !== undefined;
 
 /**
+ * A lift core with nothing else on its own grid line is measured along the next grid line through it that has columns on
+ * it. Lift 2 is set out from line J, where nothing else stands, but the columns above and below it (K/3 and K/7) stand on
+ * line K, so down line K the tape runs K/3, Lift 2, K/7, the way it runs D/3, Lift 1, D/7 down line D. Returns that line,
+ * or null when the core is measured along its own line. axis "x": rows (numbered lines); axis "y": lettered lines.
+ */
+export function adoptedLine(floor: Floor, axis: Axis, core: CoreEl): string | null {
+  const own = axis === "x" ? core.y : core.x;
+  const standsOn = (id: string) =>
+    floor.columns.some((c) => (axis === "x" ? c.y : c.x) === id) ||
+    floor.cores.some((c) => c._key !== core._key && (axis === "x" ? c.y : c.x) === id);
+  if (standsOn(own)) return null;
+  const b = boxFromFaces(floor, core, core.design, "design");
+  if (!b) return null;
+  const [lo, hi] = axis === "x" ? [b.y0, b.y1] : [b.x0, b.x1];
+  const through = gridLines(floor, axis === "x" ? "y" : "x").find(
+    (g) => g.id !== own && g.design > lo && g.design < hi && standsOn(g.id),
+  );
+  return through ? through.id : null;
+}
+
+/** The grid line an item is taped along: its own, or for a lift core on its own line, the line through it (see adoptedLine). */
+export function chainLineOf(floor: Floor, axis: Axis, it: TapeItem): string {
+  if (it.list === "cores") {
+    const adopted = adoptedLine(floor, axis, it.el as CoreEl);
+    if (adopted) return adopted;
+  }
+  return axis === "x" ? it.el.y : it.el.x;
+}
+
+/**
  * Columns, walls and lift cores standing on one grid line, in order along it.
  * axis "x": the row on numbered line `lineId` (B, C, D ... left to right);
  * axis "y": the line down lettered line `lineId` (2, 3, 4 ... top to bottom).
@@ -139,7 +169,7 @@ export function chainOf(floor: Floor, axis: Axis, lineId: string): TapeItem[] {
   const items: TapeItem[] = [
     ...floor.columns.map((el) => ({ list: "columns" as const, el })),
     ...floor.cores.map((el) => ({ list: "cores" as const, el })),
-  ].filter(({ el }) => (axis === "x" ? el.y : el.x) === lineId);
+  ].filter((it) => chainLineOf(floor, axis, it) === lineId);
   const at = (it: TapeItem) => {
     const b = boxFromFaces(floor, it.el, it.el.design, "design");
     return b ? centreOf(b)[axis === "x" ? 0 : 1] : 0;
@@ -253,8 +283,9 @@ export function tapeGaps(floor: Floor, axis: Axis, lineId: string): TapeGap[] {
 
 /** The gaps on either side of one column: along its row (x) and down its line (y). */
 export function gapsAround(floor: Floor, el: TapeEl): { axis: Axis; before?: TapeGap; after?: TapeGap }[] {
+  const list: TapeList = tapeListOf(el) ?? "columns";
   return (["x", "y"] as const).map((axis) => {
-    const gaps = tapeGaps(floor, axis, axis === "x" ? el.y : el.x);
+    const gaps = tapeGaps(floor, axis, chainLineOf(floor, axis, { list, el }));
     return {
       axis,
       before: gaps.find((g) => g.next.el._key === el._key),
