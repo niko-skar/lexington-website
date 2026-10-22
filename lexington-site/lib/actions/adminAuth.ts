@@ -26,7 +26,7 @@ export async function adminLoginAction(
   }
 
   await createAdminSession();
-  redirect("/admin/crm");
+  redirect(String(formData.get("next") || "") === "/todo" ? "/todo" : "/admin/crm");
 }
 
 export async function adminLogoutAction() {

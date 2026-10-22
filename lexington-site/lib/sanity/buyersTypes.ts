@@ -23,8 +23,9 @@ export interface BuyerAccount {
   email: string;
   passwordHash: string;
   name: string;
-  /** Absent means an ordinary buyer. "admin" accounts sign in at /login but land in /admin. */
-  role?: "buyer" | "admin";
+  /** Absent means an ordinary buyer. "admin" accounts sign in at /login but land in /admin;
+   *  "site" accounts (the foreman) land on the site to-do list at /todo and can open nothing else. */
+  role?: "buyer" | "admin" | "site";
   /** Admin accounts have no unit or contract price. */
   unitNumber: string;
   contractPriceUSD: number;
@@ -36,7 +37,7 @@ export interface BuyerAccountSummary {
   _id: string;
   email: string;
   name: string;
-  role?: "buyer" | "admin";
+  role?: "buyer" | "admin" | "site";
   unitNumber?: string;
 }
 

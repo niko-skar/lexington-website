@@ -12,6 +12,10 @@ export async function proxy(request: NextRequest) {
       const loginUrl = new URL("/login", request.url);
       return NextResponse.redirect(loginUrl);
     }
+    // A site to-do login (the foreman) only has the list at /todo.
+    if (payload.site) {
+      return NextResponse.redirect(new URL("/todo", request.url));
+    }
   }
 
   if (pathname.startsWith("/admin") && pathname !== "/admin/login") {

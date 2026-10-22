@@ -15,6 +15,7 @@ const NAV_LINKS = [
   { href: "/admin/dashboard", label: "Dashboard" },
   { href: "/admin/progress", label: "Site updates" },
   { href: "/admin/asbuilt", label: "As-built" },
+  { href: "/todo", label: "Site to-do" },
 ];
 
 export default function AdminProtectedLayout({ children }: { children: React.ReactNode }) {

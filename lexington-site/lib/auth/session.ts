@@ -18,10 +18,10 @@ const cookieOptions = (maxAgeSeconds: number) => ({
 
 // An admin account's login also carries admin access, so it expires sooner
 // than an ordinary buyer's 30 days.
-export async function createBuyerSession(email: string, isAdmin = false) {
+export async function createBuyerSession(email: string, isAdmin = false, site = false) {
   const days = isAdmin ? 7 : 30;
   const token = await signSessionToken(
-    { role: "buyer", email, isAdmin },
+    { role: "buyer", email, isAdmin, ...(site && !isAdmin ? { site: true } : {}) },
     isAdmin ? "7d" : BUYER_SESSION_LIFETIME
   );
   (await cookies()).set(BUYER_COOKIE, token, cookieOptions(60 * 60 * 24 * days));
@@ -32,7 +32,7 @@ export async function getBuyerSession() {
   if (!token) return null;
   const payload = await verifySessionToken(token);
   if (!payload || payload.role !== "buyer" || !payload.email) return null;
-  return { email: payload.email, isAdmin: payload.isAdmin === true };
+  return { email: payload.email, isAdmin: payload.isAdmin === true, site: payload.site === true };
 }
 
 export async function destroyBuyerSession() {
