@@ -88,6 +88,8 @@ interface GraphLead {
   field_data?: Array<{ name: string; values?: string[] }>;
   ad_name?: string;
   campaign_name?: string;
+  campaign_id?: string;
+  adset_id?: string;
   form_id?: string;
   is_organic?: boolean;
 }
@@ -135,6 +137,8 @@ export function readLead(lead: GraphLead, formName: string): MetaFormLead {
     phone,
     formName,
     adName: lead.ad_name ?? "",
+    campaignId: lead.campaign_id ?? "",
+    adsetId: lead.adset_id ?? "",
     answers,
   };
 }
@@ -163,6 +167,28 @@ async function pageTokenFrom(pageId: string, token: string): Promise<{ token: st
     return page.access_token ? { token: page.access_token } : { token, problem: "Facebook gave no Page key back" };
   } catch (error) {
     return { token, problem: error instanceof Error ? error.message : "the swap failed" };
+  }
+}
+
+/**
+ * Prospects from lead forms saved before the campaign and ad set were recorded: up to ten a
+ * look, from the last 30 days. An entry Meta gives no campaign for (not from an advert) gets
+ * an empty one, so it isn't asked about again; one that can't be read is tried next time.
+ */
+async function fillCampaigns(token: string): Promise<void> {
+  const buyers = getBuyersClient();
+  const since = new Date(Date.now() - 30 * 86_400_000).toISOString();
+  const missing = await buyers.fetch<Array<{ _id: string; metaLeadId: string }>>(
+    `*[_type == "lead" && defined(metaLeadId) && !defined(metaCampaignId) && _createdAt > $since] | order(_createdAt desc)[0...10]{ _id, metaLeadId }`,
+    { since }
+  );
+  for (const lead of missing) {
+    const found = await graphGet<{ campaign_id?: string; adset_id?: string }>(lead.metaLeadId, { fields: "campaign_id,adset_id" }, token).catch(() => null);
+    if (!found) continue;
+    await buyers
+      .patch(lead._id)
+      .set({ metaCampaignId: found.campaign_id ?? "", ...(found.adset_id && { metaAdsetId: found.adset_id }) })
+      .commit();
   }
 }
 
@@ -196,7 +222,7 @@ export async function pollMetaLeads(nowMs = Date.now()): Promise<MetaLeadsResult
       const leads = await graphGet<{ data?: GraphLead[] }>(
         `${form.id}/leads`,
         {
-          fields: "id,created_time,field_data,ad_name,campaign_name,form_id,is_organic",
+          fields: "id,created_time,field_data,ad_name,campaign_name,campaign_id,adset_id,form_id,is_organic",
           filtering: JSON.stringify([{ field: "time_created", operator: "GREATER_THAN", value: fromUnix }]),
           limit: "100",
         },
@@ -214,6 +240,9 @@ export async function pollMetaLeads(nowMs = Date.now()): Promise<MetaLeadsResult
         if (at > newest) newest = at;
       }
     }
+
+    // Entries saved before their campaign was recorded get it now (the ads autopilot counts real leads per campaign).
+    await fillCampaigns(token).catch(() => undefined);
 
     await buyers.createOrReplace({
       ...state,

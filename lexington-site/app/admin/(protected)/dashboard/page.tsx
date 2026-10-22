@@ -1,9 +1,11 @@
 import Link from "next/link";
 
+import { AdsPilotPanel } from "@/components/dashboard/AdsPilotPanel";
 import { AdsView, type GoogleState, type MetaState } from "@/components/dashboard/AdsView";
 import styles from "@/components/dashboard/Dashboard.module.css";
 import { VisitorsView } from "@/components/dashboard/VisitorsView";
 import { WatchdogPanel } from "@/components/dashboard/WatchdogPanel";
+import { pilotSettings, readPilotRun, readPilotSwitch } from "@/lib/agents/adsPilot";
 import { readWatchdog } from "@/lib/agents/watchdog";
 import { summariseGoogle } from "@/lib/ads/google";
 import { readGoogleReport } from "@/lib/ads/googleStore";
@@ -31,7 +33,7 @@ export const metadata = {
   title: "Dashboard | The Lexington",
 };
 
-// "Check now" (the ads watchdog) runs here and reads Meta, Google and the CRM.
+// "Check now" (the ads watchdog) and the autopilot's "Run now" run here and read Meta, Google and the CRM.
 export const maxDuration = 120;
 
 type Params = Record<string, string | string[] | undefined>;
@@ -58,11 +60,13 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   // The day before the range too, so a visit that crossed midnight into it is whole.
   const logsPromise = readVisitLogs([shiftDay(days[0], -1), ...days]);
   const config = view === "ads" ? metaConfig() : null;
-  const [logs, metaResult, googleReport, watchdog] = await Promise.all([
+  const [logs, metaResult, googleReport, watchdog, pilotRun, pilotSwitch] = await Promise.all([
     logsPromise,
     config ? fetchMetaReport(config, days[0], days[days.length - 1]) : Promise.resolve(null),
     view === "ads" ? readGoogleReport() : Promise.resolve(null),
     readWatchdog(),
+    readPilotRun(),
+    readPilotSwitch(),
   ]);
 
   const stories = buildStories(logs.visits, logs.events, bounds);
@@ -112,6 +116,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       </div>
 
       <WatchdogPanel run={watchdog} />
+      <AdsPilotPanel run={pilotRun} settings={pilotSettings()} paused={pilotSwitch.paused} />
 
       <nav aria-label="Dashboard" className={styles.tabs}>
         <Link href={href({ view: "ads" })} className={view === "ads" ? styles.tabActive : styles.tab} aria-current={view === "ads" ? "page" : undefined}>

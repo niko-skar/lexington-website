@@ -6,9 +6,11 @@ import { CopyButton } from "@/components/dashboard/CopyButton";
 import styles from "@/components/dashboard/Dashboard.module.css";
 import { TestClaudeButton } from "@/components/dashboard/TestClaudeButton";
 import { claudeConfigured } from "@/lib/ai/claude";
+import { pilotSettings, readPilotRun } from "@/lib/agents/adsPilot";
+import { usd } from "@/lib/agents/adsPilotCore";
 import { autoReplyOn } from "@/lib/agents/leadReply";
 import { metaLeadsConfigured, readMetaLeadsState } from "@/lib/agents/metaLeads";
-import { googleAdsScript } from "@/lib/ads/google";
+import { GOOGLE_SCRIPT_VERSION, googleAdsScript } from "@/lib/ads/google";
 import { readGoogleReport } from "@/lib/ads/googleStore";
 import { LEXINGTON_AD_ACCOUNT, metaConfig } from "@/lib/ads/meta";
 import { requireAdminPage } from "@/lib/auth/requireAdmin";
@@ -72,10 +74,15 @@ export default async function ConnectPage() {
   const googleSet = googleSecret.length >= 16;
   const report = googleSet ? await readGoogleReport() : null;
   const sampleSecret = googleSet ? null : randomBytes(24).toString("base64url");
-  const script = googleSet ? googleAdsScript({ endpoint: `${SITE_URL}/api/ads/google-report`, secret: googleSecret }) : null;
+  const script = googleSet
+    ? googleAdsScript({ endpoint: `${SITE_URL}/api/ads/google-report`, planEndpoint: `${SITE_URL}/api/ads/google-plan`, secret: googleSecret })
+    : null;
   const claudeDone = claudeConfigured();
   const leadsState = await readMetaLeadsState();
   const leadsDone = Boolean(process.env.META_LEADS_TOKEN && leadsState?.lastOkAt && !leadsState.lastError);
+  const pilot = pilotSettings();
+  const pilotRun = await readPilotRun();
+  const pilotDone = pilot.mode === "on" && Boolean(pilotRun?.plan) && !pilotRun?.errors.length;
 
   return (
     <main className={styles.page} style={{ maxWidth: 860 }}>
@@ -158,12 +165,13 @@ export default async function ConnectPage() {
           </li>
           <li>
             <strong>Assign assets</strong>: the Page <strong>The Lexington Apartments</strong> with access to leads and ads, and the ad
-            account <strong>Lexington</strong> with <strong>View performance</strong>.
+            account <strong>Lexington</strong> with <strong>Manage campaigns</strong> (the ads autopilot changes budgets).
           </li>
           <li>
             <strong>Generate new token</strong>: app <strong>Lexington Publisher</strong>, expiry <strong>Never</strong>, and tick{" "}
             <Code>leads_retrieval</Code>, <Code>pages_manage_ads</Code>, <Code>pages_manage_metadata</Code>,{" "}
-            <Code>pages_read_engagement</Code>, <Code>pages_show_list</Code> and <Code>ads_read</Code>. Copy it.
+            <Code>pages_read_engagement</Code>, <Code>pages_show_list</Code>, <Code>ads_read</Code> and <Code>ads_management</Code>.
+            Copy it.
           </li>
           <li>
             In Vercel, add it as <Code>META_LEADS_TOKEN</Code>, and the same key again as <Code>META_ADS_ACCESS_TOKEN</Code> for the
@@ -186,7 +194,11 @@ export default async function ConnectPage() {
       </Section>
 
       <Section title="Meta ads (Facebook and Instagram)" done={metaDone}>
-        <p>This gives the dashboard a key that can only read the ad account&rsquo;s results. It cannot change or spend anything.</p>
+        <p>
+          This gives the dashboard a key for the ad account. With <Code>ads_read</Code> it reads the results; with{" "}
+          <Code>ads_management</Code> the ads autopilot can also change budgets and pause adverts (it never writes, edits or
+          extends an advert).
+        </p>
         <ol className={styles.steplist}>
           <li>
             Open <Ext href="https://business.facebook.com/settings/system-users">Business settings, Users, System users</Ext>. Check
@@ -197,11 +209,11 @@ export default async function ConnectPage() {
           </li>
           <li>
             Press <strong>Assign assets</strong>, choose <strong>Ad accounts</strong>, pick <strong>Lexington</strong> (number{" "}
-            <Code>{LEXINGTON_AD_ACCOUNT}</Code>) and switch on <strong>View performance</strong> only. Save.
+            <Code>{LEXINGTON_AD_ACCOUNT}</Code>) and switch on <strong>Manage campaigns</strong>. Save.
           </li>
           <li>
             Press <strong>Generate new token</strong>, choose the app <strong>Lexington Publisher</strong>, set the expiry to{" "}
-            <strong>Never</strong>, tick <Code>ads_read</Code> and press Generate. Copy the token.
+            <strong>Never</strong>, tick <Code>ads_read</Code> and <Code>ads_management</Code> and press Generate. Copy the token.
             <span className={styles.sub}>
               If <Code>ads_read</Code> is not in the list: in developers.facebook.com open Lexington Publisher, then Use cases, and
               add &ldquo;Measure ad performance data with Marketing API&rdquo;. Then try again.
@@ -214,11 +226,36 @@ export default async function ConnectPage() {
         </ol>
       </Section>
 
+      <Section title="Ads autopilot" done={pilotDone}>
+        <p>
+          Every morning at 6 it keeps all the advertising within {usd(pilot.monthlyCap)} a month: what is left of the month is
+          spread over the days left, and the money moves to where real enquiries come from, between Facebook and Google and
+          campaign by campaign. It changes budgets and pauses what brings nothing; it never writes, edits or extends an advert.
+          Every change, with the reason, is on the dashboard and in the daily ads check.
+        </p>
+        <ul className={styles.steplist}>
+          <li>
+            It needs the Meta key above with <Code>ads_management</Code>, and for Google the script below (version{" "}
+            {GOOGLE_SCRIPT_VERSION}).
+          </li>
+          <li>
+            As a safety net, Facebook&rsquo;s own account spending limit is set to the month&rsquo;s budget on the 1st: Facebook
+            stops by itself once it is spent, even if everything else failed.
+          </li>
+          <li>
+            Optional settings in Vercel: <Code>ADS_MONTHLY_BUDGET</Code> (dollars a month; {usd(pilot.monthlyCap)} now) and{" "}
+            <Code>ADS_PILOT</Code> set to <Code>off</Code> to switch it off completely. To stop it for a while, use Pause on the
+            dashboard.
+          </li>
+        </ul>
+        {pilotRun?.errors.length ? <p className={styles.sub}>Last run: {pilotRun.errors.join(" · ")}</p> : null}
+      </Section>
+
       <Section title="Google Ads" done={googleSet && !!report && report.rows.length > 0}>
         <p>
           Only needed if you run Google Ads for The Lexington. Google&rsquo;s own connection takes days of approval, so instead a
-          small script runs inside your Google Ads account every hour and sends the spend and clicks here. It sends figures only,
-          nothing about the people who clicked.
+          small script runs inside your Google Ads account every hour and sends the spend and clicks here, and makes the ads
+          autopilot&rsquo;s budget changes. It sends figures only, nothing about the people who clicked.
         </p>
         <ol className={styles.steplist}>
           <li>
@@ -249,7 +286,12 @@ export default async function ConnectPage() {
             </div>
             <pre className={styles.script}>{script}</pre>
             {report?.receivedAt && (
-              <p className={styles.sub}>Last report received: {new Date(report.receivedAt).toUTCString().slice(5, 22)} GMT</p>
+              <p className={styles.sub}>
+                Last report received: {new Date(report.receivedAt).toUTCString().slice(5, 22)} GMT
+                {report.version < GOOGLE_SCRIPT_VERSION
+                  ? ". The script in Google Ads is the older one: replace it with this one so the autopilot can set Google's budgets."
+                  : "."}
+              </p>
             )}
           </div>
         ) : (

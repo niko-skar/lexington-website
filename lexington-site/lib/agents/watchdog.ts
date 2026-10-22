@@ -15,9 +15,11 @@ import { sendNotice } from "@/lib/social/notify";
 import { buildStories, shiftDay } from "@/lib/visits/report";
 import { readVisitLogs } from "@/lib/visits/store";
 
+import { pilotSettings, readPilotRun, readPilotSwitch } from "./adsPilot";
+import { usd } from "./adsPilotCore";
 import { parseOffer } from "./factsCore";
 import { metaLeadsConfigured, readMetaLeadsState } from "./metaLeads";
-import { checkAll, emailSubject, shouldEmail, type Finding, type MetaWatch, type WatchInput } from "./watchdogCore";
+import { checkAll, emailSubject, shouldEmail, type Finding, type MetaWatch, type PilotWatch, type WatchInput } from "./watchdogCore";
 
 /**
  * THE ADS WATCHDOG. Every morning at 7 (Ghana time = GMT) it reads what Meta and
@@ -198,6 +200,25 @@ async function gatherCrm(today: string, nowMs: number): Promise<WatchInput["crm"
   return { waiting, newLast7 };
 }
 
+// ---- the ads autopilot -------------------------------------------------------------
+
+async function gatherPilot(): Promise<PilotWatch> {
+  const settings = pilotSettings();
+  if (settings.mode === "off") return { mode: "off", ranAt: null, errors: [], monthCap: null, spentMtd: null, dailyTarget: null, changes: [] };
+  const [run, toggle] = await Promise.all([readPilotRun(), readPilotSwitch()]);
+  const describe = (c: NonNullable<typeof run>["changes"][number]) =>
+    c.kind === "pause" ? `${c.name} paused` : c.kind === "enable" ? `${c.name} switched back on` : `${c.name} ${usd(c.fromBudget ?? 0)} to ${usd(c.toBudget ?? 0)} a day`;
+  return {
+    mode: settings.mode === "dry" ? "dry" : toggle.paused ? "paused" : "on",
+    ranAt: run?.ranAt ?? null,
+    errors: run?.errors ?? [],
+    monthCap: run?.plan?.monthCap ?? null,
+    spentMtd: run?.plan?.spentMtd ?? null,
+    dailyTarget: run?.plan?.dailyTarget ?? null,
+    changes: (run?.changes ?? []).filter((c) => c.done !== "not").map(describe),
+  };
+}
+
 // ---- Claude's note (optional) ----------------------------------------------------
 
 const NOTE_SYSTEM = `You write the two-to-four sentence note at the top of a daily email to the owner of a property development about how his adverts and enquiries are doing. You are given the day's findings. Say what matters most and what to do first, in plain words, kindly and briefly. Use only the numbers that appear in the findings, exactly as written; never work out new ones. No greeting, no sign-off, no lists.`;
@@ -235,7 +256,7 @@ export async function runWatchdog(opts: { email: boolean; nowMs?: number }): Pro
   try {
     const nowMs = opts.nowMs ?? Date.now();
     const today = todayISO();
-    const [meta, google, site, crm, settings, leadsState] = await Promise.all([
+    const [meta, google, site, crm, settings, leadsState, pilot] = await Promise.all([
       gatherMeta(today).catch((e: Error): WatchInput["meta"] => ({
         connected: true,
         error: e.message,
@@ -252,6 +273,7 @@ export async function runWatchdog(opts: { email: boolean; nowMs?: number }): Pro
       gatherCrm(today, nowMs),
       client.fetch<{ promoBanner?: { enabled?: boolean; message?: string } } | null>(`*[_type == "siteSettings"][0]{ promoBanner }`),
       readMetaLeadsState(),
+      gatherPilot().catch((): PilotWatch | null => null),
     ]);
 
     const findings = checkAll({
@@ -263,6 +285,7 @@ export async function runWatchdog(opts: { email: boolean; nowMs?: number }): Pro
       crm,
       offer: parseOffer(settings?.promoBanner?.message, settings?.promoBanner?.enabled, today),
       metaLeads: { configured: metaLeadsConfigured(), lastOkAt: leadsState?.lastOkAt ?? null, lastError: leadsState?.lastError ?? null },
+      pilot,
     });
 
     const emailing = opts.email && shouldEmail(findings, today);

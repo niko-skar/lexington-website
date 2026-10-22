@@ -946,3 +946,63 @@
 .watchMore[open] summary {
   margin-bottom: 10px;
 }
+
+/* ---- the ads autopilot --------------------------------------------------------- */
+
+.pilot {
+  composes: watch;
+  border-left-color: var(--navy);
+}
+
+.pilotActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.pilotActions form {
+  margin-left: 0;
+}
+
+.pilotStatus {
+  margin: 0 0 10px;
+  font-size: 14px;
+  color: #4a4a4a;
+}
+
+.pilotMonth {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pilotFigures {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.pilotMeter {
+  max-width: 520px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--stone-lt);
+  overflow: hidden;
+}
+
+.pilotMeterFill {
+  height: 100%;
+  background: var(--navy);
+}
+
+.pilotNotes {
+  margin: 12px 0 0;
+  padding-left: 18px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #6b6b6b;
+  max-width: 80ch;
+}

@@ -10,7 +10,8 @@
  * (`GOOGLE_ADS_REPORT_SECRET`) is the only thing that makes that address answer.
  *
  * WHAT IS SENT. Spend, clicks, impressions and conversions for each campaign and
- * day. Figures only: nothing about who clicked.
+ * day, and (from version 2) each campaign's status and daily budget. Figures only:
+ * nothing about who clicked. Version 2 also makes the ads autopilot's changes.
  *
  * Pure: the route (`app/api/ads/google-report`) checks the secret and stores.
  */
@@ -110,6 +111,71 @@ export function parseGoogleReport(body: unknown, nowMs: number): GoogleReportPar
   return { ok: true, rows: [...out.values()] };
 }
 
+/* --- What the script says about each campaign (version 2 on) ------------------------------- */
+
+export interface GoogleCampaignState {
+  id: string;
+  name: string;
+  /** ENABLED or PAUSED. */
+  status: string;
+  /** SERVING, ENDED, PENDING, SUSPENDED or NONE. */
+  servingStatus: string;
+  /** SEARCH, PERFORMANCE_MAX, DISPLAY, VIDEO... */
+  type: string;
+  /** In the account's currency, a day; null when Google gave none. */
+  dailyBudget: number | null;
+  /** A budget shared by several campaigns: the autopilot leaves those alone. */
+  shared: boolean;
+}
+
+/** What the script did with the autopilot's changes on one run. */
+export interface GoogleApplied {
+  id: string;
+  did: string;
+  from: number | null;
+  to: number | null;
+  error: string;
+}
+
+/** The campaigns the script sends with its report. Lenient: a bad entry is left out, not the report. */
+export function parseGoogleCampaigns(body: unknown): GoogleCampaignState[] {
+  const list = (body as { campaigns?: unknown } | null)?.campaigns;
+  if (!Array.isArray(list)) return [];
+  const out: GoogleCampaignState[] = [];
+  for (const item of list.slice(0, 200)) {
+    const c = item as Record<string, unknown> | null;
+    if (!c || typeof c !== "object") continue;
+    const id = String(c.id ?? "").trim();
+    if (!/^\d{1,20}$/.test(id)) continue;
+    const budget = finite(c.dailyBudget);
+    out.push({
+      id,
+      name: String(c.name ?? "").trim().slice(0, 200),
+      status: String(c.status ?? "").trim().toUpperCase().slice(0, 20),
+      servingStatus: String(c.servingStatus ?? "").trim().toUpperCase().slice(0, 20),
+      type: String(c.type ?? "").trim().toUpperCase().slice(0, 40),
+      dailyBudget: budget != null && budget >= 0 ? Math.round(budget * 100) / 100 : null,
+      shared: c.shared === true,
+    });
+  }
+  return out;
+}
+
+export function parseGoogleApplied(body: unknown): GoogleApplied[] {
+  const list = (body as { applied?: unknown } | null)?.applied;
+  if (!Array.isArray(list)) return [];
+  return list
+    .slice(0, 100)
+    .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object")
+    .map((a) => ({
+      id: String(a.id ?? "").slice(0, 30),
+      did: String(a.did ?? "").slice(0, 20),
+      from: finite(a.from),
+      to: finite(a.to),
+      error: String(a.error ?? "").slice(0, 200),
+    }));
+}
+
 /* --- The sums the Ads tab shows ------------------------------------------------------------- */
 
 export interface GoogleTotals {
@@ -182,24 +248,51 @@ export function summariseGoogle(rows: readonly GoogleRow[], days: readonly strin
 
 /**
  * The Google Ads script to paste in: Tools, Bulk actions, Scripts, New script.
- * Runs hourly; sends the last 30 days. `secret` goes into the text, so this is
- * built only on the admin's Connect page.
+ * Runs hourly. First it makes the ads autopilot's changes, collected from
+ * `planEndpoint` (campaign budgets, pausing and switching back on; each change
+ * only until its time runs out, so nothing is ever repeated a day later). Then it
+ * sends the last 30 days' figures and each campaign's status and daily budget.
+ * `secret` goes into the text, so this is built only on the admin's Connect page.
  */
-export function googleAdsScript(args: { endpoint: string; secret: string }): string {
-  return `// Sends The Lexington's Google Ads spend and clicks to the website's admin dashboard.
-// Paste this into Google Ads: Tools > Bulk actions > Scripts > New script.
-// Then press Authorize, Preview, and under Frequency choose Hourly.
-// Nothing about the people who clicked is sent: only spend, clicks and views.
+export const GOOGLE_SCRIPT_VERSION = 2;
+
+export function googleAdsScript(args: { endpoint: string; planEndpoint: string; secret: string }): string {
+  return `// The Lexington: sends the Google Ads spend and clicks to the website's dashboard, and makes
+// the ads autopilot's budget changes (it keeps all the advertising within the monthly budget).
+// Paste this into Google Ads: Tools > Bulk actions > Scripts (replace the old one, or New script).
+// Then press Authorize, Run once, Save, and under Frequency choose Hourly.
+// Only figures are sent: spend, clicks, views and each campaign's budget. Nothing about who clicked.
+
+var VERSION = ${GOOGLE_SCRIPT_VERSION};
+var REPORT_URL = ${JSON.stringify(args.endpoint)};
+var PLAN_URL = ${JSON.stringify(args.planEndpoint)};
+var SECRET = ${JSON.stringify(args.secret)};
 
 function main() {
-  var ENDPOINT = ${JSON.stringify(args.endpoint)};
-  var SECRET = ${JSON.stringify(args.secret)};
+  var applied = applyPlan();
+  var campaigns = [];
+  var snapshotError = '';
+  try {
+    campaigns = campaignStates();
+  } catch (e) {
+    snapshotError = String(e).slice(0, 300);
+  }
+  var response = UrlFetchApp.fetch(REPORT_URL, {
+    method: 'post',
+    contentType: 'application/json',
+    headers: { Authorization: 'Bearer ' + SECRET },
+    payload: JSON.stringify({ version: VERSION, rows: dailyRows(), campaigns: campaigns, applied: applied, snapshotError: snapshotError }),
+    muteHttpExceptions: true
+  });
+  Logger.log('The dashboard answered ' + response.getResponseCode() + ': ' + response.getContentText());
+}
 
+// Spend, clicks, views and conversions for each campaign and day, the last 30 days.
+function dailyRows() {
   var query =
     'SELECT segments.date, campaign.id, campaign.name, customer.currency_code, ' +
     'metrics.cost_micros, metrics.clicks, metrics.impressions, metrics.conversions ' +
     'FROM campaign WHERE segments.date DURING LAST_30_DAYS';
-
   var rows = [];
   var found = AdsApp.search(query);
   while (found.hasNext()) {
@@ -215,15 +308,86 @@ function main() {
       conversions: Number(row.metrics.conversions)
     });
   }
+  return rows;
+}
 
-  var response = UrlFetchApp.fetch(ENDPOINT, {
-    method: 'post',
-    contentType: 'application/json',
-    headers: { Authorization: 'Bearer ' + SECRET },
-    payload: JSON.stringify({ rows: rows }),
-    muteHttpExceptions: true
-  });
-  Logger.log('The dashboard answered ' + response.getResponseCode() + ': ' + response.getContentText());
+// Each campaign's status and daily budget, so the autopilot knows where things stand.
+function campaignStates() {
+  var query =
+    'SELECT campaign.id, campaign.name, campaign.status, campaign.serving_status, campaign.advertising_channel_type, ' +
+    'campaign_budget.amount_micros, campaign_budget.explicitly_shared ' +
+    "FROM campaign WHERE campaign.status != 'REMOVED'";
+  var out = [];
+  var found = AdsApp.search(query);
+  while (found.hasNext()) {
+    var row = found.next();
+    var budget = row.campaignBudget || {};
+    out.push({
+      id: String(row.campaign.id),
+      name: row.campaign.name,
+      status: row.campaign.status,
+      servingStatus: row.campaign.servingStatus,
+      type: row.campaign.advertisingChannelType,
+      dailyBudget: budget.amountMicros != null ? Number(budget.amountMicros) / 1000000 : null,
+      shared: budget.explicitlyShared === true
+    });
+  }
+  return out;
+}
+
+// The autopilot's changes. Each comes with a time limit: after it, the change is not made.
+function applyPlan() {
+  var done = [];
+  var response = UrlFetchApp.fetch(PLAN_URL, { method: 'get', headers: { Authorization: 'Bearer ' + SECRET }, muteHttpExceptions: true });
+  if (response.getResponseCode() !== 200) {
+    Logger.log('No changes collected (' + response.getResponseCode() + ').');
+    return done;
+  }
+  var plan = JSON.parse(response.getContentText());
+  if (!plan.ok || plan.mode !== 'on' || !plan.campaigns || !plan.validUntil || new Date() > new Date(plan.validUntil)) return done;
+  var most = Math.min(Number(plan.maxDaily) || 0, 100);
+  for (var i = 0; i < plan.campaigns.length; i++) {
+    var want = plan.campaigns[i];
+    var campaign = findCampaign(want.id);
+    if (!campaign) {
+      done.push({ id: want.id, error: 'campaign not found' });
+      continue;
+    }
+    try {
+      if (want.status === 'PAUSED' && campaign.isEnabled()) {
+        campaign.pause();
+        done.push({ id: want.id, did: 'paused' });
+      }
+      if (want.status === 'ENABLED' && campaign.isPaused()) {
+        campaign.enable();
+        done.push({ id: want.id, did: 'enabled' });
+      }
+      if (want.dailyBudget != null) {
+        var amount = Math.max(1, Math.min(Number(want.dailyBudget), most));
+        var budget = campaign.getBudget();
+        if (budget && !budget.isExplicitlyShared() && Math.abs(budget.getAmount() - amount) >= 0.01) {
+          var before = budget.getAmount();
+          budget.setAmount(amount);
+          done.push({ id: want.id, did: 'budget', from: before, to: amount });
+        }
+      }
+    } catch (e) {
+      done.push({ id: want.id, error: String(e).slice(0, 200) });
+    }
+  }
+  return done;
+}
+
+// Search, Display, Performance Max, video and shopping campaigns each have their own list.
+function findCampaign(id) {
+  var kinds = ['campaigns', 'performanceMaxCampaigns', 'videoCampaigns', 'shoppingCampaigns'];
+  for (var k = 0; k < kinds.length; k++) {
+    try {
+      var found = AdsApp[kinds[k]]().withIds([Number(id)]).get();
+      if (found.hasNext()) return found.next();
+    } catch (e) {}
+  }
+  return null;
 }
 `;
 }

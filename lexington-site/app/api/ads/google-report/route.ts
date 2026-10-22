@@ -1,13 +1,15 @@
 import { timingSafeEqual } from "node:crypto";
 
-import { GOOGLE_REPORT_MAX_BYTES, parseGoogleReport } from "@/lib/ads/google";
+import { GOOGLE_REPORT_MAX_BYTES, parseGoogleApplied, parseGoogleCampaigns, parseGoogleReport } from "@/lib/ads/google";
 import { saveGoogleReport } from "@/lib/ads/googleStore";
 
 export const dynamic = "force-dynamic";
 
 /**
  * POST /api/ads/google-report: where the Google Ads script (shown on
- * /admin/dashboard/connect) sends the account's spend and clicks every hour.
+ * /admin/dashboard/connect) sends the account's spend and clicks every hour,
+ * and from version 2 each campaign's budget and what it did with the ads
+ * autopilot's changes.
  *
  * Only a request carrying the secret (`Authorization: Bearer
  * <GOOGLE_ADS_REPORT_SECRET>`) is read; without the setting nothing is. The
@@ -49,7 +51,13 @@ export async function POST(request: Request): Promise<Response> {
   if (!parsed.ok) return json(400, { ok: false, error: parsed.error });
 
   try {
-    await saveGoogleReport(parsed.rows, new Date(nowMs).toISOString());
+    const sent = body as { version?: unknown; snapshotError?: unknown };
+    await saveGoogleReport(parsed.rows, new Date(nowMs).toISOString(), {
+      version: Math.max(1, Math.min(99, Math.round(Number(sent.version) || 1))),
+      campaigns: parseGoogleCampaigns(body),
+      applied: parseGoogleApplied(body),
+      snapshotError: String(sent.snapshotError ?? "").slice(0, 300),
+    });
   } catch (error) {
     console.error("[google-report] could not be stored:", error instanceof Error ? error.message : "unknown");
     return json(500, { ok: false, error: "The report could not be stored. It will be sent again next hour." });

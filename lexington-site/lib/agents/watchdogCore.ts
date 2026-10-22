@@ -4,7 +4,8 @@
  * and the plain numbers ("ok"). Pure, so every rule can be tested on its own;
  * lib/agents/watchdog.ts gathers the numbers, keeps the result and sends the email.
  *
- * It only ever reads and reports. Nothing here changes an advert or a budget.
+ * It only ever reads and reports. Nothing here changes an advert or a budget (the ads
+ * autopilot does that, and what it did and couldn't do is reported here).
  */
 import { formatUSD } from "@/lib/format";
 
@@ -14,7 +15,7 @@ export type Level = "act" | "watch" | "ok";
 
 export interface Finding {
   level: Level;
-  area: "Meta" | "Google" | "Website" | "Replies" | "Offer" | "Setup";
+  area: "Meta" | "Google" | "Website" | "Replies" | "Offer" | "Setup" | "Autopilot";
   title: string;
   detail?: string;
 }
@@ -50,6 +51,18 @@ export interface GoogleWatch {
   currency: string;
 }
 
+export interface PilotWatch {
+  /** off: ADS_PILOT=off; dry: trial mode; paused: Niko paused it on the dashboard. */
+  mode: "on" | "dry" | "paused" | "off";
+  ranAt: string | null;
+  errors: string[];
+  monthCap: number | null;
+  spentMtd: number | null;
+  dailyTarget: number | null;
+  /** What it changed on its last run, in words. */
+  changes: string[];
+}
+
 export interface WatchInput {
   today: string;
   nowMs: number;
@@ -68,6 +81,7 @@ export interface WatchInput {
   /** The banner's offer as written (even if its last day has passed), or null. */
   offer: OfferFact | null;
   metaLeads: { configured: boolean; lastOkAt: string | null; lastError: string | null };
+  pilot?: PilotWatch | null;
 }
 
 const ACCOUNT_STATUS: Record<number, string> = {
@@ -289,6 +303,39 @@ export function checkAll(input: WatchInput): Finding[] {
         area: "Offer",
         title: `The offer on the website ends on ${longDate(offer.endsOn)}${left === 0 ? " (today)" : left === 1 ? " (tomorrow)" : ` (in ${left} days)`}.`,
         detail: "Decide what comes next: the banner, the adverts and the posts all quote it.",
+      });
+    }
+  }
+
+  // ---- the ads autopilot ---------------------------------------------------------
+  const pilot = input.pilot;
+  if (pilot && pilot.mode !== "off") {
+    const hours = pilot.ranAt ? (input.nowMs - Date.parse(pilot.ranAt)) / 3_600_000 : null;
+    if (pilot.errors.length && hours != null && hours <= 30) {
+      add({ level: "act", area: "Autopilot", title: "The ads autopilot couldn't do everything this morning.", detail: pilot.errors.join(" · ") });
+    }
+    if (pilot.mode === "on" && (hours == null || hours > 30)) {
+      add({
+        level: "watch",
+        area: "Autopilot",
+        title: pilot.ranAt ? `The ads autopilot hasn't run for ${Math.floor(hours!)} hours.` : "The ads autopilot hasn't run yet.",
+        detail: "It runs every morning at 6; the dashboard's Run now runs it at once.",
+      });
+    }
+    if (pilot.mode === "paused") {
+      add({
+        level: "watch",
+        area: "Autopilot",
+        title: "The ads autopilot is paused, so nothing is keeping the budgets to the month's limit.",
+        detail: "Facebook's own monthly spending limit still stops its adverts. Resume it on the dashboard.",
+      });
+    }
+    if (pilot.monthCap != null && pilot.spentMtd != null) {
+      add({
+        level: "ok",
+        area: "Autopilot",
+        title: `Ads autopilot: ${money(pilot.spentMtd, "USD")} of this month's ${money(pilot.monthCap, "USD")} spent${pilot.dailyTarget != null ? `, up to ${money(pilot.dailyTarget, "USD")} a day from today` : ""}.`,
+        detail: pilot.changes.length ? `This morning: ${pilot.changes.join(" · ")}` : undefined,
       });
     }
   }
