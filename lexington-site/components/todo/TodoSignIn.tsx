@@ -16,8 +16,8 @@ function Submit() {
   );
 }
 
-/** The list's own sign-in, so the home-screen app never has to leave it. */
-export function TodoSignIn() {
+/** The site app's own sign-in, so the home-screen app never has to leave it. */
+export function TodoSignIn({ next = "/todo" }: { next?: string }) {
   const [office, setOffice] = useState(false);
   const [state, signIn] = useActionState<LoginState, FormData>(loginAction, { status: "idle", message: "" });
   const [officeState, officeSignIn] = useActionState<AdminLoginState, FormData>(adminLoginAction, { status: "idle", message: "" });
@@ -31,11 +31,11 @@ export function TodoSignIn() {
       <main className={styles.signIn}>
         <p className={styles.brand}>The Lexington</p>
         <h1 className={styles.signInTitle}>Site to-do</h1>
-        <p className={styles.sheetNote}>Jobs on site with a photo and a note. Tick them off when they&rsquo;re done.</p>
+        <p className={styles.sheetNote}>Jobs on site with a photo and a note, and the store room. Sign in to carry on.</p>
 
         {office ? (
           <form action={officeSignIn} className={styles.signInForm}>
-            <input type="hidden" name="next" value="/todo" />
+            <input type="hidden" name="next" value={next} />
             <label className={styles.smallLabel} htmlFor="todo-office-password">
               Office password
             </label>
@@ -48,7 +48,7 @@ export function TodoSignIn() {
           </form>
         ) : (
           <form action={signIn} className={styles.signInForm}>
-            <input type="hidden" name="next" value="/todo" />
+            <input type="hidden" name="next" value={next} />
             <label className={styles.smallLabel} htmlFor="todo-email">
               Email
             </label>

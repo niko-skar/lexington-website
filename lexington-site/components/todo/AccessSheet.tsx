@@ -2,19 +2,23 @@
 
 import { useEffect, useState } from "react";
 
-import type { SiteAccount } from "@/lib/todo/shared";
+import { SITE_SECTIONS, type SiteAccount, type SiteSection } from "@/lib/todo/shared";
 import styles from "./Todo.module.css";
 
-const LIST_ADDRESS = "https://www.lexington.com.gh/todo";
+const APP_ADDRESS = "https://www.lexington.com.gh/todo";
 
-function message(name: string, email: string, password: string) {
+const PART: Record<SiteSection, string> = { todo: "To-do list", store: "Store room" };
+
+function message(name: string, email: string, password: string, sections: SiteSection[]) {
+  const what = sections.length === 2 ? "site to-do list and store room" : sections[0] === "store" ? "store room" : "site to-do list";
   return [
-    `Hi ${name.split(" ")[0]}, this is the Lexington site to-do list.`,
-    `Open: ${LIST_ADDRESS}`,
+    `Hi ${name.split(" ")[0]}, this is the Lexington ${what}.`,
+    `Open: ${APP_ADDRESS}`,
     `Email: ${email}`,
     `Password: ${password}`,
     "Then in Chrome tap ⋮ and Add to Home screen (or Install app) so it opens like an app.",
-    "Tick each job when it's done, and add a photo of the fix if you can.",
+    ...(sections.includes("todo") ? ["Tick each job when it's done, and add a photo of the fix if you can."] : []),
+    ...(sections.includes("store") ? ["Record every material that leaves the store: Store, tap the item, Take out."] : []),
   ].join("\n");
 }
 
@@ -30,11 +34,36 @@ async function call(method: string, body?: unknown, query = "") {
   return data;
 }
 
-/** The office's list of foreman logins: add one, send a new password, or remove access. */
+/** Buttons to choose which parts of the app a login opens (at least one). */
+function Parts({ value, onChange, disabled }: { value: SiteSection[]; onChange: (next: SiteSection[]) => void; disabled?: boolean }) {
+  return (
+    <div className={styles.chips}>
+      {SITE_SECTIONS.map((section) => {
+        const on = value.includes(section);
+        return (
+          <button
+            key={section}
+            type="button"
+            className={on ? styles.chipOn : styles.chip}
+            aria-pressed={on}
+            disabled={disabled || (on && value.length === 1)}
+            onClick={() => onChange(on ? value.filter((s) => s !== section) : SITE_SECTIONS.filter((s) => s === section || value.includes(s)))}
+          >
+            {on ? "✓ " : ""}
+            {PART[section]}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/** The office's list of site logins (the foreman, a storekeeper): add one, choose what it opens, send a new password, or remove it. */
 export function AccessSheet({ onClose }: { onClose: () => void }) {
   const [accounts, setAccounts] = useState<SiteAccount[] | null>(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [sections, setSections] = useState<SiteSection[]>([...SITE_SECTIONS]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState<{ title: string; text: string } | null>(null);
@@ -51,11 +80,13 @@ export function AccessSheet({ onClose }: { onClose: () => void }) {
     setError("");
     setBusy(true);
     try {
-      const data = await call("POST", { name, email });
-      setAccounts((list) => [...(list ?? []), data.account].sort((a, b) => a.name.localeCompare(b.name)));
-      setResult({ title: `Send this to ${data.account.name}`, text: message(data.account.name, data.account.email, data.password) });
+      const data = await call("POST", { name, email, sections });
+      const account = data.account as SiteAccount;
+      setAccounts((list) => [...(list ?? []), account].sort((a, b) => a.name.localeCompare(b.name)));
+      setResult({ title: `Send this to ${account.name}`, text: message(account.name, account.email, data.password, account.sections) });
       setName("");
       setEmail("");
+      setSections([...SITE_SECTIONS]);
     } catch (e) {
       setError(e instanceof Error ? e.message : "That didn't work.");
     } finally {
@@ -68,7 +99,20 @@ export function AccessSheet({ onClose }: { onClose: () => void }) {
     setBusy(true);
     try {
       const data = await call("PATCH", { id: account.id });
-      setResult({ title: `New password for ${account.name}: send this`, text: message(account.name, account.email, data.password) });
+      setResult({ title: `New password for ${account.name}: send this`, text: message(account.name, account.email, data.password, account.sections) });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "That didn't work.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const changeParts = async (account: SiteAccount, next: SiteSection[]) => {
+    setError("");
+    setBusy(true);
+    try {
+      const data = await call("PATCH", { id: account.id, sections: next });
+      setAccounts((list) => (list ?? []).map((a) => (a.id === account.id ? { ...a, sections: data.sections } : a)));
     } catch (e) {
       setError(e instanceof Error ? e.message : "That didn't work.");
     } finally {
@@ -103,16 +147,17 @@ export function AccessSheet({ onClose }: { onClose: () => void }) {
 
   return (
     <div className={styles.sheetBackdrop}>
-      <div className={styles.sheet} role="dialog" aria-label="Foreman logins">
-        <h2 className={styles.sheetTitle}>Foreman logins</h2>
+      <div className={styles.sheet} role="dialog" aria-label="Site logins">
+        <h2 className={styles.sheetTitle}>Site logins</h2>
         <p className={styles.sheetNote}>
-          These logins open this list and nothing else on the website. They can tick jobs off and add photos of the fix; only the office can add or delete jobs.
+          These logins open only what is ticked: the to-do list (tick jobs off, add photos of the fix) and/or the store room (take out, bring back, count;
+          never prices). Only the office adds jobs, sees the expenses or changes store items.
         </p>
 
         {result && (
           <div className={styles.result}>
             <p className={styles.label}>{result.title}</p>
-            <textarea id="todo-access-text" className={styles.textarea} readOnly rows={7} value={result.text} />
+            <textarea id="todo-access-text" className={styles.textarea} readOnly rows={8} value={result.text} />
             <div className={styles.sheetButtons}>
               <button type="button" className={styles.sheetSave} onClick={() => void copy()}>
                 {copied ? "Copied" : "Copy for WhatsApp"}
@@ -128,7 +173,7 @@ export function AccessSheet({ onClose }: { onClose: () => void }) {
         {accounts === null ? (
           <p className={styles.sheetNote}>Loading…</p>
         ) : accounts.length === 0 ? (
-          <p className={styles.sheetNote}>No foreman logins yet.</p>
+          <p className={styles.sheetNote}>No site logins yet.</p>
         ) : (
           <ul className={styles.accounts}>
             {accounts.map((a) => (
@@ -137,6 +182,7 @@ export function AccessSheet({ onClose }: { onClose: () => void }) {
                   <b>{a.name || "No name"}</b>
                   <span>{a.email}</span>
                 </div>
+                <Parts value={a.sections} onChange={(next) => void changeParts(a, next)} disabled={busy} />
                 <div className={styles.accountButtons}>
                   <button type="button" onClick={() => void reset(a)} disabled={busy}>
                     New password
@@ -173,6 +219,8 @@ export function AccessSheet({ onClose }: { onClose: () => void }) {
           autoComplete="off"
           placeholder="e.g. kwame@gmail.com"
         />
+        <span className={styles.smallLabel}>What it opens</span>
+        <Parts value={sections} onChange={setSections} disabled={busy} />
 
         {error && <p className={styles.sheetError}>{error}</p>}
         <div className={styles.sheetButtons}>

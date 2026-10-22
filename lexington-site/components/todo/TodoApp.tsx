@@ -1,12 +1,12 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 
-import { todoSignOutAction } from "@/lib/actions/todo";
 import { AREAS, areaLabel, listLabel, MAX_NOTE, MAX_TEXT, photoAt, type TodoList, type TodoMe, type TodoTask } from "@/lib/todo/shared";
 import { AccessSheet } from "./AccessSheet";
+import { dayName, errorText, send, startPolling, when } from "./api";
 import { forgetPhoto, uploadPhoto } from "./photo";
+import { appClass, SiteMenu, SiteNav } from "./SiteChrome";
 import styles from "./Todo.module.css";
 
 type Tab = "open" | "done";
@@ -22,9 +22,6 @@ const FIX_CAMERA = "todo-fix-camera";
 
 /* ---------- small helpers ---------- */
 
-const when = (iso: string) =>
-  new Date(iso).toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
-
 function ago(iso: string) {
   const minutes = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60_000));
   if (minutes < 1) return "just now";
@@ -34,34 +31,6 @@ function ago(iso: string) {
   const days = Math.round(hours / 24);
   return days < 14 ? `${days} day${days === 1 ? "" : "s"} ago` : new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 }
-
-function dayName(iso: string) {
-  const d = new Date(iso);
-  const today = new Date();
-  const yesterday = new Date();
-  yesterday.setDate(today.getDate() - 1);
-  if (d.toDateString() === today.toDateString()) return "Today";
-  if (d.toDateString() === yesterday.toDateString()) return "Yesterday";
-  return d.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short" });
-}
-
-async function send(url: string, method: string, body?: unknown) {
-  let response: Response;
-  try {
-    response = await fetch(url, {
-      method,
-      headers: body ? { "Content-Type": "application/json" } : undefined,
-      body: body ? JSON.stringify(body) : undefined,
-    });
-  } catch {
-    throw Object.assign(new Error("No signal: that didn't save. Try again when you have data."), { status: 0 });
-  }
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw Object.assign(new Error(data.error || "That didn't save. Try again."), { status: response.status });
-  return data;
-}
-
-const errorText = (e: unknown) => (e instanceof Error ? e.message : "That didn't save. Try again.");
 
 // Facts about the phone that never change while the page is open (read without an effect).
 const never = () => () => {};
@@ -184,7 +153,6 @@ export function TodoApp({
   const seq = useRef(new Map<string, number>());
   const chains = useRef(new Map<string, Promise<unknown>>());
   const inFlight = useRef(false);
-  const lastActive = useRef(0);
 
   const commit = useCallback((next: TodoTask[]) => {
     tasksRef.current = next;
@@ -243,43 +211,7 @@ export function TodoApp({
 
   // Live: every 5 seconds while someone is using it, every 20 when it just sits open,
   // straight away when the app comes back to the front or the signal returns.
-  useEffect(() => {
-    lastActive.current = Date.now();
-    const active = () => {
-      lastActive.current = Date.now();
-    };
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    let stopped = false;
-    const loop = async () => {
-      if (stopped) return;
-      if (document.visibilityState === "visible") await refresh();
-      if (stopped) return;
-      const busy = Date.now() - lastActive.current < 180_000;
-      clearTimeout(timer);
-      timer = setTimeout(loop, document.visibilityState === "visible" && busy ? 5_000 : 20_000);
-    };
-    const wake = () => {
-      if (document.visibilityState !== "visible") return;
-      lastActive.current = Date.now();
-      clearTimeout(timer);
-      void loop();
-    };
-    timer = setTimeout(loop, 5_000);
-    window.addEventListener("pointerdown", active, { passive: true });
-    window.addEventListener("keydown", active);
-    document.addEventListener("visibilitychange", wake);
-    window.addEventListener("focus", wake);
-    window.addEventListener("online", wake);
-    return () => {
-      stopped = true;
-      clearTimeout(timer);
-      window.removeEventListener("pointerdown", active);
-      window.removeEventListener("keydown", active);
-      document.removeEventListener("visibilitychange", wake);
-      window.removeEventListener("focus", wake);
-      window.removeEventListener("online", wake);
-    };
-  }, [refresh]);
+  useEffect(() => startPolling(refresh, 5_000, 20_000), [refresh]);
 
   // Home-screen app: the helper that lets Android install it, and Android's own install offer.
   useEffect(() => {
@@ -430,7 +362,7 @@ export function TodoApp({
   };
 
   return (
-    <div className={styles.app}>
+    <div className={appClass(me)}>
       <header className={styles.top}>
         <div className={styles.topRow}>
           <div>
@@ -728,71 +660,36 @@ export function TodoApp({
       )}
 
       {menuOpen && (
-        <div className={styles.sheetBackdrop} onClick={() => setMenuOpen(false)}>
-          <div className={styles.sheet} onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Menu">
-            <p className={styles.sheetNote}>
-              Signed in as <b>{me.name}</b>
-              {isAdmin ? " (office)" : ""}
-            </p>
-            {isAdmin && (
-              <>
-                <p className={styles.label}>Lists</p>
-                <div className={styles.menuList}>
-                  {(["site", "house"] as const).map((which) => (
-                    <button
-                      key={which}
-                      type="button"
-                      aria-current={list === which}
-                      className={list === which ? styles.menuCurrent : undefined}
-                      onClick={() => {
-                        setList(which);
-                        setTab("open");
-                        setItemMenu(null);
-                        setArmed(null);
-                        setMenuOpen(false);
-                      }}
-                    >
-                      <span className={styles.menuGrow}>
-                        {listLabel(which)}
-                        <small>{which === "house" ? "Only you" : "Shared with your foreman"}</small>
-                      </span>
-                      <span className={styles.menuCount}>{openOn(which)} to do</span>
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-            <div className={styles.menuList}>
-              {isAdmin && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMenuOpen(false);
-                    setAccessOpen(true);
-                  }}
-                >
-                  Foreman logins
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={() => {
-                  setMenuOpen(false);
-                  void refresh();
-                }}
-              >
-                Refresh now
-              </button>
-              {isAdmin && <Link href="/admin/crm">Back to the admin pages</Link>}
-              <form action={todoSignOutAction}>
-                <button type="submit">Sign out</button>
-              </form>
-            </div>
-            <button type="button" className={styles.sheetCancel} onClick={() => setMenuOpen(false)}>
-              Close
-            </button>
-          </div>
-        </div>
+        <SiteMenu me={me} onClose={() => setMenuOpen(false)} onRefresh={() => void refresh()} onLogins={() => setAccessOpen(true)}>
+          {isAdmin && (
+            <>
+              <p className={styles.label}>Lists</p>
+              <div className={styles.menuList}>
+                {(["site", "house"] as const).map((which) => (
+                  <button
+                    key={which}
+                    type="button"
+                    aria-current={list === which}
+                    className={list === which ? styles.menuCurrent : undefined}
+                    onClick={() => {
+                      setList(which);
+                      setTab("open");
+                      setItemMenu(null);
+                      setArmed(null);
+                      setMenuOpen(false);
+                    }}
+                  >
+                    <span className={styles.menuGrow}>
+                      {listLabel(which)}
+                      <small>{which === "house" ? "Only you" : "Shared with your foreman"}</small>
+                    </span>
+                    <span className={styles.menuCount}>{openOn(which)} to do</span>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </SiteMenu>
       )}
 
       {accessOpen && <AccessSheet onClose={() => setAccessOpen(false)} />}
@@ -841,6 +738,8 @@ export function TodoApp({
           )}
         </div>
       )}
+
+      <SiteNav me={me} current="todo" />
     </div>
   );
 }

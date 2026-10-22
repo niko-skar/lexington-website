@@ -20,7 +20,8 @@ async function decode(file: File): Promise<{ source: CanvasImageSource; width: n
   }
 }
 
-async function shrink(file: File): Promise<Blob> {
+/** A phone photo as a JPEG at most 1600 px on its long side (fast on site data). */
+export async function shrink(file: File): Promise<Blob> {
   const { source, width, height } = await decode(file);
   const scale = Math.min(1, LONG_SIDE / Math.max(width, height));
   const canvas = document.createElement("canvas");

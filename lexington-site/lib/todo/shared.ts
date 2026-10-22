@@ -37,16 +37,33 @@ export interface TodoTask {
   updatedAt: string;
 }
 
+/**
+ * The parts of the site app (one home-screen app, a tab bar at the bottom). The office opens all
+ * three; a site login opens what the office ticked for it, and never the expenses (money).
+ */
+export const SECTIONS = ["todo", "store", "expenses"] as const;
+export type Section = (typeof SECTIONS)[number];
+export type SiteSection = Exclude<Section, "expenses">;
+export const SITE_SECTIONS: readonly SiteSection[] = ["todo", "store"];
+export const sectionHref = (section: Section) => (section === "todo" ? "/todo" : `/todo/${section}`);
+export const sectionName = (section: Section) => (section === "todo" ? "To-do" : section === "store" ? "Store" : "Expenses");
+/** Where a sign-in from the app may send someone back to. */
+export const APP_PAGES: readonly string[] = SECTIONS.map(sectionHref);
+
 /** Who is using the page: Niko and other admins add and delete; a "site" login (the foreman) ticks. */
 export interface TodoMe {
   kind: "admin" | "site";
+  /** The site login's account id; "office" for the office. */
+  id: string;
   name: string;
+  sections: Section[];
 }
 
 export interface SiteAccount {
   id: string;
   name: string;
   email: string;
+  sections: SiteSection[];
 }
 
 /** A smaller copy of a stored photo from Sanity's image CDN (it resizes on the fly). */

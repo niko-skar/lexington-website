@@ -34,10 +34,14 @@ const nextConfig: NextConfig = {
         ],
       },
       {
-        // The site to-do list's "Take photo" opens the phone's camera straight away (Android
-        // ignores that request while the camera is switched off). Later entries win for the
-        // same header, so this overrides the line above for this one page only.
+        // The site app's "Take photo" (a to-do job, a receipt) opens the phone's camera straight
+        // away (Android ignores that request while the camera is switched off). Later entries
+        // win for the same header, so this overrides the line above for the app's pages only.
         source: "/todo",
+        headers: [{ key: "Permissions-Policy", value: "camera=(self), microphone=(), geolocation=()" }],
+      },
+      {
+        source: "/todo/:path*",
         headers: [{ key: "Permissions-Policy", value: "camera=(self), microphone=(), geolocation=()" }],
       },
     ];

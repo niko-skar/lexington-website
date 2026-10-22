@@ -7,6 +7,7 @@ import { createBuyerSession } from "@/lib/auth/session";
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
 import { buyerAccountByEmailQuery } from "@/lib/sanity/buyersQueries";
 import type { BuyerAccount } from "@/lib/sanity/buyersTypes";
+import { APP_PAGES } from "@/lib/todo/shared";
 
 export interface LoginState {
   status: "idle" | "error";
@@ -47,9 +48,10 @@ export async function loginAction(
 
   const isAdmin = buyer.role === "admin";
   const isSite = buyer.role === "site";
-  // The site to-do list signs in through this same action (hidden next=/todo); a buyer
-  // still goes to their own portal whichever form they used.
-  const backToTodo = String(formData.get("next") || "") === "/todo";
+  // The site app (to-do, store, expenses) signs in through this same action (hidden next=/todo...);
+  // a buyer still goes to their own portal whichever form they used.
+  const next = String(formData.get("next") || "");
+  const appPage = APP_PAGES.includes(next) ? next : null;
   await createBuyerSession(buyer.email, isAdmin, isSite);
-  redirect(isSite || (isAdmin && backToTodo) ? "/todo" : isAdmin ? "/admin/crm" : "/account");
+  redirect(isSite ? (appPage ?? "/todo") : isAdmin && appPage ? appPage : isAdmin ? "/admin/crm" : "/account");
 }

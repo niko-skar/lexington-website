@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+
 import { TodoApp } from "@/components/todo/TodoApp";
 import { TodoSignIn } from "@/components/todo/TodoSignIn";
 import { getTodoUser, listTasks } from "@/lib/todo/server";
@@ -14,6 +16,11 @@ export const dynamic = "force-dynamic";
 export default async function TodoPage({ searchParams }: { searchParams: Promise<{ list?: string }> }) {
   const me = await getTodoUser();
   if (!me) return <TodoSignIn />;
+  // A storekeeper's login opens only the store room.
+  if (!me.sections.includes("todo")) {
+    if (me.sections.includes("store")) redirect("/todo/store");
+    return <p style={{ padding: 24 }}>This login doesn&rsquo;t open anything yet. Ask the office.</p>;
+  }
   // /todo?list=house opens the office's private house list straight away (a site login never can).
   const initialList: TodoList = me.kind === "admin" && (await searchParams).list === "house" ? "house" : "site";
 

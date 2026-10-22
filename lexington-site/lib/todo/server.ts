@@ -4,7 +4,18 @@ import { randomBytes, randomInt } from "node:crypto";
 import { hashPassword } from "@/lib/auth/password";
 import { getAdminSession, getBuyerSession } from "@/lib/auth/session";
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
-import { AREAS, MAX_NOTE, MAX_TEXT, type SiteAccount, type TodoMe, type TodoTask } from "./shared";
+import {
+  AREAS,
+  MAX_NOTE,
+  MAX_TEXT,
+  SECTIONS,
+  SITE_SECTIONS,
+  type Section,
+  type SiteAccount,
+  type SiteSection,
+  type TodoMe,
+  type TodoTask,
+} from "./shared";
 
 // Items live in the PRIVATE buyers dataset, never the public website one: the public dataset
 // can be listed by anyone, photos included. Live items are "sitetask-live-<12 hex>"; a preview
@@ -26,7 +37,7 @@ export class TodoError extends Error {
 
 /* ---------- who is signed in ---------- */
 
-type Account = { _id: string; email: string; name?: string; role?: string };
+type Account = { _id: string; email: string; name?: string; role?: string; siteAccess?: unknown };
 const accounts = new Map<string, { at: number; account: Account | null }>();
 
 // The list refreshes every few seconds; looking the account up each time would double the
@@ -35,32 +46,43 @@ async function accountFor(email: string): Promise<Account | null> {
   const hit = accounts.get(email);
   if (hit && Date.now() - hit.at < 60_000) return hit.account;
   const account = await getBuyersClient().fetch<Account | null>(
-    `*[_type == "buyerAccount" && lower(email) == $email][0]{ _id, email, name, role }`,
+    `*[_type == "buyerAccount" && lower(email) == $email][0]{ _id, email, name, role, siteAccess }`,
     { email }
   );
   accounts.set(email, { at: Date.now(), account });
   return account;
 }
 
-/** Admins (Niko's account, or the office password) and "site" accounts (the foreman). */
+/** What a site login opens. Logins made before the store existed (the foreman's) have both: Niko,
+ *  22 Oct 2026: "albert and I can record materials going out". */
+function siteSections(value: unknown): SiteSection[] {
+  if (!Array.isArray(value)) return [...SITE_SECTIONS];
+  return SITE_SECTIONS.filter((s) => value.includes(s));
+}
+
+/** Admins (Niko's account, or the office password) and "site" accounts (the foreman, a storekeeper). */
 export async function getTodoUser(): Promise<TodoMe | null> {
   const buyer = await getBuyerSession();
   if (buyer?.isAdmin) {
     const account = await accountFor(buyer.email);
-    if (account?.role === "admin") return { kind: "admin", name: account.name?.trim() || "Admin" };
+    if (account?.role === "admin") return { kind: "admin", id: "office", name: account.name?.trim() || "Admin", sections: [...SECTIONS] };
   }
-  if (await getAdminSession()) return { kind: "admin", name: "Admin" };
+  if (await getAdminSession()) return { kind: "admin", id: "office", name: "Admin", sections: [...SECTIONS] };
   if (buyer?.site) {
     const account = await accountFor(buyer.email);
-    if (account?.role === "site") return { kind: "site", name: account.name?.trim() || "Foreman" };
+    if (account?.role === "site") {
+      return { kind: "site", id: account._id, name: account.name?.trim() || "Foreman", sections: siteSections(account.siteAccess) };
+    }
   }
   return null;
 }
 
-export async function requireTodoUser(adminOnly = false): Promise<TodoMe> {
+/** The signed-in person, if they may open this part of the app (and do office-only things when asked). */
+export async function requireTodoUser(adminOnly = false, section: Section = "todo"): Promise<TodoMe> {
   const me = await getTodoUser();
-  if (!me) throw new TodoError(401, "You've been signed out. Open the list again to sign in.");
+  if (!me) throw new TodoError(401, "You've been signed out. Open the app again to sign in.");
   if (adminOnly && me.kind !== "admin") throw new TodoError(403, "Only the office can do that.");
+  if (!me.sections.includes(section)) throw new TodoError(403, "This login can't open that part of the app. Ask the office.");
   return me;
 }
 
@@ -97,7 +119,7 @@ async function getTask(id: string): Promise<TodoTask | null> {
 
 const photoRef = (assetId: string) => ({ _type: "image", asset: { _type: "reference", _ref: assetId } });
 
-function cleanText(value: unknown, max: number, what: string) {
+export function cleanText(value: unknown, max: number, what: string) {
   const text = typeof value === "string" ? value.replace(/\s+\n/g, "\n").trim() : "";
   if (text.length > max) throw new TodoError(400, `The ${what} is too long (${max} letters at most).`);
   return text;
@@ -231,12 +253,19 @@ export async function dropPhoto(assetId: string): Promise<void> {
   }
 }
 
-/* ---------- foreman logins ---------- */
+/* ---------- site logins (the foreman, a storekeeper) ---------- */
 
 export async function listSiteAccounts(): Promise<SiteAccount[]> {
-  return getBuyersClient().fetch<SiteAccount[]>(
-    `*[_type == "buyerAccount" && role == "site"] | order(lower(name) asc){ "id": _id, "name": coalesce(name, ""), email }`
+  const list = await getBuyersClient().fetch<(Omit<SiteAccount, "sections"> & { siteAccess?: unknown })[]>(
+    `*[_type == "buyerAccount" && role == "site"] | order(lower(name) asc){ "id": _id, "name": coalesce(name, ""), email, siteAccess }`
   );
+  return list.map(({ siteAccess, ...a }) => ({ ...a, sections: siteSections(siteAccess) }));
+}
+
+function cleanSections(value: unknown): SiteSection[] {
+  const sections = siteSections(Array.isArray(value) ? value : []);
+  if (sections.length === 0) throw new TodoError(400, "Tick at least one: the to-do list or the store room.");
+  return sections;
 }
 
 // Easy to read out or type on a phone: 3 groups of 4 from letters and digits that can't be
@@ -252,21 +281,32 @@ export async function createSiteAccount(body: Record<string, unknown>): Promise<
   const email = cleanText(body.email, 120, "email").toLowerCase();
   if (!name) throw new TodoError(400, "Type the person's name.");
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new TodoError(400, "That email address doesn't look right.");
+  const sections = cleanSections(body.sections ?? SITE_SECTIONS);
   const client = getBuyersClient();
   const existing = await client.fetch<{ role?: string } | null>(`*[_type == "buyerAccount" && lower(email) == $email][0]{ role }`, { email });
-  if (existing) throw new TodoError(409, "There's already a login with that email. Use a different email for the foreman.");
+  if (existing) throw new TodoError(409, "There's already a login with that email. Use a different email for this person.");
   const password = friendlyPassword();
   const doc = await client.create({
     _type: "buyerAccount",
     email,
     name,
     role: "site",
+    siteAccess: sections,
     passwordHash: await hashPassword(password),
     payments: [],
     signedAgreements: [],
   });
   accounts.delete(email);
-  return { account: { id: doc._id, name, email }, password };
+  return { account: { id: doc._id, name, email, sections }, password };
+}
+
+/** Which parts of the app a site login opens (takes effect within a minute). */
+export async function setSiteAccess(id: string, value: unknown): Promise<SiteSection[]> {
+  const account = await siteAccount(id);
+  const sections = cleanSections(value);
+  await getBuyersClient().patch(id).set({ siteAccess: sections }).commit();
+  accounts.delete(account.email.toLowerCase());
+  return sections;
 }
 
 async function siteAccount(id: string): Promise<{ email: string }> {

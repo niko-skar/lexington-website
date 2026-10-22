@@ -99,17 +99,31 @@ export const buyerAccount = defineType({
       name: "role",
       title: "Role",
       description:
-        'Leave as Buyer for customers. "Admin" accounts sign in at the normal login page but land in the admin area (CRM) and have no unit or payments. "Site to-do only" is for the foreman: the login opens the site to-do list (/todo) and nothing else.',
+        'Leave as Buyer for customers. "Admin" accounts sign in at the normal login page but land in the admin area (CRM) and have no unit or payments. "Site app only" is for the foreman or a storekeeper: the login opens the site app (/todo) and nothing else -- the to-do list and/or the store room, as ticked below.',
       type: "string",
       options: {
         list: [
           { title: "Buyer", value: "buyer" },
           { title: "Admin", value: "admin" },
-          { title: "Site to-do only", value: "site" },
+          { title: "Site app only", value: "site" },
         ],
         layout: "radio",
       },
       initialValue: "buyer",
+    }),
+    defineField({
+      name: "siteAccess",
+      title: "Opens",
+      description: "Which parts of the site app this login opens (also set from the app: ☰ → Site logins). Logins made before this field existed open both.",
+      type: "array",
+      of: [{ type: "string" }],
+      options: {
+        list: [
+          { title: "To-do list", value: "todo" },
+          { title: "Store room", value: "store" },
+        ],
+      },
+      hidden: ({ document }) => document?.role !== "site",
     }),
     defineField({
       name: "unitNumber",

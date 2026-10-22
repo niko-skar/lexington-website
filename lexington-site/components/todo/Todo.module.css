@@ -755,6 +755,55 @@
   background: #6e3524;
 }
 
+/* ---------- the bar at the bottom: To-do · Store · Expenses ---------- */
+.nav {
+  position: fixed;
+  /* Over the page, under the toast (35) and any open sheet (40). */
+  z-index: 30;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px max(10px, env(safe-area-inset-right, 0px)) calc(6px + env(safe-area-inset-bottom, 0px)) max(10px, env(safe-area-inset-left, 0px));
+  background: var(--ink, #15181a);
+  box-shadow: 0 -6px 18px rgba(0, 0, 0, 0.18);
+}
+.navItem,
+.navOn {
+  flex: 1;
+  max-width: 200px;
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  min-height: 54px;
+  padding: 6px 4px 4px;
+  border-radius: 12px;
+  color: rgba(247, 244, 236, 0.66);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.navOn {
+  color: var(--paper, #f7f4ec);
+  background: rgba(255, 255, 255, 0.12);
+}
+.navItem svg,
+.navOn svg {
+  width: 24px;
+  height: 24px;
+}
+.navOn svg {
+  color: var(--brass-lt, #d9c29a);
+}
+.withNav .main {
+  padding-bottom: calc(150px + env(safe-area-inset-bottom, 0px));
+}
+.withNav .toast {
+  bottom: calc(82px + env(safe-area-inset-bottom, 0px));
+}
+
 /* ---------- sign in ---------- */
 .signIn {
   max-width: 420px;

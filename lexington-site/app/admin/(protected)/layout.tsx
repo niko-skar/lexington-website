@@ -16,6 +16,8 @@ const NAV_LINKS = [
   { href: "/admin/progress", label: "Site updates" },
   { href: "/admin/asbuilt", label: "As-built" },
   { href: "/todo", label: "Site to-do" },
+  { href: "/todo/store", label: "Store" },
+  { href: "/todo/expenses", label: "Expenses" },
 ];
 
 export default function AdminProtectedLayout({ children }: { children: React.ReactNode }) {

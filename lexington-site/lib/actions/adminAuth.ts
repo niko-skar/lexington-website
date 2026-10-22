@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 
 import { createAdminSession, destroyAdminSession, destroyBuyerSession } from "@/lib/auth/session";
+import { APP_PAGES } from "@/lib/todo/shared";
 
 export interface AdminLoginState {
   status: "idle" | "error";
@@ -26,7 +27,9 @@ export async function adminLoginAction(
   }
 
   await createAdminSession();
-  redirect(String(formData.get("next") || "") === "/todo" ? "/todo" : "/admin/crm");
+  // From the site app's own sign-in: back to the page it came from.
+  const next = String(formData.get("next") || "");
+  redirect(APP_PAGES.includes(next) ? next : "/admin/crm");
 }
 
 export async function adminLogoutAction() {
