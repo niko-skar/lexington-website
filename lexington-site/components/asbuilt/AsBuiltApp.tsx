@@ -23,7 +23,7 @@ import { HistoryView, parseChanges } from "./HistoryView";
 import { ListView } from "./ListView";
 import { PlanView } from "./PlanView";
 import { SetOutView } from "./SetOutView";
-import { Sheet } from "./Sheet";
+import { ClashNotice, Sheet } from "./Sheet";
 import { useLocalSetting } from "./useLocalSetting";
 
 export type AsBuiltTab = "plan" | "list" | "setout" | "history";
@@ -397,6 +397,8 @@ export function AsBuiltApp({ initialFloors, initialKey, initialTab, realRecord }
           )}
         </div>
       </details>
+
+      <ClashNotice floor={floor} tol={settings.tol} onSelect={setSelection} />
 
       <div className={panel ? s.workWithPanel : s.work}>
         <div>

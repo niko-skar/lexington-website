@@ -64,6 +64,22 @@ export interface TapeMeasures {
   gx?: number | null;
   /** Clear gap, face to face, from the previous column down the same line. */
   gy?: number | null;
+  /** Taped from this column's face to a slab edge (Niko, 22 Oct 2026: a figure is never changed by another). */
+  edges?: EdgeFigure[] | null;
+}
+
+/**
+ * One taped distance from a column's face to a slab edge, kept exactly as typed. It is not
+ * turned into a position: the plan works out where the edge and the column are from all the
+ * figures together, and a figure that doesn't fit the others is shown as a clash.
+ */
+export interface EdgeFigure {
+  _key: string;
+  /** The slab edge (its _key). */
+  edge: string;
+  /** Clear distance, face to edge, mm. */
+  d: number;
+  at?: string | null;
 }
 
 export interface ColumnEl extends TapeMeasures {

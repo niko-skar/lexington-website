@@ -5,10 +5,12 @@ import {
   boxOf,
   centreOf,
   chainLines,
+  edgeMeasured,
   edgePos,
   gapsOf,
   isMeasured,
   linePos,
+  resolveFloor,
   sizeOf,
   tapeGaps,
   tapeListOf,
@@ -183,10 +185,13 @@ function floorRows(floor: Floor): (string | number | null)[][] {
     }
   }
 
+  const figures = resolveFloor(floor).figures;
   for (const edge of floor.slab?.edges ?? []) {
-    const built = edge.actual ?? null;
+    // As built: measured from its grid line, or placed by the figures taped from the columns.
     const absD = edgePos(floor, edge, "design");
-    const absA = built === null ? null : edgePos(floor, edge, "actual");
+    const absA = edgeMeasured(floor, edge) ? edgePos(floor, edge, "actual") : null;
+    const line = linePos(floor, edge.axis, edge.ref, "actual");
+    const built = edge.actual ?? (absA !== null && line !== null ? absA - line : null);
     rows.push([
       floor.name,
       "Slab edge",
@@ -196,8 +201,31 @@ function floorRows(floor: Floor): (string | number | null)[][] {
       built,
       diff(absA, absD),
       edge.at ? when(edge.at) : "",
-      edge.note ?? "",
+      [edge.actual === null || edge.actual === undefined ? (absA !== null ? "from the column figures" : "") : "", edge.note ?? ""]
+        .filter(Boolean)
+        .join("; "),
     ]);
+    // Each figure taped from a column to this edge, exactly as typed.
+    for (const f of figures.filter((x) => x.edge._key === edge._key)) {
+      const who = f.item.list === "columns" ? gridRef(f.item.el) : f.item.el.name;
+      rows.push([
+        floor.name,
+        `${who} to slab edge`,
+        edge.ref,
+        "Column face to the slab edge (taped)",
+        null,
+        f.figure.d,
+        f.role === "check" ? f.off : null,
+        f.figure.at ? when(f.figure.at) : "",
+        f.role === "edge"
+          ? "places the edge"
+          : f.role === "item"
+            ? "places the column"
+            : Math.abs(f.off) > 10
+              ? `doesn't add up: the plan gives ${Math.round(f.now)}`
+              : "fits",
+      ]);
+    }
   }
   return rows;
 }

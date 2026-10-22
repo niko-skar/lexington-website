@@ -10,7 +10,7 @@ import type { Change, Floor } from "./types";
 
 export type ListName = "grid" | "columns" | "cores" | "openings" | "slab.edges";
 export type FieldName =
-  "shift" | "measured" | "actual" | "at" | "note" | "removed" | "name" | "kind" | "w" | "h" | "gx" | "gy";
+  "shift" | "measured" | "actual" | "at" | "note" | "removed" | "name" | "kind" | "w" | "h" | "gx" | "gy" | "edges";
 
 export interface ParsedPath {
   list: ListName;
@@ -20,13 +20,13 @@ export interface ParsedPath {
 }
 
 const PATH_RE =
-  /^(grid|columns|cores|openings|slab\.edges)\[_key=="([A-Za-z0-9_-]{1,40})"\](?:\.(shift|measured|actual|at|note|removed|name|kind|w|h|gx|gy))?$/;
+  /^(grid|columns|cores|openings|slab\.edges)\[_key=="([A-Za-z0-9_-]{1,40})"\](?:\.(shift|measured|actual|at|note|removed|name|kind|w|h|gx|gy|edges))?$/;
 
 const FIELDS_BY_LIST: Record<ListName, FieldName[]> = {
   grid: ["shift", "measured"],
   "slab.edges": ["actual", "at"],
-  columns: ["actual", "at", "note", "w", "h", "gx", "gy"],
-  cores: ["actual", "at", "note", "w", "h", "gx", "gy"],
+  columns: ["actual", "at", "note", "w", "h", "gx", "gy", "edges"],
+  cores: ["actual", "at", "note", "w", "h", "gx", "gy", "edges"],
   openings: ["actual", "at", "note", "removed", "name", "kind"],
 };
 

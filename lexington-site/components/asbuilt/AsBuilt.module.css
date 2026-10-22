@@ -1772,3 +1772,128 @@ textarea.text {
     display: none;
   }
 }
+
+/* ---- figures that don't add up (Niko, 22 Oct 2026: a figure is never changed by another) ---- */
+
+.statusClash {
+  composes: status;
+  background: #f8d9d4;
+  color: #8f1d12;
+}
+
+.figList {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.figRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto 34px;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+}
+
+.figName {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.figName small {
+  font-size: 11.5px;
+  color: #6b7072;
+}
+
+.figValue {
+  font-variant-numeric: tabular-nums;
+}
+
+.figRemove {
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--stone-lt);
+  border-radius: var(--radius);
+  background: var(--paper);
+  color: #6b7072;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.figRemove:hover {
+  border-color: #8f1d12;
+  color: #8f1d12;
+}
+
+.clashNote {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-left: 3px solid #b3261e;
+  border-radius: var(--radius);
+  background: #fdf0ee;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #3c2a27;
+}
+
+.clashNote p {
+  margin: 0;
+}
+
+.clashList {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  font-variant-numeric: tabular-nums;
+}
+
+.clashBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  margin: 0 0 10px;
+  padding: 8px 10px;
+  border-left: 3px solid #b3261e;
+  border-radius: var(--radius);
+  background: #fdf0ee;
+  font-size: 13px;
+}
+
+.clashBarTitle {
+  font-weight: 700;
+  color: #8f1d12;
+  margin-right: 4px;
+}
+
+.clashChip {
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid #e6b3ab;
+  border-radius: 999px;
+  background: var(--paper);
+  color: #8f1d12;
+  font-size: 12.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.clashChip:hover {
+  border-color: #8f1d12;
+}
+
+.dimClash {
+  font-weight: 700;
+  fill: #b3261e;
+}
+
+.clashLine {
+  stroke: #b3261e;
+  stroke-width: 1.4;
+  stroke-dasharray: 4 3;
+}

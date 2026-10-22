@@ -4,7 +4,7 @@ import { randomBytes } from "node:crypto";
 
 import { getAt, getItem, parsePath, type ParsedPath } from "@/lib/asbuilt/paths";
 import { floorId, isFloorKey, readFloorForPage, readFloorFull } from "@/lib/asbuilt/store";
-import type { Change, Floor, LogEntry, OpeningEl, OpeningKind } from "@/lib/asbuilt/types";
+import type { Change, EdgeFigure, Floor, LogEntry, OpeningEl, OpeningKind } from "@/lib/asbuilt/types";
 import { getAdminSession } from "@/lib/auth/session";
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
 
@@ -28,6 +28,7 @@ const MAX_LOG = 5000;
 const KINDS: OpeningKind[] = ["void", "duct", "stair", "pool"];
 const ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?Z$/;
 const ADDED_KEY_RE = /^v[a-z0-9]{6,16}$/;
+const KEY_RE = /^[A-Za-z0-9_-]{1,40}$/;
 
 class Refused extends Error {}
 
@@ -139,8 +140,27 @@ function cleanValue(p: ParsedPath, value: unknown, floor: Floor, current: unknow
       if (v < 0) throw new Refused("A gap can't be less than 0.");
       return v;
     }
+    case "edges":
+      return edgeFigures(value, floor);
   }
   return null;
+}
+
+/** A column's taped distances to the slab edges: each to an edge on this floor, at most one per edge. */
+function edgeFigures(value: unknown, floor: Floor): EdgeFigure[] | null {
+  if (!Array.isArray(value) || value.length > 8) throw new Refused("Those edge measurements don't look right.");
+  const out: EdgeFigure[] = [];
+  for (const item of value) {
+    const o = (item ?? {}) as Record<string, unknown>;
+    if (typeof o._key !== "string" || !KEY_RE.test(o._key)) throw new Refused("Those edge measurements don't look right.");
+    if (typeof o.edge !== "string" || !floor.slab?.edges.some((e) => e._key === o.edge))
+      throw new Refused("That slab edge isn't on this floor.");
+    if (out.some((f) => f.edge === o.edge)) throw new Refused("One measurement per edge, please.");
+    const d = num(o.d, 20000);
+    if (d < 0) throw new Refused("A distance can't be less than 0.");
+    out.push({ _key: o._key, edge: o.edge, d, ...(o.at ? { at: isoDate(o.at) } : {}) });
+  }
+  return out.length ? out : null;
 }
 
 function isRevisionClash(err: unknown): boolean {

@@ -17,22 +17,30 @@ import {
   boxOf,
   boxStatus,
   chainLineOf,
+  clashesOf,
   deviationOf,
   edgeDeviation,
+  edgeFigures,
+  edgePos,
   edgeReaches,
   edgeSegment,
   findBox,
   gapsAround,
   gapsOf,
+  itemFigures,
+  linePos,
   openingNeighbours,
   gridLines,
   isMeasured,
+  resolveFloor,
   shiftsForGap,
   sizeOf,
   slabCorners,
   statusFor,
   tapeGaps,
   tapeListOf,
+  type Clash,
+  type FigureCheck,
   type Status,
   type TapeEl,
   type TapeItem,
@@ -46,11 +54,13 @@ import type {
   Change,
   ColumnEl,
   CoreFaces,
+  EdgeFigure,
   Faces,
   Floor,
   OpeningEl,
   OpeningKind,
   Selection,
+  SlabEdge,
   Tolerance,
 } from "@/lib/asbuilt/types";
 
@@ -133,10 +143,11 @@ export function Sheet({ floor, selection, tol, busy, onClose, onSave }: SheetPro
         );
       body = (
         <BoxBody
-          key={`${floor.key}:${el._key}:${floor._rev ?? ""}:${JSON.stringify([el.actual ?? null, "w" in el ? el.w : null, "h" in el ? el.h : null, "gx" in el ? el.gx : null, "gy" in el ? el.gy : null])}`}
+          key={`${floor.key}:${el._key}:${floor._rev ?? ""}:${JSON.stringify([el.actual ?? null, "w" in el ? el.w : null, "h" in el ? el.h : null, "gx" in el ? el.gx : null, "gy" in el ? el.gy : null, "edges" in el ? (el.edges ?? null) : null])}`}
           floor={floor}
           list={selection.list}
           el={el}
+          tol={tol}
           busy={busy}
           onSave={onSave}
           onClose={onClose}
@@ -148,7 +159,9 @@ export function Sheet({ floor, selection, tol, busy, onClose, onSave }: SheetPro
     if (edge) {
       const via = selection.via ? findBox(floor, selection.via.list, selection.via.key) : undefined;
       kind = via ? `Slab edge, from ${boxTitle(selection.via!.list, via)}` : "Slab edge";
-      title = offsetText(edge.axis, edge.actual ?? edge.design, edge.ref);
+      const at = edgePos(floor, edge, "actual");
+      const line = linePos(floor, edge.axis, edge.ref, "actual");
+      title = offsetText(edge.axis, at !== null && line !== null ? Math.round((at - line) * 10) / 10 : edge.design, edge.ref);
       const dev = edgeDeviation(floor, edge);
       chip = (
         <StatusChip
@@ -162,6 +175,7 @@ export function Sheet({ floor, selection, tol, busy, onClose, onSave }: SheetPro
           floor={floor}
           edgeKey={edge._key}
           via={selection.via}
+          tol={tol}
           busy={busy}
           onSave={onSave}
         />
@@ -259,6 +273,7 @@ function BoxBody({
   floor,
   list,
   el,
+  tol,
   busy,
   onSave,
   onClose,
@@ -266,6 +281,7 @@ function BoxBody({
   floor: Floor;
   list: BoxList;
   el: BoxEl;
+  tol: Tolerance;
   busy: boolean;
   onSave: SaveFn;
   onClose: () => void;
@@ -289,6 +305,33 @@ function BoxBody({
       {isMeasured(el) && el.at && <p className={s.fact}>Last measured {when(el.at)}.</p>}
 
       {tape && <TapeBlock floor={floor} list={tape} el={el as TapeEl} busy={busy} onSave={onSave} />}
+      {tape &&
+        resolveFloor(floor)
+          .faceClashes.filter((c) => c.item.el._key === el._key && Math.abs(c.off) > tol.ok)
+          .map((c) => (
+            <div key={c.axis} className={s.clashNote}>
+              <p>
+                <b>Doesn&rsquo;t add up by {mm(Math.abs(c.off))} mm.</b> Measured from the grid lines, and by the gap from
+                the column before it {c.axis === "x" ? "along its row" : "down its line"}: the two put it{" "}
+                {mm(Math.abs(c.off))} mm apart. The gap places it on the plan. One of them is off; tape them again:
+              </p>
+              <ul className={s.clashList}>
+                <li>{runText(floor, c.axis, c.item)}</li>
+                <li>Its faces from the grid lines (under &ldquo;Position from the grid lines&rdquo;)</li>
+              </ul>
+            </div>
+          ))}
+      {tape && itemFigures(floor, el as TapeEl).length > 0 && (
+        <FigureRows
+          floor={floor}
+          figures={itemFigures(floor, el as TapeEl)}
+          tol={tol}
+          busy={busy}
+          onSave={onSave}
+          title="To the slab edge"
+          label={(f) => `Edge by ${edgeSpan(floor, f.edge)}`}
+        />
+      )}
 
       {opening?.removed ? (
         <div className={s.row}>
@@ -1165,12 +1208,14 @@ function EdgeBody({
   floor,
   edgeKey,
   via,
+  tol,
   busy,
   onSave,
 }: {
   floor: Floor;
   edgeKey: string;
   via?: { list: TapeList; key: string };
+  tol: Tolerance;
   busy: boolean;
   onSave: SaveFn;
 }) {
@@ -1179,9 +1224,12 @@ function EdgeBody({
   const reach = via
     ? edgeReaches(floor).find((r) => r.edge._key === edgeKey && r.item.list === via.list && r.item.el._key === via.key)
     : undefined;
+  const viaEl = via ? (findBox(floor, via.list, via.key) as TapeEl | undefined) : undefined;
+  const viaItem: TapeItem | null = via && viaEl ? { list: via.list, el: viaEl } : null;
+  const mine = viaEl?.edges?.find((f) => f.edge === edgeKey);
   const [text, setText] = useState(mm(Math.abs(current)));
   const [neg, setNeg] = useState(current === 0 ? (edge?.design ?? 0) < 0 : current < 0);
-  const [fromText, setFromText] = useState("");
+  const [fromText, setFromText] = useState(mine ? mm(mine.d) : "");
   if (!edge || !floor.slab) return null;
 
   const corners = slabCorners(floor, "actual");
@@ -1207,38 +1255,31 @@ function EdgeBody({
     );
   };
 
-  // Typed from the column face: the edge sits that far from the face, on the edge's side.
+  // Taped from a column face: kept on the column exactly as typed. It never moves the edge
+  // under another column's figure; if the figures don't agree, that shows as a clash.
   const fromTyped = parseMm(fromText);
-  const fromValue = (() => {
-    if (!reach || fromTyped === null) return null;
-    const line = floor.grid.find((g) => g.axis === edge.axis && g.id === edge.ref);
-    if (!line) return null;
-    const pos = reach.to > reach.from ? reach.from + fromTyped : reach.from - fromTyped;
-    return Math.round((pos - (line.design + (line.shift ?? 0))) * 10) / 10;
-  })();
+  const unchanged = mine !== undefined && fromTyped !== null && Math.abs(mine.d - fromTyped) < 0.05;
   const saveFromColumn = async () => {
-    if (!reach || fromValue === null || fromTyped === null) return;
-    const who = reach.item.list === "columns" ? gridRef(reach.item.el) : reach.item.el.name;
+    if (!viaItem || fromTyped === null) return;
     await onSave(
-      [
-        { path: pathOf("slab.edges", edge._key, "actual"), value: fromValue },
-        { path: pathOf("slab.edges", edge._key, "at"), value: nowIso() },
-      ],
-      `Slab edge by ${span}: ${mm(fromTyped)} from ${who} (${offsetText(edge.axis, fromValue, edge.ref)})`,
+      [{ path: pathOf(viaItem.list, viaItem.el._key, "edges"), value: withFigure(viaItem.el, edge._key, fromTyped) }],
+      `${itemRef(viaItem)} to the slab edge by ${span}: ${mm(fromTyped)}${mine ? ` (was ${mm(mine.d)})` : ""}`,
       edge._key,
     );
   };
+  const figures = edgeFigures(floor, edge._key);
 
   return (
     <>
-      {reach && (
+      {viaItem && (
         <div className={s.tape}>
           <div className={s.blockTitle}>From the column face to the edge, mm</div>
           <label className={s.gapRow} htmlFor="edge-from">
             <span>
-              <b>{reach.item.list === "columns" ? boxTitle("columns", reach.item.el) : reach.item.el.name}</b>
+              <b>{viaItem.list === "columns" ? boxTitle("columns", viaItem.el) : viaItem.el.name}</b>
               <small>
-                drawing {reach.design === null ? "?" : mm(reach.design)} · now {mm(reach.distance)}
+                drawing {reach?.design == null ? "?" : mm(reach.design)}
+                {mine ? ` · you measured ${mm(mine.d)}` : reach ? ` · now ${mm(reach.distance)}` : ""}
               </small>
             </span>
             <input
@@ -1247,30 +1288,38 @@ function EdgeBody({
               inputMode="numeric"
               pattern="[0-9]*"
               enterKeyHint="done"
-              placeholder={mm(reach.distance)}
+              placeholder={reach ? mm(reach.distance) : ""}
               value={fromText}
               onChange={(e) => setFromText(e.target.value)}
               onFocus={(e) => e.target.select()}
             />
           </label>
-          {fromValue !== null && (
-            <div className={s.derived}>
-              The edge is then {offsetText(edge.axis, fromValue, edge.ref)}
-              {Math.round(fromValue) !== Math.round(edge.design) ? ` (drawing ${mm(Math.abs(edge.design))})` : ""}.
-            </div>
-          )}
           <div className={s.row}>
             <button
               type="button"
               className={s.btnPrimary}
-              disabled={busy || fromValue === null}
+              disabled={busy || fromTyped === null || unchanged}
               onClick={saveFromColumn}
             >
               Save
             </button>
           </div>
-          <p className={s.hint}>Or set it from the grid line below.</p>
+          <p className={s.hint}>
+            Kept exactly as you type it. If it doesn&rsquo;t add up with your other figures, it is shown in red, nothing
+            else moves.
+          </p>
         </div>
+      )}
+      {figures.length > 0 && (
+        <FigureRows
+          floor={floor}
+          figures={figures}
+          tol={tol}
+          busy={busy}
+          onSave={onSave}
+          title="Measured to this edge"
+          label={(f) => itemRef(f.item)}
+        />
       )}
       <p className={s.fact}>
         <span className={s.factStrong}>Drawing:</span> {offsetText(edge.axis, edge.design, edge.ref)}
@@ -1359,6 +1408,199 @@ function EdgeBody({
         </div>
       </div>
     </>
+  );
+}
+
+// ---- figures taped from a column to a slab edge ------------------------------------------------
+
+/** "C to N": the grid lines a slab edge runs between, as built. */
+export function edgeSpan(floor: Floor, edge: SlabEdge): string {
+  const corners = slabCorners(floor, "actual");
+  const i = floor.slab?.edges.findIndex((e) => e._key === edge._key) ?? -1;
+  if (!corners || i < 0) return `grid ${edge.ref}`;
+  const seg = edgeSegment(corners, i);
+  const along: Axis = edge.axis === "x" ? "y" : "x";
+  return `${nearestLine(floor, along, seg[0][along === "x" ? 0 : 1])} to ${nearestLine(floor, along, seg[1][along === "x" ? 0 : 1])}`;
+}
+
+const figureKey = () => `f${Math.random().toString(36).slice(2, 10)}`;
+
+/** The column's figures with this edge's set to `d` (a new figure, or the old one corrected). */
+function withFigure(el: TapeEl, edgeKey: string, d: number): EdgeFigure[] {
+  return [...(el.edges ?? []).filter((f) => f.edge !== edgeKey), { _key: figureKey(), edge: edgeKey, d, at: nowIso() }];
+}
+
+function withoutFigure(el: TapeEl, edgeKey: string): EdgeFigure[] | null {
+  const left = (el.edges ?? []).filter((f) => f.edge !== edgeKey);
+  return left.length ? left : null;
+}
+
+/** Off by more than the tolerance: the figures don't add up. */
+const clashing = (f: FigureCheck, tol: Tolerance) => f.role === "check" && Math.abs(f.off) > tol.ok;
+
+function figureStatus(f: FigureCheck, tol: Tolerance): { text: string; className: string } {
+  if (f.role === "edge") return { text: "Places the edge", className: s.statusNone };
+  if (f.role === "item") return { text: "Places the column", className: s.statusNone };
+  const off = Math.abs(f.off);
+  if (off <= tol.ok) return { text: off < 0.5 ? "Fits" : `Fits (${mm(off)} mm)`, className: s.statusOk };
+  return { text: `${mm(off)} mm out`, className: off <= tol.warn ? s.statusWarn : s.statusClash };
+}
+
+/**
+ * How an item got where it is along one axis, as the figures that put it there: "Down grid K: from
+ * K/3 as drawn, K/3 to Lift 2 5380, Lift 2 depth 2500, Lift 2 to K/7 1870".
+ */
+export function runText(floor: Floor, axis: Axis, it: TapeItem): string {
+  const lineId = chainLineOf(floor, axis, it);
+  const gaps = tapeGaps(floor, axis, lineId);
+  const items: TapeItem[] = [it];
+  const steps: { from: TapeItem; to: TapeItem; gap: number }[] = [];
+  let cur = it;
+  for (;;) {
+    const g = gaps.find((x) => x.next.el._key === cur.el._key && x.measured);
+    const gap = g ? (axis === "x" ? g.next.el.gx : g.next.el.gy) : null;
+    if (!g || !has(gap) || items.some((x) => x.el._key === g.prev.el._key)) break;
+    steps.unshift({ from: g.prev, to: g.next, gap });
+    items.unshift(g.prev);
+    cur = g.prev;
+  }
+  const sizeWord = axis === "x" ? "width" : "depth";
+  const parts: string[] = [];
+  items.forEach((x, k) => {
+    const size = axis === "x" ? x.el.w : x.el.h;
+    if (has(size)) parts.push(`${itemRef(x)} ${sizeWord} ${mm(size)}`);
+    if (k < steps.length) parts.push(`${itemRef(steps[k].from)} to ${itemRef(steps[k].to)} ${mm(steps[k].gap)}`);
+  });
+  const start = items[0];
+  const from = start.el.actual ? "as measured from the grid lines" : "where the drawing has it";
+  if (!steps.length) return `${itemRef(it)}: ${from}${parts.length ? `, ${parts.join(", ")}` : ""}`;
+  const where = axis === "x" ? `Along grid ${lineId}` : `Down grid ${lineId}`;
+  return `${where}: from ${itemRef(start)} ${from}, ${parts.join(", ")}`;
+}
+
+/** Why a figure doesn't fit, and the figures to tape again. */
+function ClashExplain({ floor, f }: { floor: Floor; f: FigureCheck }) {
+  const axis = f.edge.axis;
+  const by = f.edgeBy;
+  const lines: string[] = [runText(floor, axis, f.item)];
+  let placer: string;
+  if (by?.kind === "figure") {
+    placer = `Your figure from ${itemRef(by.item)} (${mm(by.figure.d)}) places this edge`;
+    lines.push(runText(floor, axis, by.item));
+    lines.push(`From ${itemRef(by.item)} to the edge: ${mm(by.figure.d)}. From ${itemRef(f.item)}: ${mm(f.figure.d)}`);
+  } else {
+    placer = `The edge is where you measured it from grid ${f.edge.ref} (${offsetText(f.edge.axis, f.edge.actual ?? f.edge.design, f.edge.ref)})`;
+    lines.push(`The edge from grid ${f.edge.ref}`);
+  }
+  return (
+    <div className={s.clashNote}>
+      <p>
+        <b>{itemRef(f.item)} doesn&rsquo;t add up by {mm(Math.abs(f.off))} mm.</b> {placer}. Your other figures put{" "}
+        {itemRef(f.item)} {mm(f.now)} from it, not the {mm(f.figure.d)} you measured. One of these is off; tape them
+        again:
+      </p>
+      <ul className={s.clashList}>
+        {lines.map((l) => (
+          <li key={l}>{l}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function FigureRows({
+  floor,
+  figures,
+  tol,
+  busy,
+  onSave,
+  title,
+  label,
+}: {
+  floor: Floor;
+  figures: FigureCheck[];
+  tol: Tolerance;
+  busy: boolean;
+  onSave: SaveFn;
+  title: string;
+  label: (f: FigureCheck) => string;
+}) {
+  const remove = (f: FigureCheck) =>
+    onSave(
+      [{ path: pathOf(f.item.list, f.item.el._key, "edges"), value: withoutFigure(f.item.el, f.edge._key) }],
+      `${itemRef(f.item)} to the slab edge by ${edgeSpan(floor, f.edge)}: ${mm(f.figure.d)} removed`,
+      f.edge._key,
+    );
+  return (
+    <div>
+      <div className={s.blockTitle}>{title}</div>
+      <ul className={s.figList}>
+        {figures.map((f) => {
+          const status = figureStatus(f, tol);
+          return (
+            <li key={f.figure._key} className={s.figRow}>
+              <span className={s.figName}>
+                {label(f)}
+                {f.figure.at && <small>{when(f.figure.at)}</small>}
+              </span>
+              <b className={s.figValue}>{mm(f.figure.d)}</b>
+              <span className={status.className}>{status.text}</span>
+              <button
+                type="button"
+                className={s.figRemove}
+                disabled={busy}
+                aria-label={`Remove ${label(f)}: ${mm(f.figure.d)}`}
+                onClick={() => void remove(f)}
+              >
+                ×
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+      {figures
+        .filter((f) => clashing(f, tol))
+        .map((f) => (
+          <ClashExplain key={f.figure._key} floor={floor} f={f} />
+        ))}
+    </div>
+  );
+}
+
+/** Above the plan: every figure on this floor that doesn't add up, each a tap away. */
+export function ClashNotice({
+  floor,
+  tol,
+  onSelect,
+}: {
+  floor: Floor;
+  tol: Tolerance;
+  onSelect: (selection: Selection) => void;
+}) {
+  const clashes = clashesOf(floor, tol.ok);
+  if (!clashes.length) return null;
+  const pick = (c: Clash): Selection =>
+    c.kind === "edge" && c.figure
+      ? { kind: "edge", key: c.figure.edge._key, via: { list: c.item.list, key: c.item.el._key } }
+      : { kind: "box", list: c.item.list, key: c.item.el._key };
+  return (
+    <div className={s.clashBar} role="status">
+      <span className={s.clashBarTitle}>
+        {clashes.length === 1 ? "1 figure doesn’t add up" : `${clashes.length} figures don’t add up`}
+      </span>
+      {clashes.slice(0, 4).map((c) => (
+        <button
+          key={`${c.kind}${c.item.el._key}${c.figure?.figure._key ?? c.axis}`}
+          type="button"
+          className={s.clashChip}
+          onClick={() => onSelect(pick(c))}
+        >
+          {itemRef(c.item)}
+          {c.kind === "edge" ? " to the edge" : ": gap and grid"} · {mm(Math.abs(c.off))} mm
+        </button>
+      ))}
+      {clashes.length > 4 && <span className={s.hint}>and {clashes.length - 4} more</span>}
+    </div>
   );
 }
 

@@ -19,6 +19,7 @@ import {
   gapsOf,
   gridLines,
   linePos,
+  resolveFloor,
   slabCorners,
   statusFor,
   tapeGaps,
@@ -591,6 +592,7 @@ export function PlanView({
 
     // Zoomed in: how far each slab edge is from the column face in front of it.
     if (k >= ZOOM_DETAIL) {
+      const figures = resolveFloor(floor).figures;
       for (const r of edgeReaches(floor)) {
         const across = r.edge.axis === "y";
         const a = across ? sy(r.from) : sx(r.from);
@@ -603,19 +605,28 @@ export function PlanView({
         if (across ? at < -10 || at > W + 10 : at < -10 || at > H + 10) continue;
         const sel: Selection = { kind: "edge", key: r.edge._key, via: { list: r.item.list, key: r.item.el._key } };
         const hot = sameSel(selection, sel);
-        const measured = r.edge.actual !== null && r.edge.actual !== undefined;
+        // A figure taped from this column is shown exactly as typed; red when it doesn't add up.
+        const fig = figures.find(
+          (f) => f.edge._key === r.edge._key && f.item.list === r.item.list && f.item.el._key === r.item.el._key,
+        );
+        const clash = fig !== undefined && fig.role === "check" && Math.abs(fig.off) > tol.ok;
         const cls = hot
           ? `${s.dimText} ${s.dimHot}`
-          : measured && r.design !== null
-            ? DIM_CLASS[statusFor(Math.abs(r.distance - r.design), tol)]
-            : s.colGapText;
-        const label = mm(r.distance);
+          : clash
+            ? `${s.dimText} ${s.dimClash}`
+            : fig
+              ? r.design !== null
+                ? DIM_CLASS[statusFor(Math.abs(fig.figure.d - r.design), tol)]
+                : `${s.dimText} ${s.dimMeasured}`
+              : s.colGapText;
+        const label = fig ? `${mm(fig.figure.d)}${clash ? " !" : ""}` : mm(r.distance);
+        const lineCls = clash ? s.clashLine : s.colGapLine;
         const key = `er${r.edge._key}${r.item.el._key}`;
         const lo = Math.min(a, b2);
         const len = Math.abs(b2 - a);
         if (across) {
           over.push(
-            <line key={`${key}l`} x1={at} x2={at} y1={a} y2={b2} className={s.colGapLine} />,
+            <line key={`${key}l`} x1={at} x2={at} y1={a} y2={b2} className={lineCls} />,
             tick(at, a, `${key}a`),
             tick(at, b2, `${key}b`),
           );
@@ -634,7 +645,7 @@ export function PlanView({
           hits.push({ sel, x: at - 6, y: lo, w: 22, h: len });
         } else {
           over.push(
-            <line key={`${key}l`} x1={a} x2={b2} y1={at} y2={at} className={s.colGapLine} />,
+            <line key={`${key}l`} x1={a} x2={b2} y1={at} y2={at} className={lineCls} />,
             tick(a, at, `${key}a`),
             tick(b2, at, `${key}b`),
           );
@@ -1316,6 +1327,9 @@ export function PlanView({
         </span>
         <span className={s.legendItem}>
           <span className={s.swatch} style={{ background: "var(--clay)" }} /> More than {tol.warn} mm off
+        </span>
+        <span className={s.legendItem}>
+          <span className={s.swatch} style={{ background: "#b3261e" }} /> 1890 ! = your figures don&rsquo;t add up
         </span>
         {showBelow && (
           <span className={s.legendItem}>
