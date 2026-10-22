@@ -147,12 +147,12 @@ export async function readMetaLeadsState(): Promise<MetaLeadsState | null> {
  * is used as it is, and a system user's token (the kind made in Business settings, which
  * never expires) is swapped for the Page token it is allowed to fetch.
  */
-async function pageTokenFrom(pageId: string, token: string): Promise<string> {
+async function pageTokenFrom(pageId: string, token: string): Promise<{ token: string; problem?: string }> {
   try {
     const page = await graphGet<{ access_token?: string }>(pageId, { fields: "access_token" }, token);
-    return page.access_token || token;
-  } catch {
-    return token;
+    return page.access_token ? { token: page.access_token } : { token, problem: "Facebook gave no Page key back" };
+  } catch (error) {
+    return { token, problem: error instanceof Error ? error.message : "the swap failed" };
   }
 }
 
@@ -161,7 +161,8 @@ export async function pollMetaLeads(nowMs = Date.now()): Promise<MetaLeadsResult
   const pageId = process.env.META_PAGE_ID;
   const given = leadsToken();
   if (!pageId || !given) return { ok: false, error: "No Facebook Page token is set.", forms: 0, added: [] };
-  const token = await pageTokenFrom(pageId, given);
+  const swap = await pageTokenFrom(pageId, given);
+  const token = swap.token;
 
   const buyers = getBuyersClient();
   const state = await readState();
@@ -215,7 +216,11 @@ export async function pollMetaLeads(nowMs = Date.now()): Promise<MetaLeadsResult
     });
     return { ok: true, forms: active.length, added };
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Meta could not be reached.";
+    let message = error instanceof Error ? error.message : "Meta could not be reached.";
+    // A user's key that could not be swapped for the Page's: say why the swap failed, which is the real cause.
+    if (/page access token/i.test(message) && swap.problem) {
+      message = `The saved key is a personal key, and Facebook would not swap it for the Page's key (${swap.problem})`;
+    }
     // Whatever was saved before the problem is remembered as seen; the next look starts
     // from the same point as this one, so nothing after the problem is skipped.
     await buyers
