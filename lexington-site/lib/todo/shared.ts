@@ -10,11 +10,18 @@ export type Area = (typeof AREAS)[number];
 export const areaLabel = (area: string | null | undefined) =>
   !area ? "No floor given" : area === "Ground" ? "Ground floor" : area === "Roof" || area === "Outside" ? area : `${area} floor`;
 
+/** Two lists: the site (shared with the foreman) and the house (the office only, never shown to a site login). */
+export const LISTS = ["site", "house"] as const;
+export type TodoList = (typeof LISTS)[number];
+export const listLabel = (list: TodoList) => (list === "house" ? "House to-do" : "Site to-do");
+
 export const MAX_TEXT = 600;
 export const MAX_NOTE = 300;
 
 export interface TodoTask {
   id: string;
+  /** Jobs saved before the house list existed have no list: they are site jobs. */
+  list: TodoList;
   text: string;
   area: string | null;
   urgent: boolean;

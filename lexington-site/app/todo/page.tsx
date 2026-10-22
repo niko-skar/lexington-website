@@ -1,7 +1,7 @@
 import { TodoApp } from "@/components/todo/TodoApp";
 import { TodoSignIn } from "@/components/todo/TodoSignIn";
 import { getTodoUser, listTasks } from "@/lib/todo/server";
-import type { TodoTask } from "@/lib/todo/shared";
+import type { TodoList, TodoTask } from "@/lib/todo/shared";
 
 export const dynamic = "force-dynamic";
 
@@ -11,17 +11,19 @@ export const dynamic = "force-dynamic";
  * photo of the fix). Both phones see each other's changes within seconds. Not signed in: the
  * page shows its own sign-in so the home-screen app never leaves /todo.
  */
-export default async function TodoPage() {
+export default async function TodoPage({ searchParams }: { searchParams: Promise<{ list?: string }> }) {
   const me = await getTodoUser();
   if (!me) return <TodoSignIn />;
+  // /todo?list=house opens the office's private house list straight away (a site login never can).
+  const initialList: TodoList = me.kind === "admin" && (await searchParams).list === "house" ? "house" : "site";
 
   let tasks: TodoTask[] = [];
   let failed = false;
   try {
-    tasks = await listTasks();
+    tasks = await listTasks(me);
   } catch (error) {
     console.error("[todo] list failed:", error instanceof Error ? error.message : error);
     failed = true;
   }
-  return <TodoApp me={me} initialTasks={tasks} startedOffline={failed} />;
+  return <TodoApp me={me} initialTasks={tasks} initialList={initialList} startedOffline={failed} />;
 }

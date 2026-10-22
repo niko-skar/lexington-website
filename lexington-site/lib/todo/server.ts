@@ -68,6 +68,7 @@ export async function requireTodoUser(adminOnly = false): Promise<TodoMe> {
 
 const FIELDS = `{
   "id": _id,
+  "list": coalesce(list, "site"),
   "text": coalesce(text, ""),
   "area": area,
   "urgent": coalesce(urgent, false),
@@ -82,10 +83,11 @@ const FIELDS = `{
   "updatedAt": _updatedAt
 }`;
 
-export async function listTasks(): Promise<TodoTask[]> {
+/** The office gets both lists; a site login (the foreman) only ever gets the site list. */
+export async function listTasks(me: TodoMe): Promise<TodoTask[]> {
   return getBuyersClient().fetch<TodoTask[]>(
-    `*[_type == "siteTask" && string::startsWith(_id, $prefix)] | order(createdAt desc)[0...800] ${FIELDS}`,
-    { prefix: PREFIX }
+    `*[_type == "siteTask" && string::startsWith(_id, $prefix) && ($all || coalesce(list, "site") == "site")] | order(createdAt desc)[0...800] ${FIELDS}`,
+    { prefix: PREFIX, all: me.kind === "admin" }
   );
 }
 
@@ -122,6 +124,7 @@ export async function createTask(me: TodoMe, body: Record<string, unknown>): Pro
   await getBuyersClient().create({
     _id: id,
     _type: "siteTask",
+    list: body.list === "house" ? "house" : "site",
     text,
     area: cleanArea(body.area),
     urgent: body.urgent === true,
@@ -141,11 +144,12 @@ export async function changeTask(me: TodoMe, id: string, body: Record<string, un
   checkId(id);
   const action = body.action as Action;
   const client = getBuyersClient();
-  const before = await client.fetch<{ status?: string; fix?: string } | null>(
-    `*[_id == $id && _type == "siteTask"][0]{ status, "fix": donePhoto.asset._ref }`,
+  const before = await client.fetch<{ status?: string; fix?: string; list: string } | null>(
+    `*[_id == $id && _type == "siteTask"][0]{ status, "fix": donePhoto.asset._ref, "list": coalesce(list, "site") }`,
     { id }
   );
-  if (!before) throw new TodoError(404, "That item isn't on the list any more.");
+  // A house job does not exist as far as a site login is concerned.
+  if (!before || (before.list !== "site" && me.kind !== "admin")) throw new TodoError(404, "That item isn't on the list any more.");
   const now = new Date().toISOString();
 
   if (action === "done") {

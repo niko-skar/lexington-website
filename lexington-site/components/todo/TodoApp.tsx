@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 
 import { todoSignOutAction } from "@/lib/actions/todo";
-import { AREAS, areaLabel, MAX_NOTE, MAX_TEXT, photoAt, type TodoMe, type TodoTask } from "@/lib/todo/shared";
+import { AREAS, areaLabel, listLabel, MAX_NOTE, MAX_TEXT, photoAt, type TodoList, type TodoMe, type TodoTask } from "@/lib/todo/shared";
 import { AccessSheet } from "./AccessSheet";
 import { forgetPhoto, uploadPhoto } from "./photo";
 import styles from "./Todo.module.css";
@@ -140,9 +140,21 @@ function useUploadSlot() {
 
 /* ---------- the app ---------- */
 
-export function TodoApp({ me, initialTasks, startedOffline }: { me: TodoMe; initialTasks: TodoTask[]; startedOffline: boolean }) {
+export function TodoApp({
+  me,
+  initialTasks,
+  initialList = "site",
+  startedOffline,
+}: {
+  me: TodoMe;
+  initialTasks: TodoTask[];
+  initialList?: TodoList;
+  startedOffline: boolean;
+}) {
   const isAdmin = me.kind === "admin";
   const [tasks, setTasks] = useState<TodoTask[]>(initialTasks);
+  // Which list is on screen: the site (shared with the foreman) or the house (the office only).
+  const [list, setList] = useState<TodoList>(isAdmin ? initialList : "site");
   const tasksRef = useRef<TodoTask[]>(initialTasks);
   const [tab, setTab] = useState<Tab>("open");
   const [offline, setOffline] = useState(startedOffline);
@@ -374,25 +386,29 @@ export function TodoApp({ me, initialTasks, startedOffline }: { me: TodoMe; init
 
   /* ---------- what to show ---------- */
 
-  const open = useMemo(() => tasks.filter((t) => t.status !== "done"), [tasks]);
+  const onList = useMemo(() => tasks.filter((t) => (t.list ?? "site") === list), [tasks, list]);
+  const open = useMemo(() => onList.filter((t) => t.status !== "done"), [onList]);
   const done = useMemo(
-    () => tasks.filter((t) => t.status === "done").sort((a, b) => (b.doneAt ?? "").localeCompare(a.doneAt ?? "")),
-    [tasks]
+    () => onList.filter((t) => t.status === "done").sort((a, b) => (b.doneAt ?? "").localeCompare(a.doneAt ?? "")),
+    [onList]
   );
+  const openOn = (which: TodoList) => tasks.filter((t) => (t.list ?? "site") === which && t.status !== "done").length;
+  const house = list === "house";
   const doneToday = done.filter((t) => t.doneAt && new Date(t.doneAt).toDateString() === new Date().toDateString()).length;
 
-  // To do: floor by floor (walk the building), urgent first, then the longest waiting.
+  // Site: floor by floor (walk the building). House: one list. Urgent first, then the longest waiting.
   const openGroups = useMemo(() => {
+    const order = (a: TodoTask, b: TodoTask) => Number(b.urgent) - Number(a.urgent) || a.createdAt.localeCompare(b.createdAt);
+    if (house) return open.length ? [{ key: "house", title: "Jobs", items: [...open].sort(order) }] : [];
     const known = AREAS as readonly string[];
     return ([...AREAS, null] as (string | null)[])
       .map((area) => ({
-        area,
-        items: open
-          .filter((t) => (area === null ? !known.includes(t.area ?? "") : t.area === area))
-          .sort((a, b) => Number(b.urgent) - Number(a.urgent) || a.createdAt.localeCompare(b.createdAt)),
+        key: area ?? "none",
+        title: areaLabel(area),
+        items: open.filter((t) => (area === null ? !known.includes(t.area ?? "") : t.area === area)).sort(order),
       }))
       .filter((g) => g.items.length > 0);
-  }, [open]);
+  }, [open, house]);
 
   const doneGroups = useMemo(() => {
     const groups: { day: string; items: TodoTask[] }[] = [];
@@ -418,7 +434,10 @@ export function TodoApp({ me, initialTasks, startedOffline }: { me: TodoMe; init
       <header className={styles.top}>
         <div className={styles.topRow}>
           <div>
-            <h1 className={styles.title}>Site to-do</h1>
+            <h1 className={styles.title}>
+              {listLabel(list)}
+              {house && <span className={styles.onlyYou}>Only you</span>}
+            </h1>
             <p className={styles.counts}>
               {open.length} to do · {doneToday} done today
             </p>
@@ -494,15 +513,17 @@ export function TodoApp({ me, initialTasks, startedOffline }: { me: TodoMe; init
         {tab === "open" &&
           (openGroups.length === 0 ? (
             <p className={styles.empty}>
-              {isAdmin
-                ? "Nothing to do. Take a photo of something on site and say what needs doing, and it appears here."
-                : "Nothing to do right now. New jobs appear here by themselves."}
+              {house
+                ? "Nothing to do at the house. Take a photo or write a job: only you can see this list."
+                : isAdmin
+                  ? "Nothing to do. Take a photo of something on site and say what needs doing, and it appears here."
+                  : "Nothing to do right now. New jobs appear here by themselves."}
             </p>
           ) : (
             openGroups.map((group) => (
-              <section key={group.area ?? "none"} className={styles.group}>
+              <section key={group.key} className={styles.group}>
                 <h2 className={styles.groupTitle}>
-                  {areaLabel(group.area)} <span>{group.items.length}</span>
+                  {group.title} <span>{group.items.length}</span>
                 </h2>
                 {group.items.map((task) => (
                   <article key={task.id} className={`${styles.card} ${task.urgent ? styles.cardUrgent : ""}`}>
@@ -592,7 +613,8 @@ export function TodoApp({ me, initialTasks, startedOffline }: { me: TodoMe; init
                         <p className={styles.text}>{task.text || "No note"}</p>
                         <p className={styles.doneMeta}>
                           ✓ Done{task.doneBy ? ` by ${task.doneBy}` : ""}
-                          {task.doneAt ? ` · ${when(task.doneAt)}` : ""} · {areaLabel(task.area)}
+                          {task.doneAt ? ` · ${when(task.doneAt)}` : ""}
+                          {house ? "" : ` · ${areaLabel(task.area)}`}
                         </p>
                         {task.doneNote && <p className={styles.doneNote}>&ldquo;{task.doneNote}&rdquo;</p>}
                       </div>
@@ -676,6 +698,7 @@ export function TodoApp({ me, initialTasks, startedOffline }: { me: TodoMe; init
         <Composer
           key={composer.mode === "edit" ? composer.task.id : "new"}
           initial={composer}
+          list={composer.mode === "edit" ? composer.task.list ?? "site" : list}
           onClose={() => setComposer(null)}
           onAdded={(task) => {
             setComposer(null);
@@ -711,6 +734,34 @@ export function TodoApp({ me, initialTasks, startedOffline }: { me: TodoMe; init
               Signed in as <b>{me.name}</b>
               {isAdmin ? " (office)" : ""}
             </p>
+            {isAdmin && (
+              <>
+                <p className={styles.label}>Lists</p>
+                <div className={styles.menuList}>
+                  {(["site", "house"] as const).map((which) => (
+                    <button
+                      key={which}
+                      type="button"
+                      aria-current={list === which}
+                      className={list === which ? styles.menuCurrent : undefined}
+                      onClick={() => {
+                        setList(which);
+                        setTab("open");
+                        setItemMenu(null);
+                        setArmed(null);
+                        setMenuOpen(false);
+                      }}
+                    >
+                      <span className={styles.menuGrow}>
+                        {listLabel(which)}
+                        <small>{which === "house" ? "Only you" : "Shared with your foreman"}</small>
+                      </span>
+                      <span className={styles.menuCount}>{openOn(which)} to do</span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
             <div className={styles.menuList}>
               {isAdmin && (
                 <button
@@ -798,11 +849,13 @@ export function TodoApp({ me, initialTasks, startedOffline }: { me: TodoMe; init
 
 function Composer({
   initial,
+  list,
   onClose,
   onAdded,
   onEdit,
 }: {
   initial: { mode: "new"; file?: File } | { mode: "edit"; task: TodoTask };
+  list: TodoList;
   onClose: () => void;
   onAdded: (task: TodoTask) => void;
   onEdit: (task: TodoTask, change: { text: string; area: string | null; urgent: boolean }) => void;
@@ -842,7 +895,9 @@ function Composer({
         setError("The photo didn't upload. Try it again, or remove it and save the note on its own.");
         return;
       }
-      const { task } = (await send("/api/todo", "POST", { text: text.trim(), area, urgent, photoId: photo?.id ?? null })) as { task: TodoTask };
+      const { task } = (await send("/api/todo", "POST", { list, text: text.trim(), area: list === "house" ? null : area, urgent, photoId: photo?.id ?? null })) as {
+        task: TodoTask;
+      };
       clear(true);
       onAdded(task);
     } catch (e) {
@@ -860,7 +915,9 @@ function Composer({
   return (
     <div className={styles.sheetBackdrop}>
       <div className={styles.sheet} role="dialog" aria-label={editing ? "Change this job" : "New job"}>
-        <h2 className={styles.sheetTitle}>{editing ? "Change this job" : "New job"}</h2>
+        <h2 className={styles.sheetTitle}>
+          {editing ? "Change this job" : list === "house" ? "New house job" : "New job"}
+        </h2>
 
         {editing ? (
           editing.photoUrl && (
@@ -920,14 +977,18 @@ function Composer({
           placeholder="e.g. Fill the gap under the window frame before plastering"
         />
 
-        <span className={styles.label}>Floor</span>
-        <div className={styles.chips}>
-          {AREAS.map((a) => (
-            <button key={a} type="button" className={area === a ? styles.chipOn : styles.chip} aria-pressed={area === a} onClick={() => setArea(area === a ? null : a)}>
-              {a}
-            </button>
-          ))}
-        </div>
+        {list === "site" && (
+          <>
+            <span className={styles.label}>Floor</span>
+            <div className={styles.chips}>
+              {AREAS.map((a) => (
+                <button key={a} type="button" className={area === a ? styles.chipOn : styles.chip} aria-pressed={area === a} onClick={() => setArea(area === a ? null : a)}>
+                  {a}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
 
         <button type="button" className={urgent ? styles.urgentOn : styles.urgentOff} aria-pressed={urgent} onClick={() => setUrgent(!urgent)}>
           {urgent ? "Urgent ✓" : "Mark as urgent"}
@@ -996,7 +1057,7 @@ function ProofSheet({
     <div className={styles.sheetBackdrop}>
       <div className={styles.sheet} role="dialog" aria-label="The finished job">
         <h2 className={styles.sheetTitle}>{noteOnly ? "Note on the finished job" : "Photo of the fix"}</h2>
-        <p className={styles.sheetNote}>{task.text || areaLabel(task.area)}</p>
+        <p className={styles.sheetNote}>{task.text || (task.list === "house" ? "House job" : areaLabel(task.area))}</p>
 
         {!noteOnly &&
           (slot ? (

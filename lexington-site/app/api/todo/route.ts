@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 export async function GET(): Promise<Response> {
   try {
     const me = await requireTodoUser();
-    const tasks = await listTasks();
+    const tasks = await listTasks(me);
     return Response.json({ me, tasks }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     return errorResponse(error);
