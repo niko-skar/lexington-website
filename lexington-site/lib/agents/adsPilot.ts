@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 
 import { readGoogleReport } from "@/lib/ads/googleStore";
 import { leadsOf, metaConfig, type MetaConfig } from "@/lib/ads/meta";
+import { MetaError, metaGraph } from "@/lib/ads/metaGraph";
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
 import { buildStories, shiftDay } from "@/lib/visits/report";
 import { readVisitLogs } from "@/lib/visits/store";
@@ -122,42 +123,6 @@ const mapToMarks = (map: Record<string, string>): DayMark[] => Object.entries(ma
 
 // ---- Meta ------------------------------------------------------------------------------
 
-class MetaError extends Error {
-  /** The key isn't allowed to do this (or is no longer valid): no point trying more changes. */
-  readonly permission: boolean;
-  constructor(message: string, permission: boolean) {
-    super(message);
-    this.permission = permission;
-  }
-}
-
-async function graph<T>(config: MetaConfig, method: "GET" | "POST", path: string, params: Record<string, string>): Promise<T> {
-  const url = `${config.base}/${config.version}/${path}`;
-  const query = new URLSearchParams(params);
-  const response = await fetch(method === "GET" ? `${url}?${query}` : url, {
-    method,
-    headers: {
-      Authorization: `Bearer ${config.token}`,
-      ...(method === "POST" && { "Content-Type": "application/x-www-form-urlencoded" }),
-    },
-    body: method === "POST" ? query.toString() : undefined,
-    signal: AbortSignal.timeout(15_000),
-    cache: "no-store",
-  });
-  const body = (await response.json().catch(() => null)) as
-    | ({ error?: { message?: string; code?: number; error_user_msg?: string } } & T)
-    | null;
-  if (!response.ok || body?.error) {
-    const error = body?.error;
-    const message = error?.error_user_msg || error?.message || `Meta answered ${response.status}`;
-    const code = error?.code ?? 0;
-    // 190: the key is no longer valid; 10 and 200-299: not allowed.
-    const permission = code === 190 || code === 10 || (code >= 200 && code < 300) || /permission|not authori[sz]ed/i.test(message);
-    throw new MetaError(message, permission);
-  }
-  return body as T;
-}
-
 interface AccountRow {
   account_status?: number;
   currency?: string;
@@ -216,7 +181,7 @@ interface MetaSide {
 
 async function gatherMeta(config: MetaConfig, nowMs: number, startFor: (today: string) => string): Promise<MetaSide> {
   const act = `act_${config.accountId}`;
-  const account = await graph<AccountRow>(config, "GET", act, { fields: "account_status,currency,timezone_name,spend_cap,amount_spent" });
+  const account = await metaGraph<AccountRow>(config, "GET", act, { fields: "account_status,currency,timezone_name,spend_cap,amount_spent" });
   const today = dayIn(account.timezone_name, nowMs);
   const yesterday = shiftDay(today, -1);
   const since14 = shiftDay(today, -14);
@@ -224,18 +189,18 @@ async function gatherMeta(config: MetaConfig, nowMs: number, startFor: (today: s
   const range = (since: string) => JSON.stringify({ since, until: yesterday });
 
   const [campaigns, adsets, byCampaign, byAdset, mtd] = await Promise.all([
-    graph<{ data?: CampaignRow[] }>(config, "GET", `${act}/campaigns`, {
+    metaGraph<{ data?: CampaignRow[] }>(config, "GET", `${act}/campaigns`, {
       fields: "id,name,status,effective_status,daily_budget,lifetime_budget,budget_remaining,stop_time",
       limit: "500",
     }),
-    graph<{ data?: AdsetRow[] }>(config, "GET", `${act}/adsets`, {
+    metaGraph<{ data?: AdsetRow[] }>(config, "GET", `${act}/adsets`, {
       fields: "id,name,campaign_id,status,effective_status,daily_budget,lifetime_budget,budget_remaining,end_time",
       limit: "500",
     }),
-    graph<{ data?: InsightRow[] }>(config, "GET", `${act}/insights`, { level: "campaign", time_range: range(since14), fields: "campaign_id,spend,actions", limit: "500" }),
-    graph<{ data?: InsightRow[] }>(config, "GET", `${act}/insights`, { level: "adset", time_range: range(since14), fields: "adset_id,spend,actions", limit: "500" }),
+    metaGraph<{ data?: InsightRow[] }>(config, "GET", `${act}/insights`, { level: "campaign", time_range: range(since14), fields: "campaign_id,spend,actions", limit: "500" }),
+    metaGraph<{ data?: InsightRow[] }>(config, "GET", `${act}/insights`, { level: "adset", time_range: range(since14), fields: "adset_id,spend,actions", limit: "500" }),
     fromDay <= yesterday
-      ? graph<{ data?: InsightRow[] }>(config, "GET", `${act}/insights`, { level: "account", time_range: range(fromDay), fields: "spend" })
+      ? metaGraph<{ data?: InsightRow[] }>(config, "GET", `${act}/insights`, { level: "account", time_range: range(fromDay), fields: "spend" })
       : Promise.resolve({ data: [] as InsightRow[] }),
   ]);
 
@@ -296,7 +261,7 @@ async function gatherMeta(config: MetaConfig, nowMs: number, startFor: (today: s
  * (a cheap lead that is only browsing isn't a result). Three rated entries are needed for a
  * campaign's own share; otherwise all of Facebook's; otherwise no discount.
  */
-async function realShares(nowMs: number): Promise<(holder: Holder) => number> {
+export async function realShares(nowMs: number): Promise<(holder: Holder) => number> {
   const since = new Date(nowMs - 30 * 86_400_000).toISOString();
   const rated = await getBuyersClient().fetch<Array<{ campaign?: string; adset?: string; temperature?: string }>>(
     `*[_type == "lead" && defined(metaCampaignId) && metaCampaignId != "" && defined(replyDraft.temperature) && _createdAt > $since]{ "campaign": metaCampaignId, "adset": metaAdsetId, "temperature": replyDraft.temperature }`,
@@ -317,20 +282,20 @@ async function realShares(nowMs: number): Promise<(holder: Holder) => number> {
 async function setMonthLimit(config: MetaConfig, value: number): Promise<{ ok: true; value: number } | { ok: false; error: string; permission: boolean }> {
   const act = `act_${config.accountId}`;
   // Meta gives both in cents, and takes a new limit in dollars.
-  const read = () => graph<AccountRow>(config, "GET", act, { fields: "spend_cap,amount_spent" });
+  const read = () => metaGraph<AccountRow>(config, "GET", act, { fields: "spend_cap,amount_spent" });
   const dollars = Math.max(MIN_DAILY, Math.round(value * 100) / 100);
   try {
     const before = await read();
     if (num(before.spend_cap) <= 0) {
       const roomy = Math.ceil((num(before.amount_spent) / 100) * 1.1 + dollars) + 1;
-      await graph(config, "POST", act, { spend_cap: roomy.toFixed(2) });
+      await metaGraph(config, "POST", act, { spend_cap: roomy.toFixed(2) });
     }
-    await graph(config, "POST", act, { spend_cap_action: "reset" });
-    await graph(config, "POST", act, { spend_cap: dollars.toFixed(2) });
+    await metaGraph(config, "POST", act, { spend_cap_action: "reset" });
+    await metaGraph(config, "POST", act, { spend_cap: dollars.toFixed(2) });
     const after = await read();
     const room = (num(after.spend_cap) - num(after.amount_spent)) / 100;
     if (room < Math.min(dollars, 1)) {
-      await graph(config, "POST", act, { spend_cap_action: "delete" }).catch(() => undefined);
+      await metaGraph(config, "POST", act, { spend_cap_action: "delete" }).catch(() => undefined);
       return { ok: false, permission: false, error: "Meta's account spending limit could not be set safely (the adverts would have stopped), so it was taken off again." };
     }
     if (Math.abs(num(after.spend_cap) - dollars * 100) > 1) {
@@ -354,7 +319,7 @@ async function applyMeta(config: MetaConfig, change: PilotChange, lifetime: Life
       ? { lifetime_budget: String(Math.round(lifetime.totalCents - lifetime.remainingCents + target * 100 * lifetime.daysLeft)) }
       : { daily_budget: String(Math.round(target * 100)) };
   }
-  await graph(config, "POST", change.id, params);
+  await metaGraph(config, "POST", change.id, params);
 }
 
 // ---- Google --------------------------------------------------------------------------

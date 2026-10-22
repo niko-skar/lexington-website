@@ -15,6 +15,7 @@ import { sendNotice } from "@/lib/social/notify";
 import { buildStories, shiftDay } from "@/lib/visits/report";
 import { readVisitLogs } from "@/lib/visits/store";
 
+import { readManagerRun } from "./adsManager";
 import { pilotSettings, readPilotRun, readPilotSwitch } from "./adsPilot";
 import { usd } from "./adsPilotCore";
 import { parseOffer } from "./factsCore";
@@ -205,17 +206,30 @@ async function gatherCrm(today: string, nowMs: number): Promise<WatchInput["crm"
 async function gatherPilot(): Promise<PilotWatch> {
   const settings = pilotSettings();
   if (settings.mode === "off") return { mode: "off", ranAt: null, errors: [], monthCap: null, spentMtd: null, dailyTarget: null, changes: [] };
-  const [run, toggle] = await Promise.all([readPilotRun(), readPilotSwitch()]);
+  const [run, toggle, manager] = await Promise.all([readPilotRun(), readPilotSwitch(), readManagerRun()]);
   const describe = (c: NonNullable<typeof run>["changes"][number]) =>
     c.kind === "pause" ? `${c.name} paused` : c.kind === "enable" ? `${c.name} switched back on` : `${c.name} ${usd(c.fromBudget ?? 0)} to ${usd(c.toBudget ?? 0)} a day`;
+  // The ads manager's morning run: what it made and switched off, and anything it couldn't do.
+  const fresh = manager && Date.now() - Date.parse(manager.ranAt) < 30 * 3_600_000;
+  const adWords = (c: NonNullable<typeof manager>["changes"][number]) =>
+    c.kind === "new ad"
+      ? `new ad in ${c.adsetName}${c.words ? `: "${c.words.split(" | ")[0]}"` : ""}`
+      : c.kind === "pause"
+        ? `ad switched off in ${c.adsetName} (${c.reason.replace(/\.$/, "")})`
+        : c.kind === "keep running"
+          ? `${c.adsetName} keeps running past its end date`
+          : `${c.name} diaspora tried as a new ad set`;
   return {
     mode: settings.mode === "dry" ? "dry" : toggle.paused ? "paused" : "on",
     ranAt: run?.ranAt ?? null,
-    errors: run?.errors ?? [],
+    errors: [...(run?.errors ?? []), ...(fresh ? (manager?.errors ?? []) : [])],
     monthCap: run?.plan?.monthCap ?? null,
     spentMtd: run?.plan?.spentMtd ?? null,
     dailyTarget: run?.plan?.dailyTarget ?? null,
-    changes: (run?.changes ?? []).filter((c) => c.done !== "not").map(describe),
+    changes: [
+      ...(run?.changes ?? []).filter((c) => c.done !== "not").map(describe),
+      ...(fresh ? (manager?.changes ?? []).filter((c) => c.done).map(adWords) : []),
+    ],
   };
 }
 

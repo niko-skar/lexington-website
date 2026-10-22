@@ -247,6 +247,7 @@ export interface MetaFormLead {
   /** The campaign and ad set the entry came from (empty when Meta doesn't say). */
   campaignId?: string;
   adsetId?: string;
+  adId?: string;
   /** Every other question on the form, as asked. */
   answers: Array<{ question: string; answer: string }>;
 }
@@ -275,7 +276,11 @@ export async function saveMetaLead(input: MetaFormLead): Promise<{ id: string; i
       answer: a.answer.slice(0, 300),
     }));
     const where = [input.formName && `form "${input.formName}"`, input.adName && `ad "${input.adName}"`].filter(Boolean).join(", ");
-    const fromAd = { ...(input.campaignId && { metaCampaignId: input.campaignId }), ...(input.adsetId && { metaAdsetId: input.adsetId }) };
+    const fromAd = {
+      ...(input.campaignId && { metaCampaignId: input.campaignId }),
+      ...(input.adsetId && { metaAdsetId: input.adsetId }),
+      ...(input.adId && { metaAdId: input.adId }),
+    };
     const said = answers.length ? `: ${answers.map((a) => `${a.question}: ${a.answer}`).join("; ")}` : "";
     const entry = { _key: newKey(), at: now, kind: "system" as const, text: `Facebook / Instagram lead form${where ? ` (${where})` : ""}${said}`.slice(0, 3000) };
     const task = { _key: newKey(), text: `Reply to ${firstName(name)} (Facebook lead form)`, due: todayISO(), waitingOn: "me", done: false, createdAt: now };

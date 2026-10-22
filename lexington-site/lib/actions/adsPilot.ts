@@ -2,12 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 
+import { runAdsManager } from "@/lib/agents/adsManager";
 import { runAdsPilot, setPilotPaused } from "@/lib/agents/adsPilot";
 import { getAdminSession } from "@/lib/auth/session";
 
-/** The dashboard's "Run now": the same run as the morning one (it makes the changes, unless paused). */
+/** The dashboard's "Run now": the same runs as the morning ones, the ads first, then the budgets (unless paused). */
 export async function runAdsPilotAction(): Promise<void> {
   if (!(await getAdminSession())) throw new Error("Not authorized.");
+  await runAdsManager({ mode: "full" });
   await runAdsPilot();
   revalidatePath("/admin/dashboard");
 }

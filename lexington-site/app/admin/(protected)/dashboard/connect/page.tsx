@@ -226,17 +226,19 @@ export default async function ConnectPage() {
         </ol>
       </Section>
 
-      <Section title="Ads autopilot" done={pilotDone}>
+      <Section title="Ads autopilot and ads manager" done={pilotDone}>
         <p>
-          Every morning at 6 it keeps all the advertising within {usd(pilot.monthlyCap)} a month: what is left of the month is
-          spread over the days left, and the money moves to where real enquiries come from, between Facebook and Google and
-          campaign by campaign. It changes budgets and pauses what brings nothing; it never writes, edits or extends an advert.
-          Every change, with the reason, is on the dashboard and in the daily ads check.
+          Every morning the ads manager (5:30) looks after the ads themselves: it writes and publishes new ads from the
+          website&rsquo;s facts only, with pictures from the website and the site updates, tries one new idea a week in each ad
+          set, switches off ads that bring no real enquiries (and any quoting an offer that has ended, the same night), and has
+          tried the UK and Canada once each. Then the autopilot (6:00) keeps all the advertising within {usd(pilot.monthlyCap)}{" "}
+          a month: what is left of the month is spread over the days left, and the money moves to where real enquiries come
+          from. Every change, with the reason, is on the dashboard and in the daily ads check.
         </p>
         <ul className={styles.steplist}>
           <li>
-            It needs the Meta key above with <Code>ads_management</Code>, and for Google the script below (version{" "}
-            {GOOGLE_SCRIPT_VERSION}).
+            It needs the Meta key above with <Code>ads_management</Code> and <Code>pages_manage_ads</Code>, and for Google the
+            script below (version {GOOGLE_SCRIPT_VERSION}).
           </li>
           <li>
             As a safety net, Facebook&rsquo;s own account spending limit is set to the month&rsquo;s budget on the 1st: Facebook

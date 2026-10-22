@@ -27,6 +27,14 @@
     {
       "path": "/api/cron/ads-pilot",
       "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/ads-manager",
+      "schedule": "30 5 * * *"
+    },
+    {
+      "path": "/api/cron/ads-guard",
+      "schedule": "10 0 * * *"
     }
   ]
 }

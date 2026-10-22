@@ -67,6 +67,7 @@ export interface Lead {
   /** The campaign and ad set that entry came from (the ads autopilot counts real leads per budget). */
   metaCampaignId?: string;
   metaAdsetId?: string;
+  metaAdId?: string;
   /** Their lead form answers, as asked. */
   formAnswers?: Array<{ _key: string; question: string; answer: string }>;
 }

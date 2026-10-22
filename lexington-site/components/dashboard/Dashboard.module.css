@@ -1006,3 +1006,16 @@
   color: #6b6b6b;
   max-width: 80ch;
 }
+
+.pilotManager {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--stone-lt);
+}
+
+.pilotSub {
+  margin: 0 0 4px;
+  font-family: var(--font-serif);
+  font-size: 17px;
+  line-height: 1.25;
+}

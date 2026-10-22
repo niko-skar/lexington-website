@@ -90,6 +90,7 @@ interface GraphLead {
   campaign_name?: string;
   campaign_id?: string;
   adset_id?: string;
+  ad_id?: string;
   form_id?: string;
   is_organic?: boolean;
 }
@@ -139,6 +140,7 @@ export function readLead(lead: GraphLead, formName: string): MetaFormLead {
     adName: lead.ad_name ?? "",
     campaignId: lead.campaign_id ?? "",
     adsetId: lead.adset_id ?? "",
+    adId: lead.ad_id ?? "",
     answers,
   };
 }
@@ -183,13 +185,37 @@ async function fillCampaigns(token: string): Promise<void> {
     { since }
   );
   for (const lead of missing) {
-    const found = await graphGet<{ campaign_id?: string; adset_id?: string }>(lead.metaLeadId, { fields: "campaign_id,adset_id" }, token).catch(() => null);
+    const found = await graphGet<{ campaign_id?: string; adset_id?: string; ad_id?: string }>(
+      lead.metaLeadId,
+      { fields: "campaign_id,adset_id,ad_id" },
+      token
+    ).catch(() => null);
     if (!found) continue;
     await buyers
       .patch(lead._id)
-      .set({ metaCampaignId: found.campaign_id ?? "", ...(found.adset_id && { metaAdsetId: found.adset_id }) })
+      .set({
+        metaCampaignId: found.campaign_id ?? "",
+        ...(found.adset_id && { metaAdsetId: found.adset_id }),
+        ...(found.ad_id && { metaAdId: found.ad_id }),
+      })
       .commit();
   }
+}
+
+/** The Page's lead forms, newest first: the ads manager attaches its new ads to one of them. */
+export async function listLeadForms(): Promise<Array<{ id: string; name: string; status: string; created: string }>> {
+  const pageId = process.env.META_PAGE_ID;
+  const given = leadsToken();
+  if (!pageId || !given) throw new Error("No Facebook Page token is set.");
+  const { token } = await pageTokenFrom(pageId, given);
+  const forms = await graphGet<{ data?: Array<{ id: string; name?: string; status?: string; created_time?: string }> }>(
+    `${pageId}/leadgen_forms`,
+    { fields: "id,name,status,created_time", limit: "100" },
+    token
+  );
+  return (forms.data ?? [])
+    .map((f) => ({ id: f.id, name: f.name ?? "", status: f.status ?? "ACTIVE", created: f.created_time ?? "" }))
+    .sort((a, b) => b.created.localeCompare(a.created));
 }
 
 /** One look at the lead forms. Never throws. */
@@ -222,7 +248,7 @@ export async function pollMetaLeads(nowMs = Date.now()): Promise<MetaLeadsResult
       const leads = await graphGet<{ data?: GraphLead[] }>(
         `${form.id}/leads`,
         {
-          fields: "id,created_time,field_data,ad_name,campaign_name,campaign_id,adset_id,form_id,is_organic",
+          fields: "id,created_time,field_data,ad_name,campaign_name,campaign_id,adset_id,ad_id,form_id,is_organic",
           filtering: JSON.stringify([{ field: "time_created", operator: "GREATER_THAN", value: fromUnix }]),
           limit: "100",
         },

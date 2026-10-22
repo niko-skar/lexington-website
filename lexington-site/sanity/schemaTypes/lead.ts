@@ -124,6 +124,7 @@ export const lead = defineType({
     defineField({ name: "metaLeadId", title: "Facebook lead form entry (id)", type: "string", readOnly: true }),
     defineField({ name: "metaCampaignId", title: "Facebook campaign (id)", type: "string", readOnly: true, hidden: true }),
     defineField({ name: "metaAdsetId", title: "Facebook ad set (id)", type: "string", readOnly: true, hidden: true }),
+    defineField({ name: "metaAdId", title: "Facebook ad (id)", type: "string", readOnly: true, hidden: true }),
     defineField({
       name: "formAnswers",
       title: "Lead form answers",

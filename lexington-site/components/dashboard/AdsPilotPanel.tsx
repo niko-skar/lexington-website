@@ -1,4 +1,5 @@
 import { runAdsPilotAction, setAdsPilotPausedAction } from "@/lib/actions/adsPilot";
+import type { ManagerChange, ManagerRun } from "@/lib/agents/adsManager";
 import type { PilotRun, PilotRunChange, PilotSettings } from "@/lib/agents/adsPilot";
 import { usd } from "@/lib/agents/adsPilotCore";
 import { formatWhen } from "@/lib/crm";
@@ -34,17 +35,120 @@ function Change({ c, mode }: { c: PilotRunChange; mode: PilotRun["mode"] }) {
   );
 }
 
+const MANAGER_TAG: Record<ManagerChange["kind"], string> = {
+  "new ad": "New ad",
+  pause: "Off",
+  "keep running": "Runs on",
+  "new market": "Market",
+};
+
+function ManagerItem({ c, live }: { c: ManagerChange; live: boolean }) {
+  return (
+    <li className={styles.watchItem}>
+      <span className={c.done ? styles.levelOk : live ? styles.levelAct : styles.levelWatch}>
+        {c.done ? MANAGER_TAG[c.kind] : live ? "Not done" : "Would do"}
+      </span>
+      <span>{c.kind === "new market" ? `${c.name}: a new ad set` : `${c.adsetName}: ${c.name}`}</span>
+      <span className={styles.watchDetail}>
+        {c.done ? `${c.day.slice(8, 10)}/${c.day.slice(5, 7)} · ` : ""}
+        {c.words ? `“${c.words}” ` : ""}
+        {c.reason}
+        {c.error ? ` ${c.error}` : ""}
+      </span>
+    </li>
+  );
+}
+
+/** What the ads manager did with the ads themselves, and the ads it made that are running. */
+function ManagerSection({ manager }: { manager: ManagerRun }) {
+  const live = manager.mode === "on" || manager.mode === "guard";
+  const running = (manager.experiments ?? []).filter((e) => !e.ended).slice(-8).reverse();
+  return (
+    <div className={styles.pilotManager}>
+      <h3 className={styles.pilotSub}>The ads themselves</h3>
+      <p className={styles.sub}>
+        Last look {formatWhen(manager.ranAt)} GMT{manager.mode === "guard" ? " (the night check for ended offers)" : ""}. It writes
+        and publishes new ads from the website&rsquo;s facts, one new idea a week per ad set, and switches off what doesn&rsquo;t
+        bring real enquiries.
+      </p>
+      {manager.errors.length > 0 && (
+        <ul className={styles.watchList} style={{ marginTop: 8 }}>
+          {manager.errors.map((e) => (
+            <li key={e} className={styles.watchItem}>
+              <span className={styles.levelAct}>Problem</span>
+              <span>{e}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {/* What it would do (trial mode, paused) or couldn't do on the last look... */}
+      {manager.changes.some((c) => !c.done) && (
+        <ul className={styles.watchList} style={{ marginTop: 8 }}>
+          {manager.changes
+            .filter((c) => !c.done)
+            .map((c) => (
+              <ManagerItem key={c._key} c={c} live={live} />
+            ))}
+        </ul>
+      )}
+      {/* ...and what it has done lately, newest first (the night check alone would hide the morning's work). */}
+      {(manager.recent ?? []).length > 0 ? (
+        <ul className={styles.watchList} style={{ marginTop: 8 }}>
+          {(manager.recent ?? []).slice(0, 8).map((c) => (
+            <ManagerItem key={c._key} c={c} live={live} />
+          ))}
+        </ul>
+      ) : (
+        !manager.changes.length && (
+          <p className={styles.hint} style={{ marginTop: 6 }}>
+            No changes to the ads yet.
+          </p>
+        )
+      )}
+      {manager.notes.length > 0 && (
+        <ul className={styles.pilotNotes}>
+          {manager.notes.map((n) => (
+            <li key={n}>{n}</li>
+          ))}
+        </ul>
+      )}
+      {running.length > 0 && (
+        <details className={styles.watchMore}>
+          <summary>Ads it made that are running ({running.length})</summary>
+          <ul className={styles.watchList}>
+            {running.map((e) => (
+              <li key={e._key} className={styles.watchItem}>
+                <span className={styles.levelOk}>
+                  {e.made.slice(8, 10)}/{e.made.slice(5, 7)}
+                </span>
+                <span>
+                  {e.market === "ghana" ? "Ghana" : e.market.toUpperCase()}, {e.angle} angle{e.offerUntil ? ", with the offer" : ""}
+                </span>
+                <span className={styles.watchDetail}>
+                  {e.spend !== undefined ? `${usd(e.spend)} spent, ${e.leads ?? 0} real lead${e.leads === 1 ? "" : "s"} so far` : "Just started"}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+    </div>
+  );
+}
+
 /**
  * The ads autopilot on the dashboard: where the month's budget stands, what today's
  * allowance is and how it is split, what it changed this morning and why, and the
- * buttons to pause it or run it now.
+ * buttons to pause it or run it now. Below, the ads manager's work on the ads themselves.
  */
 export function AdsPilotPanel({
   run,
+  manager,
   settings,
   paused,
 }: {
   run: PilotRun | null;
+  manager: ManagerRun | null;
   settings: PilotSettings;
   paused: boolean;
 }) {
@@ -74,7 +178,7 @@ export function AdsPilotPanel({
               </form>
             )}
             <form action={runAdsPilotAction}>
-              <PendingButton label="Run now" pendingLabel="Running… (up to a minute)" />
+              <PendingButton label="Run now" pendingLabel="Running… (a few minutes)" />
             </form>
           </div>
         )}
@@ -139,9 +243,11 @@ export function AdsPilotPanel({
         </ul>
       )}
 
+      {manager && <ManagerSection manager={manager} />}
+
       {earlier.length > 0 && (
         <details className={styles.watchMore}>
-          <summary>Earlier changes</summary>
+          <summary>Earlier budget changes</summary>
           <ul className={styles.watchList}>
             {earlier.slice(0, 20).map((c) => (
               <li key={c._key} className={styles.watchItem}>
