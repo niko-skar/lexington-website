@@ -146,12 +146,30 @@ export default async function ConnectPage() {
                 : "It hasn't looked yet."}
         </p>
         <p style={{ marginTop: 8 }}>
-          The saved Facebook login (the one the daily posts use) isn&rsquo;t allowed to read lead forms. It needs a Page token
-          with these permissions: <Code>leads_retrieval</Code>, <Code>pages_manage_ads</Code>, <Code>pages_manage_metadata</Code>,{" "}
-          <Code>pages_read_engagement</Code> and <Code>pages_show_list</Code>, saved in Vercel as <Code>META_LEADS_TOKEN</Code>.
-          Making one takes a few clicks in Facebook&rsquo;s Graph API Explorer with your password: say &ldquo;connect Facebook
-          leads&rdquo; and Claude will go through it with you.
+          The saved Facebook login (the one the daily posts use) isn&rsquo;t allowed to read lead forms. It needs its own key,
+          from a &ldquo;system user&rdquo; in Business settings: it never expires and isn&rsquo;t tied to your password. The same
+          key can also read your ad numbers (the Meta ads section below).
         </p>
+        <ol className={styles.steplist}>
+          <li>
+            Open <Ext href="https://business.facebook.com/settings/system-users">Business settings, Users, System users</Ext> with{" "}
+            <strong>The Lexington Apartments</strong> chosen at the top left. Press <strong>Add</strong>, name it{" "}
+            <Code>Lexington Website</Code>, role <strong>Employee</strong>.
+          </li>
+          <li>
+            <strong>Assign assets</strong>: the Page <strong>The Lexington Apartments</strong> with access to leads and ads, and the ad
+            account <strong>Lexington</strong> with <strong>View performance</strong>.
+          </li>
+          <li>
+            <strong>Generate new token</strong>: app <strong>Lexington Publisher</strong>, expiry <strong>Never</strong>, and tick{" "}
+            <Code>leads_retrieval</Code>, <Code>pages_manage_ads</Code>, <Code>pages_manage_metadata</Code>,{" "}
+            <Code>pages_read_engagement</Code>, <Code>pages_show_list</Code> and <Code>ads_read</Code>. Copy it.
+          </li>
+          <li>
+            In Vercel, add it as <Code>META_LEADS_TOKEN</Code>, and the same key again as <Code>META_ADS_ACCESS_TOKEN</Code> for the
+            ad numbers.
+          </li>
+        </ol>
       </Section>
 
       <Section title="Automatic replies">

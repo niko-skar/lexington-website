@@ -9,11 +9,13 @@ import { getBuyersClient } from "@/lib/sanity/buyersClient";
  * (or joins the person already there by email or phone), with a "Reply to ..." step
  * and a suggested first reply (the lead responder does that part).
  *
- * WHAT IS NEEDED. A Page access token that may read leads (`leads_retrieval`,
- * plus `pages_manage_ads`, `pages_read_engagement` and `pages_show_list`), as
- * META_LEADS_TOKEN; the daily-posts token (META_PAGE_TOKEN) is tried when it is not
- * set, but it was made without those permissions. Until then each look just records
- * "not allowed" and the Connect page and the daily ads check say so.
+ * WHAT IS NEEDED. A token that may read leads (`leads_retrieval`, plus
+ * `pages_manage_ads`, `pages_manage_metadata`, `pages_read_engagement` and
+ * `pages_show_list`), as META_LEADS_TOKEN: best a system user's token from Business
+ * settings (it never expires and isn't tied to anyone's password), which is swapped for
+ * the Page's token on each look. The daily-posts token (META_PAGE_TOKEN) is tried when
+ * it is not set, but it was made without those permissions. Until then each look just
+ * records "not allowed" and the Connect page and the daily ads check say so.
  *
  * What has been seen lives in one small private document (`agentState.metaLeads`).
  */
@@ -140,11 +142,26 @@ export async function readMetaLeadsState(): Promise<MetaLeadsState | null> {
   }
 }
 
+/**
+ * The Page's own token. Lead forms are read with a Page token: one set as META_LEADS_TOKEN
+ * is used as it is, and a system user's token (the kind made in Business settings, which
+ * never expires) is swapped for the Page token it is allowed to fetch.
+ */
+async function pageTokenFrom(pageId: string, token: string): Promise<string> {
+  try {
+    const page = await graphGet<{ access_token?: string }>(pageId, { fields: "access_token" }, token);
+    return page.access_token || token;
+  } catch {
+    return token;
+  }
+}
+
 /** One look at the lead forms. Never throws. */
 export async function pollMetaLeads(nowMs = Date.now()): Promise<MetaLeadsResult> {
   const pageId = process.env.META_PAGE_ID;
-  const token = leadsToken();
-  if (!pageId || !token) return { ok: false, error: "No Facebook Page token is set.", forms: 0, added: [] };
+  const given = leadsToken();
+  if (!pageId || !given) return { ok: false, error: "No Facebook Page token is set.", forms: 0, added: [] };
+  const token = await pageTokenFrom(pageId, given);
 
   const buyers = getBuyersClient();
   const state = await readState();
