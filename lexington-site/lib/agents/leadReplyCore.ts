@@ -241,7 +241,7 @@ WHAT TO WRITE
 - Write in the language they wrote in.
 
 ALSO
-- temperature: "hot" if they name a unit or a budget that fits, want to visit, ask how to pay or reserve, or want to buy within a month; "cold" if it looks like spam, a wrong number, an agent or someone selling something; otherwise "warm". temperature_reason: one short sentence saying why.
+- temperature: "hot" only for a clear sign they want to act soon: they name a specific unit, ask to visit or for a video call, ask how to pay or reserve, or say they want to buy within a month. A budget answer on a form, or saying it is a home to live in, is not enough on its own: that is "warm". "cold" if it looks like spam, a wrong number, an agent or someone selling something, or they say they are just exploring. temperature_reason: one short sentence saying why.
 - needs_owner: the questions only the owner can answer, as short phrases. An empty list when there are none.`;
 
 export const LEAD_REPLY_SCHEMA = {

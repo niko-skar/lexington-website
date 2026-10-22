@@ -104,7 +104,10 @@ export async function draftReply(leadId: string, opts: { message?: string } = {}
         temperature: out.temperature,
         temperatureReason: out.temperature_reason.trim().slice(0, 300),
         warnings: out.needs_owner.filter((q) => q.trim()).map((q) => `Only you can answer: ${q.trim()}`),
-        units: picks.map((u) => u.unitNumber),
+        // The units Claude actually put in the reply (it may choose better ones than the suggestions).
+        units: pack.units
+          .filter((u) => new RegExp(`\\b${u.unitNumber.replace(/\s+/g, "\\s*")}\\b`, "i").test(out.email_body))
+          .map((u) => u.unitNumber),
         status: "draft",
       };
     } else {
@@ -121,8 +124,10 @@ export async function draftReply(leadId: string, opts: { message?: string } = {}
       };
     }
 
-    // The fact check runs on what will actually be sent, whoever wrote it.
-    const checked = factCheck(`${draft.subject}\n${draft.body}\n${draft.whatsapp}`, pack);
+    // The fact check runs on what will actually be sent, whoever wrote it. Their own words
+    // (a budget they gave) may be repeated back to them.
+    const theirWords = [ctx.message, ...(ctx.answers ?? []).map((a) => a.answer), ...(ctx.history ?? [])].filter(Boolean).join("\n");
+    const checked = factCheck(`${draft.subject}\n${draft.body}\n${draft.whatsapp}`, pack, theirWords);
     draft.warnings = [...checked, ...draft.warnings];
     if (!lead.email && !lead.phone) draft.warnings.push("They left no email or phone number.");
 

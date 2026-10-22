@@ -98,6 +98,14 @@ export function questionWords(key: string): string {
   return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
+/** A form answer as Meta stores it ("$150,000_to_$300,000", "greater_accra") in plain words. */
+export function answerWords(value: string): string {
+  return value.replace(/_/g, " ").replace(/\s+/g, " ").trim();
+}
+
+// What Meta adds to every entry but nobody was asked: a link to the chat, whether the phone was checked.
+const NOT_QUESTIONS = new Set(["inbox_url", "phone_number_verified", "is_organic", "platform"]);
+
 /** One lead form entry in the CRM's words. Pure. */
 export function readLead(lead: GraphLead, formName: string): MetaFormLead {
   const fields = new Map((lead.field_data ?? []).map((f) => [f.name.toLowerCase(), (f.values ?? []).join(", ").trim()]));
@@ -116,7 +124,9 @@ export function readLead(lead: GraphLead, formName: string): MetaFormLead {
   const name = take("full_name", "name") || [first, last].filter(Boolean).join(" ");
   const email = take("email", "work_email");
   const phone = take("phone_number", "phone", "whatsapp_number");
-  const answers = [...fields.entries()].filter(([, v]) => v).map(([k, v]) => ({ question: questionWords(k), answer: v }));
+  const answers = [...fields.entries()]
+    .filter(([k, v]) => v && !NOT_QUESTIONS.has(k))
+    .map(([k, v]) => ({ question: questionWords(k), answer: answerWords(v) }));
   return {
     metaLeadId: lead.id,
     createdAt: lead.created_time,

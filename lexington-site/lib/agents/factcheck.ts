@@ -56,8 +56,26 @@ const CLAIMS: Array<[RegExp, string]> = [
 
 const norm = (unitNumber: string) => unitNumber.toLowerCase().replace(/\s+/g, "");
 
-/** What in `text` the website does not back up, in plain words. Empty when everything checks out. */
-export function factCheck(text: string, pack: FactPack): string[] {
+/** Every dollar amount written in `text`, with how it was written. */
+function dollarAmounts(text: string): Array<{ raw: string; value: number }> {
+  const out: Array<{ raw: string; value: number }> = [];
+  for (const m of text.matchAll(/(?:US)?\$\s?(\d{1,3}(?:,\d{3})+|\d+(?:\.\d+)?)(\s?k\b|\s?(?:million|m)\b)?/gi)) {
+    let value = Number(m[1].replace(/,/g, ""));
+    if (m[2]) value *= /k/i.test(m[2]) ? 1000 : 1_000_000;
+    out.push({ raw: m[0], value });
+  }
+  for (const m of text.matchAll(/\b(?:USD|US\s+dollars?)\s?(\d{1,3}(?:,\d{3})+|\d+)/gi)) {
+    out.push({ raw: m[0], value: Number(m[1].replace(/,/g, "")) });
+  }
+  return out;
+}
+
+/**
+ * What in `text` the website does not back up, in plain words. Empty when everything checks out.
+ * `theirWords` is what the person themselves wrote or answered: repeating their own budget back
+ * to them ("your budget of $70,000 to $150,000") is not a claim about the building.
+ */
+export function factCheck(text: string, pack: FactPack, theirWords = ""): string[] {
   const found: string[] = [];
   const flag = (message: string) => {
     if (!found.includes(message)) found.push(message);
@@ -65,16 +83,9 @@ export function factCheck(text: string, pack: FactPack): string[] {
 
   // ---- dollar amounts: "$92,400", "$92400", "$92.4k", "USD 92,400"
   const amounts = allowedAmounts(pack);
-  const checkAmount = (raw: string, value: number) => {
+  for (const own of dollarAmounts(theirWords)) amounts.add(Math.round(own.value));
+  for (const { raw, value } of dollarAmounts(text)) {
     if (!amounts.has(Math.round(value))) flag(`"${raw.trim()}" is not a price, fee or rate the website shows.`);
-  };
-  for (const m of text.matchAll(/(?:US)?\$\s?(\d{1,3}(?:,\d{3})+|\d+(?:\.\d+)?)(\s?k\b|\s?(?:million|m)\b)?/gi)) {
-    let value = Number(m[1].replace(/,/g, ""));
-    if (m[2]) value *= /k/i.test(m[2]) ? 1000 : 1_000_000;
-    checkAmount(m[0], value);
-  }
-  for (const m of text.matchAll(/\b(?:USD|US\s+dollars?)\s?(\d{1,3}(?:,\d{3})+|\d+)/gi)) {
-    checkAmount(m[0], Number(m[1].replace(/,/g, "")));
   }
 
   // ---- percentages
