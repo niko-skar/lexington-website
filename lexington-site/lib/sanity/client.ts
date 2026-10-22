@@ -13,5 +13,11 @@ export const client = createClient({
   // alongside published ones — any unpublished edit in Studio (even a
   // half-finished draft with missing fields) would leak onto the live
   // public site.
-  perspective: "published",
+  // The one exception is a test copy on a computer (never a deployment):
+  // SANITY_LOCAL_DRAFTS=1 shows drafts, so the progress reporter can be tried
+  // end to end without a test update ever reaching the live site.
+  perspective:
+    !process.env.VERCEL_ENV && process.env.NODE_ENV !== "production" && process.env.SANITY_LOCAL_DRAFTS === "1"
+      ? "drafts"
+      : "published",
 });

@@ -13,6 +13,7 @@
     "social:post": "tsx --env-file=.env.local scripts/social-post.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^1.1.0",
     "@sanity/client": "^7.23.0",
     "@sanity/image-url": "^2.1.1",
     "@sanity/vision": "^6.4.0",

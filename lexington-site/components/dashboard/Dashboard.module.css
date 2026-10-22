@@ -845,3 +845,104 @@
     height: 120px;
   }
 }
+
+/* ---- the daily ads check (the watchdog) ------------------------------------- */
+
+.watch {
+  margin-bottom: var(--space-6);
+  padding: 16px 18px;
+  background: var(--paper);
+  border: 1px solid var(--stone-lt);
+  border-left: 3px solid var(--brass);
+  border-radius: var(--radius);
+}
+
+.watchHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 12px;
+  margin-bottom: 12px;
+}
+
+.watchTitle {
+  font-family: var(--font-serif);
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+.watchWhen {
+  font-size: 12.5px;
+  color: #6b6b6b;
+}
+
+.watchHead form {
+  margin-left: auto;
+}
+
+.watchNote {
+  margin: 0 0 12px;
+  font-size: 14.5px;
+  line-height: 1.55;
+  max-width: 75ch;
+}
+
+.watchList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.watchItem {
+  display: grid;
+  grid-template-columns: 74px minmax(0, 1fr);
+  gap: 2px 10px;
+  align-items: baseline;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.watchDetail {
+  grid-column: 2;
+  font-size: 13px;
+  color: #6b6b6b;
+  overflow-wrap: anywhere;
+}
+
+.levelAct {
+  composes: tag;
+  justify-content: center;
+  background: #f3e1d8;
+  color: var(--clay);
+}
+
+.levelWatch {
+  composes: tag;
+  justify-content: center;
+  background: #f1e6cf;
+  color: var(--brass-text);
+}
+
+.levelOk {
+  composes: tag;
+  justify-content: center;
+  background: #dfe6d8;
+  color: #3f4b38;
+}
+
+.watchMore {
+  margin-top: 12px;
+  font-size: 13.5px;
+}
+
+.watchMore summary {
+  cursor: pointer;
+  color: var(--sage);
+}
+
+.watchMore[open] summary {
+  margin-bottom: 10px;
+}

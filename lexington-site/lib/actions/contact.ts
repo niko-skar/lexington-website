@@ -1,7 +1,9 @@
 "use server";
 
+import { after } from "next/server";
 import { Resend } from "resend";
 
+import { respondToNewLead } from "@/lib/agents/leadReply";
 import { saveWebsiteLead } from "@/lib/crmIntake";
 import { confirmationEmail, notificationEmail } from "@/lib/email/templates";
 import { SITE_URL } from "@/lib/seo";
@@ -69,6 +71,7 @@ export async function sendEnquiry(
     message,
     siteSettings,
     crmUrl: leadId ? `${SITE_URL}/admin/crm/${leadId}` : undefined,
+    replyComing: Boolean(leadId),
   });
 
   try {
@@ -118,6 +121,10 @@ export async function sendEnquiry(
   } catch (err) {
     console.error("Failed to send confirmation email:", err);
   }
+
+  // The lead responder writes a suggested first reply once the visitor already has
+  // their answer: it takes a little while and must never hold up the form.
+  if (leadId) after(() => respondToNewLead(leadId, { message }));
 
   return { status: "success", message: "Thanks — we'll be in touch shortly.", unit };
 }

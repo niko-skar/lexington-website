@@ -31,6 +31,9 @@ export const POSTAL_ADDRESS = {
 /** Lowest published unit price, used for the AggregateOffer in structured data. */
 export const PRICE_FROM_USD = 72000;
 
+/** The estimated completion the home page shows ("Dec 2027"); the lead responder quotes the same, as an estimate. */
+export const ESTIMATED_COMPLETION = { month: "Dec", monthName: "December", year: 2027 } as const;
+
 /**
  * Per-page metadata. Title and description are unique per route; the canonical
  * is relative because `metadataBase` in the root layout resolves it against

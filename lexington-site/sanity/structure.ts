@@ -39,6 +39,20 @@ export const structure: StructureResolver = (S) =>
       S.listItem()
         .title("Family members")
         .child(S.documentTypeList("familyMember").title("Family members")),
+      S.listItem()
+        .title("Site updates (progress reporter)")
+        .child(
+          S.documentTypeList("progressReport")
+            .title("Site updates")
+            .defaultOrdering([{ field: "date", direction: "desc" }])
+        ),
+      S.listItem()
+        .title("Construction updates (progress photos)")
+        .child(
+          S.documentTypeList("constructionUpdate")
+            .title("Construction updates")
+            .defaultOrdering([{ field: "order", direction: "desc" }])
+        ),
       S.divider(),
       S.listItem()
         .title("Apartment packages")

@@ -1,9 +1,10 @@
 import { pageMetadata } from "@/lib/seo";
 import { client } from "@/lib/sanity/client";
-import { constructionUpdatesQuery, siteSettingsQuery } from "@/lib/sanity/queries";
-import type { ConstructionUpdate, SiteSettings } from "@/lib/sanity/types";
+import { constructionUpdatesQuery, latestProgressReportQuery, siteSettingsQuery } from "@/lib/sanity/queries";
+import type { ConstructionUpdate, ProgressReport, SiteSettings } from "@/lib/sanity/types";
 
 import { PageIntro } from "@/components/PageIntro";
+import { LatestUpdate } from "@/components/LatestUpdate";
 import { ProgressGallery } from "@/components/ProgressGallery";
 import { Button } from "@/components/Button";
 
@@ -17,14 +18,23 @@ export const metadata = pageMetadata({
 });
 
 export default async function ProgressPage() {
-  const [updates, siteSettings] = await Promise.all([
+  const [updates, siteSettings, latest] = await Promise.all([
     client.fetch<ConstructionUpdate[]>(constructionUpdatesQuery),
     client.fetch<SiteSettings>(siteSettingsQuery),
+    client.fetch<ProgressReport | null>(latestProgressReportQuery),
   ]);
 
   return (
     <>
       <PageIntro {...siteSettings.progressIntro} />
+
+      {latest && (
+        <section style={{ paddingTop: "clamp(24px, 3vw, 40px)" }}>
+          <div className="wrap">
+            <LatestUpdate report={latest} />
+          </div>
+        </section>
+      )}
 
       <section style={{ paddingTop: "clamp(24px, 3vw, 40px)" }}>
         <div className="wrap">

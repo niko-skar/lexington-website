@@ -1,3 +1,4 @@
+import { EXTRAS } from "@/lib/extras";
 import { pageMetadata } from "@/lib/seo";
 import { client } from "@/lib/sanity/client";
 import { urlFor } from "@/lib/sanity/image";
@@ -24,12 +25,7 @@ export const metadata = pageMetadata({
     "Studio, one, two and three-bedroom residences and a penthouse duplex in Shiashie, East Legon. Live floor plans, availability and pricing from $72,000.",
 });
 
-const extras = [
-  { key: "parking-lift", label: "Parking", title: "Covered parking near lifts — $5,000/space, purchased in pairs" },
-  { key: "parking-compound", label: "Parking", title: "Compound parking included — 1 space for 1BR, 2 for 2BR+" },
-  { key: "storage-bq", label: "Storage", title: "Boys' quarters — $1,250/sqm (8–12 sqm units)" },
-  { key: "storage-unit", label: "Storage", title: "Storage units — $1,200/sqm (4–12 sqm units)" },
-];
+const extras = EXTRAS;
 
 export default async function ResidencesPage() {
   const [units, images, siteSettings, packageTiers] = await Promise.all([

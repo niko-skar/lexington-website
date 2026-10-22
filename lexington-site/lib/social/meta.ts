@@ -1,7 +1,12 @@
 // Facebook Page + Instagram publishing through the Graph API (the same route as scripts/post-to-meta.ts, extended to
 // swipe-through posts). Both platforms fetch the pictures themselves from public URLs, so nothing is uploaded from here.
 
-const GRAPH = `https://graph.facebook.com/${process.env.META_GRAPH_VERSION || "v23.0"}`;
+// A stand-in server (META_GRAPH_BASE) is only ever used for testing; production always posts to Meta.
+const GRAPH_BASE =
+  process.env.VERCEL_ENV !== "production" && process.env.META_GRAPH_BASE
+    ? process.env.META_GRAPH_BASE.replace(/\/+$/, "")
+    : "https://graph.facebook.com";
+const GRAPH = `${GRAPH_BASE}/${process.env.META_GRAPH_VERSION || "v23.0"}`;
 
 export class MetaError extends Error {
   code?: number;

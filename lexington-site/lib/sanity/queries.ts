@@ -60,3 +60,9 @@ export const constructionUpdatesQuery = defineQuery(`
 export const packageTiersQuery = defineQuery(`
   *[_type == "packageTiers"][0]
 `);
+
+export const latestProgressReportQuery = defineQuery(`
+  *[_type == "progressReport" && count(photos) > 0] | order(date desc, _createdAt desc)[0]{
+    _id, date, title, text, stage, photos[]{ _key, image, alt }, facebookUrl, instagramUrl
+  }
+`);

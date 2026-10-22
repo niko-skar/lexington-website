@@ -17,6 +17,7 @@ import type {
   Unit,
 } from "@/lib/sanity/types";
 import { formatUSD } from "@/lib/format";
+import { ESTIMATED_COMPLETION } from "@/lib/seo";
 
 import { Hero } from "@/components/Hero";
 import { Button } from "@/components/Button";
@@ -94,7 +95,7 @@ export default async function HomePage() {
                 { value: startingPrice, prefix: "$", label: "Starting from" },
                 { value: projectedYield, suffix: "%", label: "Projected rental yield" },
                 { value: 8, label: "Storeys, Shiashie skyline" },
-                { value: 2027, prefix: "Dec ", label: "Estimated completion", noGrouping: true },
+                { value: ESTIMATED_COMPLETION.year, prefix: `${ESTIMATED_COMPLETION.month} `, label: "Estimated completion", noGrouping: true },
               ]}
             />
           </Reveal>

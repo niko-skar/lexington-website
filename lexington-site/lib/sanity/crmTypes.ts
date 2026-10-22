@@ -17,6 +17,27 @@ export interface LeadNote {
   text: string;
 }
 
+/** The lead responder's suggested reply, kept on the prospect until it is sent or put aside. */
+export interface ReplyDraft {
+  createdAt: string;
+  /** "claude" when Claude wrote it, "template" for the plain fill-in-the-blanks reply. */
+  writer: "claude" | "template";
+  subject: string;
+  body: string;
+  whatsapp: string;
+  temperature?: "hot" | "warm" | "cold";
+  temperatureReason?: string;
+  /** What the fact check found, and what only Niko can answer: "check before sending". */
+  warnings: string[];
+  /** The units it suggests. */
+  units: string[];
+  status: "draft" | "sent" | "discarded";
+  sentAt?: string;
+  sentVia?: "email" | "whatsapp" | "auto-email";
+  /** Why Claude did not write it, when it didn't. */
+  note?: string;
+}
+
 export interface Lead {
   _id: string;
   _createdAt: string;
@@ -38,6 +59,13 @@ export interface Lead {
   notes?: LeadNote[];
   /** In lists only: the last thing typed about them, or how they first came in. */
   context?: string;
+  /** Set by the website form and the Facebook lead forms: the lead responder should suggest a first reply. */
+  replyWanted?: boolean;
+  replyDraft?: ReplyDraft;
+  /** The Facebook / Instagram lead form entry this prospect came from (so it is never added twice). */
+  metaLeadId?: string;
+  /** Their lead form answers, as asked. */
+  formAnswers?: Array<{ _key: string; question: string; answer: string }>;
 }
 
 export interface UnitOption {

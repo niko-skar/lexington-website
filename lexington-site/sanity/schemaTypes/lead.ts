@@ -97,6 +97,48 @@ export const lead = defineType({
     defineField({ name: "buyerAccountId", title: "Buyer login (id)", type: "string", readOnly: true }),
     defineField({ name: "tasks", title: "Tasks", type: "array", of: [defineArrayMember(task)] }),
     defineField({ name: "notes", title: "Notes", type: "array", of: [defineArrayMember(note)] }),
+    // ---- written by the lead responder (lib/agents/leadReply.ts); read-only here
+    defineField({ name: "replyWanted", title: "Suggested reply wanted", type: "boolean", readOnly: true }),
+    defineField({
+      name: "replyDraft",
+      title: "Suggested reply",
+      type: "object",
+      readOnly: true,
+      options: { collapsible: true, collapsed: true },
+      fields: [
+        defineField({ name: "createdAt", title: "Written", type: "datetime" }),
+        defineField({ name: "writer", title: "Written by", type: "string" }),
+        defineField({ name: "subject", title: "Subject", type: "string" }),
+        defineField({ name: "body", title: "Email", type: "text", rows: 8 }),
+        defineField({ name: "whatsapp", title: "WhatsApp", type: "text", rows: 3 }),
+        defineField({ name: "temperature", title: "Hot / warm / cold", type: "string" }),
+        defineField({ name: "temperatureReason", title: "Why", type: "string" }),
+        defineField({ name: "warnings", title: "Check before sending", type: "array", of: [defineArrayMember({ type: "string" })] }),
+        defineField({ name: "units", title: "Units suggested", type: "array", of: [defineArrayMember({ type: "string" })] }),
+        defineField({ name: "status", title: "Status", type: "string" }),
+        defineField({ name: "sentAt", title: "Sent", type: "datetime" }),
+        defineField({ name: "sentVia", title: "Sent by", type: "string" }),
+        defineField({ name: "note", title: "Note", type: "string" }),
+      ],
+    }),
+    defineField({ name: "metaLeadId", title: "Facebook lead form entry (id)", type: "string", readOnly: true }),
+    defineField({
+      name: "formAnswers",
+      title: "Lead form answers",
+      type: "array",
+      readOnly: true,
+      of: [
+        defineArrayMember({
+          name: "formAnswer",
+          type: "object",
+          fields: [
+            defineField({ name: "question", title: "Question", type: "string" }),
+            defineField({ name: "answer", title: "Answer", type: "string" }),
+          ],
+          preview: { select: { title: "answer", subtitle: "question" } },
+        }),
+      ],
+    }),
   ],
   preview: {
     select: { title: "name", subtitle: "stage" },

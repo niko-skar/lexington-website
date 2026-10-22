@@ -6,6 +6,7 @@ import { financingPlan } from "./financingPlan";
 import { siteSettings } from "./siteSettings";
 import { unitLocationPlan } from "./unitLocationPlan";
 import { constructionUpdate } from "./constructionUpdate";
+import { progressReport } from "./progressReport";
 import { packageTiers } from "./packageTiers";
 import { buyerAccount } from "./buyerAccount";
 import { standardAgreements } from "./standardAgreements";
@@ -21,6 +22,7 @@ export const schemaTypes = [
   siteSettings,
   unitLocationPlan,
   constructionUpdate,
+  progressReport,
   packageTiers,
 ];
 

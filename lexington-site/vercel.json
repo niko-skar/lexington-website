@@ -15,6 +15,14 @@
     {
       "path": "/api/cron/visit-log-cleanup",
       "schedule": "20 3 * * *"
+    },
+    {
+      "path": "/api/cron/agents",
+      "schedule": "*/10 * * * *"
+    },
+    {
+      "path": "/api/cron/ads-watchdog",
+      "schedule": "0 7 * * *"
     }
   ]
 }

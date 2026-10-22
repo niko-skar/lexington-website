@@ -3,6 +3,8 @@ import Link from "next/link";
 import { AdsView, type GoogleState, type MetaState } from "@/components/dashboard/AdsView";
 import styles from "@/components/dashboard/Dashboard.module.css";
 import { VisitorsView } from "@/components/dashboard/VisitorsView";
+import { WatchdogPanel } from "@/components/dashboard/WatchdogPanel";
+import { readWatchdog } from "@/lib/agents/watchdog";
 import { summariseGoogle } from "@/lib/ads/google";
 import { readGoogleReport } from "@/lib/ads/googleStore";
 import { fetchMetaReport, metaConfig } from "@/lib/ads/meta";
@@ -29,6 +31,9 @@ export const metadata = {
   title: "Dashboard | The Lexington",
 };
 
+// "Check now" (the ads watchdog) runs here and reads Meta, Google and the CRM.
+export const maxDuration = 120;
+
 type Params = Record<string, string | string[] | undefined>;
 const one = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value) ?? "";
 
@@ -53,10 +58,11 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   // The day before the range too, so a visit that crossed midnight into it is whole.
   const logsPromise = readVisitLogs([shiftDay(days[0], -1), ...days]);
   const config = view === "ads" ? metaConfig() : null;
-  const [logs, metaResult, googleReport] = await Promise.all([
+  const [logs, metaResult, googleReport, watchdog] = await Promise.all([
     logsPromise,
     config ? fetchMetaReport(config, days[0], days[days.length - 1]) : Promise.resolve(null),
     view === "ads" ? readGoogleReport() : Promise.resolve(null),
+    readWatchdog(),
   ]);
 
   const stories = buildStories(logs.visits, logs.events, bounds);
@@ -104,6 +110,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           Connect ad accounts
         </Link>
       </div>
+
+      <WatchdogPanel run={watchdog} />
 
       <nav aria-label="Dashboard" className={styles.tabs}>
         <Link href={href({ view: "ads" })} className={view === "ads" ? styles.tabActive : styles.tab} aria-current={view === "ads" ? "page" : undefined}>

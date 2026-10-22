@@ -6,6 +6,7 @@ import { ConfirmSubmitButton } from "@/components/crm/ConfirmSubmitButton";
 import { openTasksOf } from "@/components/crm/data";
 import { NotesPanel, StepsPanel } from "@/components/crm/LeadPanels";
 import { CreateBuyerFromLeadForm, LeadDetailsForm } from "@/components/crm/LeadForms";
+import { ReplyPanel } from "@/components/crm/ReplyPanel";
 import { LiveStageChip, LostControls, StagePills, StageProvider } from "@/components/crm/StagePanel";
 import { deleteLeadAction } from "@/lib/actions/crm";
 import { requireAdminPage } from "@/lib/auth/requireAdmin";
@@ -20,6 +21,9 @@ import { unitOptionsQuery } from "@/lib/sanity/queries";
 export const metadata = {
   title: "Prospect | The Lexington",
 };
+
+// "Write a suggested reply" runs here and can wait up to a minute for Claude.
+export const maxDuration = 120;
 
 const ID_RE = /^[A-Za-z0-9_.-]{1,80}$/;
 const SOLD_STAGES = ["reserved", "paying", "paid", "handed_over"];
@@ -90,6 +94,8 @@ export default async function ProspectPage({ params }: { params: Promise<{ id: s
 
       <div className={styles.detailGrid}>
         <div>
+          <ReplyPanel lead={lead} />
+
           <section className={styles.panel}>
             <h2 className={styles.panelTitle}>Stage</h2>
             <StagePills />

@@ -4,10 +4,15 @@ import type { ReactNode } from "react";
 
 import { CopyButton } from "@/components/dashboard/CopyButton";
 import styles from "@/components/dashboard/Dashboard.module.css";
+import { TestClaudeButton } from "@/components/dashboard/TestClaudeButton";
+import { claudeConfigured } from "@/lib/ai/claude";
+import { autoReplyOn } from "@/lib/agents/leadReply";
+import { metaLeadsConfigured, readMetaLeadsState } from "@/lib/agents/metaLeads";
 import { googleAdsScript } from "@/lib/ads/google";
 import { readGoogleReport } from "@/lib/ads/googleStore";
 import { LEXINGTON_AD_ACCOUNT, metaConfig } from "@/lib/ads/meta";
 import { requireAdminPage } from "@/lib/auth/requireAdmin";
+import { formatWhen } from "@/lib/crm";
 import { SITE_URL } from "@/lib/seo";
 
 export const metadata = {
@@ -68,6 +73,9 @@ export default async function ConnectPage() {
   const report = googleSet ? await readGoogleReport() : null;
   const sampleSecret = googleSet ? null : randomBytes(24).toString("base64url");
   const script = googleSet ? googleAdsScript({ endpoint: `${SITE_URL}/api/ads/google-report`, secret: googleSecret }) : null;
+  const claudeDone = claudeConfigured();
+  const leadsState = await readMetaLeadsState();
+  const leadsDone = Boolean(process.env.META_LEADS_TOKEN && leadsState?.lastOkAt && !leadsState.lastError);
 
   return (
     <main className={styles.page} style={{ maxWidth: 860 }}>
@@ -91,6 +99,72 @@ export default async function ConnectPage() {
           Preview if you like), tick &ldquo;Sensitive&rdquo; and press Save.
         </p>
         <p style={{ marginTop: 8 }}>New settings work from the next deploy, so after adding one, tell me and I will redeploy.</p>
+      </Section>
+
+      <Section title="Claude: the AI that writes" done={claudeDone}>
+        <p>
+          Claude writes the suggested first reply to each new enquiry, the words for your site updates, and the note on the
+          daily ads check. It only uses the website&rsquo;s own facts, and every reply goes through a fact check before you
+          see it. Without it everything still works, with a standard reply and your own words.
+        </p>
+        <ol className={styles.steplist}>
+          <li>
+            Open <Ext href="https://console.anthropic.com">console.anthropic.com</Ext> and sign in (or create the account
+            yourself).
+          </li>
+          <li>
+            Under <strong>Settings, Billing</strong>, add a card and some credit. Under <strong>Settings, Limits</strong>, set a
+            monthly spend limit you are happy with (for example $20): it can never spend more.
+          </li>
+          <li>
+            Under <strong>API keys</strong>, press <strong>Create key</strong>, name it <Code>Lexington website</Code> and copy it.
+          </li>
+          <li>
+            In Vercel, add it as <Code>ANTHROPIC_API_KEY</Code> (see &ldquo;Where the settings go&rdquo;). After the redeploy,
+            press &ldquo;Test it&rdquo; here.
+          </li>
+        </ol>
+        <p className={styles.sub}>
+          Expected cost: a few cents per reply or site update. It uses Claude Opus 5.5; if Claude&rsquo;s safety checks ever
+          refuse an ordinary request by mistake, Anthropic answers it with its recommended stand-in model instead.
+        </p>
+        {claudeDone && <TestClaudeButton />}
+      </Section>
+
+      <Section title="Facebook / Instagram lead forms into the CRM" done={leadsDone}>
+        <p>
+          Every ten minutes the website looks for new entries on your Facebook lead forms. Each one goes into Prospects with a
+          suggested first reply, and you get an email with the link.
+        </p>
+        <p style={{ marginTop: 8 }}>
+          {!metaLeadsConfigured()
+            ? "Not set up on this copy of the site."
+            : leadsState?.lastError
+              ? `Last look${leadsState.lastRunAt ? ` (${formatWhen(leadsState.lastRunAt)} GMT)` : ""}: ${leadsState.lastError}`
+              : leadsState?.lastOkAt
+                ? `Last look: ${formatWhen(leadsState.lastOkAt)} GMT, ${leadsState.forms ?? 0} active form(s).`
+                : "It hasn't looked yet."}
+        </p>
+        <p style={{ marginTop: 8 }}>
+          The saved Facebook login (the one the daily posts use) isn&rsquo;t allowed to read lead forms. It needs a Page token
+          with these permissions: <Code>leads_retrieval</Code>, <Code>pages_manage_ads</Code>, <Code>pages_manage_metadata</Code>,{" "}
+          <Code>pages_read_engagement</Code> and <Code>pages_show_list</Code>, saved in Vercel as <Code>META_LEADS_TOKEN</Code>.
+          Making one takes a few clicks in Facebook&rsquo;s Graph API Explorer with your password: say &ldquo;connect Facebook
+          leads&rdquo; and Claude will go through it with you.
+        </p>
+      </Section>
+
+      <Section title="Automatic replies">
+        <p>
+          {autoReplyOn()
+            ? "ON: a suggested reply that passes the fact check is emailed to the person straight away, without waiting for you."
+            : "OFF: every suggested reply waits for you to read it and press Send."}
+        </p>
+        <p style={{ marginTop: 8 }}>
+          To switch it on, add <Code>LEAD_AUTO_REPLY</Code> with the value <Code>1</Code> in Vercel; delete it to switch it off.
+          It never sends a reply the fact check flagged, a standard (non-Claude) reply, or one to someone who looks like spam.
+          Worth trying for a few weeks with it off first.
+        </p>
       </Section>
 
       <Section title="Meta ads (Facebook and Instagram)" done={metaDone}>

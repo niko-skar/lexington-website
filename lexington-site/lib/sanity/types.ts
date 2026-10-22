@@ -152,3 +152,15 @@ export interface ConstructionUpdate {
   stage: string;
   order: number;
 }
+
+/** A site update posted with the progress reporter (newest shown at the top of /progress). */
+export interface ProgressReport {
+  _id: string;
+  date: string;
+  title: string;
+  text?: string;
+  stage?: string;
+  photos: Array<{ _key: string; image: Image; alt: string }>;
+  facebookUrl?: string;
+  instagramUrl?: string;
+}

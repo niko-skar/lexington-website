@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { pushEvent } from "@/lib/analytics";
 import { formatArea } from "@/lib/area";
+import { MODELS, type PlanLevel } from "@/lib/models3d";
 import { useAreaUnit } from "./useAreaUnit";
 import { Reveal } from "./Reveal";
 import { useDialog } from "./useDialog";
@@ -16,38 +17,8 @@ import styles from "./Penthouse3D.module.css";
 const VIEWER_SRC = "/3d/ph2b.iife.js?v=11";
 const POSTER_SRC = "/3d/ph2b-poster.jpg";
 
-// The units with a 3D model, by unit number: the name the script knows the model by, how the page names it, its floors, and
-// the plan picture of each floor as the model itself sees it from straight above (night view), in the two shapes the plan box
-// takes. The picture is on screen the moment the pop-up opens and stays until the live 3D view has started, so there is never
-// an empty box: the live view starts from the very same camera and just takes over.
-export type PlanLevel = "lower" | "upper" | "main";
-interface Model3D {
-  viewerId: string;
-  name: string;
-  levels: PlanLevel[];
-  posters: Partial<Record<PlanLevel, { wide: string; phone: string }>>;
-}
-const MODELS: Record<string, Model3D> = {
-  PH2b: {
-    viewerId: "ph2b",
-    name: "penthouse PH2b",
-    levels: ["lower", "upper"],
-    posters: {
-      lower: { wide: "/3d/ph2b-plan-lower.jpg", phone: "/3d/ph2b-plan-lower-m.jpg" },
-      upper: { wide: "/3d/ph2b-plan-upper.jpg", phone: "/3d/ph2b-plan-upper-m.jpg" },
-    },
-  },
-  "405B": {
-    viewerId: "u405b",
-    name: "apartment 405B",
-    levels: ["main"],
-    posters: { main: { wide: "/3d/u405b-plan.jpg?v=1", phone: "/3d/u405b-plan-m.jpg?v=1" } },
-  },
-};
-
-export function has3DModel(unitNumber: string): boolean {
-  return unitNumber in MODELS;
-}
+// The units with a 3D model live in lib/models3d.ts (the server reads the same list).
+export { has3DModel, type PlanLevel } from "@/lib/models3d";
 
 // The floor the plan box opens on. The floor plans of the duplex penthouses are captioned "... lower floor" /
 // "... upper floor (rooftop level)"; a one-floor apartment has only the one.

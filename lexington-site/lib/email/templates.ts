@@ -206,6 +206,7 @@ export function notificationEmail({
   message,
   siteSettings,
   crmUrl,
+  replyComing,
 }: {
   name: string;
   email: string;
@@ -215,6 +216,8 @@ export function notificationEmail({
   siteSettings: SiteSettings;
   /** Link to this prospect in the admin CRM, when the enquiry was saved there. */
   crmUrl?: string;
+  /** The lead responder is writing a suggested reply on the prospect's CRM page. */
+  replyComing?: boolean;
 }) {
   const fields: Array<[string, string]> = [
     ["Name", name],
@@ -263,7 +266,9 @@ export function notificationEmail({
         ? `
     <tr>
       <td style="padding:0 40px 24px;">
-        <a href="${escapeHtml(crmUrl)}" style="font-family:${FONT_SANS}; font-size:13px; color:#8b4a34; text-decoration:underline;">Open this prospect in your CRM &rarr;</a>
+        <a href="${escapeHtml(crmUrl)}" style="font-family:${FONT_SANS}; font-size:13px; color:#8b4a34; text-decoration:underline;">${
+          replyComing ? "Open in your CRM: a suggested reply will be ready there in a minute or two &rarr;" : "Open this prospect in your CRM &rarr;"
+        }</a>
       </td>
     </tr>`
         : ""
@@ -463,4 +468,25 @@ export function reservationNotificationEmail({
     subject: `Reservation request - The Lexington (${name})`,
     html: shell(siteSettings, body),
   };
+}
+
+// ---- the lead responder's replies -------------------------------------------
+
+/**
+ * A reply to a buyer, as a person would send it: plain paragraphs, links that
+ * work, no banner. (The branded shell above reads as a newsletter; a first reply
+ * should read like the sales team wrote it, because they did: Niko sends it.)
+ */
+export function personalEmailHtml(text: string) {
+  const linked = (line: string) =>
+    escapeHtml(line).replace(
+      /(https?:\/\/[^\s<]+[^\s<.,;:!?)])/g,
+      '<a href="$1" style="color:#8b4a34; text-decoration:underline;">$1</a>'
+    );
+  const paragraphs = text
+    .trim()
+    .split(/\n\s*\n/)
+    .map((block) => `<p style="margin:0 0 14px;">${block.split("\n").map(linked).join("<br />")}</p>`)
+    .join("");
+  return `<div style="font-family:${FONT_SANS}; font-size:15px; line-height:1.6; color:#15181a; max-width:600px;">${paragraphs}</div>`;
 }

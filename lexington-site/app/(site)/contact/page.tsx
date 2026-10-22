@@ -14,6 +14,9 @@ import buttonStyles from "@/components/Button.module.css";
 import styles from "./contact.module.css";
 
 export const revalidate = 600;
+// The enquiry form's action runs here, and after answering the visitor it waits
+// for the lead responder to write the suggested reply (lib/actions/contact.ts).
+export const maxDuration = 120;
 
 export const metadata = pageMetadata({
   path: "/contact",

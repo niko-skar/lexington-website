@@ -2,6 +2,7 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 
 import { addDaysISO, firstName, todayISO } from "@/lib/crm";
+import { internationalDigits } from "@/lib/format";
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
 import { leadByEmailQuery } from "@/lib/sanity/crmQueries";
 
@@ -50,7 +51,8 @@ export async function saveWebsiteLead(input: WebsiteEnquiry): Promise<string | n
         // One append per patch: two on the same patch overwrite each other and only the last is kept.
         .patch(existing._id, (p) => p.append("tasks", [task]))
         .patch(existing._id, (p) => {
-          const next = p.append("notes", [entry]);
+          // A new enquiry wants a new suggested reply (the old one, sent or not, is in the timeline).
+          const next = p.append("notes", [entry]).set({ replyWanted: true }).unset(["replyDraft"]);
           // Someone written off who comes back is a live prospect again.
           return existing.stage === "lost" ? next.set({ stage: "new" }).unset(["lostReason"]) : next;
         })
@@ -67,6 +69,8 @@ export async function saveWebsiteLead(input: WebsiteEnquiry): Promise<string | n
       stage: "new",
       ...(unit && { interest: unit }),
       paymentPreference: "undecided",
+      // The lead responder writes a suggested first reply for it (lib/agents/leadReply.ts).
+      replyWanted: true,
       tasks: [
         {
           _key: newKey(),
@@ -226,5 +230,104 @@ export async function noteOnLead(
     ).commit();
   } catch (err) {
     console.error("Could not add a note to the prospect:", err);
+  }
+}
+
+// ---- Facebook / Instagram lead forms ----------------------------------------
+
+export interface MetaFormLead {
+  /** Meta's id for this form entry: a prospect is never added twice for one entry. */
+  metaLeadId: string;
+  createdAt: string;
+  name: string;
+  email: string;
+  phone: string;
+  formName: string;
+  adName: string;
+  /** Every other question on the form, as asked. */
+  answers: Array<{ question: string; answer: string }>;
+}
+
+const digitsOf = (phone: string) => internationalDigits(phone).replace(/\D/g, "");
+
+/**
+ * Saves a lead form entry as a prospect: a new one, or the person already in the CRM
+ * with the same email or phone number. Returns the prospect's id and whether it is
+ * new, "exists" when this entry was saved before, or null when it could not be saved
+ * (it is then tried again on the next look). Never throws.
+ */
+export async function saveMetaLead(input: MetaFormLead): Promise<{ id: string; isNew: boolean } | "exists" | null> {
+  try {
+    const client = getBuyersClient();
+    const already = await client.fetch<string | null>(`*[_type == "lead" && metaLeadId == $id][0]._id`, { id: input.metaLeadId });
+    if (already) return "exists";
+
+    const name = (input.name || "Facebook lead").slice(0, 120);
+    const email = input.email.toLowerCase().slice(0, 160);
+    const phone = input.phone.slice(0, 40);
+    const now = new Date().toISOString();
+    const answers = input.answers.slice(0, 20).map((a) => ({
+      _key: newKey(),
+      question: a.question.slice(0, 200),
+      answer: a.answer.slice(0, 300),
+    }));
+    const where = [input.formName && `form "${input.formName}"`, input.adName && `ad "${input.adName}"`].filter(Boolean).join(", ");
+    const said = answers.length ? `: ${answers.map((a) => `${a.question}: ${a.answer}`).join("; ")}` : "";
+    const entry = { _key: newKey(), at: now, kind: "system" as const, text: `Facebook / Instagram lead form${where ? ` (${where})` : ""}${said}`.slice(0, 3000) };
+    const task = { _key: newKey(), text: `Reply to ${firstName(name)} (Facebook lead form)`, due: todayISO(), waitingOn: "me", done: false, createdAt: now };
+
+    // Only a question about which home (not "what will the home be for?").
+    const unitAnswer = answers.find((a) => /\bunits?\b|apartment|bedroom|type of home|interested in/i.test(a.question))?.answer;
+    const payAnswer = answers.find((a) => /pay|plan|finance|cash/i.test(`${a.question} ${a.answer}`))?.answer ?? "";
+    const payment = /mortgage/i.test(payAnswer) ? "mortgage" : /plan|instal/i.test(payAnswer) ? "plan" : /full|cash/i.test(payAnswer) ? "cash" : "undecided";
+
+    // The same person already in the CRM: by email, else by phone number.
+    let existing: { _id: string; stage?: string } | null = null;
+    if (email) existing = await client.fetch(`*[_type == "lead" && lower(email) == $email][0]{ _id, stage }`, { email });
+    if (!existing && phone && digitsOf(phone).length >= 9) {
+      const withPhones = await client.fetch<Array<{ _id: string; stage?: string; phone: string }>>(
+        `*[_type == "lead" && defined(phone)]{ _id, stage, phone }`
+      );
+      existing = withPhones.find((l) => digitsOf(l.phone) === digitsOf(phone)) ?? null;
+    }
+
+    if (existing) {
+      await client
+        .transaction()
+        .patch(existing._id, (p) => p.setIfMissing({ tasks: [], notes: [] }))
+        // One append per patch (see saveWebsiteLead).
+        .patch(existing._id, (p) => p.append("tasks", [task]))
+        .patch(existing._id, (p) => {
+          let next = p
+            .append("notes", [entry])
+            .set({ replyWanted: true, metaLeadId: input.metaLeadId, formAnswers: answers })
+            .unset(["replyDraft"]);
+          if (email) next = next.setIfMissing({ email });
+          if (phone) next = next.setIfMissing({ phone });
+          return existing!.stage === "lost" ? next.set({ stage: "new" }).unset(["lostReason"]) : next;
+        })
+        .commit();
+      return { id: existing._id, isNew: false };
+    }
+
+    const doc = await client.create({
+      _type: "lead",
+      name,
+      ...(email && { email }),
+      ...(phone && { phone }),
+      source: "meta_ads",
+      stage: "new",
+      ...(unitAnswer && { interest: unitAnswer.slice(0, 120) }),
+      paymentPreference: payment,
+      replyWanted: true,
+      metaLeadId: input.metaLeadId,
+      formAnswers: answers,
+      tasks: [task],
+      notes: [entry],
+    });
+    return { id: doc._id, isNew: true };
+  } catch (err) {
+    console.error("Could not save the Facebook lead to the CRM:", err);
+    return null;
   }
 }
