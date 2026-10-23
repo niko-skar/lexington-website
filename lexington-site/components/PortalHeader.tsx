@@ -13,11 +13,14 @@ export function PortalHeader({ navLinks, signOutAction }: PortalHeaderProps) {
       <div className={styles.bar}>
         {/* Always the real site homepage, not a portal-specific "home" --
             a logo going anywhere else reads as broken. The portal's own
-            nav links (Overview, etc.) cover in-portal navigation. */}
-        <Link href="/" className={styles.brand}>
+            nav links (Overview, etc.) cover in-portal navigation. A plain
+            <a>, not <Link>: a full page load, so the tag manager the
+            public site loads can't follow Back into the portal. */}
+        {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- see above */}
+        <a href="/" className={styles.brand}>
           The Lexington
           <small>Skarlatos &amp; Son</small>
-        </Link>
+        </a>
 
         {navLinks && navLinks.length > 0 && (
           <nav className={styles.nav}>

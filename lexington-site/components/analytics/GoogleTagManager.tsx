@@ -9,6 +9,15 @@ const GTM_ID = process.env.NEXT_PUBLIC_GTM_ID;
  *
  * Gated on NEXT_PUBLIC_GTM_ID: with the env var unset (e.g. before the account
  * exists) this renders nothing, so it is safe to ship ahead of setup.
+ *
+ * Public pages only: mounted by app/(site)/layout.tsx, never the root layout,
+ * so the site to-do, admin, buyer portal, logins and Studios never load it.
+ * Once loaded, though, GTM keeps running through client-side navigations, and
+ * GA4 and the Meta Pixel count each one as a page view by default. So every
+ * link between the public site and a private page (the header's Buyer Portal,
+ * the login and portal logos, the login page's help link) is a plain <a>,
+ * never <Link>: a full page load, so the container never follows a visitor
+ * into a private page, not even on Back.
  */
 export function GoogleTagManager() {
   if (!GTM_ID) return null;

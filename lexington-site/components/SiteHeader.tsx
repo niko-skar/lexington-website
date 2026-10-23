@@ -42,13 +42,15 @@ export function SiteHeader() {
           <Link href="/contact" className={styles.cta} onClick={() => setOpen(false)}>
             Contact Us
           </Link>
-          <Link
+          {/* A plain <a>, not <Link>: the portal opens as a fresh page, so the tag manager
+              loaded by the public pages never follows into it (see GoogleTagManager.tsx). */}
+          <a
             href="/login"
             aria-current={pathname === "/login" ? "page" : undefined}
             onClick={() => setOpen(false)}
           >
             Buyer Portal
-          </Link>
+          </a>
         </nav>
 
         <button

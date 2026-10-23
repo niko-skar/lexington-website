@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
 
 import { getBuyerSession } from "@/lib/auth/session";
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
@@ -43,9 +42,12 @@ export default async function LoginPage() {
   return (
     <main className={styles.page}>
       <div className={styles.card}>
-        <Link href="/" className={styles.brand}>
+        {/* Plain <a>s, not <Link>, back to the public site: a full page load, so the tag
+            manager those pages load never runs on this page, not even on Back. */}
+        {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- see above */}
+        <a href="/" className={styles.brand}>
           The Lexington
-        </Link>
+        </a>
         <h1 className={styles.title}>Buyer Sign In</h1>
         <p className={styles.lede}>
           Track your deposits, unit and documents. Accounts are set up by
@@ -53,7 +55,7 @@ export default async function LoginPage() {
         </p>
         <LoginForm />
         <p className={contactFormStyles.note}>
-          <Link href="/contact">Need help signing in?</Link>
+          <a href="/contact">Need help signing in?</a>
         </p>
       </div>
     </main>
