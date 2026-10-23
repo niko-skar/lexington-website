@@ -16,6 +16,8 @@ import { buildStories, shiftDay } from "@/lib/visits/report";
 import { readVisitLogs } from "@/lib/visits/store";
 
 import { readManagerRun } from "./adsManager";
+import { chatSummary } from "./chat";
+import { CHANNEL_NAMES } from "./chatCore";
 import { pilotSettings, readPilotRun, readPilotSwitch } from "./adsPilot";
 import { usd } from "./adsPilotCore";
 import { parseOffer } from "./factsCore";
@@ -270,7 +272,7 @@ export async function runWatchdog(opts: { email: boolean; nowMs?: number }): Pro
   try {
     const nowMs = opts.nowMs ?? Date.now();
     const today = todayISO();
-    const [meta, google, site, crm, settings, leadsState, pilot] = await Promise.all([
+    const [meta, google, site, crm, settings, leadsState, pilot, chats] = await Promise.all([
       gatherMeta(today).catch((e: Error): WatchInput["meta"] => ({
         connected: true,
         error: e.message,
@@ -288,6 +290,9 @@ export async function runWatchdog(opts: { email: boolean; nowMs?: number }): Pro
       client.fetch<{ promoBanner?: { enabled?: boolean; message?: string } } | null>(`*[_type == "siteSettings"][0]{ promoBanner }`),
       readMetaLeadsState(),
       gatherPilot().catch((): PilotWatch | null => null),
+      chatSummary(nowMs)
+        .then((c) => ({ active: c.active, waiting: c.waiting.map((w) => ({ ...w, channel: CHANNEL_NAMES[w.channel] })) }))
+        .catch(() => null),
     ]);
 
     const findings = checkAll({
@@ -300,6 +305,7 @@ export async function runWatchdog(opts: { email: boolean; nowMs?: number }): Pro
       offer: parseOffer(settings?.promoBanner?.message, settings?.promoBanner?.enabled, today),
       metaLeads: { configured: metaLeadsConfigured(), lastOkAt: leadsState?.lastOkAt ?? null, lastError: leadsState?.lastError ?? null },
       pilot,
+      chats,
     });
 
     const emailing = opts.email && shouldEmail(findings, today);

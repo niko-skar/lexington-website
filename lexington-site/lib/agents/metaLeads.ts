@@ -202,6 +202,24 @@ async function fillCampaigns(token: string): Promise<void> {
   }
 }
 
+let pageKeyCache: { pageId: string; token: string; until: number } | null = null;
+
+/**
+ * The Page's own key, for the chat agent to answer messages with (kept ten minutes, so a busy
+ * chat doesn't swap keys on every message). Null when the Page or its key isn't set.
+ */
+export async function pageAccess(): Promise<{ pageId: string; token: string; base: string } | null> {
+  const pageId = process.env.META_PAGE_ID;
+  const given = leadsToken();
+  if (!pageId || !given) return null;
+  if (pageKeyCache && pageKeyCache.pageId === pageId && pageKeyCache.until > Date.now()) {
+    return { pageId, token: pageKeyCache.token, base: graphBase() };
+  }
+  const swap = await pageTokenFrom(pageId, given);
+  if (!swap.problem) pageKeyCache = { pageId, token: swap.token, until: Date.now() + 10 * 60_000 };
+  return { pageId, token: swap.token, base: graphBase() };
+}
+
 /** The Page's lead forms, newest first: the ads manager attaches its new ads to one of them. */
 export async function listLeadForms(): Promise<Array<{ id: string; name: string; status: string; created: string }>> {
   const pageId = process.env.META_PAGE_ID;

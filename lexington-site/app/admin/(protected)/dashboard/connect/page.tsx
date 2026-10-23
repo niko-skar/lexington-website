@@ -2,11 +2,15 @@ import Link from "next/link";
 import { randomBytes } from "node:crypto";
 import type { ReactNode } from "react";
 
+import { ConnectPageButton } from "@/components/dashboard/ConnectPageButton";
 import { CopyButton } from "@/components/dashboard/CopyButton";
 import styles from "@/components/dashboard/Dashboard.module.css";
+import { PendingButton } from "@/components/dashboard/PendingButton";
 import { TestClaudeButton } from "@/components/dashboard/TestClaudeButton";
+import { setChatPausedAction } from "@/lib/actions/chat";
 import { claudeConfigured } from "@/lib/ai/claude";
 import { pilotSettings, readPilotRun } from "@/lib/agents/adsPilot";
+import { chatAgentOn, chatSummary, readChatSwitch } from "@/lib/agents/chat";
 import { usd } from "@/lib/agents/adsPilotCore";
 import { autoReplyOn } from "@/lib/agents/leadReply";
 import { metaLeadsConfigured, readMetaLeadsState } from "@/lib/agents/metaLeads";
@@ -83,6 +87,9 @@ export default async function ConnectPage() {
   const pilot = pilotSettings();
   const pilotRun = await readPilotRun();
   const pilotDone = pilot.mode === "on" && Boolean(pilotRun?.plan) && !pilotRun?.errors.length;
+  const [chats, chatSwitch] = await Promise.all([chatSummary().catch(() => null), readChatSwitch()]);
+  const chatReady = Boolean(process.env.META_APP_SECRET && process.env.META_WEBHOOK_VERIFY_TOKEN);
+  const sampleVerify = process.env.META_WEBHOOK_VERIFY_TOKEN ? null : randomBytes(18).toString("base64url");
 
   return (
     <main className={styles.page} style={{ maxWidth: 860 }}>
@@ -190,6 +197,69 @@ export default async function ConnectPage() {
           To switch it on, add <Code>LEAD_AUTO_REPLY</Code> with the value <Code>1</Code> in Vercel; delete it to switch it off.
           It never sends a reply the fact check flagged, a standard (non-Claude) reply, or one to someone who looks like spam.
           Worth trying for a few weeks with it off first.
+        </p>
+      </Section>
+
+      <Section title="Messages: Messenger, Instagram and WhatsApp" done={chatReady && Boolean(chats?.lastAt)}>
+        <p>
+          The Lexington&rsquo;s assistant answers the messages people send the Page on Messenger and Instagram (and WhatsApp
+          once it&rsquo;s connected), from the website&rsquo;s facts only, with the same fact check as the email replies. It
+          hands a chat to you, with an email and a step in Prospects, when someone wants a viewing or a call, asks how to pay,
+          wants a better price, has a legal question, is unhappy, asks for a person, or asks something the website doesn&rsquo;t
+          answer. When you answer a chat yourself it stays quiet there for {12} hours. Its first message says it is the
+          assistant (Meta&rsquo;s rule for automatic replies). Every chat is in Prospects.
+        </p>
+        <p style={{ marginTop: 8 }}>
+          {!chatAgentOn()
+            ? "Switched off (CHAT_AGENT=off in Vercel)."
+            : chatSwitch.paused
+              ? "Paused by you: every message waits for you, and you get an email for each chat."
+              : chats?.lastAt
+                ? `On. Last message ${formatWhen(chats.lastAt)} GMT; ${chats.active} chat${chats.active === 1 ? "" : "s"} in the last day${chats.waiting.length ? `; ${chats.waiting.length} waiting for you` : ""}.`
+                : "On, waiting for its first message."}
+        </p>
+        {chatAgentOn() && (
+          <form action={setChatPausedAction} style={{ marginTop: 8 }}>
+            <input type="hidden" name="paused" value={chatSwitch.paused ? "0" : "1"} />
+            <PendingButton label={chatSwitch.paused ? "Resume the assistant" : "Pause the assistant"} pendingLabel="Saving…" />
+          </form>
+        )}
+        <ol className={styles.steplist}>
+          <li>
+            The Facebook key (the one in <Code>META_LEADS_TOKEN</Code>) also needs <Code>pages_messaging</Code>,{" "}
+            <Code>instagram_basic</Code> and <Code>instagram_manage_messages</Code> ticked. Same steps as before in the Graph API
+            Explorer.
+          </li>
+          <li>
+            In Vercel add <Code>META_APP_SECRET</Code>: in{" "}
+            <Ext href="https://developers.facebook.com/apps">developers.facebook.com</Ext>, open Lexington Publisher, then App
+            settings, Basic, and press Show next to App secret. Copy it.
+          </li>
+          <li>
+            In Vercel add <Code>META_WEBHOOK_VERIFY_TOKEN</Code>
+            {sampleVerify ? ". Use this one:" : " (done)."}
+            {sampleVerify && <Value name="META_WEBHOOK_VERIFY_TOKEN" value={sampleVerify} />}
+          </li>
+          <li>
+            After the redeploy, in Lexington Publisher open Use cases, add <strong>Engage with customers on Messenger from Meta</strong>
+            , and under its webhooks enter the callback address <Code>{`${SITE_URL}/api/meta/webhook`}</Code> and the same verify
+            token, then Verify and save. Tick the fields <Code>messages</Code>, <Code>message_echoes</Code> and{" "}
+            <Code>messaging_postbacks</Code>. For Instagram, add the Instagram messaging use case and tick <Code>messages</Code>{" "}
+            there too.
+          </li>
+          <li>
+            On your phone, in Instagram: Settings, Messages, Connected tools, switch on <strong>Allow access to messages</strong>.
+          </li>
+          <li>
+            Press <strong>Connect the Page</strong> below, then send the Page a message from another account to try it.
+            <ConnectPageButton />
+          </li>
+        </ol>
+        <p className={styles.sub}>
+          WhatsApp: your number stays on the WhatsApp Business app on your phone and the assistant answers alongside you.
+          Meta only lets its WhatsApp partners connect a number that way, so it needs one partner account (a one-time step,
+          about 10 minutes, a code confirmed in the app). Then <Code>WHATSAPP_PHONE_NUMBER_ID</Code> and{" "}
+          <Code>WHATSAPP_TOKEN</Code> go in Vercel.
         </p>
       </Section>
 

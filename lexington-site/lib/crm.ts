@@ -44,6 +44,7 @@ export const SOURCES = [
   { key: "whatsapp", label: "WhatsApp" },
   { key: "phone", label: "Phone call" },
   { key: "meta_ads", label: "Facebook / Instagram ad" },
+  { key: "messenger", label: "Facebook / Instagram message" },
   { key: "google_ads", label: "Google ad" },
   { key: "referral", label: "Referral" },
   { key: "walk_in", label: "Walk-in / site visit" },

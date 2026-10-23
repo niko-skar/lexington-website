@@ -15,7 +15,7 @@ export type Level = "act" | "watch" | "ok";
 
 export interface Finding {
   level: Level;
-  area: "Meta" | "Google" | "Website" | "Replies" | "Offer" | "Setup" | "Autopilot";
+  area: "Meta" | "Google" | "Website" | "Replies" | "Offer" | "Setup" | "Autopilot" | "Messages";
   title: string;
   detail?: string;
 }
@@ -82,6 +82,8 @@ export interface WatchInput {
   offer: OfferFact | null;
   metaLeads: { configured: boolean; lastOkAt: string | null; lastError: string | null };
   pilot?: PilotWatch | null;
+  /** The chat agent: chats in the last day, and those handed to Niko that he hasn't answered. */
+  chats?: { active: number; waiting: Array<{ name: string; channel: string; hours: number; reason: string }> } | null;
 }
 
 const ACCOUNT_STATUS: Record<number, string> = {
@@ -305,6 +307,26 @@ export function checkAll(input: WatchInput): Finding[] {
         detail: "Decide what comes next: the banner, the adverts and the posts all quote it.",
       });
     }
+  }
+
+  // ---- chats the assistant handed over ------------------------------------------------
+  const chats = input.chats;
+  if (chats) {
+    const late = chats.waiting.filter((w) => w.hours >= 2);
+    if (late.length) {
+      const first = late[0];
+      add({
+        level: "act",
+        area: "Messages",
+        title: `${plural(late.length, "chat is", "chats are")} waiting for you (handed over by the assistant).`,
+        detail: `Longest: ${first.name} on ${first.channel}, ${plural(first.hours, "hour")}: ${first.reason}.`,
+      });
+    }
+    add({
+      level: "ok",
+      area: "Messages",
+      title: `Messages, last day: ${plural(chats.active, "chat")} answered by the assistant${chats.waiting.length ? `, ${chats.waiting.length} with you` : ""}.`,
+    });
   }
 
   // ---- the ads autopilot ---------------------------------------------------------
