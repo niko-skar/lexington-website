@@ -39,14 +39,16 @@ export interface TodoTask {
 
 /**
  * The parts of the site app (one home-screen app, a tab bar at the bottom). The office opens all
- * three; a site login opens what the office ticked for it, and never the expenses (money).
+ * of them; a site login opens what the office ticked for it, and never the expenses (money) or the
+ * alerts (Niko's enquiries, leads and messages; 23 Oct 2026, instead of emails).
  */
-export const SECTIONS = ["todo", "store", "expenses"] as const;
+export const SECTIONS = ["todo", "store", "expenses", "alerts"] as const;
 export type Section = (typeof SECTIONS)[number];
-export type SiteSection = Exclude<Section, "expenses">;
+export type SiteSection = Exclude<Section, "expenses" | "alerts">;
 export const SITE_SECTIONS: readonly SiteSection[] = ["todo", "store"];
 export const sectionHref = (section: Section) => (section === "todo" ? "/todo" : `/todo/${section}`);
-export const sectionName = (section: Section) => (section === "todo" ? "To-do" : section === "store" ? "Store" : "Expenses");
+const SECTION_NAMES: Record<Section, string> = { todo: "To-do", store: "Store", expenses: "Expenses", alerts: "Alerts" };
+export const sectionName = (section: Section) => SECTION_NAMES[section];
 /** Where a sign-in from the app may send someone back to. */
 export const APP_PAGES: readonly string[] = SECTIONS.map(sectionHref);
 

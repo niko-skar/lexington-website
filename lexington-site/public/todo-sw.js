@@ -14,3 +14,42 @@ self.addEventListener("fetch", (event) => {
     fetch(event.request).catch(() => new Response(OFFLINE, { headers: { "Content-Type": "text/html; charset=utf-8" } }))
   );
 });
+
+// Phone alerts for the office (23 Oct 2026, instead of emails): every push shows a notification
+// (an iPhone stops sending them to an app that stays silent), and the icon shows the unread count.
+self.addEventListener("push", (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = { body: event.data ? event.data.text() : "" };
+  }
+  const shown = self.registration.showNotification(data.title || "The Lexington", {
+    body: data.body || "Open the app to see it.",
+    tag: data.tag || undefined,
+    icon: "/todo/icon-192.png",
+    badge: "/todo/icon-192.png",
+    data: { url: typeof data.url === "string" && data.url.startsWith("/todo") ? data.url : "/todo/alerts" },
+  });
+  const badge = typeof data.unread === "number" && self.navigator.setAppBadge ? self.navigator.setAppBadge(data.unread).catch(() => {}) : null;
+  event.waitUntil(Promise.all([shown, badge]));
+});
+
+// A tap opens the alert in the app: the open app if there is one, else a new one.
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = new URL((event.notification.data && event.notification.data.url) || "/todo/alerts", self.location.origin).href;
+  event.waitUntil(
+    (async () => {
+      const open = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+      for (const client of open) {
+        if (new URL(client.url).pathname.startsWith("/todo") && "focus" in client) {
+          await client.focus();
+          if ("navigate" in client) await client.navigate(url).catch(() => {});
+          return;
+        }
+      }
+      await self.clients.openWindow(url);
+    })()
+  );
+});

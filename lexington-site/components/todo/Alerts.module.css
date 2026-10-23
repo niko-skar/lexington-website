@@ -1,0 +1,175 @@
+/* Alerts (the office only): what the website used to email Niko, in the app's own look. The
+   colour tokens come from .app in Todo.module.css, so the dark version follows by itself. */
+
+.phone {
+  margin: 4px 0 8px;
+  padding: 14px 16px;
+  border: 1px solid var(--x-line);
+  border-radius: 10px;
+  background: var(--x-surface);
+}
+.phone p {
+  margin: 0 0 10px;
+  font-size: 15px;
+}
+.phone p:last-child {
+  margin-bottom: 0;
+}
+/* Set here: these are headings, and the website gives headings its serif font. */
+.phoneTitle {
+  margin: 0 0 6px;
+  font-family: var(--x-display);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.phoneButtons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+.primary,
+.secondary {
+  min-height: 48px;
+  padding: 0 18px;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 600;
+}
+.primary {
+  border: 0;
+  background: var(--x-accent);
+  color: var(--x-accent-ink);
+}
+.secondary {
+  border: 1px solid var(--x-line);
+  background: var(--x-bg);
+  color: var(--x-ink);
+}
+.primary:disabled,
+.secondary:disabled {
+  opacity: 0.55;
+}
+.phoneMore {
+  font-size: 13px;
+  color: var(--x-muted);
+}
+
+.alert {
+  margin-bottom: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--x-line);
+  border-radius: 10px;
+  background: var(--x-surface);
+  scroll-margin-top: 140px;
+}
+/* New since he last looked: a blueprint-blue edge. */
+.fresh {
+  border-color: var(--x-accent);
+  box-shadow: inset 4px 0 0 var(--x-accent);
+}
+/* The one a phone alert opened. */
+.opened {
+  outline: 2px solid var(--x-accent);
+  outline-offset: 2px;
+}
+.alertTop {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.kind {
+  padding: 2px 8px;
+  border-radius: 99px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.kindPeople {
+  background: var(--x-accent-soft);
+  color: var(--x-accent);
+}
+.kindAds {
+  background: var(--x-amber-soft);
+  color: var(--x-amber);
+}
+.kindQuiet {
+  border: 1px solid var(--x-line);
+  background: var(--x-bg);
+  color: var(--x-muted);
+}
+.newTag {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--x-warn);
+}
+.time {
+  margin-left: auto;
+  font-family: var(--x-num);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--x-muted);
+}
+.alertTitle {
+  margin: 0;
+  font-family: var(--x-body);
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+.lines {
+  display: grid;
+  gap: 4px;
+  margin-top: 6px;
+}
+.lines p {
+  margin: 0;
+  font-size: 15px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.lines a {
+  color: var(--x-accent);
+}
+.bullet {
+  position: relative;
+  padding-left: 14px;
+}
+.bullet::before {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: 0.6em;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--x-muted);
+}
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+.linkButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--x-line);
+  border-radius: 8px;
+  background: var(--x-bg);
+  color: var(--x-accent);
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+}

@@ -27,18 +27,39 @@ const ICONS: Record<Section, React.ReactNode> = {
       <path d="M9 8h6M9 12h6M9 16h3" />
     </svg>
   ),
+  alerts: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z" />
+      <path d="M10 20.5a2.2 2.2 0 0 0 4 0" />
+    </svg>
+  ),
 };
+
+// What a badge on the bar counts, for a screen reader.
+const BADGE_WORDS: Partial<Record<Section, string>> = { store: "to reorder", alerts: "new" };
 
 /** The class for the app's outer box: room at the bottom for the bar when there is one. */
 export const appClass = (me: TodoMe) => (me.sections.length > 1 ? `${styles.app} ${styles.withNav}` : styles.app);
 
 /** Each part's header: "Building works", the part's name, a line of counts, the ☰ button, then its tabs. */
-export function SiteHeader({ title, sub, onMenu, children }: { title: React.ReactNode; sub?: React.ReactNode; onMenu: () => void; children?: React.ReactNode }) {
+export function SiteHeader({
+  eyebrow = "Building works",
+  title,
+  sub,
+  onMenu,
+  children,
+}: {
+  eyebrow?: string;
+  title: React.ReactNode;
+  sub?: React.ReactNode;
+  onMenu: () => void;
+  children?: React.ReactNode;
+}) {
   return (
     <header className={styles.top}>
       <div className={styles.topRow}>
         <div className={styles.topText}>
-          <p className={styles.eyebrow}>Building works</p>
+          <p className={styles.eyebrow}>{eyebrow}</p>
           <h1 className={styles.title}>{title}</h1>
           {sub ? <p className={styles.counts}>{sub}</p> : null}
         </div>
@@ -86,7 +107,7 @@ export function SiteNav({
             {ICONS[section]}
             <span>{sectionName(section)}</span>
             {badge > 0 && (
-              <span className={styles.navBadge} aria-label={`${badge} to reorder`}>
+              <span className={styles.navBadge} aria-label={`${badge} ${BADGE_WORDS[section] ?? ""}`.trim()}>
                 {badge}
               </span>
             )}

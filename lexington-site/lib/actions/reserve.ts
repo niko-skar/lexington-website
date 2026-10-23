@@ -3,6 +3,7 @@
 import { headers } from "next/headers";
 import { Resend } from "resend";
 
+import { notifyOwner } from "@/lib/alerts/notify";
 import { firstName } from "@/lib/crm";
 import { countRecentReservationRequests, noteOnLead, saveReservationLead } from "@/lib/crmIntake";
 import {
@@ -190,14 +191,17 @@ export async function submitReservation(
   }
   const formEmailed = sendForm && buyerMailOk;
 
-  // 2) The sales inbox: everything they answered, and the form to forward if it didn't go out.
+  // 2) Niko: an alert in the site app that buzzes his phone, with everything they answered (no email
+  // since 23 Oct 2026). The old email to the sales inbox goes only when the alert can't be saved, or
+  // when the form did not reach the buyer: it carries the form, to forward by hand.
   const outcome = formEmailed
     ? `The reservation fee form was emailed to ${input.email}. It has no bank details on it: next, agree with ${first} how they want to pay, then send them the bank details.`
     : buyerMailOk
       ? `The form was NOT sent automatically (${held}). They were told a sales advisor will send it. ${pdf ? "The form is attached: forward it to them." : ""}`.trim()
       : `The email to ${input.email} did NOT go out. Send them the reservation form by hand. ${pdf ? "It is attached." : "(No form could be made either.)"}`.trim();
   let notifyOk = false;
-  if (resend) {
+  const emailSales = async () => {
+    if (!resend || notifyOk) return;
     try {
       const mail = reservationNotificationEmail({
         name: input.name,
@@ -220,11 +224,35 @@ export async function submitReservation(
     } catch (err) {
       console.error("Failed to send the reservation notification:", err);
     }
-  }
+  };
+  // The form didn't reach them: the sales inbox gets it to forward.
+  if (!formEmailed && pdf) await emailSales();
+  const alerted = await notifyOwner({
+    kind: "reservation",
+    urgent: true,
+    title: `Reservation request: ${input.name}${unit ? ` (${unit.unitNumber})` : ""}`,
+    lines: [
+      formEmailed
+        ? outcome
+        : outcome.replace(
+            / ?(The form is attached: forward it to them\.|It is attached\.)/,
+            notifyOk ? " The form is in an email to the sales inbox: forward it to them." : ""
+          ),
+      ...answerRows(input, facts)
+        .filter(([label]) => label !== "Name")
+        .map(([label, value]) => `${label}: ${value}`),
+    ],
+    links: [
+      ...(leadId ? [{ label: "Open their record", url: `/admin/crm/${leadId}` }] : []),
+      ...(input.phone ? [{ label: "WhatsApp them", url: whatsappUrl(input.phone) }] : []),
+    ],
+  });
+  // No alert could be saved: the email is the only way it reaches anyone.
+  if (!alerted) await emailSales();
 
   // 3) The prospect's timeline: what actually happened.
   if (leadId) {
-    const copy = pdf && notifyOk ? " The form is attached to the email sent to sales." : " No email could be sent at all, so make the form by hand.";
+    const copy = pdf && notifyOk ? " The form is attached to the email sent to sales." : " No copy of the form could be sent, so make it by hand.";
     const what = buyerMailOk
       ? `The form was NOT sent automatically (${held}). ${input.email} was told a sales advisor will send it.${pdf && notifyOk ? copy : ""}`
       : `The email to ${input.email} did NOT go out. Send them the reservation form by hand.${copy}`;

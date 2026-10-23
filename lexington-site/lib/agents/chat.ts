@@ -3,11 +3,10 @@ import "server-only";
 import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 
 import { claudeConfigured, writeWithClaude } from "@/lib/ai/claude";
+import { notifyOwner } from "@/lib/alerts/notify";
 import { firstName, todayISO } from "@/lib/crm";
 import { internationalDigits } from "@/lib/format";
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
-import { SITE_URL } from "@/lib/seo";
-import { sendNotice } from "@/lib/social/notify";
 
 import {
   AGENT_METADATA,
@@ -42,7 +41,8 @@ import { pageAccess } from "./metaLeads";
  * message on the Page's Messenger, on Instagram and on WhatsApp to /api/meta/webhook; for each one
  * this answers from the website's facts (the rules are in chatCore.ts), keeps the chat in one
  * private document per person (`chat.<channel>.<id>`), puts the person in Prospects with the chat
- * in their timeline, and emails Niko when it hands a chat over. When he answers himself (in
+ * in their timeline, and alerts Niko (the site app, a buzz on his phone) when it hands a chat
+ * over. When he answers himself (in
  * Business Suite, Messenger, Instagram or the WhatsApp Business app) it goes quiet in that chat.
  *
  * Off with CHAT_AGENT=off, or Pause on the Connect page. WhatsApp needs WHATSAPP_PHONE_NUMBER_ID
@@ -300,14 +300,25 @@ async function draft(thread: ChatThread, nowMs: number): Promise<Drafted> {
   return { text, handover, topic, reason, out };
 }
 
-/** Emails Niko about a chat, at most once an hour per chat. */
+/** Alerts Niko about a chat (an alert in the site app that buzzes his phone), at most once an hour per chat. */
 async function tellNiko(thread: ChatThread, subject: string, lines: string[], nowMs: number): Promise<boolean> {
   if (thread.notifiedAt && nowMs - Date.parse(thread.notifiedAt) < 3_600_000) return false;
   const where =
-    thread.channel === "whatsapp"
-      ? "Answer them in the WhatsApp Business app on your phone."
-      : `Answer them in Business Suite: https://business.facebook.com/latest/inbox/${thread.channel === "instagram" ? "instagram_direct" : "messenger"}`;
-  return sendNotice(subject, [...lines, where, ...(thread.leadId ? [`Their record: ${SITE_URL}/admin/crm/${thread.leadId}`] : [])]);
+    thread.channel === "whatsapp" ? "Answer them in the WhatsApp Business app on your phone." : "Answer them in Business Suite or the Facebook / Instagram app.";
+  return notifyOwner({
+    kind: "chat",
+    urgent: true,
+    // One per chat on the lock screen: a newer alert about the same chat replaces the older one.
+    tag: thread._id,
+    title: subject,
+    lines: [...lines, where],
+    links: [
+      ...(thread.channel === "whatsapp"
+        ? []
+        : [{ label: "Open Business Suite", url: `https://business.facebook.com/latest/inbox/${thread.channel === "instagram" ? "instagram_direct" : "messenger"}` }]),
+      ...(thread.leadId ? [{ label: "Their record", url: `/admin/crm/${thread.leadId}` }] : []),
+    ],
+  });
 }
 
 // ---- one event ----------------------------------------------------------------------------------------

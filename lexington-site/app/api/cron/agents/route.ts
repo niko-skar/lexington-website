@@ -1,9 +1,8 @@
 import { draftMissingReplies } from "@/lib/agents/leadReply";
 import { metaLeadsConfigured, pollMetaLeads } from "@/lib/agents/metaLeads";
+import { notifyOwner } from "@/lib/alerts/notify";
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
 import type { ReplyDraft } from "@/lib/sanity/crmTypes";
-import { SITE_URL } from "@/lib/seo";
-import { sendNotice } from "@/lib/social/notify";
 
 // Writing a few suggested replies can take a minute or two.
 export const maxDuration = 300;
@@ -14,7 +13,7 @@ const TEMP_WORDS: Record<string, string> = { hot: "HOT", warm: "warm", cold: "pr
 /**
  * Every ten minutes (vercel.json): new Facebook / Instagram lead form entries go into
  * the CRM, every recent enquiry still without a suggested reply gets one, and Niko
- * is emailed about each new Facebook lead with a link to its reply.
+ * gets an alert in the site app (a buzz on his phone) about each new Facebook lead.
  * Vercel sends "Authorization: Bearer <CRON_SECRET>"; without it nothing runs.
  */
 export async function GET(request: Request) {
@@ -33,24 +32,28 @@ export async function GET(request: Request) {
         `*[_type == "lead" && _id in $ids]{ _id, name, replyDraft }`,
         { ids }
       );
-      const lines = drafts.flatMap((lead) => {
+      const lines = drafts.map((lead) => {
         const d = lead.replyDraft;
         const how = d?.temperature ? ` (${TEMP_WORDS[d.temperature]}${d.temperatureReason ? `: ${d.temperatureReason}` : ""})` : "";
-        return [
-          `• ${lead.name}${how}`,
-          `${d ? "Suggested reply ready" : "Open"}: ${SITE_URL}/admin/crm/${lead._id}`,
-        ];
+        return `• ${lead.name}${how}${d ? ": suggested reply ready" : ""}`;
       });
       const hot = drafts.some((l) => l.replyDraft?.temperature === "hot");
       const subject =
         drafts.length === 1
           ? `${hot ? "HOT " : ""}Facebook lead: ${drafts[0].name}`
           : `${drafts.length} new Facebook leads${hot ? " (one is hot)" : ""}`;
-      await sendNotice(subject, [
-        drafts.length === 1 ? "A new lead came in through the Facebook / Instagram form:" : "New leads came in through the Facebook / Instagram form:",
-        ...lines,
-        "Each one is in the CRM with a suggested first reply to read and send.",
-      ]);
+      // An alert in the site app that buzzes Niko's phone (no email since 23 Oct 2026).
+      await notifyOwner({
+        kind: "lead",
+        urgent: true,
+        title: subject,
+        lines: [
+          drafts.length === 1 ? "A new lead came in through the Facebook / Instagram form:" : "New leads came in through the Facebook / Instagram form:",
+          ...lines,
+          "Each one is in the CRM with a suggested first reply to read and send.",
+        ],
+        links: drafts.map((lead) => ({ label: drafts.length === 1 ? "Open their record" : lead.name, url: `/admin/crm/${lead._id}` })),
+      });
     }
 
     return Response.json({ meta, drafted });

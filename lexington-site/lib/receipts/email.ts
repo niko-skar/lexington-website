@@ -1,6 +1,7 @@
 import "server-only";
 import { Resend } from "resend";
 
+import { notifyOwner } from "@/lib/alerts/notify";
 import { receiptEmail } from "@/lib/email/templates";
 import { SITE_URL } from "@/lib/seo";
 import { client } from "@/lib/sanity/client";
@@ -46,14 +47,12 @@ export async function sendReceiptEmail(buyer: BuyerAccount, paymentKey: string):
     siteSettings: settings,
   });
 
-  // A copy goes to the sales inbox so there's a record of what was sent.
-  const copyTo = settings.notificationEmail && settings.notificationEmail !== buyer.email ? settings.notificationEmail : undefined;
-
+  // No copy to the sales inbox any more (Niko, 23 Oct 2026: no notification emails): the receipt
+  // stays on the buyer's page, and the automatic sends leave an alert in the site app.
   try {
     const result = await new Resend(apiKey).emails.send({
       from: "The Lexington <sales@lexington.com.gh>",
       to: buyer.email,
-      ...(copyTo && { bcc: copyTo }),
       subject: mail.subject,
       html: mail.html,
       // Base64 text, the form the email API documents for attachments.
@@ -136,6 +135,12 @@ export async function emailPendingReceipts(): Promise<{ newReceipts: number; sen
       if (result.ok) {
         await markReceiptEmailed(buyer._id, payment._key as string, result.to);
         sent++;
+        await notifyOwner({
+          kind: "receipt",
+          title: `Receipt ${result.number} emailed to ${buyer.name}`,
+          lines: [`Unit ${buyer.unitNumber ?? "—"} · sent to ${result.to}.`],
+          links: [{ label: "Open their page", url: `/admin/${buyer._id}` }],
+        });
       } else {
         console.error(`Couldn't email receipt for payment ${payment._key} of ${buyer._id}:`, result.error);
         await db

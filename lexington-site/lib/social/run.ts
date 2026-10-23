@@ -1,9 +1,9 @@
+import { notifyOwner } from "@/lib/alerts/notify";
 import { SITE_URL } from "@/lib/seo";
 
 import { calendar, postForDate } from "./calendar";
 import { runChecks } from "./checks";
 import { MetaError, metaEnv, postFacebook, postInstagram, rehearse, type MetaEnv } from "./meta";
-import { sendNotice } from "./notify";
 import { logId, readLog, saveLog } from "./state";
 import type { Platform, PlatformResult, SocialLog, SocialPost } from "./types";
 
@@ -81,11 +81,16 @@ export async function runDaily(opts: RunOptions = {}): Promise<RunResult> {
         const entry: SocialLog = { ...(prior ?? { _id: logId(date), _type: "socialLog", date, post: post.id }), status: "held", heldReasons: failed, noticeSent: true };
         await saveLog(entry);
         if (!prior?.noticeSent) {
-          await sendNotice(`Lexington post held back: ${post.title}`, [
-            `Today's post ("${post.title}", ${date}) was NOT published, because something it quotes has changed on the website:`,
-            ...failed.map((f) => "• " + f),
-            "Tell Claude and it will be updated. Nothing else is affected: tomorrow's post goes out as normal.",
-          ]);
+          await notifyOwner({
+            kind: "post",
+            urgent: true,
+            title: `Daily post held back: ${post.title}`,
+            lines: [
+              `Today's post ("${post.title}", ${date}) was NOT published, because something it quotes has changed on the website:`,
+              ...failed.map((f) => "• " + f),
+              "Tell Claude and it will be updated. Nothing else is affected: tomorrow's post goes out as normal.",
+            ],
+          });
         }
       }
       return { ...base, outcome: "held", detail: failed };
@@ -101,7 +106,12 @@ export async function runDaily(opts: RunOptions = {}): Promise<RunResult> {
     log(detail[0]);
     if (!opts.force) {
       await saveLog({ ...(prior ?? { _id: logId(date), _type: "socialLog", date, post: post.id }), status: "failed", heldReasons: detail });
-      await sendNotice(`Lexington post could not go out: ${post.title}`, [`The pictures for today's post are not on the website: ${missing.join(", ")}.`, "The next scheduled run will try again."]);
+      await notifyOwner({
+        kind: "post",
+        urgent: true,
+        title: `Daily post could not go out: ${post.title}`,
+        lines: [`The pictures for today's post are not on the website: ${missing.join(", ")}.`, "The next scheduled run will try again."],
+      });
     }
     return { ...base, outcome: "failed", detail };
   }
@@ -149,20 +159,34 @@ export async function runDaily(opts: RunOptions = {}): Promise<RunResult> {
   const entry: SocialLog = { ...(prior ?? { _id: logId(date), _type: "socialLog", date, post: post.id }), status, fb: results.fb, ig: results.ig, heldReasons: undefined };
   await saveLog(entry);
 
-  // 4. tell the owner what matters
+  // 4. tell the owner what matters (an alert in the site app; problems buzz his phone)
   if (tokenDead) {
-    await sendNotice("Lexington posting: Facebook needs reconnecting", [
-      "Facebook has cancelled the saved login the daily posts use (this happens when the Facebook password is changed).",
-      `Today's post ("${post.title}") did not go out. Tell Claude: "reconnect Facebook" and it will be fixed.`,
-    ]);
+    await notifyOwner({
+      kind: "post",
+      urgent: true,
+      title: "Daily posts: Facebook needs reconnecting",
+      lines: [
+        "Facebook has cancelled the saved login the daily posts use (this happens when the Facebook password is changed).",
+        `Today's post ("${post.title}") did not go out. Tell Claude: "reconnect Facebook" and it will be fixed.`,
+      ],
+    });
   } else if (problems.length) {
-    await sendNotice(`Lexington post problem: ${post.title}`, [`Today's post ("${post.title}") hit a problem:`, ...problems.map((x) => "• " + x), "It will try again at the next scheduled run."]);
+    await notifyOwner({
+      kind: "post",
+      urgent: true,
+      title: `Daily post problem: ${post.title}`,
+      lines: [`Today's post ("${post.title}") hit a problem:`, ...problems.map((x) => "• " + x), "It will try again at the next scheduled run."],
+    });
   } else if (process.env.SOCIAL_NOTIFY_OK !== "0") {
-    await sendNotice(`Posted: ${post.title}`, [
-      `Today's post is live: "${post.title}".`,
-      ...(results.fb?.url ? [`Facebook: ${results.fb.url}`] : []),
-      ...(results.ig?.url ? [`Instagram: ${results.ig.url}`] : []),
-    ]);
+    await notifyOwner({
+      kind: "post",
+      title: `Posted: ${post.title}`,
+      lines: [`Today's post is live: "${post.title}".`],
+      links: [
+        ...(results.fb?.url ? [{ label: "Facebook post", url: results.fb.url }] : []),
+        ...(results.ig?.url ? [{ label: "Instagram post", url: results.ig.url }] : []),
+      ],
+    });
   }
 
   return { ...base, outcome: status === "posted" ? "posted" : status === "partial" ? "partial" : "failed", detail: problems, fb: results.fb, ig: results.ig };

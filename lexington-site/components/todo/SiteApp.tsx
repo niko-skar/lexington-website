@@ -2,9 +2,12 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 
+import type { AlertsData } from "@/lib/alerts/shared";
 import type { Expense } from "@/lib/expenses/shared";
 import { needsReorder, type StoreData, type StoreItem } from "@/lib/store/shared";
 import { sectionHref, SECTIONS, type Section, type TodoList, type TodoMe, type TodoTask } from "@/lib/todo/shared";
+import { AlertsApp } from "./AlertsApp";
+import { startPolling } from "./api";
 import { ExpensesApp } from "./ExpensesApp";
 import { appClass, SiteNav } from "./SiteChrome";
 import { StoreApp } from "./StoreApp";
@@ -18,10 +21,18 @@ import styles from "./Todo.module.css";
 
 export type { StoreData };
 export type ExpensesData = { expenses: Expense[]; items: StoreItem[] };
-export type SiteData = { todo?: TodoTask[]; store?: StoreData; expenses?: ExpensesData };
+export type SiteData = { todo?: TodoTask[]; store?: StoreData; expenses?: ExpensesData; alerts?: AlertsData };
 
 const sectionFrom = (path: string): Section | null =>
-  path.startsWith("/todo/store") ? "store" : path.startsWith("/todo/expenses") ? "expenses" : path.startsWith("/todo") ? "todo" : null;
+  path.startsWith("/todo/store")
+    ? "store"
+    : path.startsWith("/todo/expenses")
+      ? "expenses"
+      : path.startsWith("/todo/alerts")
+        ? "alerts"
+        : path.startsWith("/todo")
+          ? "todo"
+          : null;
 
 async function load(section: Section): Promise<SiteData> {
   const get = async (url: string) => {
@@ -31,6 +42,7 @@ async function load(section: Section): Promise<SiteData> {
   };
   if (section === "todo") return { todo: (await get("/api/todo")).tasks };
   if (section === "store") return { store: await get("/api/store") };
+  if (section === "alerts") return { alerts: await get("/api/alerts") };
   const [x, s] = await Promise.all([get("/api/expenses"), get("/api/store")]);
   return { expenses: { expenses: x.expenses, items: s.items } };
 }
@@ -125,20 +137,25 @@ export function SiteApp({
   section: first,
   initial,
   initialList,
+  openAlert,
   startedOffline,
 }: {
   me: TodoMe;
   section: Section;
   initial: SiteData;
   initialList?: TodoList;
+  /** Opened from a phone alert: the alert to show. */
+  openAlert?: string;
   startedOffline: boolean;
 }) {
   const [section, setSection] = useState<Section>(first);
   const [opened, setOpened] = useState<Section[]>([first]);
   const [data, setData] = useState<SiteData>(initial);
   const [reorders, setReorders] = useState(() => (initial.store ? initial.store.items.filter(needsReorder).length : 0));
+  const [unread, setUnread] = useState(() => initial.alerts?.unread ?? 0);
   const current = useRef(first);
   const scrollAt = useRef<Partial<Record<Section, number>>>({});
+  const hasAlerts = me.sections.includes("alerts");
 
   // The other parts, fetched quietly once the first one is on screen.
   useEffect(() => {
@@ -151,6 +168,7 @@ export function SiteApp({
           if (!live) return;
           setData((d) => ({ ...loaded, ...d }));
           if (loaded.store) setReorders(loaded.store.items.filter(needsReorder).length);
+          if (loaded.alerts) setUnread(loaded.alerts.unread);
         } catch {
           /* it loads when opened instead */
         }
@@ -195,6 +213,30 @@ export function SiteApp({
     return () => window.removeEventListener("popstate", onPop);
   }, [go]);
 
+  // The office: the Alerts badge stays fresh while another part is on screen (the tab itself keeps its own count).
+  useEffect(() => {
+    if (!hasAlerts || section === "alerts") return;
+    return startPolling(
+      async () => {
+        try {
+          const response = await fetch("/api/alerts?count=1", { cache: "no-store" });
+          if (response.ok) setUnread(((await response.json()) as { unread: number }).unread);
+        } catch {
+          /* no signal: the badge waits */
+        }
+      },
+      30_000,
+      120_000
+    );
+  }, [hasAlerts, section]);
+
+  // The same count on the app's home-screen icon, where the phone allows it.
+  useEffect(() => {
+    if (!hasAlerts) return;
+    const nav = navigator as Navigator & { setAppBadge?: (n?: number) => Promise<void>; clearAppBadge?: () => Promise<void> };
+    (unread > 0 ? nav.setAppBadge?.(unread) : nav.clearAppBadge?.())?.catch(() => {});
+  }, [hasAlerts, unread]);
+
   const show = (s: Section) => opened.includes(s) && me.sections.includes(s);
 
   return (
@@ -222,7 +264,20 @@ export function SiteApp({
           <ExpensesApp me={me} active={section === "expenses"} initial={data.expenses ?? null} startedOffline={startedOffline && first === "expenses"} fresh={first === "expenses"} />
         </div>
       )}
-      <SiteNav me={me} current={section} onGo={go} badges={{ store: reorders }} />
+      {show("alerts") && (
+        <div hidden={section !== "alerts"}>
+          <AlertsApp
+            me={me}
+            active={section === "alerts"}
+            initial={data.alerts ?? null}
+            startedOffline={startedOffline && first === "alerts"}
+            fresh={first === "alerts"}
+            openAlert={openAlert}
+            onUnread={setUnread}
+          />
+        </div>
+      )}
+      <SiteNav me={me} current={section} onGo={go} badges={{ store: reorders, alerts: unread }} />
     </div>
   );
 }

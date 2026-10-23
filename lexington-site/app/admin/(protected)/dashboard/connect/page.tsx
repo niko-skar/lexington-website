@@ -150,7 +150,7 @@ export default async function ConnectPage() {
       <Section title="Facebook / Instagram lead forms into the CRM" done={leadsDone}>
         <p>
           Every ten minutes the website looks for new entries on your Facebook lead forms. Each one goes into Prospects with a
-          suggested first reply, and you get an email with the link.
+          suggested first reply, and you get an alert in the site app (it buzzes your phone).
         </p>
         <p style={{ marginTop: 8 }}>
           {!metaLeadsConfigured()
@@ -206,7 +206,7 @@ export default async function ConnectPage() {
         <p>
           The Lexington&rsquo;s assistant answers the messages people send the Page on Messenger and Instagram (and WhatsApp
           once it&rsquo;s connected), from the website&rsquo;s facts only, with the same fact check as the email replies. It
-          hands a chat to you, with an email and a step in Prospects, when someone wants a viewing or a call, asks how to pay,
+          hands a chat to you, with an alert in the site app and a step in Prospects, when someone wants a viewing or a call, asks how to pay,
           wants a better price, has a legal question, is unhappy, asks for a person, or asks something the website doesn&rsquo;t
           answer. When you answer a chat yourself it stays quiet there for {12} hours. Its first message says it is the
           assistant (Meta&rsquo;s rule for automatic replies). Every chat is in Prospects.
@@ -215,7 +215,7 @@ export default async function ConnectPage() {
           {!chatAgentOn()
             ? "Switched off (CHAT_AGENT=off in Vercel)."
             : chatSwitch.paused
-              ? "Paused by you: every message waits for you, and you get an email for each chat."
+              ? "Paused by you: every message waits for you, and you get an alert for each chat."
               : chats?.lastAt
                 ? `On. Last message ${formatWhen(chats.lastAt)} GMT; ${chats.active} chat${chats.active === 1 ? "" : "s"} in the last day${chats.waiting.length ? `; ${chats.waiting.length} waiting for you` : ""}.`
                 : "On, waiting for its first message."}

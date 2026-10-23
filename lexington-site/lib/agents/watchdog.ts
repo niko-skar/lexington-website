@@ -6,12 +6,11 @@ import { claudeConfigured, writeWithClaude } from "@/lib/ai/claude";
 import { summariseGoogle } from "@/lib/ads/google";
 import { readGoogleReport } from "@/lib/ads/googleStore";
 import { fetchMetaReport, metaConfig, type MetaConfig } from "@/lib/ads/meta";
+import { notifyOwner } from "@/lib/alerts/notify";
 import { todayISO } from "@/lib/crm";
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
 import { client } from "@/lib/sanity/client";
 import type { LeadTask } from "@/lib/sanity/crmTypes";
-import { SITE_URL } from "@/lib/seo";
-import { sendNotice } from "@/lib/social/notify";
 import { buildStories, shiftDay } from "@/lib/visits/report";
 import { readVisitLogs } from "@/lib/visits/store";
 
@@ -28,8 +27,9 @@ import { checkAll, emailSubject, shouldEmail, type Finding, type MetaWatch, type
  * THE ADS WATCHDOG. Every morning at 7 (Ghana time = GMT) it reads what Meta and
  * Google say the adverts did, the website's own record of ad visitors, the CRM's
  * enquiries and the offer on the website, and runs the rules in watchdogCore.ts.
- * Niko gets an email when something needs him (and a round-up every Monday); the
- * dashboard shows the latest check. It only reads: nothing changes an advert.
+ * Niko gets an alert in the site app when something needs him (it buzzes his phone),
+ * and a quiet round-up every Monday; the dashboard shows the latest check. It only
+ * reads: nothing changes an advert.
  */
 
 // A test copy or a preview keeps its own record, apart from the live site's.
@@ -237,7 +237,7 @@ async function gatherPilot(): Promise<PilotWatch> {
 
 // ---- Claude's note (optional) ----------------------------------------------------
 
-const NOTE_SYSTEM = `You write the two-to-four sentence note at the top of a daily email to the owner of a property development about how his adverts and enquiries are doing. You are given the day's findings. Say what matters most and what to do first, in plain words, kindly and briefly. Use only the numbers that appear in the findings, exactly as written; never work out new ones. No greeting, no sign-off, no lists.`;
+const NOTE_SYSTEM = `You write the two-to-four sentence note at the top of a daily alert on the phone of the owner of a property development about how his adverts and enquiries are doing. You are given the day's findings. Say what matters most and what to do first, in plain words, kindly and briefly. Use only the numbers that appear in the findings, exactly as written; never work out new ones. No greeting, no sign-off, no lists.`;
 
 async function claudeNote(findings: Finding[]): Promise<string | null> {
   if (!claudeConfigured()) return null;
@@ -316,13 +316,14 @@ export async function runWatchdog(opts: { email: boolean; nowMs?: number }): Pro
         const items = findings.filter((f) => f.level === level);
         return items.length ? [title, ...items.map((f) => `• ${f.title}${f.detail ? ` ${f.detail}` : ""}`)] : [];
       };
-      await sendNotice(emailSubject(findings, today), [
-        ...(summary ? [summary] : []),
-        ...section("Needs you:", "act"),
-        ...section("Keep an eye on:", "watch"),
-        ...section("The numbers:", "ok"),
-        `Dashboard: ${SITE_URL}/admin/dashboard`,
-      ]);
+      // An alert in the site app (no email since 23 Oct 2026): it buzzes his phone only when something needs him.
+      await notifyOwner({
+        kind: "ads",
+        urgent: findings.some((f) => f.level === "act"),
+        title: emailSubject(findings, today),
+        lines: [...(summary ? [summary] : []), ...section("Needs you:", "act"), ...section("Keep an eye on:", "watch"), ...section("The numbers:", "ok")],
+        links: [{ label: "Open the dashboard", url: "/admin/dashboard" }],
+      });
     }
 
     const previous = await readWatchdog();
