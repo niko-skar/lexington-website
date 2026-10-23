@@ -89,7 +89,9 @@ export default async function ConnectPage() {
   const pilotDone = pilot.mode === "on" && Boolean(pilotRun?.plan) && !pilotRun?.errors.length;
   const [chats, chatSwitch] = await Promise.all([chatSummary().catch(() => null), readChatSwitch()]);
   const chatReady = Boolean(process.env.META_APP_SECRET && process.env.META_WEBHOOK_VERIFY_TOKEN);
-  const sampleVerify = process.env.META_WEBHOOK_VERIFY_TOKEN ? null : randomBytes(18).toString("base64url");
+  // Shown even once it is set: the same value goes into Facebook's webhook settings afterwards.
+  const verifyToken = process.env.META_WEBHOOK_VERIFY_TOKEN?.trim() || null;
+  const sampleVerify = verifyToken ? null : randomBytes(18).toString("base64url");
 
   return (
     <main className={styles.page} style={{ maxWidth: 860 }}>
@@ -237,8 +239,9 @@ export default async function ConnectPage() {
           </li>
           <li>
             In Vercel add <Code>META_WEBHOOK_VERIFY_TOKEN</Code>
-            {sampleVerify ? ". Use this one:" : " (done)."}
-            {sampleVerify && <Value name="META_WEBHOOK_VERIFY_TOKEN" value={sampleVerify} />}
+            {verifyToken ? ": set. The same value goes into Facebook in the next step:" : ". Use this one:"}
+            <Value name="META_WEBHOOK_VERIFY_TOKEN" value={verifyToken ?? sampleVerify ?? ""} />
+            {sampleVerify && <span className={styles.sub}>A new one appears each time this page opens. Use one, and keep it.</span>}
           </li>
           <li>
             After the redeploy, in Lexington Publisher open Use cases, add <strong>Engage with customers on Messenger from Meta</strong>
