@@ -33,8 +33,11 @@ export async function shrink(file: File): Promise<Blob> {
   );
 }
 
+/** Where photos go: the to-do list's ("/api/todo/photo") or the store room's ("/api/store/photo"). */
+export type PhotoEndpoint = "/api/todo/photo" | "/api/store/photo";
+
 /** Shrinks and uploads one photo; resolves to the stored photo's id and address. */
-export async function uploadPhoto(file: File): Promise<{ id: string; url: string }> {
+export async function uploadPhoto(file: File, endpoint: PhotoEndpoint = "/api/todo/photo"): Promise<{ id: string; url: string }> {
   let blob: Blob = file;
   try {
     blob = await shrink(file);
@@ -45,7 +48,7 @@ export async function uploadPhoto(file: File): Promise<{ id: string; url: string
   form.append("photo", blob, "photo.jpg");
   let response: Response;
   try {
-    response = await fetch("/api/todo/photo", { method: "POST", body: form });
+    response = await fetch(endpoint, { method: "POST", body: form });
   } catch {
     throw new Error("No signal: the photo didn't upload. Try again when you have data.");
   }
@@ -55,6 +58,6 @@ export async function uploadPhoto(file: File): Promise<{ id: string; url: string
 }
 
 /** A photo that was taken and then removed before saving: tidy it away (nothing else uses it). */
-export function forgetPhoto(id: string) {
-  void fetch(`/api/todo/photo?id=${encodeURIComponent(id)}`, { method: "DELETE" }).catch(() => {});
+export function forgetPhoto(id: string, endpoint: PhotoEndpoint = "/api/todo/photo") {
+  void fetch(`${endpoint}?id=${encodeURIComponent(id)}`, { method: "DELETE" }).catch(() => {});
 }

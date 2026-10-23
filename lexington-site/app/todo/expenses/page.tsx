@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
-import { ExpensesApp } from "@/components/todo/ExpensesApp";
+import { SiteApp } from "@/components/todo/SiteApp";
 import { TodoSignIn } from "@/components/todo/TodoSignIn";
 import { listExpenses } from "@/lib/expenses/server";
 import type { Expense } from "@/lib/expenses/shared";
@@ -27,5 +27,5 @@ export default async function ExpensesPage() {
     console.error("[expenses] load failed:", error instanceof Error ? error.message : error);
     failed = true;
   }
-  return <ExpensesApp me={me} initialExpenses={expenses} initialItems={items} startedOffline={failed} />;
+  return <SiteApp me={me} section="expenses" initial={{ expenses: { expenses, items } }} startedOffline={failed} />;
 }

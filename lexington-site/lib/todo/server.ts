@@ -117,7 +117,7 @@ async function getTask(id: string): Promise<TodoTask | null> {
   return getBuyersClient().fetch<TodoTask | null>(`*[_id == $id && _type == "siteTask"][0] ${FIELDS}`, { id });
 }
 
-const photoRef = (assetId: string) => ({ _type: "image", asset: { _type: "reference", _ref: assetId } });
+export const photoRef = (assetId: string) => ({ _type: "image", asset: { _type: "reference", _ref: assetId } });
 
 export function cleanText(value: unknown, max: number, what: string) {
   const text = typeof value === "string" ? value.replace(/\s+\n/g, "\n").trim() : "";
@@ -226,20 +226,21 @@ export async function deleteTask(id: string): Promise<void> {
 const MAX_BYTES = 4_400_000; // the phone shrinks photos first; Vercel refuses over 4.5 MB anyway
 const TYPES = ["image/jpeg", "image/png", "image/webp"];
 
-export async function storePhoto(file: File): Promise<{ id: string; url: string }> {
+/** A phone photo into the private store, named "<kind>-<date>-<hex>" (to-do photos "todo-", the store's "store-"). */
+export async function storePhoto(file: File, kind: "todo" | "store" = "todo"): Promise<{ id: string; url: string }> {
   if (!TYPES.includes(file.type)) throw new TodoError(415, "That file is not a JPEG, PNG or WebP photo.");
   if (file.size === 0) throw new TodoError(400, "No photo was sent.");
   if (file.size > MAX_BYTES) throw new TodoError(413, "That photo is too big (over 4 MB).");
   const ext = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
   const asset = await getBuyersClient().assets.upload("image", Buffer.from(await file.arrayBuffer()), {
-    filename: `todo-${new Date().toISOString().slice(0, 10)}-${randomBytes(3).toString("hex")}.${ext}`,
+    filename: `${kind}-${new Date().toISOString().slice(0, 10)}-${randomBytes(3).toString("hex")}.${ext}`,
     contentType: file.type,
   });
   return { id: asset._id, url: asset.url };
 }
 
-/** Deletes a to-do photo nothing points at any more (a retake, a removed or deleted item). */
-export async function dropPhoto(assetId: string): Promise<void> {
+/** Deletes a to-do (or store) photo nothing points at any more (a retake, a removed or deleted item). */
+export async function dropPhoto(assetId: string, kind: "todo" | "store" = "todo"): Promise<void> {
   if (!PHOTO_ID_RE.test(assetId)) return;
   const client = getBuyersClient();
   try {
@@ -247,10 +248,17 @@ export async function dropPhoto(assetId: string): Promise<void> {
       `*[_id == $id][0]{ "name": originalFilename, "refs": count(*[references(^._id)]) }`,
       { id: assetId }
     );
-    if (info && info.refs === 0 && info.name?.startsWith("todo-")) await client.delete(assetId);
+    if (info && info.refs === 0 && info.name?.startsWith(`${kind}-`)) await client.delete(assetId);
   } catch (error) {
-    console.error("[todo] photo clean-up failed:", error instanceof Error ? error.message : error);
+    console.error(`[${kind}] photo clean-up failed:`, error instanceof Error ? error.message : error);
   }
+}
+
+/** A photo id sent by the phone, checked: null when there is none. */
+export function cleanPhotoRef(value: unknown): string | null {
+  if (value === null || value === undefined || value === "") return null;
+  if (typeof value !== "string" || !PHOTO_ID_RE.test(value)) throw new TodoError(400, "That photo didn't upload properly. Take it again.");
+  return value;
 }
 
 /* ---------- site logins (the foreman, a storekeeper) ---------- */

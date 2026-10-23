@@ -1,18 +1,17 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { AREAS, areaLabel, listLabel, MAX_NOTE, MAX_TEXT, photoAt, type TodoList, type TodoMe, type TodoTask } from "@/lib/todo/shared";
 import { AccessSheet } from "./AccessSheet";
 import { dayName, errorText, send, startPolling, when } from "./api";
-import { forgetPhoto, uploadPhoto } from "./photo";
-import { appClass, SiteMenu, SiteNav } from "./SiteChrome";
+import { SiteHeader, SiteMenu } from "./SiteChrome";
 import styles from "./Todo.module.css";
+import { useUploadSlot } from "./useUploadSlot";
 
 type Tab = "open" | "done";
 /** A message at the bottom; after a tick it offers "Add photo of the fix" and "Undo" for that job. */
 type ToastData = { text: string; tone?: "error"; jobId?: string };
-type InstallPrompt = Event & { prompt: () => Promise<void> };
 
 // The hidden photo pickers. Buttons that take a photo are <label>s for these: tapping a label
 // opens its picker the same way on an iPhone and an Android.
@@ -32,99 +31,32 @@ function ago(iso: string) {
   return days < 14 ? `${days} day${days === 1 ? "" : "s"} ago` : new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 }
 
-// Facts about the phone that never change while the page is open (read without an effect).
-const never = () => () => {};
-function useStandalone() {
-  return useSyncExternalStore(
-    never,
-    () => window.matchMedia("(display-mode: standalone)").matches || (navigator as Navigator & { standalone?: boolean }).standalone === true,
-    () => true
-  );
-}
-function useIphone() {
-  return useSyncExternalStore(never, () => /iphone|ipad|ipod/i.test(navigator.userAgent), () => false);
-}
-function useHintClosedBefore() {
-  return useSyncExternalStore(
-    never,
-    () => {
-      try {
-        return localStorage.getItem("todo-hint-closed") === "1";
-      } catch {
-        return false;
-      }
-    },
-    () => true
-  );
-}
-
-/* ---------- photo slot (used by the new-job and fix-photo sheets) ---------- */
-
-type Slot = { preview: string; state: "uploading" | "ready" | "error"; id?: string; url?: string; error?: string };
-
-function useUploadSlot() {
-  const [slot, setSlot] = useState<Slot | null>(null);
-  const job = useRef<Promise<{ id: string; url: string } | null> | null>(null);
-  const token = useRef(0);
-
-  const start = useCallback((file: File) => {
-    const mine = ++token.current;
-    const preview = URL.createObjectURL(file);
-    setSlot((old) => {
-      if (old?.preview) URL.revokeObjectURL(old.preview);
-      if (old?.id) forgetPhoto(old.id);
-      return { preview, state: "uploading" };
-    });
-    job.current = uploadPhoto(file).then(
-      (stored) => {
-        if (token.current !== mine) {
-          forgetPhoto(stored.id); // replaced by a newer photo meanwhile
-          return null;
-        }
-        setSlot({ preview, state: "ready", id: stored.id, url: stored.url });
-        return stored;
-      },
-      (e) => {
-        if (token.current === mine) setSlot({ preview, state: "error", error: errorText(e) });
-        return null;
-      }
-    );
-  }, []);
-
-  const clear = useCallback((keepStored = false) => {
-    token.current++;
-    job.current = null;
-    setSlot((old) => {
-      if (old?.preview) URL.revokeObjectURL(old.preview);
-      if (old?.id && !keepStored) forgetPhoto(old.id);
-      return null;
-    });
-  }, []);
-
-  /** Waits for an upload still on its way; null when there's no photo or it failed. */
-  const settled = useCallback(async () => (job.current ? job.current : null), []);
-
-  return { slot, start, clear, settled };
-}
-
 /* ---------- the app ---------- */
 
 export function TodoApp({
   me,
+  active,
   initialTasks,
   initialList = "site",
   startedOffline,
+  fresh,
 }: {
   me: TodoMe;
-  initialTasks: TodoTask[];
+  /** On screen: only then does it keep itself fresh. */
+  active: boolean;
+  /** Null when the app opened on another part and the list hasn't arrived yet. */
+  initialTasks: TodoTask[] | null;
   initialList?: TodoList;
   startedOffline: boolean;
+  /** The page came with this part's data just now (it's the part the app opened on). */
+  fresh: boolean;
 }) {
   const isAdmin = me.kind === "admin";
-  const [tasks, setTasks] = useState<TodoTask[]>(initialTasks);
+  const [tasks, setTasks] = useState<TodoTask[]>(initialTasks ?? []);
+  const [loaded, setLoaded] = useState(initialTasks !== null);
   // Which list is on screen: the site (shared with the foreman) or the house (the office only).
   const [list, setList] = useState<TodoList>(isAdmin ? initialList : "site");
-  const tasksRef = useRef<TodoTask[]>(initialTasks);
+  const tasksRef = useRef<TodoTask[]>(initialTasks ?? []);
   const [tab, setTab] = useState<Tab>("open");
   const [offline, setOffline] = useState(startedOffline);
   const [signedOut, setSignedOut] = useState(false);
@@ -137,11 +69,6 @@ export function TodoApp({
   const [fixTarget, setFixTarget] = useState<string | null>(null);
   const [itemMenu, setItemMenu] = useState<string | null>(null);
   const [armed, setArmed] = useState<string | null>(null);
-  const standalone = useStandalone();
-  const isIphone = useIphone();
-  const hintClosedBefore = useHintClosedBefore();
-  const [hintClosedNow, setHintClosedNow] = useState(false);
-  const [installPrompt, setInstallPrompt] = useState<InstallPrompt | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   // Changes made on this phone that the server hasn't confirmed yet are laid over every refresh,
@@ -153,6 +80,9 @@ export function TodoApp({
   const seq = useRef(new Map<string, number>());
   const chains = useRef(new Map<string, Promise<unknown>>());
   const inFlight = useRef(false);
+  const lastServer = useRef("");
+  const lastLoadedAt = useRef(0);
+  const skipFirst = useRef(fresh);
 
   const commit = useCallback((next: TodoTask[]) => {
     tasksRef.current = next;
@@ -167,6 +97,11 @@ export function TodoApp({
 
   const applyServer = useCallback(
     (list: TodoTask[], startedAt: number) => {
+      // Nothing changed on the server and nothing waiting here: leave the screen alone (no
+      // redraw every few seconds under a finger).
+      const sig = JSON.stringify(list);
+      if (sig === lastServer.current && pending.current.size === 0) return;
+      lastServer.current = sig;
       const local = new Map(tasksRef.current.map((t) => [t.id, t]));
       const seen = new Set<string>();
       const out: TodoTask[] = [];
@@ -201,6 +136,8 @@ export function TodoApp({
       if (!response.ok) throw new Error("refresh failed");
       const data = (await response.json()) as { tasks: TodoTask[] };
       applyServer(data.tasks, startedAt);
+      lastLoadedAt.current = Date.now();
+      setLoaded(true);
       setOffline(false);
     } catch {
       setOffline(true);
@@ -209,29 +146,15 @@ export function TodoApp({
     }
   }, [applyServer]);
 
-  // Live: every 5 seconds while someone is using it, every 20 when it just sits open,
-  // straight away when the app comes back to the front or the signal returns.
-  useEffect(() => startPolling(refresh, 5_000, 20_000), [refresh]);
-
-  // Home-screen app: the helper that lets Android install it, and Android's own install offer.
+  // Live while on screen: every 5 seconds while someone is using it, every 20 when it just sits
+  // open, straight away when it comes back to the front or the signal returns.
   useEffect(() => {
-    const onPrompt = (e: Event) => {
-      e.preventDefault();
-      setInstallPrompt(e as InstallPrompt);
-    };
-    window.addEventListener("beforeinstallprompt", onPrompt);
-    navigator.serviceWorker?.register("/todo-sw.js", { scope: "/todo" }).catch(() => {});
-    return () => window.removeEventListener("beforeinstallprompt", onPrompt);
-  }, []);
-
-  const closeHint = () => {
-    setHintClosedNow(true);
-    try {
-      localStorage.setItem("todo-hint-closed", "1");
-    } catch {
-      /* private mode: the tip just comes back next time */
-    }
-  };
+    if (!active) return;
+    // Opened on this part: what the page came with is fresh. Otherwise look again at once.
+    if (skipFirst.current) skipFirst.current = false;
+    else if (Date.now() - lastLoadedAt.current > 4_000) void refresh();
+    return startPolling(refresh, 5_000, 20_000);
+  }, [active, refresh]);
 
   /* ---------- changes ---------- */
 
@@ -362,22 +285,17 @@ export function TodoApp({
   };
 
   return (
-    <div className={appClass(me)}>
-      <header className={styles.top}>
-        <div className={styles.topRow}>
-          <div>
-            <h1 className={styles.title}>
-              {listLabel(list)}
-              {house && <span className={styles.onlyYou}>Only you</span>}
-            </h1>
-            <p className={styles.counts}>
-              {open.length} to do · {doneToday} done today
-            </p>
-          </div>
-          <button type="button" className={styles.menuButton} onClick={() => setMenuOpen(true)} aria-label="Menu">
-            <span aria-hidden="true">☰</span>
-          </button>
-        </div>
+    <>
+      <SiteHeader
+        title={
+          <>
+            {listLabel(list)}
+            {house && <span className={styles.onlyYou}>Only you</span>}
+          </>
+        }
+        sub={`${open.length} to do · ${doneToday} done today`}
+        onMenu={() => setMenuOpen(true)}
+      >
         <div className={styles.tabs} role="tablist">
           <button type="button" role="tab" aria-selected={tab === "open"} className={tab === "open" ? styles.tabOn : styles.tab} onClick={() => setTab("open")}>
             To do <span className={styles.tabCount}>{open.length}</span>
@@ -386,7 +304,7 @@ export function TodoApp({
             Done <span className={styles.tabCount}>{done.length}</span>
           </button>
         </div>
-      </header>
+      </SiteHeader>
 
       {signedOut && (
         <div className={styles.banner} role="alert">
@@ -399,39 +317,9 @@ export function TodoApp({
         </div>
       )}
 
-      {!standalone && !hintClosedBefore && !hintClosedNow && (
-        <div className={styles.hint}>
-          {installPrompt ? (
-            <>
-              <span>Put the list on your home screen so it opens like an app.</span>
-              <button
-                type="button"
-                className={styles.hintButton}
-                onClick={async () => {
-                  await installPrompt.prompt().catch(() => {});
-                  setInstallPrompt(null);
-                }}
-              >
-                Install the app
-              </button>
-            </>
-          ) : isIphone ? (
-            <span>
-              Put it on your home screen: tap <b>Share</b> <span aria-hidden="true">⬆︎</span>, then <b>Add to Home Screen</b>. It then opens like an app.
-            </span>
-          ) : (
-            <span>
-              Put it on your home screen: in Chrome tap <b>⋮</b>, then <b>Add to Home screen</b> (or <b>Install app</b>).
-            </span>
-          )}
-          <button type="button" className={styles.hintClose} onClick={closeHint} aria-label="Close the tip">
-            ✕
-          </button>
-        </div>
-      )}
-
       <main className={styles.main}>
-        {isAdmin && tab === "open" && (
+        {!loaded && <p className={styles.loading}>Loading the list…</p>}
+        {loaded && isAdmin && tab === "open" && (
           <div className={styles.addBar}>
             <label htmlFor={NEW_CAMERA} className={styles.addPhoto} role="button" tabIndex={0}>
               <span aria-hidden="true">📷</span> Take photo
@@ -442,7 +330,8 @@ export function TodoApp({
           </div>
         )}
 
-        {tab === "open" &&
+        {loaded &&
+          tab === "open" &&
           (openGroups.length === 0 ? (
             <p className={styles.empty}>
               {house
@@ -519,7 +408,8 @@ export function TodoApp({
             ))
           ))}
 
-        {tab === "done" &&
+        {loaded &&
+          tab === "done" &&
           (doneGroups.length === 0 ? (
             <p className={styles.empty}>Ticked-off jobs show here, newest first.</p>
           ) : (
@@ -739,8 +629,7 @@ export function TodoApp({
         </div>
       )}
 
-      <SiteNav me={me} current="todo" />
-    </div>
+    </>
   );
 }
 

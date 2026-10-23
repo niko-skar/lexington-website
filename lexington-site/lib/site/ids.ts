@@ -9,6 +9,12 @@ const TAG = process.env.VERCEL_ENV === "production" ? "live" : "dev";
 export const EXPENSE_PREFIX = `expense-${TAG}-`;
 export const ITEM_PREFIX = `storeitem-${TAG}-`;
 export const MOVE_PREFIX = `storemove-${TAG}-`;
+/** The running numbers behind the expense refs (EXP-0001, IN-0001). */
+export const EXPENSE_COUNTER_ID = `expensecounter-${TAG}`;
+/** Deleted entries still to be marked "Deleted" on the Google Sheet. */
+export const SHEET_DELETION_PREFIX = `expensegone-${TAG}-`;
+/** Small settings for the expenses (the Google Sheet's address once it has answered). */
+export const EXPENSE_SETTINGS_ID = `expensesettings-${TAG}`;
 
 export const newId = (prefix: string) => prefix + randomBytes(6).toString("hex");
 

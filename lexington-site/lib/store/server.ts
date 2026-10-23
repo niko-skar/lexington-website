@@ -3,7 +3,7 @@ import "server-only";
 import { FLOORS } from "@/lib/expenses/shared";
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
 import { EXPENSE_PREFIX, isId, ITEM_PREFIX, MOVE_PREFIX, newId } from "@/lib/site/ids";
-import { cleanText, TodoError } from "@/lib/todo/server";
+import { cleanPhotoRef, cleanText, dropPhoto, photoRef, TodoError } from "@/lib/todo/server";
 import type { TodoMe } from "@/lib/todo/shared";
 import {
   MAX_ITEM_NAME,
@@ -21,7 +21,7 @@ import {
 //   bought   -- paid Material expenses marked "into the store room"
 //   in       -- stock the office adds by hand (e.g. bought before the store existed)
 //   back     -- brought back to the store
-//   out      -- taken out
+//   out      -- taken out (always with a photo of what went)
 //   count    -- a count: the difference between the shelf and the record at that moment
 
 type Totals = { bought: number; added: number; back: number; taken: number; adjusted: number };
@@ -34,6 +34,9 @@ const ITEM_FIELDS = `{
   "unit": coalesce(unit, "pcs"),
   "stocked": coalesce(stocked, true),
   "low": low,
+  "reorderQty": reorderQty,
+  "reorderDismissed": coalesce(reorderDismissed, false),
+  "photoUrl": photo.asset->url,
   "bought": coalesce(math::sum(*[_type == "siteExpense" && string::startsWith(_id, $expensePrefix) && itemId == ^._id && toStore == true].qty), 0),
   "added": coalesce(math::sum(*[_type == "storeMove" && itemId == ^._id && kind == "in"].qty), 0),
   "back": coalesce(math::sum(*[_type == "storeMove" && itemId == ^._id && kind == "back"].qty), 0),
@@ -43,10 +46,10 @@ const ITEM_FIELDS = `{
 }`;
 const MOVE_FIELDS = `{
   "id": _id, kind, itemId, qty, "diff": diff, "opening": coalesce(opening, false), "floor": floor, "person": person,
-  "note": coalesce(note, ""), at, "by": coalesce(by, ""), byId
+  "note": coalesce(note, ""), "photoUrl": photo.asset->url, at, "by": coalesce(by, ""), byId
 }`;
 const BOUGHT_FIELDS = `{
-  "id": _id, "kind": "bought", itemId, qty, "diff": null, "floor": floor, "person": null, "note": "", date,
+  "id": _id, "kind": "bought", itemId, qty, "diff": null, "floor": floor, "person": null, "note": "", "photoUrl": null, date,
   "at": createdAt, "by": coalesce(createdBy, ""), supplier, amount
 }`;
 const params = { itemPrefix: ITEM_PREFIX, movePrefix: MOVE_PREFIX, expensePrefix: EXPENSE_PREFIX };
@@ -79,6 +82,20 @@ function history(me: TodoMe, moves: RawMove[], bought: RawMove[], moveCap: numbe
     .map((e) => toEntry(me, e));
 }
 
+/** "No need to reorder" lasts until the item is restocked above its reorder point. */
+async function clearStaleDismissals(items: StoreItem[]): Promise<void> {
+  const stale = items.filter((i) => i.reorderDismissed && (i.low === null || i.level > i.low));
+  if (!stale.length) return;
+  const tx = getBuyersClient().transaction();
+  for (const i of stale) tx.patch(i.id, (p) => p.set({ reorderDismissed: false }));
+  try {
+    await tx.commit();
+    for (const i of stale) i.reorderDismissed = false;
+  } catch (error) {
+    console.error("[store] clearing reorder dismissals failed:", error instanceof Error ? error.message : error);
+  }
+}
+
 /* ---------- reading ---------- */
 
 export async function getStore(me: TodoMe): Promise<{ items: StoreItem[]; history: StoreEntry[] }> {
@@ -90,7 +107,9 @@ export async function getStore(me: TodoMe): Promise<{ items: StoreItem[]; histor
     }`,
     params
   );
-  return { items: data.items.map(withLevel), history: history(me, data.moves, data.bought, 200, 100) };
+  const items = data.items.map(withLevel);
+  await clearStaleDismissals(items);
+  return { items, history: history(me, data.moves, data.bought, 200, 100) };
 }
 
 async function getItem(id: string): Promise<StoreItem | null> {
@@ -125,12 +144,15 @@ function cleanName(value: unknown) {
 function cleanUnit(value: unknown) {
   return cleanText(value, MAX_UNIT, "unit").replace(/\s+/g, " ").toLowerCase() || "pcs";
 }
-function cleanQty(value: unknown, zeroOk: boolean) {
+function cleanQty(value: unknown, zeroOk: boolean, message?: string) {
   const n = typeof value === "number" ? value : typeof value === "string" ? Number(value) : NaN;
   if (!Number.isFinite(n) || n < 0 || (!zeroOk && n === 0) || n > 1_000_000) {
-    throw new TodoError(400, zeroOk ? "Type how many are there (0 if none)." : "Type how many.");
+    throw new TodoError(400, message ?? (zeroOk ? "Type how many are there (0 if none)." : "Type how many."));
   }
   return round(n);
+}
+function cleanOptionalQty(value: unknown, message: string) {
+  return value === null || value === undefined || value === "" ? null : cleanQty(value, true, message);
 }
 function cleanFloor(value: unknown) {
   if (value === null || value === undefined || value === "") return null;
@@ -146,9 +168,18 @@ async function findItem(name: string): Promise<{ id: string; stocked: boolean } 
   );
 }
 
-async function createItemDoc(me: TodoMe, name: string, unit: string): Promise<string> {
+async function createItemDoc(me: TodoMe, name: string, unit: string, photoId: string | null = null): Promise<string> {
   const id = newId(ITEM_PREFIX);
-  await getBuyersClient().create({ _id: id, _type: "storeItem", name, unit, stocked: true, createdAt: new Date().toISOString(), createdBy: me.name });
+  await getBuyersClient().create({
+    _id: id,
+    _type: "storeItem",
+    name,
+    unit,
+    stocked: true,
+    ...(photoId ? { photo: photoRef(photoId) } : {}),
+    createdAt: new Date().toISOString(),
+    createdBy: me.name,
+  });
   return id;
 }
 
@@ -168,13 +199,14 @@ export async function itemForPurchase(me: TodoMe, material: string, unit: unknow
   return { id: await createItemDoc(me, name, cleanUnit(unit)), name };
 }
 
-/** A new item, with what is on the shelf now (its starting count). Anyone who uses the store. */
+/** A new item, with what is on the shelf now (its starting count) and a photo of it. Anyone who uses the store. */
 export async function createItem(me: TodoMe, body: Record<string, unknown>): Promise<StoreItem> {
   const name = cleanName(body.name);
   const unit = cleanUnit(body.unit);
-  const count = body.count === null || body.count === undefined || body.count === "" ? null : cleanQty(body.count, true);
+  const count = cleanOptionalQty(body.count, "Type how many are there now (0 if none).");
+  const photoId = cleanPhotoRef(body.photoId);
   if (await findItem(name)) throw new TodoError(409, `"${name}" is already in the store. Find it in the list and count it there.`);
-  const id = await createItemDoc(me, name, unit);
+  const id = await createItemDoc(me, name, unit, photoId);
   if (count !== null) {
     await getBuyersClient().create({
       _id: newId(MOVE_PREFIX),
@@ -195,7 +227,22 @@ export async function createItem(me: TodoMe, body: Record<string, unknown>): Pro
   return item;
 }
 
-/** The office: rename, change the unit, the low-stock warning, or stop keeping it in the store. */
+/** A new photo of an item's stock. Anyone who uses the store. */
+export async function setItemPhoto(id: string, value: unknown): Promise<StoreItem> {
+  if (!isId(ITEM_PREFIX, id)) throw new TodoError(404, "That item isn't in the store any more.");
+  const photoId = cleanPhotoRef(value);
+  if (!photoId) throw new TodoError(400, "Take a photo first.");
+  const client = getBuyersClient();
+  const before = await client.fetch<{ photo?: string } | null>(`*[_id == $id && _type == "storeItem"][0]{ "photo": photo.asset._ref }`, { id });
+  if (!before) throw new TodoError(404, "That item isn't in the store any more.");
+  await client.patch(id).set({ photo: photoRef(photoId) }).commit();
+  if (before.photo && before.photo !== photoId) await dropPhoto(before.photo, "store");
+  const item = await getItem(id);
+  if (!item) throw new TodoError(404, "That item isn't in the store any more.");
+  return item;
+}
+
+/** The office: rename, unit, reorder point and quantity, dismiss a reorder, or stop keeping it in the store. */
 export async function updateItem(id: string, body: Record<string, unknown>): Promise<StoreItem> {
   if (!isId(ITEM_PREFIX, id)) throw new TodoError(404, "That item isn't in the store any more.");
   const client = getBuyersClient();
@@ -213,7 +260,12 @@ export async function updateItem(id: string, body: Record<string, unknown>): Pro
     }
   }
   if ("unit" in body) set.unit = cleanUnit(body.unit);
-  if ("low" in body) set.low = body.low === null || body.low === "" ? null : cleanQty(body.low, true);
+  if ("low" in body) set.low = cleanOptionalQty(body.low, "Type the reorder point as a number, or leave it empty.");
+  if ("reorderQty" in body) set.reorderQty = cleanOptionalQty(body.reorderQty, "Type how much to reorder as a number, or leave it empty.");
+  if ("reorderDismissed" in body) {
+    set.reorderDismissed = body.reorderDismissed === true;
+    set.reorderDismissedAt = body.reorderDismissed === true ? new Date().toISOString() : null;
+  }
   if ("stocked" in body) set.stocked = body.stocked !== false;
   if (Object.keys(set).length) await client.patch(id).set(set).commit();
   const item = await getItem(id);
@@ -236,6 +288,9 @@ export async function addMove(me: TodoMe, body: Record<string, unknown>): Promis
   const floor = moving ? cleanFloor(body.floor) : null;
   const person = moving ? cleanText(body.person, MAX_PERSON, "name") || null : null;
   const note = cleanText(body.note, MAX_MOVE_NOTE, "note");
+  const photoId = cleanPhotoRef(body.photoId);
+  // Niko, 23 Oct 2026: "any stock movements require a photo of the stock going out".
+  if (kind === "out" && !photoId) throw new TodoError(400, "Take a photo of what's going out first.");
   const item = await getItem(itemId);
   if (!item) throw new TodoError(404, "That item isn't in the store any more.");
 
@@ -248,37 +303,27 @@ export async function addMove(me: TodoMe, body: Record<string, unknown>): Promis
     ...(kind === "count" ? { diff: round(qty - item.level) } : {}),
     ...(floor ? { floor } : {}),
     ...(person ? { person } : {}),
+    ...(photoId ? { photo: photoRef(photoId) } : {}),
     note,
     at: new Date().toISOString(),
     by: me.name,
     byId: me.id,
   };
-  await getBuyersClient().create(doc);
-  const after = await getItem(itemId);
-  if (!after) throw new TodoError(404, "That item isn't in the store any more.");
-  const entry = toEntry(me, {
-    id: doc._id,
-    kind,
-    itemId,
-    qty,
-    diff: kind === "count" ? doc.diff ?? 0 : null,
-    opening: false,
-    floor,
-    person,
-    note,
-    at: doc.at,
-    by: me.name,
-    byId: me.id,
-  });
-  return { item: after, entry };
+  const created = await getBuyersClient().create(doc);
+  const [after, saved] = await Promise.all([
+    getItem(itemId),
+    getBuyersClient().fetch<RawMove | null>(`*[_id == $id][0] ${MOVE_FIELDS}`, { id: created._id }),
+  ]);
+  if (!after || !saved) throw new TodoError(404, "That item isn't in the store any more.");
+  return { item: after, entry: toEntry(me, saved) };
 }
 
 /** Undo a wrong entry: the office any time; a site login its own, for a few minutes. */
 export async function deleteMove(me: TodoMe, id: string): Promise<StoreItem | null> {
   if (!isId(MOVE_PREFIX, id)) throw new TodoError(404, "That entry isn't there any more.");
   const client = getBuyersClient();
-  const move = await client.fetch<{ byId?: string; at: string; itemId: string } | null>(
-    `*[_id == $id && _type == "storeMove"][0]{ byId, at, itemId }`,
+  const move = await client.fetch<{ byId?: string; at: string; itemId: string; photo?: string } | null>(
+    `*[_id == $id && _type == "storeMove"][0]{ byId, at, itemId, "photo": photo.asset._ref }`,
     { id }
   );
   if (!move) return null;
@@ -289,5 +334,6 @@ export async function deleteMove(me: TodoMe, id: string): Promise<StoreItem | nu
     }
   }
   await client.delete(id);
+  if (move.photo) await dropPhoto(move.photo, "store");
   return getItem(move.itemId);
 }

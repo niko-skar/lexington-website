@@ -1,7 +1,11 @@
+import { after } from "next/server";
+
 import { createExpense, listExpenses } from "@/lib/expenses/server";
+import { syncExpense } from "@/lib/expenses/sheet";
 import { errorResponse, readJson, requireTodoUser } from "@/lib/todo/server";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 /** GET /api/expenses: every expense and money in. The office only. */
 export async function GET(): Promise<Response> {
@@ -18,6 +22,8 @@ export async function POST(request: Request): Promise<Response> {
   try {
     const me = await requireTodoUser(true, "expenses");
     const expense = await createExpense(me, await readJson(request));
+    // Off to the Google Sheet once the phone has its answer (the cron catches up any miss).
+    after(() => syncExpense(expense.id));
     return Response.json({ expense }, { status: 201 });
   } catch (error) {
     return errorResponse(error);

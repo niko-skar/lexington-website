@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-import { TodoApp } from "@/components/todo/TodoApp";
+import { SiteApp } from "@/components/todo/SiteApp";
 import { TodoSignIn } from "@/components/todo/TodoSignIn";
 import { getTodoUser, listTasks } from "@/lib/todo/server";
 import type { TodoList, TodoTask } from "@/lib/todo/shared";
@@ -9,9 +9,10 @@ export const dynamic = "force-dynamic";
 
 /**
  * The site to-do list (22 Oct 2026). Niko takes a photo, says what needs doing and picks the
- * floor; the foreman, on a login that opens nothing but this page, ticks jobs off (and can add a
- * photo of the fix). Both phones see each other's changes within seconds. Not signed in: the
- * page shows its own sign-in so the home-screen app never leaves /todo.
+ * floor; the foreman, on a login that opens nothing but the site app, ticks jobs off (and can add
+ * a photo of the fix). Both phones see each other's changes within seconds. Not signed in: the
+ * page shows its own sign-in so the home-screen app never leaves /todo. The store room and the
+ * expenses are in the same app (one page, so moving between them is instant).
  */
 export default async function TodoPage({ searchParams }: { searchParams: Promise<{ list?: string }> }) {
   const me = await getTodoUser();
@@ -32,5 +33,5 @@ export default async function TodoPage({ searchParams }: { searchParams: Promise
     console.error("[todo] list failed:", error instanceof Error ? error.message : error);
     failed = true;
   }
-  return <TodoApp me={me} initialTasks={tasks} initialList={initialList} startedOffline={failed} />;
+  return <SiteApp me={me} section="todo" initial={{ todo: tasks }} initialList={initialList} startedOffline={failed} />;
 }

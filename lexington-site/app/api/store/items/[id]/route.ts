@@ -1,4 +1,4 @@
-import { itemHistory, updateItem } from "@/lib/store/server";
+import { itemHistory, setItemPhoto, updateItem } from "@/lib/store/server";
 import { errorResponse, readJson, requireTodoUser } from "@/lib/todo/server";
 
 export const dynamic = "force-dynamic";
@@ -14,12 +14,21 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   }
 }
 
-/** PATCH /api/store/items/:id { name?, unit?, low?, stocked? }: the office only. */
+/**
+ * PATCH /api/store/items/:id
+ *   { photoId }                                                   -- a new photo of the stock (anyone using the store)
+ *   { name?, unit?, low?, reorderQty?, reorderDismissed?, stocked? } -- the office only
+ */
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
   try {
-    await requireTodoUser(true, "store");
     const { id } = await params;
-    return Response.json({ item: await updateItem(id, await readJson(request)) });
+    const body = await readJson(request);
+    if (Object.keys(body).length === 1 && "photoId" in body) {
+      await requireTodoUser(false, "store");
+      return Response.json({ item: await setItemPhoto(id, body.photoId) });
+    }
+    await requireTodoUser(true, "store");
+    return Response.json({ item: await updateItem(id, body) });
   } catch (error) {
     return errorResponse(error);
   }

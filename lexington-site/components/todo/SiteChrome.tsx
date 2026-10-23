@@ -6,8 +6,8 @@ import { todoSignOutAction } from "@/lib/actions/todo";
 import { sectionHref, sectionName, type Section, type TodoMe } from "@/lib/todo/shared";
 import styles from "./Todo.module.css";
 
-// What every part of the site app shares: the bar at the bottom (To-do · Store · Expenses, only
-// the parts this login opens) and the ☰ menu.
+// What every part of the site app shares: its header, the bar at the bottom (To-do · Store ·
+// Expenses, only the parts this login opens) and the ☰ menu.
 
 const ICONS: Record<Section, React.ReactNode> = {
   todo: (
@@ -29,24 +29,70 @@ const ICONS: Record<Section, React.ReactNode> = {
   ),
 };
 
-/** The class for the page's outer box: room at the bottom for the bar when there is one. */
+/** The class for the app's outer box: room at the bottom for the bar when there is one. */
 export const appClass = (me: TodoMe) => (me.sections.length > 1 ? `${styles.app} ${styles.withNav}` : styles.app);
 
-export function SiteNav({ me, current }: { me: TodoMe; current: Section }) {
+/** Each part's header: "Building works", the part's name, a line of counts, the ☰ button, then its tabs. */
+export function SiteHeader({ title, sub, onMenu, children }: { title: React.ReactNode; sub?: React.ReactNode; onMenu: () => void; children?: React.ReactNode }) {
+  return (
+    <header className={styles.top}>
+      <div className={styles.topRow}>
+        <div className={styles.topText}>
+          <p className={styles.eyebrow}>Building works</p>
+          <h1 className={styles.title}>{title}</h1>
+          {sub ? <p className={styles.counts}>{sub}</p> : null}
+        </div>
+        <button type="button" className={styles.menuButton} onClick={onMenu} aria-label="Menu">
+          <span aria-hidden="true">☰</span>
+        </button>
+      </div>
+      {children}
+    </header>
+  );
+}
+
+/**
+ * The bar at the bottom. Switching parts happens on the phone at once (the parts stay loaded);
+ * the links still carry the real address for a long-press or a new tab.
+ */
+export function SiteNav({
+  me,
+  current,
+  onGo,
+  badges,
+}: {
+  me: TodoMe;
+  current: Section;
+  onGo: (section: Section) => void;
+  badges?: Partial<Record<Section, number>>;
+}) {
   if (me.sections.length < 2) return null;
   return (
     <nav className={styles.nav} aria-label="Parts of the app">
-      {me.sections.map((section) => (
-        <Link
-          key={section}
-          href={sectionHref(section)}
-          className={section === current ? styles.navOn : styles.navItem}
-          aria-current={section === current ? "page" : undefined}
-        >
-          {ICONS[section]}
-          <span>{sectionName(section)}</span>
-        </Link>
-      ))}
+      {me.sections.map((section) => {
+        const badge = badges?.[section] ?? 0;
+        return (
+          <a
+            key={section}
+            href={sectionHref(section)}
+            className={section === current ? styles.navOn : styles.navItem}
+            aria-current={section === current ? "page" : undefined}
+            onClick={(e) => {
+              if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+              e.preventDefault();
+              onGo(section);
+            }}
+          >
+            {ICONS[section]}
+            <span>{sectionName(section)}</span>
+            {badge > 0 && (
+              <span className={styles.navBadge} aria-label={`${badge} to reorder`}>
+                {badge}
+              </span>
+            )}
+          </a>
+        );
+      })}
     </nav>
   );
 }
