@@ -1,6 +1,4 @@
 /**
- * @OnlyCurrentDoc
- *
  * Lexington site expenses -> this Google Sheet, with every receipt saved in Google Drive under a
  * name that traces back to its entry ("2026-10-23 EXP-0084 Kalushia Hardware GHS 5,430.00 VAT.jpg").
  * The website (lexington.com.gh/todo/expenses) sends each new, changed or deleted entry here.
@@ -12,6 +10,9 @@
  * Set up once (in this sheet): Extensions > Apps Script, paste this file, Save, then
  * Deploy > New deployment > Web app, Execute as: Me, Who has access: Anyone > Deploy, allow it,
  * and send the "Web app" address to Claude. Nothing is written without the secret below.
+ *
+ * (No "only this document" tag here: Google would then also shut the script out of
+ * Google Drive, where the receipts go.)
  */
 
 const SECRET = "PASTE-SECRET-HERE";
