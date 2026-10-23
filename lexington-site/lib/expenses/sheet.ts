@@ -78,15 +78,26 @@ function rowFor(x: SyncDoc): Record<string, string | number> {
   };
 }
 
+/**
+ * Apps Script answers a POST with a redirect to its output (".../macros/echo"). Now and then Google
+ * instead sends the POST on to another script address; simply following that turns it into a GET,
+ * which runs the script's "hello" page and saves nothing (23 Oct 2026: three rows never reached the
+ * sheet while the site counted them as sent). So redirects are followed by hand: the output is
+ * fetched, any other address gets the POST again (saving a row twice changes nothing).
+ */
 async function post(body: Record<string, unknown>): Promise<Record<string, unknown>> {
-  // Apps Script answers a POST with a redirect to its output, which fetch follows.
-  const response = await fetch(url()!, {
-    method: "POST",
-    headers: { "Content-Type": "text/plain;charset=utf-8" },
-    body: JSON.stringify({ secret: secret(), ...body }),
-    redirect: "follow",
-    signal: AbortSignal.timeout(50_000),
-  });
+  const payload = JSON.stringify({ secret: secret(), ...body });
+  const signal = AbortSignal.timeout(50_000);
+  let target = new URL(url()!);
+  let response = await fetch(target, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: payload, redirect: "manual", signal });
+  for (let hop = 0; hop < 4; hop++) {
+    const next = response.status >= 300 && response.status < 400 ? response.headers.get("location") : null;
+    if (!next) break;
+    target = new URL(next, target);
+    response = /\/echo$/.test(target.pathname)
+      ? await fetch(target, { redirect: "follow", signal })
+      : await fetch(target, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: payload, redirect: "manual", signal });
+  }
   const text = await response.text();
   let data: Record<string, unknown> = {};
   try {
@@ -95,6 +106,8 @@ async function post(body: Record<string, unknown>): Promise<Record<string, unkno
     throw new Error(`The sheet answered ${response.status} without the expected reply`);
   }
   if (!response.ok || data.ok !== true) throw new Error(String(data.error || `The sheet answered ${response.status}`));
+  // The "hello" page answered, not the save: count it as not sent, so it goes again.
+  if ("hello" in data) throw new Error("The sheet didn't save it (Google answered like a page visit). It goes again on the next round.");
   return data;
 }
 
