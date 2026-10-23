@@ -4,8 +4,10 @@
  * rule can be tested; lib/agents/chat.ts receives the messages, keeps the conversations and sends.
  *
  * - It answers from the website's facts only (the same fact pack and fact check as the email
- *   replies), short, in the language they wrote in.
- * - It hands over to Niko (an email, a step in Prospects) when someone wants a viewing or a call,
+ *   replies), short, in the language they wrote in. Homes go as the website's own cards (a picture
+ *   of each with its floor plan, size, floor and price; Niko, 23 Oct 2026: "that response is too
+ *   long and too many numbers"), so its words stay short and nearly free of figures.
+ * - It hands over to Niko (an alert, a step in Prospects) when someone wants a viewing or a call,
  *   asks how to pay or for bank details, wants a better price, asks a legal or contract question,
  *   complains, asks for a person, or asks something the facts don't answer. Its reply then says the
  *   sales team will get back to them, and it goes quiet in that chat for 12 hours (sooner if he
@@ -31,6 +33,10 @@ export interface ChatMessage {
   at: string;
   /** The message's id on Meta's side, so a delivery twice is seen once. */
   mid?: string;
+  /** The residences sent as cards right after this message (unit numbers). */
+  cards?: string[];
+  /** Those cards' ids on Meta's side, so their echoes are known as the assistant's own. */
+  cardMids?: string[];
 }
 
 export interface ChatThread {
@@ -98,7 +104,13 @@ export const HANDOVER_WORDS: Record<Exclude<HandoverTopic, "none">, string> = {
 
 export const CHAT_SYSTEM = (channel: ChatChannel) => `You answer messages people send to The Lexington, a residential building under construction in Shiashie, East Legon, Accra, Ghana, on ${CHANNEL_NAMES[channel]}. You are The Lexington's assistant; the sales team sees every message and can step in.
 
-Write like a helpful person on the sales team: warm, plain and short. One to four sentences, at most 600 characters, at most one link. No hype words (luxury, exclusive, stunning, dream, world-class), no emojis, no markdown, at most one exclamation mark. Write in the language they wrote in.
+Write like a helpful person on the sales team: warm, plain and short. One to three short sentences, at most 300 characters, at most one link. Keep figures out of your words: no prices, sizes or floor numbers (the cards show them). No hype words (luxury, exclusive, stunning, dream, world-class), no emojis, no markdown, at most one exclamation mark. Write in the language they wrote in.
+
+HOME CARDS
+- When they ask about homes, prices, sizes, floor plans or what is available, put up to three unit numbers in "cards": available units from the FACTS that fit what they told you (budget, type, what the home is for). Each card is sent as a picture right after your message: the unit's floor plan, floor, type, size and website price.
+- Your words then only introduce the cards (for example "Here are three homes within your budget.") and ask one useful question. Don't repeat what the cards show.
+- Leave "cards" empty when no card helps: a question about the location, the building's progress, a viewing or paying, or homes you already sent.
+- The cards show the website prices. If the FACTS list an offer running now, you may mention it in a few words; never work out discounted prices yourself.
 
 THE FACTS ARE ONLY WHAT YOU ARE GIVEN
 - Use only the facts in the FACTS block: unit numbers, types, floors, sizes, prices, the offer, fees, finishes, extras, amenities, dates and links. Copy every number exactly as given. Never work out a new number: no monthly instalments, totals, savings, yields or returns.
@@ -133,13 +145,16 @@ export const CHAT_SCHEMA = {
     phone: { type: "string" },
     interest: { type: "string" },
     budget: { type: "string" },
+    cards: { type: "array", items: { type: "string" } },
   },
-  required: ["reply", "handover", "topic", "handover_reason", "temperature", "name", "email", "phone", "interest", "budget"],
+  required: ["reply", "handover", "topic", "handover_reason", "temperature", "name", "email", "phone", "interest", "budget", "cards"],
   additionalProperties: false,
 } as const;
 
 export interface ChatOut {
   reply: string;
+  /** Unit numbers to send as cards after the reply (checked against the available units). */
+  cards: string[];
   handover: boolean;
   topic: HandoverTopic;
   handover_reason: string;
@@ -153,7 +168,9 @@ export interface ChatOut {
 
 /** The conversation for Claude: the facts, then the last messages, oldest first. */
 export function chatPrompt(facts: string, thread: ChatThread): string {
-  const lines = thread.messages.slice(-20).map((m) => `${m.from === "them" ? "THEM" : m.from === "agent" ? "YOU" : "SALES TEAM"}: ${m.text}`);
+  const lines = thread.messages
+    .slice(-20)
+    .map((m) => `${m.from === "them" ? "THEM" : m.from === "agent" ? "YOU" : "SALES TEAM"}: ${m.text}${m.cards?.length ? ` [cards sent: ${m.cards.join(", ")}]` : ""}`);
   return [
     `FACTS\n${facts}`,
     thread.name ? `THEIR NAME (from ${CHANNEL_NAMES[thread.channel]}): ${thread.name}` : "",
@@ -165,11 +182,21 @@ export function chatPrompt(facts: string, thread: ChatThread): string {
     .join("\n\n");
 }
 
-/** The first line of the agent's first message in a chat. */
-export function introLine(channel: ChatChannel): string {
-  return channel === "whatsapp"
-    ? "Hello, this is The Lexington's assistant. The sales team sees this chat and can step in at any time."
-    : "Hello, this is The Lexington's assistant; the sales team sees this chat and can step in at any time.";
+/** The first line of the agent's first message in a chat (short: the sales team sees the chat too). */
+export function introLine(): string {
+  return "Hi, this is The Lexington's assistant (our sales team sees this chat too).";
+}
+
+/** The cards to send: available units only, as the website names them, at most three, each once. Pure. */
+export function pickCards(requested: string[], units: Array<{ unitNumber: string; status: string }>): string[] {
+  const key = (s: string) => s.toLowerCase().replace(/^unit\s+/, "").replace(/\s+/g, "");
+  const out: string[] = [];
+  for (const want of requested) {
+    const unit = units.find((u) => u.status === "available" && key(u.unitNumber) === key(String(want)));
+    if (unit && !out.includes(unit.unitNumber)) out.push(unit.unitNumber);
+    if (out.length === 3) break;
+  }
+  return out;
 }
 
 /** Sent instead of a reply that didn't pass the checks, or when Claude can't be reached. */
@@ -250,7 +277,8 @@ export function parseWebhook(body: unknown, appId?: string): ChatEvent[] {
 export function chatProblems(reply: string): string[] {
   const out: string[] = [];
   if (!reply.trim()) out.push("The reply is empty.");
-  if (reply.length > 700) out.push(`The reply is ${reply.length} characters (at most 600).`);
+  if (reply.length > 450) out.push(`The reply is ${reply.length} characters (at most 300).`);
+  if ((reply.match(/(US)?\$\s?\d[\d,.]*\s*(k\b)?/gi) ?? []).length > 1) out.push("It quotes prices in its words (the cards show them).");
   if (/\b(account (no|number)|iban|swift|sort code|routing number)\b/i.test(reply)) out.push("It mentions bank details.");
   if (/(https?:\/\/\S+[\s\S]*){2,}/.test(reply)) out.push("It has more than one link.");
   if (/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(reply)) out.push("It has emojis.");

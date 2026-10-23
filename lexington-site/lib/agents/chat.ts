@@ -1,12 +1,13 @@
 import "server-only";
 
-import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 
 import { claudeConfigured, writeWithClaude } from "@/lib/ai/claude";
 import { notifyOwner } from "@/lib/alerts/notify";
 import { firstName, todayISO } from "@/lib/crm";
 import { internationalDigits } from "@/lib/format";
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
+import { SITE_URL } from "@/lib/seo";
 
 import {
   AGENT_METADATA,
@@ -20,6 +21,7 @@ import {
   handoverTopic,
   holdingMessage,
   introLine,
+  pickCards,
   quietReason,
   tooChatty,
   wantsNoReplies,
@@ -32,7 +34,7 @@ import {
 } from "./chatCore";
 import { factCheck } from "./factcheck";
 import { loadFactPack } from "./facts";
-import { factPackText } from "./factsCore";
+import { factPackText, type UnitFact } from "./factsCore";
 import { pageAccess } from "./metaLeads";
 
 /**
@@ -94,8 +96,11 @@ function graphBase(): string {
   return `${base}/${version}`;
 }
 
+/** Words, or a residence card's picture (by its address on the website). */
+type Outgoing = { text: string } | { image: string };
+
 /** Sends one message on the chat's channel and returns its id. Throws in Meta's words. */
-async function send(thread: ChatThread, text: string): Promise<string> {
+async function send(thread: ChatThread, outgoing: Outgoing): Promise<string> {
   let url: string;
   let token: string;
   let body: Record<string, unknown>;
@@ -105,13 +110,21 @@ async function send(thread: ChatThread, text: string): Promise<string> {
     if (!phoneId || !waToken) throw new Error("WhatsApp isn't connected yet (WHATSAPP_PHONE_NUMBER_ID and WHATSAPP_TOKEN).");
     url = `${graphBase()}/${phoneId}/messages`;
     token = waToken;
-    body = { messaging_product: "whatsapp", recipient_type: "individual", to: thread.senderId, type: "text", text: { body: text, preview_url: true } };
+    const base = { messaging_product: "whatsapp", recipient_type: "individual", to: thread.senderId };
+    body = "text" in outgoing ? { ...base, type: "text", text: { body: outgoing.text, preview_url: true } } : { ...base, type: "image", image: { link: outgoing.image } };
   } else {
     const access = await pageAccess();
     if (!access) throw new Error("The Facebook Page isn't connected (META_PAGE_ID and the Page key).");
     url = `${access.base}/${access.pageId}/messages`;
     token = access.token;
-    body = { recipient: { id: thread.senderId }, messaging_type: "RESPONSE", message: { text, metadata: AGENT_METADATA } };
+    const message =
+      "text" in outgoing
+        ? { text: outgoing.text, metadata: AGENT_METADATA }
+        : {
+            attachment: { type: "image", payload: { url: outgoing.image, ...(thread.channel === "messenger" ? { is_reusable: true } : {}) } },
+            metadata: AGENT_METADATA,
+          };
+    body = { recipient: { id: thread.senderId }, messaging_type: "RESPONSE", message };
   }
   const response = await fetch(url, {
     method: "POST",
@@ -127,6 +140,32 @@ async function send(thread: ChatThread, text: string): Promise<string> {
   } | null;
   if (!response.ok || out?.error) throw new Error(out?.error?.message ?? `Meta answered ${response.status}`);
   return out?.message_id ?? out?.messages?.[0]?.id ?? `sent-${newKey()}`;
+}
+
+/**
+ * A residence's card picture on the website (app/api/unit-card). Its figures go into the address, so
+ * when a price or status changes Meta and the website's cache fetch a fresh picture. A test copy can
+ * point at itself with CARD_BASE_URL; the live site always uses its own address.
+ */
+function cardUrl(unit: UnitFact): string {
+  const base = (process.env.VERCEL_ENV !== "production" && process.env.CARD_BASE_URL?.replace(/\/+$/, "")) || SITE_URL;
+  const version = createHash("sha1").update(`${unit.priceUSD}|${unit.status}|${unit.areaSqm}|${unit.floor}|${unit.type}`).digest("hex").slice(0, 10);
+  return `${base}/api/unit-card/${encodeURIComponent(unit.unitNumber)}?v=${version}`;
+}
+
+/** Sends the cards after a reply (each one drawn first, so Meta never waits on it). Answers the ones that went. */
+async function sendCards(thread: ChatThread, cards: UnitFact[]): Promise<Array<{ unit: string; mid: string }>> {
+  if (!cards.length) return [];
+  await Promise.allSettled(cards.map((u) => fetch(cardUrl(u), { signal: AbortSignal.timeout(25_000), cache: "no-store" })));
+  const sent: Array<{ unit: string; mid: string }> = [];
+  for (const unit of cards) {
+    try {
+      sent.push({ unit: unit.unitNumber, mid: await send(thread, { image: cardUrl(unit) }) });
+    } catch (error) {
+      console.error(`[chat] the ${unit.unitNumber} card couldn't be sent:`, error instanceof Error ? error.message : error);
+    }
+  }
+  return sent;
 }
 
 // ---- the chat's document ---------------------------------------------------------------------------
@@ -257,11 +296,16 @@ async function handoverTask(leadId: string | null | undefined, name: string, cha
 
 interface Drafted {
   text: string;
+  /** The residences to send as cards after the words. */
+  cards: UnitFact[];
   handover: boolean;
   topic: HandoverTopic;
   reason: string;
   out: ChatOut | null;
 }
+
+// Problems another go can fix: too long, or prices in its words that belong on the cards.
+const STYLE_ONLY = /characters \(at most|quotes prices/;
 
 async function draft(thread: ChatThread, nowMs: number): Promise<Drafted> {
   const pack = await loadFactPack();
@@ -272,24 +316,31 @@ async function draft(thread: ChatThread, nowMs: number): Promise<Drafted> {
   const forced = handoverTopic(latest);
 
   let out: ChatOut | null = null;
+  let text = "";
+  let problems = ["No reply could be written."];
   if (claudeConfigured()) {
-    const written = await writeWithClaude<ChatOut>({
-      system: CHAT_SYSTEM(thread.channel),
-      content: [{ type: "text", text: chatPrompt(factPackText(pack), thread) }],
-      schema: CHAT_SCHEMA,
-      effort: "low",
-      maxTokens: 3000,
-      purpose: "chat reply",
-    });
-    if (written.ok) out = written.value;
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const again = attempt ? `\n\nYOUR LAST DRAFT: ${text}\nTO FIX: ${problems.join(" ")} Write it again: shorter, the figures left to the cards.` : "";
+      const written = await writeWithClaude<ChatOut>({
+        system: CHAT_SYSTEM(thread.channel),
+        content: [{ type: "text", text: chatPrompt(factPackText(pack), thread) + again }],
+        schema: CHAT_SCHEMA,
+        effort: "low",
+        maxTokens: 3000,
+        purpose: "chat reply",
+      });
+      if (!written.ok) break;
+      out = written.value;
+      text = out.reply.trim();
+      problems = [...chatProblems(text), ...factCheck(text, pack, theirWords)];
+      if (!problems.length || !problems.every((p) => STYLE_ONLY.test(p))) break;
+    }
   }
-  let text = out?.reply.trim() ?? "";
-  const problems = out ? [...chatProblems(text), ...factCheck(text, pack, theirWords)] : ["No reply could be written."];
   const loop = tooChatty(thread, nowMs);
   const topic: HandoverTopic = forced !== "none" ? forced : out?.handover ? out.topic === "none" ? "unknown" : out.topic : problems.length || loop ? "unknown" : "none";
   const handover = topic !== "none";
   if (problems.length || loop) text = holdingMessage(thread.name || out?.name);
-  if (!thread.messages.some((m) => m.from === "agent")) text = `${introLine(thread.channel)}\n\n${text}`;
+  if (!thread.messages.some((m) => m.from === "agent")) text = `${introLine()}\n\n${text}`;
   const reason = loop
     ? "a long run of messages in an hour"
     : problems.length
@@ -297,7 +348,14 @@ async function draft(thread: ChatThread, nowMs: number): Promise<Drafted> {
       : topic !== "none"
         ? HANDOVER_WORDS[topic as Exclude<HandoverTopic, "none">]
         : "";
-  return { text, handover, topic, reason, out };
+  // Only with a reply that passed: a holding message goes alone.
+  const cards =
+    out && !problems.length && !loop
+      ? pickCards(out.cards ?? [], pack.units)
+          .map((n) => pack.units.find((u) => u.unitNumber === n))
+          .filter((u): u is UnitFact => Boolean(u))
+      : [];
+  return { text, cards, handover, topic, reason, out };
 }
 
 /** Alerts Niko about a chat (an alert in the site app that buzzes his phone), at most once an hour per chat. */
@@ -336,7 +394,9 @@ export async function handleChatEvent(ev: ChatEvent, nowMs = Date.now()): Promis
       const saved = await updateThread(
         id,
         (t) => {
-          if (t.messages.some((m) => m.mid === ev.mid)) return null;
+          if (t.messages.some((m) => m.mid === ev.mid || m.cardMids?.includes(ev.mid))) return null;
+          // While the assistant is still sending its cards (its lock is on), a picture is one of them.
+          if (t.lockedUntil && Date.parse(t.lockedUntil) > Date.now() && /^\[image/.test(ev.text)) return null;
           t.messages = keepLast([...t.messages, { _key: newKey(), from: "owner", text: ev.text.slice(0, 2000), at: ev.at, mid: ev.mid }]);
           t.ownerActiveUntil = new Date(Date.parse(ev.at) + OWNER_QUIET_HOURS * 3_600_000).toISOString();
           t.handedOver = null;
@@ -402,22 +462,36 @@ export async function handleChatEvent(ev: ChatEvent, nowMs = Date.now()): Promis
         let mid: string | null = null;
         let sendError: string | null = null;
         try {
-          mid = await send(current, d.text);
+          mid = await send(current, { text: d.text });
         } catch (error) {
           sendError = error instanceof Error ? error.message : "it couldn't be sent";
         }
         const now = new Date().toISOString();
+        const key = newKey();
         thread =
           (await updateThread(
             id,
             (t) => {
-              if (mid) t.messages = keepLast([...t.messages, { _key: newKey(), from: "agent", text: d.text, at: now, mid }]);
+              if (mid) t.messages = keepLast([...t.messages, { _key: key, from: "agent", text: d.text, at: now, mid }]);
               if (d.handover || sendError) t.handedOver = { at: now, reason: sendError ? `the reply couldn't be sent (${sendError})` : d.reason };
               return t;
             },
             fresh
           )) ?? current;
-        if (mid) await leadNote(thread.leadId, `${CHANNEL_NAMES[current.channel]}, assistant: ${d.text}`);
+        // Then the homes, as the website's cards; kept on the reply so their echoes are known as ours.
+        const cards = mid ? await sendCards(current, d.cards) : [];
+        if (cards.length) {
+          thread =
+            (await updateThread(
+              id,
+              (t) => {
+                t.messages = t.messages.map((m) => (m._key === key ? { ...m, cards: cards.map((c) => c.unit), cardMids: cards.map((c) => c.mid) } : m));
+                return t;
+              },
+              fresh
+            )) ?? thread;
+        }
+        if (mid) await leadNote(thread.leadId, `${CHANNEL_NAMES[current.channel]}, assistant: ${d.text}${cards.length ? ` [cards: ${cards.map((c) => c.unit).join(", ")}]` : ""}`);
         if (d.out) await learnAbout(thread.leadId, d.out);
 
         if (d.handover || sendError) {
