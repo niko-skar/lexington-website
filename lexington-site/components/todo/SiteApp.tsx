@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import type { Expense } from "@/lib/expenses/shared";
-import { needsReorder, type StoreEntry, type StoreItem } from "@/lib/store/shared";
+import { needsReorder, type StoreData, type StoreItem } from "@/lib/store/shared";
 import { sectionHref, SECTIONS, type Section, type TodoList, type TodoMe, type TodoTask } from "@/lib/todo/shared";
 import { ExpensesApp } from "./ExpensesApp";
 import { appClass, SiteNav } from "./SiteChrome";
@@ -16,7 +16,7 @@ import styles from "./Todo.module.css";
 // loaded; only the part on screen keeps itself fresh. The others are fetched quietly a moment
 // after the app opens, so the first tap on them is instant too. The address bar follows along.
 
-export type StoreData = { items: StoreItem[]; history: StoreEntry[] };
+export type { StoreData };
 export type ExpensesData = { expenses: Expense[]; items: StoreItem[] };
 export type SiteData = { todo?: TodoTask[]; store?: StoreData; expenses?: ExpensesData };
 

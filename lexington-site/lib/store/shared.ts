@@ -86,3 +86,79 @@ export const needsReorder = (item: StoreItem) => atReorderPoint(item) && !item.r
 
 /** Items people can undo for a short while after recording (a wrong tap). */
 export const UNDO_MINUTES = 15;
+
+/** The day in Ghana (GMT all year round), e.g. "2026-10-23": what "today" means for the store room. */
+export const ghanaDay = (at: string | number | Date = Date.now()) => new Date(at).toISOString().slice(0, 10);
+
+/* ---------- tools ---------- */
+// Niko, 23 Oct 2026: "a section for tools with daily take outs and returns". Unlike materials,
+// tools come back: each take-out stays open, with who has it, until it's all back (or the office
+// marks it lost). Tools are counted in whole numbers.
+
+export const MAX_TOOL_NAME = 60;
+export const MAX_TOOL_COUNT = 1000;
+
+export interface StoreTool {
+  id: string;
+  name: string;
+  /** How many we have. The office keeps it right; marking one lost takes it off. */
+  count: number;
+  /** Not used any more: off the list (what happened to it stays on record). */
+  retired: boolean;
+  photoUrl: string | null;
+}
+
+export interface ToolReturn {
+  key: string;
+  qty: number;
+  /** The office marked it lost: it never came back. */
+  lost: boolean;
+  note: string;
+  photoUrl: string | null;
+  at: string;
+  by: string;
+  mine: boolean;
+}
+
+/** One tool taken out by one person (tools taken together share the photo). */
+export interface ToolOut {
+  id: string;
+  toolId: string;
+  qty: number;
+  person: string;
+  note: string;
+  photoUrl: string | null;
+  at: string;
+  by: string;
+  mine: boolean;
+  /** What came back so far, oldest first. */
+  returns: ToolReturn[];
+  /** When the last of it came back (or was marked lost); null while any is still out. */
+  closedAt: string | null;
+}
+
+/** How many of a take-out are still out. */
+export const stillOut = (out: ToolOut) => Math.max(0, out.qty - out.returns.reduce((n, r) => n + r.qty, 0));
+export const toolWord = (n: number) => (Math.abs(n) === 1 ? "tool" : "tools");
+
+/* ---------- opening and closing the store room ---------- */
+// Niko, 23 Oct 2026: "daily pictures of opening store room and closing store room". Taken there and
+// then with the camera; closing also notes how many tools were still out.
+
+export const MAX_CHECK_PHOTOS = 6;
+export type CheckKind = "open" | "close";
+
+export interface StoreCheck {
+  id: string;
+  kind: CheckKind;
+  photoUrls: string[];
+  note: string;
+  /** Closing only: tools still out at that moment. */
+  toolsOut: number | null;
+  at: string;
+  by: string;
+  mine: boolean;
+}
+
+/** The whole store room as the page gets it. */
+export type StoreData = { items: StoreItem[]; history: StoreEntry[]; tools: StoreTool[]; toolOuts: ToolOut[]; checks: StoreCheck[] };

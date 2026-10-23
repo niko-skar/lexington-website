@@ -165,8 +165,10 @@
   border-radius: 10px;
   background: var(--x-surface);
 }
-.tab,
-.tabOn {
+/* ".tabs" in front: stronger than the app's "buttons use the page's font" rule, so the tabs get
+   their narrow bold letters. */
+.tabs .tab,
+.tabs .tabOn {
   min-height: 44px;
   border: 0;
   border-radius: 7px;
@@ -178,7 +180,7 @@
   letter-spacing: 0.03em;
   text-transform: uppercase;
 }
-.tabOn {
+.tabs .tabOn {
   background: var(--x-accent);
   color: var(--x-accent-ink);
 }
@@ -199,6 +201,25 @@
 .tabOn .tabCount {
   background: rgba(255, 255, 255, 0.22);
   color: inherit;
+}
+/* Tools still out from an earlier day. */
+.tabCount.tabCountLate,
+.tabOn .tabCount.tabCountLate {
+  background: var(--x-warn);
+  color: var(--x-on-color);
+}
+/* Four tabs (the store room): a little tighter so each fits one line on a phone, count and all. */
+.tabs4 .tab,
+.tabs4 .tabOn {
+  padding: 0 2px;
+  font-size: 15px;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+.tabs4 .tabCount {
+  min-width: 20px;
+  margin-left: 4px;
+  padding: 0 5px;
 }
 
 /* ---------- notes under the header ---------- */
@@ -306,6 +327,8 @@
   display: flex;
   justify-content: space-between;
   margin: 0 2px 8px;
+  /* Set here: these are headings, and the website gives headings its serif font. */
+  font-family: var(--x-body);
   font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.06em;
@@ -604,6 +627,7 @@
 }
 .label {
   margin: 6px 0 0;
+  font-family: var(--x-body);
   font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.06em;

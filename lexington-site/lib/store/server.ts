@@ -2,9 +2,10 @@ import "server-only";
 
 import { FLOORS } from "@/lib/expenses/shared";
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
-import { EXPENSE_PREFIX, isId, ITEM_PREFIX, MOVE_PREFIX, newId } from "@/lib/site/ids";
+import { CHECK_PREFIX, EXPENSE_PREFIX, isId, ITEM_PREFIX, MOVE_PREFIX, newId, TOOL_OUT_PREFIX, TOOL_PREFIX } from "@/lib/site/ids";
 import { cleanPhotoRef, cleanText, dropPhoto, photoRef, TodoError } from "@/lib/todo/server";
 import type { TodoMe } from "@/lib/todo/shared";
+import { CHECK_FIELDS, toCheck, type RawCheck } from "./checks";
 import {
   MAX_ITEM_NAME,
   MAX_MOVE_NOTE,
@@ -12,9 +13,12 @@ import {
   MAX_UNIT,
   UNDO_MINUTES,
   type MoveKind,
+  type StoreData,
   type StoreEntry,
   type StoreItem,
+  type StoreTool,
 } from "./shared";
+import { OUT_FIELDS, TOOL_FIELDS, toOut, type RawOut } from "./tools";
 
 // The stock is never stored: it is always added up from what moved, so correcting or deleting a
 // purchase (in the expenses) or a wrong take-out puts the number right by itself.
@@ -98,18 +102,48 @@ async function clearStaleDismissals(items: StoreItem[]): Promise<void> {
 
 /* ---------- reading ---------- */
 
-export async function getStore(me: TodoMe): Promise<{ items: StoreItem[]; history: StoreEntry[] }> {
-  const data = await getBuyersClient().fetch<{ items: RawItem[]; moves: RawMove[]; bought: RawMove[] }>(
+/**
+ * The whole store room in one look: stock, what moved, the tools with every take-out still open
+ * (and the last week's), and the last month of opening and closing photos.
+ */
+export async function getStore(me: TodoMe): Promise<StoreData> {
+  const day = 86_400_000;
+  const data = await getBuyersClient().fetch<{
+    items: RawItem[];
+    moves: RawMove[];
+    bought: RawMove[];
+    tools: StoreTool[];
+    outsOpen: RawOut[];
+    outsDone: RawOut[];
+    checks: RawCheck[];
+  }>(
     `{
       "items": *[_type == "storeItem" && string::startsWith(_id, $itemPrefix)] | order(lower(name) asc) ${ITEM_FIELDS},
       "moves": *[_type == "storeMove" && string::startsWith(_id, $movePrefix)] | order(at desc)[0...200] ${MOVE_FIELDS},
-      "bought": *[_type == "siteExpense" && string::startsWith(_id, $expensePrefix) && toStore == true && defined(itemId)] | order(createdAt desc)[0...100] ${BOUGHT_FIELDS}
+      "bought": *[_type == "siteExpense" && string::startsWith(_id, $expensePrefix) && toStore == true && defined(itemId)] | order(createdAt desc)[0...100] ${BOUGHT_FIELDS},
+      "tools": *[_type == "storeTool" && string::startsWith(_id, $toolPrefix)] | order(lower(name) asc) ${TOOL_FIELDS},
+      "outsOpen": *[_type == "toolOut" && string::startsWith(_id, $outPrefix) && !defined(closedAt)] | order(at desc)[0...500] ${OUT_FIELDS},
+      "outsDone": *[_type == "toolOut" && string::startsWith(_id, $outPrefix) && defined(closedAt) && at >= $weekAgo] | order(at desc)[0...300] ${OUT_FIELDS},
+      "checks": *[_type == "storeCheck" && string::startsWith(_id, $checkPrefix) && at >= $monthAgo] | order(at desc)[0...200] ${CHECK_FIELDS}
     }`,
-    params
+    {
+      ...params,
+      toolPrefix: TOOL_PREFIX,
+      outPrefix: TOOL_OUT_PREFIX,
+      checkPrefix: CHECK_PREFIX,
+      weekAgo: new Date(Date.now() - 8 * day).toISOString(),
+      monthAgo: new Date(Date.now() - 31 * day).toISOString(),
+    }
   );
   const items = data.items.map(withLevel);
   await clearStaleDismissals(items);
-  return { items, history: history(me, data.moves, data.bought, 200, 100) };
+  return {
+    items,
+    history: history(me, data.moves, data.bought, 200, 100),
+    tools: data.tools,
+    toolOuts: [...data.outsOpen, ...data.outsDone].sort((a, b) => b.at.localeCompare(a.at)).map((o) => toOut(me, o)),
+    checks: data.checks.map((c) => toCheck(me, c)),
+  };
 }
 
 async function getItem(id: string): Promise<StoreItem | null> {

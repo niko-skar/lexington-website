@@ -1055,3 +1055,373 @@
   font-size: 13px;
   font-weight: 600;
 }
+
+/* ---------- store: tools (out with someone, back at the end of the day) ---------- */
+.toolBar {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+}
+.toolBar .bigAction:disabled {
+  opacity: 0.5;
+}
+.outCard {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 10px;
+  padding: 10px 14px;
+  border: 1px solid var(--x-line);
+  border-left: 4px solid var(--x-accent);
+  border-radius: 10px;
+  background: var(--x-surface);
+}
+.outCardLate {
+  border-left-color: var(--x-warn);
+}
+.outHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.outPerson {
+  margin: 0;
+  min-width: 0;
+  font-size: 18px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.outBack {
+  flex: none;
+  min-height: 44px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--x-accent);
+  color: var(--x-accent-ink);
+  font-weight: 600;
+}
+.outLine {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  border-top: 1px solid var(--x-line);
+}
+.outLineSheet {
+  padding: 6px 12px;
+}
+.outLineSheet:first-child {
+  border-top: 0;
+}
+.outTool {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--x-ink);
+  text-align: left;
+  font-size: 16px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.outWhen,
+.outLate {
+  flex: none;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.outWhen {
+  color: var(--x-muted);
+}
+.outLate {
+  flex: 0 1 auto;
+  color: var(--x-warn);
+  font-weight: 700;
+  white-space: normal;
+  text-align: right;
+}
+.outLineBack {
+  flex: none;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--x-line);
+  border-radius: 8px;
+  background: var(--x-bg);
+  color: var(--x-ink);
+  font-weight: 600;
+}
+.returnLine {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+.returnLine p {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: 13px;
+}
+.returnLine .entryThumb {
+  width: 40px;
+  height: 40px;
+}
+
+/* picking tools (taking out, bringing back) */
+.pickList {
+  display: grid;
+  overflow: hidden;
+  border: 1px solid var(--x-line);
+  border-radius: 10px;
+  background: var(--x-bg);
+}
+.pickRow,
+.pickRowOn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 58px;
+  padding: 7px 10px 7px 12px;
+  border-top: 1px solid var(--x-line);
+}
+.pickRow:first-child,
+.pickRowOn:first-child {
+  border-top: 0;
+}
+.pickRowOn {
+  background: var(--x-accent-soft);
+}
+.pickName {
+  flex: 1;
+  display: grid;
+  min-width: 0;
+  font-size: 16px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.pickName small {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--x-muted);
+}
+.pickAdd {
+  flex: none;
+  min-height: 44px;
+  padding: 0 18px;
+  border: 1px solid var(--x-accent);
+  border-radius: 8px;
+  background: var(--x-surface);
+  color: var(--x-accent);
+  font-weight: 600;
+}
+.pickTick {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border: 2px solid var(--x-line);
+  border-radius: 8px;
+  background: var(--x-surface);
+  color: var(--x-accent-ink);
+  font-size: 20px;
+  font-weight: 700;
+}
+.pickTick[aria-pressed="true"] {
+  border-color: var(--x-accent);
+  background: var(--x-accent);
+}
+.stepper {
+  flex: none;
+  display: inline-grid;
+  grid-template-columns: 44px 36px 44px;
+  align-items: center;
+}
+.stepper button {
+  height: 44px;
+  border: 1px solid var(--x-line);
+  border-radius: 8px;
+  background: var(--x-surface);
+  color: var(--x-ink);
+  font-size: 22px;
+  font-weight: 600;
+}
+.stepper button:disabled {
+  opacity: 0.35;
+}
+.stepperValue {
+  font-family: var(--x-num);
+  font-size: 20px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- store: opening and closing photos ---------- */
+.checkNone,
+.checkOpen,
+.checkClosed {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding: 8px 8px 8px 12px;
+  border: 1px solid var(--x-line);
+  border-left: 4px solid var(--x-muted);
+  border-radius: 10px;
+  background: var(--x-surface);
+}
+.checkNone {
+  border-left-color: var(--x-amber);
+  background: var(--x-amber-soft);
+}
+.checkOpen {
+  border-left-color: var(--x-ok);
+}
+.checkText {
+  flex: 1;
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: var(--x-ink);
+  text-align: left;
+}
+.checkText b {
+  font-size: 16px;
+}
+.checkText small {
+  font-size: 13px;
+  color: var(--x-muted);
+  overflow-wrap: anywhere;
+}
+.checkButton {
+  flex: none;
+  min-height: 44px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--x-accent);
+  color: var(--x-accent-ink);
+  font-weight: 600;
+}
+.checkClosed .checkButton {
+  border: 1px solid var(--x-line);
+  background: var(--x-bg);
+  color: var(--x-ink);
+}
+.photoGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.photoTile,
+.photoTileAdd {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.photoTile {
+  background: var(--x-bg);
+}
+.photoTile img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.photoTileState,
+.photoTileError {
+  position: absolute;
+  left: 4px;
+  bottom: 4px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+}
+.photoTileError {
+  background: var(--x-warn);
+}
+.photoTileOff {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 99px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 15px;
+}
+.photoTileAdd {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 4px;
+  border: 1.5px dashed var(--x-line);
+  background: var(--x-bg);
+  color: var(--x-muted);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+}
+.photoTileAdd svg {
+  width: 26px;
+  height: 26px;
+}
+.checkDay {
+  margin-top: 6px;
+}
+.checkDay h3 em {
+  font-style: normal;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.checkEntry {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--x-line);
+  border-radius: 10px;
+  background: var(--x-bg);
+}
+.checkEntryTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.checkThumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.checkThumbs button {
+  width: 72px;
+  height: 72px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--x-surface);
+}
+.checkThumbs img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.dayFlagBad {
+  color: var(--x-warn);
+}
+.dayFlagOk {
+  color: var(--x-ok);
+}

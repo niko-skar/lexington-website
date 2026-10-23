@@ -12,11 +12,18 @@ import {
   MAX_UNIT,
   needsReorder,
   qtyUnit,
+  stillOut,
+  toolWord,
   UNDO_MINUTES,
   UNITS,
+  type CheckKind,
   type MoveKind,
+  type StoreCheck,
+  type StoreData,
   type StoreEntry,
   type StoreItem,
+  type StoreTool,
+  type ToolOut,
 } from "@/lib/store/shared";
 import { photoAt, type TodoMe } from "@/lib/todo/shared";
 import { AccessSheet } from "./AccessSheet";
@@ -24,30 +31,34 @@ import { dayName, errorText, send, startPolling, when } from "./api";
 import { QtyPicker } from "./QtyPicker";
 import site from "./Site.module.css";
 import { SiteHeader, SiteMenu } from "./SiteChrome";
+import { CameraIcon, EntryPhoto, minutesSince, PhotoField, time } from "./StoreBits";
+import { CheckSheet, CheckStrip, DaysSheet } from "./StoreChecks";
+import { EditToolSheet, isLate, NewToolSheet, outByTool, ReturnSheet, TakeOutSheet, ToolSheet, ToolsTab } from "./StoreTools";
 import styles from "./Todo.module.css";
 import { useUploadSlot } from "./useUploadSlot";
 
-type Tab = "stock" | "reorder" | "history";
-type Sheet = { kind: "item"; id: string } | { kind: "move"; id: string; move: MoveKind } | { kind: "new" } | { kind: "edit"; id: string };
-type ToastData = { text: string; tone?: "error"; undo?: string };
-type StoreData = { items: StoreItem[]; history: StoreEntry[] };
+type Tab = "stock" | "tools" | "reorder" | "history";
+type Sheet =
+  | { kind: "item"; id: string }
+  | { kind: "move"; id: string; move: MoveKind }
+  | { kind: "new" }
+  | { kind: "edit"; id: string }
+  | { kind: "tool"; toolId: string }
+  | { kind: "takeOut"; first?: string; back?: string }
+  | { kind: "return"; outIds: string[]; back?: string }
+  | { kind: "newTool" }
+  | { kind: "editTool"; toolId: string }
+  | { kind: "check"; check: CheckKind }
+  | { kind: "days" };
+type ToastData = { text: string; tone?: "error"; onUndo?: () => void };
 
 const MOVE_TITLE: Record<MoveKind, string> = { out: "Take out", back: "Brought back", in: "Add stock", count: "Count" };
 const MOVE_DONE: Record<MoveKind, string> = { out: "Taken out", back: "Brought back", in: "Added", count: "Counted" };
-const time = (iso: string) => new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
-const minutesSince = (iso: string) => (Date.now() - Date.parse(iso)) / 60_000;
 
 function counted(diff: number, unit: string) {
   if (diff === 0) return "Matches the record";
   return diff < 0 ? `${qtyUnit(-diff, unit)} missing` : `${qtyUnit(diff, unit)} more than the record`;
 }
-
-const CameraIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M4 8h3l2-3h6l2 3h3v11H4z" />
-    <circle cx="12" cy="13" r="3.5" />
-  </svg>
-);
 
 /** One line in a history list: what moved, how much, and who. */
 function EntryLine({ entry, item, showName, isAdmin }: { entry: StoreEntry; item: StoreItem | undefined; showName: boolean; isAdmin: boolean }) {
@@ -102,17 +113,6 @@ function EntryLine({ entry, item, showName, isAdmin }: { entry: StoreEntry; item
   );
 }
 
-/** A photo taken with an entry, small; tap for the big one. */
-function EntryPhoto({ url, onOpen }: { url: string | null | undefined; onOpen: (url: string) => void }) {
-  if (!url) return null;
-  return (
-    <button type="button" className={site.entryThumb} onClick={() => onOpen(url)} aria-label="Open the photo">
-      {/* eslint-disable-next-line @next/next/no-img-element -- a resized copy from the image store */}
-      <img src={photoAt(url, 160)} alt="" loading="lazy" />
-    </button>
-  );
-}
-
 export function StoreApp({
   me,
   active,
@@ -135,6 +135,12 @@ export function StoreApp({
   const isAdmin = me.kind === "admin";
   const [items, setItems] = useState(initial?.items ?? []);
   const [history, setHistory] = useState(initial?.history ?? []);
+  const [tools, setTools] = useState<StoreTool[]>(initial?.tools ?? []);
+  const [toolOuts, setToolOuts] = useState<ToolOut[]>(initial?.toolOuts ?? []);
+  const [checks, setChecks] = useState<StoreCheck[]>(initial?.checks ?? []);
+  // Opening and closing photos from before the month the page keeps fresh (asked for in the days list).
+  const [olderChecks, setOlderChecks] = useState<StoreCheck[]>([]);
+  const [olderState, setOlderState] = useState<"more" | "loading" | "end">("more");
   const [loaded, setLoaded] = useState(initial !== null);
   const [tab, setTab] = useState<Tab>("stock");
   const [search, setSearch] = useState("");
@@ -160,7 +166,7 @@ export function StoreApp({
   const showToast = useCallback((data: ToastData) => {
     clearTimeout(toastTimer.current);
     setToast(data);
-    toastTimer.current = setTimeout(() => setToast(null), data.undo ? 7000 : 3500);
+    toastTimer.current = setTimeout(() => setToast(null), data.onUndo ? 7000 : 3500);
   }, []);
 
   const refresh = useCallback(async () => {
@@ -184,6 +190,9 @@ export function StoreApp({
       const data = JSON.parse(text) as StoreData;
       setItems(data.items);
       setHistory(data.history);
+      setTools(data.tools ?? []);
+      setToolOuts(data.toolOuts ?? []);
+      setChecks(data.checks ?? []);
     } catch {
       setOffline(true);
     } finally {
@@ -216,6 +225,111 @@ export function StoreApp({
     if (entry) setHistory((list) => [entry, ...list.filter((e) => e.id !== entry.id)]);
     if (removed) setHistory((list) => list.filter((e) => e.id !== removed));
   }, []);
+
+  /** Take-outs as the server has them now (new, changed or, with removed, gone). */
+  const applyOuts = useCallback((outs: ToolOut[], removed?: string) => {
+    localAt.current = Date.now();
+    setToolOuts((list) => {
+      const fresh = new Set(outs.map((o) => o.id));
+      const kept = list.filter((o) => !fresh.has(o.id) && o.id !== removed);
+      return [...kept, ...outs].sort((a, b) => b.at.localeCompare(a.at));
+    });
+  }, []);
+  const applyTool = useCallback((tool: StoreTool | null) => {
+    if (!tool) return;
+    localAt.current = Date.now();
+    setTools((list) =>
+      (list.some((t) => t.id === tool.id) ? list.map((t) => (t.id === tool.id ? tool : t)) : [...list, tool]).sort((a, b) =>
+        a.name.localeCompare(b.name, "en", { sensitivity: "base" })
+      )
+    );
+  }, []);
+  const failed = useCallback(
+    (e: unknown) => {
+      if ((e as { status?: number }).status === 401) setSignedOut(true);
+      showToast({ text: errorText(e), tone: "error" });
+    },
+    [showToast]
+  );
+
+  const undoOut = useCallback(
+    async (out: ToolOut) => {
+      setArmed(null);
+      try {
+        await send(`/api/store/tools/out/${out.id}`, "DELETE");
+        applyOuts([], out.id);
+        showToast({ text: "Taken off the record" });
+      } catch (e) {
+        failed(e);
+      }
+    },
+    [applyOuts, showToast, failed]
+  );
+  const undoReturn = useCallback(
+    async (out: ToolOut, key: string) => {
+      setArmed(null);
+      try {
+        const { out: after, tool } = await send<{ out: ToolOut | null; tool: StoreTool | null }>(`/api/store/tools/back/${out.id}/${key}`, "DELETE");
+        applyOuts(after ? [after] : [], after ? undefined : out.id);
+        applyTool(tool);
+        showToast({ text: "Out again" });
+      } catch (e) {
+        failed(e);
+      }
+    },
+    [applyOuts, applyTool, showToast, failed]
+  );
+  const markLost = useCallback(
+    async (out: ToolOut) => {
+      try {
+        const { outs, tool } = await send<{ outs: ToolOut[]; tool: StoreTool | null }>("/api/store/tools/back", "POST", { lost: out.id });
+        applyOuts(outs);
+        applyTool(tool);
+        const saved = outs[0];
+        const key = saved?.returns[saved.returns.length - 1]?.key;
+        showToast({ text: `Marked lost (it was with ${out.person})`, onUndo: saved && key ? () => void undoReturn(saved, key) : undefined });
+      } catch (e) {
+        failed(e);
+      }
+    },
+    [applyOuts, applyTool, showToast, failed, undoReturn]
+  );
+
+  const applyCheck = useCallback((check: StoreCheck | null, removed?: string) => {
+    localAt.current = Date.now();
+    const drop = (list: StoreCheck[]) => list.filter((c) => c.id !== removed && c.id !== check?.id);
+    setChecks((list) => (check ? [check, ...drop(list)] : drop(list)).sort((a, b) => b.at.localeCompare(a.at)));
+    if (removed) setOlderChecks((list) => list.filter((c) => c.id !== removed));
+  }, []);
+  const undoCheck = useCallback(
+    async (check: StoreCheck) => {
+      setArmed(null);
+      try {
+        await send(`/api/store/checks/${check.id}`, "DELETE");
+        applyCheck(null, check.id);
+        showToast({ text: "Taken off the record" });
+      } catch (e) {
+        failed(e);
+      }
+    },
+    [applyCheck, showToast, failed]
+  );
+  const loadOlderChecks = useCallback(async () => {
+    const oldest = [...checks, ...olderChecks].map((c) => c.at).sort()[0];
+    if (!oldest) return setOlderState("end");
+    setOlderState("loading");
+    try {
+      const response = await fetch(`/api/store/checks?before=${encodeURIComponent(oldest)}`, { cache: "no-store" });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || "Couldn't load the older days. Check your signal.");
+      const more = data.checks as StoreCheck[];
+      setOlderChecks((list) => [...list, ...more.filter((c) => !list.some((o) => o.id === c.id))]);
+      setOlderState(more.length ? "more" : "end");
+    } catch (e) {
+      setOlderState("more");
+      failed(e);
+    }
+  }, [checks, olderChecks, failed]);
 
   const undo = useCallback(
     async (id: string) => {
@@ -258,9 +372,15 @@ export function StoreApp({
   const dismissed = useMemo(() => stocked.filter((i) => atReorderPoint(i) && i.reorderDismissed), [stocked]);
   const people = useMemo(() => {
     const seen = new Map<string, string>();
-    for (const e of history) if (e.person && !seen.has(e.person.toLowerCase())) seen.set(e.person.toLowerCase(), e.person);
-    return [...seen.values()].slice(0, 6);
-  }, [history]);
+    const names = [...history, ...toolOuts].map((e) => ({ at: e.at, person: e.person })).sort((a, b) => b.at.localeCompare(a.at));
+    for (const { person } of names) if (person && !seen.has(person.toLowerCase())) seen.set(person.toLowerCase(), person);
+    return [...seen.values()].slice(0, 8);
+  }, [history, toolOuts]);
+  const toolById = useMemo(() => new Map(tools.map((t) => [t.id, t])), [tools]);
+  const toolName = useCallback((id: string) => toolById.get(id)?.name ?? "A tool no longer on the list", [toolById]);
+  const toolsOut = useMemo(() => [...outByTool(toolOuts).values()].reduce((a, b) => a + b, 0), [toolOuts]);
+  const toolsLate = useMemo(() => toolOuts.some(isLate), [toolOuts]);
+  const allChecks = useMemo(() => [...checks, ...olderChecks.filter((o) => !checks.some((c) => c.id === o.id))], [checks, olderChecks]);
   const days = useMemo(() => {
     const groups: { day: string; entries: StoreEntry[] }[] = [];
     for (const e of history) {
@@ -273,7 +393,8 @@ export function StoreApp({
   }, [history]);
 
   const canUndo = (e: StoreEntry) => e.kind !== "bought" && (isAdmin || (e.mine && minutesSince(e.at) < UNDO_MINUTES));
-  const current = sheet && "id" in sheet ? byId.get(sheet.id) : undefined;
+  const current = sheet && (sheet.kind === "item" || sheet.kind === "move" || sheet.kind === "edit") ? byId.get(sheet.id) : undefined;
+  const currentTool = sheet && (sheet.kind === "tool" || sheet.kind === "editTool") ? toolById.get(sheet.toolId) : undefined;
 
   const orderText = () =>
     [
@@ -316,13 +437,26 @@ export function StoreApp({
 
   return (
     <>
-      <SiteHeader title="Store room" sub={`${stocked.length} item${stocked.length === 1 ? "" : "s"} · ${toReorder.length} to reorder`} onMenu={() => setMenuOpen(true)}>
-        <div className={styles.tabs} role="tablist">
+      <SiteHeader
+        title="Store room"
+        sub={`${stocked.length} item${stocked.length === 1 ? "" : "s"} · ${toReorder.length} to reorder${toolsOut ? ` · ${toolsOut} ${toolWord(toolsOut)} out` : ""}`}
+        onMenu={() => setMenuOpen(true)}
+      >
+        <div className={`${styles.tabs} ${styles.tabs4}`} role="tablist">
           <button type="button" role="tab" aria-selected={tab === "stock"} className={tab === "stock" ? styles.tabOn : styles.tab} onClick={() => setTab("stock")}>
             Stock
           </button>
+          <button type="button" role="tab" aria-selected={tab === "tools"} className={tab === "tools" ? styles.tabOn : styles.tab} onClick={() => setTab("tools")}>
+            Tools
+            {toolsOut > 0 && (
+              <span className={`${styles.tabCount} ${toolsLate ? styles.tabCountLate : ""}`} aria-label={toolsLate ? `${toolsOut} out, some since an earlier day` : `${toolsOut} out`}>
+                {toolsOut}
+              </span>
+            )}
+          </button>
           <button type="button" role="tab" aria-selected={tab === "reorder"} className={tab === "reorder" ? styles.tabOn : styles.tab} onClick={() => setTab("reorder")}>
-            Reorder {toReorder.length > 0 && <span className={styles.tabCount}>{toReorder.length}</span>}
+            Reorder
+            {toReorder.length > 0 && <span className={styles.tabCount}>{toReorder.length}</span>}
           </button>
           <button type="button" role="tab" aria-selected={tab === "history"} className={tab === "history" ? styles.tabOn : styles.tab} onClick={() => setTab("history")}>
             Moved
@@ -343,6 +477,22 @@ export function StoreApp({
 
       <main className={styles.main}>
         {!loaded && <p className={styles.loading}>Loading the store…</p>}
+        {loaded && <CheckStrip checks={checks} onCheck={(check) => setSheet({ kind: "check", check })} onDays={() => setSheet({ kind: "days" })} />}
+
+        {loaded && tab === "tools" && (
+          <ToolsTab
+            me={me}
+            tools={tools}
+            outs={toolOuts}
+            onOpenTool={(toolId) => setSheet({ kind: "tool", toolId })}
+            onTakeOut={(first) => setSheet({ kind: "takeOut", first })}
+            onReturn={(outIds) => setSheet({ kind: "return", outIds })}
+            onNewTool={() => setSheet({ kind: "newTool" })}
+            onOpenPhoto={setLightbox}
+            onUndoOut={(out) => void undoOut(out)}
+            onUndoReturn={(out, key) => void undoReturn(out, key)}
+          />
+        )}
 
         {loaded && tab === "stock" && (
           <>
@@ -515,7 +665,7 @@ export function StoreApp({
             const what =
               entry.kind === "count" ? `Counted ${current.name}: ${qtyUnit(entry.qty, current.unit)}` : `${MOVE_DONE[sheet.move]}: ${qtyUnit(entry.qty, current.unit)} ${current.name}`;
             const gap = entry.kind === "count" && entry.diff ? ` · ${counted(entry.diff, current.unit)}` : "";
-            showToast({ text: what + gap, undo: entry.id });
+            showToast({ text: what + gap, onUndo: () => void undo(entry.id) });
           }}
           onSignedOut={() => setSignedOut(true)}
         />
@@ -545,6 +695,124 @@ export function StoreApp({
         />
       )}
 
+      {sheet?.kind === "tool" && currentTool && (
+        <ToolSheet
+          key={currentTool.id}
+          tool={currentTool}
+          me={me}
+          outs={toolOuts}
+          onClose={() => setSheet(null)}
+          onTakeOut={() => setSheet({ kind: "takeOut", first: currentTool.id, back: currentTool.id })}
+          onReturn={(outIds) => setSheet({ kind: "return", outIds, back: currentTool.id })}
+          onEdit={() => setSheet({ kind: "editTool", toolId: currentTool.id })}
+          onPhoto={(tool) => {
+            applyTool(tool);
+            showToast({ text: "Photo saved" });
+          }}
+          onLost={(out) => void markLost(out)}
+          onOpenPhoto={setLightbox}
+          onUndoOut={(out) => void undoOut(out)}
+          onUndoReturn={(out, key) => void undoReturn(out, key)}
+        />
+      )}
+      {sheet?.kind === "takeOut" && (
+        <TakeOutSheet
+          tools={tools}
+          outs={toolOuts}
+          people={people}
+          first={sheet.first}
+          onClose={() => setSheet(sheet.back ? { kind: "tool", toolId: sheet.back } : null)}
+          onSaved={(outs) => {
+            applyOuts(outs);
+            setSheet(null);
+            setTab("tools");
+            const n = outs.reduce((sum, o) => sum + o.qty, 0);
+            showToast({
+              text: `Taken out: ${n} ${toolWord(n)} with ${outs[0]?.person ?? ""}`,
+              onUndo: async () => {
+                for (const o of outs) await undoOut(o);
+              },
+            });
+          }}
+          onSignedOut={() => setSignedOut(true)}
+        />
+      )}
+      {sheet?.kind === "return" && (
+        <ReturnSheet
+          key={sheet.outIds.join()}
+          lines={toolOuts.filter((o) => sheet.outIds.includes(o.id) && !o.closedAt && stillOut(o) > 0)}
+          name={toolName}
+          onClose={() => setSheet(sheet.back ? { kind: "tool", toolId: sheet.back } : null)}
+          onSaved={(outs) => {
+            applyOuts(outs);
+            setSheet(sheet.back ? { kind: "tool", toolId: sheet.back } : null);
+            // What this phone just recorded: the newest return on each.
+            const made = outs.map((o) => ({ out: o, ret: o.returns[o.returns.length - 1] })).filter((m) => m.ret);
+            const n = made.reduce((sum, m) => sum + m.ret.qty, 0);
+            showToast({
+              text: `Back: ${n} ${toolWord(n)}`,
+              onUndo: async () => {
+                for (const m of made) await undoReturn(m.out, m.ret.key);
+              },
+            });
+          }}
+          onSignedOut={() => setSignedOut(true)}
+        />
+      )}
+      {sheet?.kind === "newTool" && (
+        <NewToolSheet
+          tools={tools}
+          onClose={() => setSheet(null)}
+          onSaved={(tool) => {
+            applyTool(tool);
+            setSheet(null);
+            showToast({ text: `Added ${tool.name}: ${tool.count}` });
+          }}
+        />
+      )}
+      {sheet?.kind === "editTool" && currentTool && isAdmin && (
+        <EditToolSheet
+          key={currentTool.id}
+          tool={currentTool}
+          outNow={outByTool(toolOuts).get(currentTool.id) ?? 0}
+          onClose={() => setSheet({ kind: "tool", toolId: currentTool.id })}
+          onSaved={(tool) => {
+            applyTool(tool);
+            setSheet(tool.retired ? null : { kind: "tool", toolId: tool.id });
+            showToast({ text: tool.retired ? `${tool.name}: not used any more` : "Saved" });
+          }}
+        />
+      )}
+      {sheet?.kind === "check" && (
+        <CheckSheet
+          kind={sheet.check}
+          outs={toolOuts}
+          name={toolName}
+          onClose={() => setSheet(null)}
+          onSaved={(check) => {
+            applyCheck(check);
+            setSheet(null);
+            const n = check.photoUrls.length;
+            showToast({
+              text: `Store room ${check.kind === "open" ? "open" : "closed"} at ${time(check.at)}: ${n} ${n === 1 ? "photo" : "photos"}`,
+              onUndo: () => void undoCheck(check),
+            });
+          }}
+          onSignedOut={() => setSignedOut(true)}
+        />
+      )}
+      {sheet?.kind === "days" && (
+        <DaysSheet
+          me={me}
+          checks={allChecks}
+          older={olderState}
+          onOlder={() => void loadOlderChecks()}
+          onClose={() => setSheet(null)}
+          onUndo={(check) => void undoCheck(check)}
+          onOpenPhoto={setLightbox}
+        />
+      )}
+
       {menuOpen && <SiteMenu me={me} onClose={() => setMenuOpen(false)} onRefresh={() => void refresh()} onLogins={() => setAccessOpen(true)} />}
       {accessOpen && <AccessSheet onClose={() => setAccessOpen(false)} />}
 
@@ -566,11 +834,11 @@ export function StoreApp({
       {toast && (
         <div className={`${styles.toast} ${toast.tone === "error" ? styles.toastError : ""}`} role="status">
           <span>{toast.text}</span>
-          {toast.undo && (
+          {toast.onUndo && (
             <button
               type="button"
               onClick={() => {
-                if (toast.undo) void undo(toast.undo);
+                toast.onUndo?.();
                 setToast(null);
               }}
             >
@@ -580,74 +848,6 @@ export function StoreApp({
         </div>
       )}
     </>
-  );
-}
-
-/* ---------- a photo to go with something (the store's own uploads) ---------- */
-
-function PhotoField({
-  idBase,
-  slot,
-  onPick,
-  onClear,
-  required,
-  cameraOnly,
-  label,
-}: {
-  idBase: string;
-  slot: ReturnType<typeof useUploadSlot>["slot"];
-  onPick: (file: File) => void;
-  onClear: () => void;
-  required?: boolean;
-  cameraOnly?: boolean;
-  label: string;
-}) {
-  const pick = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (file) onPick(file);
-  };
-  return (
-    <div className={site.photoBox}>
-      <span className={styles.label}>{label}</span>
-      {slot ? (
-        <>
-          <span className={site.photoPreview}>
-            {/* eslint-disable-next-line @next/next/no-img-element -- the phone's own preview of the photo */}
-            <img src={slot.preview} alt="" />
-          </span>
-          <p className={slot.state === "error" ? styles.slotError : site.photoState}>
-            {slot.state === "uploading" ? "Uploading the photo…" : slot.state === "ready" ? "Photo ready" : slot.error}
-          </p>
-          <div className={styles.slotButtons}>
-            <label htmlFor={`${idBase}-camera`} role="button" tabIndex={0}>
-              Retake
-            </label>
-            {!required && (
-              <button type="button" onClick={onClear}>
-                Remove photo
-              </button>
-            )}
-          </div>
-        </>
-      ) : (
-        <>
-          {required && <p className={site.photoNeeded}>A photo of the stock going out is needed.</p>}
-          <div className={styles.slotButtons}>
-            <label htmlFor={`${idBase}-camera`} role="button" tabIndex={0}>
-              📷 Take photo
-            </label>
-            {!cameraOnly && (
-              <label htmlFor={`${idBase}-gallery`} role="button" tabIndex={0}>
-                From the gallery
-              </label>
-            )}
-          </div>
-        </>
-      )}
-      <input id={`${idBase}-camera`} data-picker={`${idBase}-camera`} className={styles.hiddenInput} type="file" accept="image/*" capture="environment" onChange={pick} />
-      {!cameraOnly && <input id={`${idBase}-gallery`} data-picker={`${idBase}-gallery`} className={styles.hiddenInput} type="file" accept="image/*" onChange={pick} />}
-    </div>
   );
 }
 

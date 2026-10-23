@@ -9,6 +9,10 @@ const TAG = process.env.VERCEL_ENV === "production" ? "live" : "dev";
 export const EXPENSE_PREFIX = `expense-${TAG}-`;
 export const ITEM_PREFIX = `storeitem-${TAG}-`;
 export const MOVE_PREFIX = `storemove-${TAG}-`;
+/** Tools (they go out each day and come back), each take-out, and the store room's opening and closing photos. */
+export const TOOL_PREFIX = `storetool-${TAG}-`;
+export const TOOL_OUT_PREFIX = `toolout-${TAG}-`;
+export const CHECK_PREFIX = `storecheck-${TAG}-`;
 /** The running numbers behind the expense refs (EXP-0001, IN-0001). */
 export const EXPENSE_COUNTER_ID = `expensecounter-${TAG}`;
 /** Deleted entries still to be marked "Deleted" on the Google Sheet. */
