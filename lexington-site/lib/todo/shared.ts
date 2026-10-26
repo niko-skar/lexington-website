@@ -28,6 +28,8 @@ export interface TodoTask {
   status: "open" | "done";
   createdAt: string;
   createdBy: string;
+  /** Who added it: "office", or a site login's account id (they may change or delete their own). */
+  createdById: string | null;
   photoUrl: string | null;
   doneAt: string | null;
   doneBy: string | null;

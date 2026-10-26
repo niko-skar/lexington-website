@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
  *   done   -- ticked off (anyone on the list; optional note / photo of the fix)
  *   reopen -- not done after all
  *   proof  -- add or change the photo of the fix / the note on a done item
- *   edit   -- change the note, floor or urgent flag (the office only)
+ *   edit   -- change the note, floor or urgent flag (the office; the foreman his own jobs)
  */
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
   try {
@@ -20,12 +20,12 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   }
 }
 
-/** DELETE /api/todo/:id: off the list for good, with its photos. The office only. */
+/** DELETE /api/todo/:id: off the list for good, with its photos. The office; the foreman his own jobs. */
 export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
   try {
-    await requireTodoUser(true);
+    const me = await requireTodoUser();
     const { id } = await params;
-    await deleteTask(id);
+    await deleteTask(me, id);
     return Response.json({ ok: true });
   } catch (error) {
     return errorResponse(error);

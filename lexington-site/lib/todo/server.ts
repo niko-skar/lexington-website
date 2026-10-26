@@ -97,6 +97,7 @@ const FIELDS = `{
   "status": coalesce(status, "open"),
   createdAt,
   "createdBy": coalesce(createdBy, ""),
+  "createdById": createdById,
   "photoUrl": photo.asset->url,
   "doneAt": doneAt,
   "doneBy": doneBy,
@@ -146,13 +147,15 @@ export async function createTask(me: TodoMe, body: Record<string, unknown>): Pro
   await getBuyersClient().create({
     _id: id,
     _type: "siteTask",
-    list: body.list === "house" ? "house" : "site",
+    // A site login (the foreman) adds to the site list only; the house list is the office's.
+    list: me.kind === "admin" && body.list === "house" ? "house" : "site",
     text,
     area: cleanArea(body.area),
     urgent: body.urgent === true,
     status: "open",
     createdAt: new Date().toISOString(),
     createdBy: me.name,
+    createdById: me.id,
     ...(photoId ? { photo: photoRef(photoId) } : {}),
   });
   const task = await getTask(id);
@@ -166,8 +169,8 @@ export async function changeTask(me: TodoMe, id: string, body: Record<string, un
   checkId(id);
   const action = body.action as Action;
   const client = getBuyersClient();
-  const before = await client.fetch<{ status?: string; fix?: string; list: string } | null>(
-    `*[_id == $id && _type == "siteTask"][0]{ status, "fix": donePhoto.asset._ref, "list": coalesce(list, "site") }`,
+  const before = await client.fetch<{ status?: string; fix?: string; list: string; createdById?: string } | null>(
+    `*[_id == $id && _type == "siteTask"][0]{ status, "fix": donePhoto.asset._ref, "list": coalesce(list, "site"), createdById }`,
     { id }
   );
   // A house job does not exist as far as a site login is concerned.
@@ -194,7 +197,7 @@ export async function changeTask(me: TodoMe, id: string, body: Record<string, un
     await client.patch(id).set(set).commit();
     if (fixId && before.fix && before.fix !== fixId) await dropPhoto(before.fix);
   } else if (action === "edit") {
-    if (me.kind !== "admin") throw new TodoError(403, "Only the office can change an item.");
+    if (me.kind !== "admin" && before.createdById !== me.id) throw new TodoError(403, "Only the office can change a job someone else added.");
     const set: Record<string, unknown> = {};
     if ("text" in body) set.text = cleanText(body.text, MAX_TEXT, "note");
     if ("area" in body) set.area = cleanArea(body.area);
@@ -209,14 +212,19 @@ export async function changeTask(me: TodoMe, id: string, body: Record<string, un
   return task;
 }
 
-export async function deleteTask(id: string): Promise<void> {
+/** Off the list for good: the office any job; a site login the jobs it added itself. */
+export async function deleteTask(me: TodoMe, id: string): Promise<void> {
   checkId(id);
   const client = getBuyersClient();
-  const refs = await client.fetch<{ photo?: string; fix?: string } | null>(
-    `*[_id == $id && _type == "siteTask"][0]{ "photo": photo.asset._ref, "fix": donePhoto.asset._ref }`,
+  const refs = await client.fetch<{ photo?: string; fix?: string; list: string; createdById?: string } | null>(
+    `*[_id == $id && _type == "siteTask"][0]{ "photo": photo.asset._ref, "fix": donePhoto.asset._ref, "list": coalesce(list, "site"), createdById }`,
     { id }
   );
   if (!refs) return;
+  if (me.kind !== "admin") {
+    if (refs.list !== "site") throw new TodoError(404, "That item isn't on the list any more.");
+    if (refs.createdById !== me.id) throw new TodoError(403, "Only the office can delete a job someone else added.");
+  }
   await client.delete(id);
   for (const assetId of [refs.photo, refs.fix]) if (assetId) await dropPhoto(assetId);
 }

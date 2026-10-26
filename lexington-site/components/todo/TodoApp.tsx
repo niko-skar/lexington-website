@@ -52,6 +52,8 @@ export function TodoApp({
   fresh: boolean;
 }) {
   const isAdmin = me.kind === "admin";
+  // The office changes any job; the foreman the ones he added himself (26 Oct 2026).
+  const canChange = (task: TodoTask) => isAdmin || (!!task.createdById && task.createdById === me.id);
   const [tasks, setTasks] = useState<TodoTask[]>(initialTasks ?? []);
   const [loaded, setLoaded] = useState(initialTasks !== null);
   // Which list is on screen: the site (shared with the foreman) or the house (the office only).
@@ -319,7 +321,7 @@ export function TodoApp({
 
       <main className={styles.main}>
         {!loaded && <p className={styles.loading}>Loading the list…</p>}
-        {loaded && isAdmin && tab === "open" && (
+        {loaded && tab === "open" && (
           <div className={styles.addBar}>
             <label htmlFor={NEW_CAMERA} className={styles.addPhoto} role="button" tabIndex={0}>
               <span aria-hidden="true">📷</span> Take photo
@@ -336,9 +338,7 @@ export function TodoApp({
             <p className={styles.empty}>
               {house
                 ? "Nothing to do at the house. Take a photo or write a job: only you can see this list."
-                : isAdmin
-                  ? "Nothing to do. Take a photo of something on site and say what needs doing, and it appears here."
-                  : "Nothing to do right now. New jobs appear here by themselves."}
+                : "Nothing to do. Take a photo of something on site and say what needs doing, and it appears here."}
             </p>
           ) : (
             openGroups.map((group) => (
@@ -367,7 +367,7 @@ export function TodoApp({
                       <button type="button" className={styles.doneButton} onClick={() => tick(task.id)}>
                         <span aria-hidden="true">✓</span> Done
                       </button>
-                      {isAdmin && (
+                      {canChange(task) && (
                         <button
                           type="button"
                           className={styles.moreButton}
@@ -382,7 +382,7 @@ export function TodoApp({
                         </button>
                       )}
                     </div>
-                    {isAdmin && itemMenu === task.id && (
+                    {canChange(task) && itemMenu === task.id && (
                       <div className={styles.itemMenu}>
                         <button
                           type="button"
@@ -461,7 +461,7 @@ export function TodoApp({
                       <button type="button" onClick={() => reopen(task.id)}>
                         Not done
                       </button>
-                      {isAdmin && (
+                      {canChange(task) && (
                         <button
                           type="button"
                           className={armed === task.id ? styles.dangerArmed : styles.danger}
@@ -478,29 +478,24 @@ export function TodoApp({
           ))}
       </main>
 
-      {/* The photo pickers. "capture" opens the camera straight away on phones. New jobs are
-          the office's, so only the office gets those two. */}
-      {isAdmin && (
-        <>
-          <input
-            id={NEW_CAMERA}
-            data-picker="new"
-            className={styles.hiddenInput}
-            type="file"
-            accept="image/*"
-            capture="environment"
-            onChange={(e) => pickFile(e, (file) => setComposer({ mode: "new", file }))}
-          />
-          <input
-            id={NEW_GALLERY}
-            data-picker="gallery"
-            className={styles.hiddenInput}
-            type="file"
-            accept="image/*"
-            onChange={(e) => pickFile(e, (file) => setComposer({ mode: "new", file }))}
-          />
-        </>
-      )}
+      {/* The photo pickers. "capture" opens the camera straight away on phones. */}
+      <input
+        id={NEW_CAMERA}
+        data-picker="new"
+        className={styles.hiddenInput}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        onChange={(e) => pickFile(e, (file) => setComposer({ mode: "new", file }))}
+      />
+      <input
+        id={NEW_GALLERY}
+        data-picker="gallery"
+        className={styles.hiddenInput}
+        type="file"
+        accept="image/*"
+        onChange={(e) => pickFile(e, (file) => setComposer({ mode: "new", file }))}
+      />
       <input
         id={FIX_CAMERA}
         data-picker="fix"

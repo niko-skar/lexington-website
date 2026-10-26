@@ -13,10 +13,10 @@ export async function GET(): Promise<Response> {
   }
 }
 
-/** POST /api/todo: a new item (photo and/or note, floor, urgent). The office only. */
+/** POST /api/todo: a new item (photo and/or note, floor, urgent). The office, or the foreman on the site list. */
 export async function POST(request: Request): Promise<Response> {
   try {
-    const me = await requireTodoUser(true);
+    const me = await requireTodoUser();
     const task = await createTask(me, await readJson(request));
     return Response.json({ task }, { status: 201 });
   } catch (error) {
