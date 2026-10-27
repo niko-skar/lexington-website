@@ -18,6 +18,7 @@ const NAV_LINKS = [
   { href: "/todo", label: "Site to-do" },
   { href: "/todo/store", label: "Store" },
   { href: "/todo/expenses", label: "Expenses" },
+  { href: "/admin/quickbooks", label: "QuickBooks" },
   { href: "/todo/alerts", label: "Alerts" },
 ];
 

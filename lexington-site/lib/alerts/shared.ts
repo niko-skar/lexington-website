@@ -4,7 +4,7 @@
 // receipt copies) is now a line in the app's Alerts tab; the ones he has to act on also buzz his
 // phone. Only the office sees them: a site login (the foreman) never does.
 
-export const ALERT_KINDS = ["enquiry", "reservation", "lead", "chat", "ads", "post", "receipt", "test"] as const;
+export const ALERT_KINDS = ["enquiry", "reservation", "lead", "chat", "ads", "post", "receipt", "books", "test"] as const;
 export type AlertKind = (typeof ALERT_KINDS)[number];
 
 export const KIND_LABEL: Record<AlertKind, string> = {
@@ -15,6 +15,7 @@ export const KIND_LABEL: Record<AlertKind, string> = {
   ads: "Ads check",
   post: "Daily post",
   receipt: "Receipt",
+  books: "QuickBooks",
   test: "Test",
 };
 
