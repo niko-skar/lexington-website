@@ -81,6 +81,7 @@ export async function POST(request: Request): Promise<Response> {
           startDate,
           payFrom: Object.fromEntries(METHODS.map((m) => [m, account(text(payField(m)), true)])) as Record<Method, string | null>,
           expenseAccount: account(text("expenseAccount"), false),
+          eventAccount: account(text("eventAccount"), false),
           classFor: Object.fromEntries(CATEGORIES.map((c) => [c, named(text(classField(c)), lists.classes)])) as Record<Category, string | null>,
           location: named(text("location"), lists.locations),
           inflowRules: Array.from({ length: RULE_ROWS }, (_, i) => ({ match: text(`rule_match_${i}`).slice(0, 60), account: text(`rule_account_${i}`) }))

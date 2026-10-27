@@ -14,7 +14,8 @@ import { loadConnection, writeLog, type QboConnection } from "./store";
 // transaction: an expense becomes an Expense (Purchase) paid from the account chosen for how it was
 // paid, booked to the chosen cost account; money in becomes a Deposit into that account from the
 // account its rule names (money from Leo = his shareholder loan, the only loan the company has).
-// The receipt photo goes with it. House / Niko / Event entries never go: they're not the company's.
+// The receipt photo goes with it. Event entries are the company's marketing events (Niko, 27 Oct 2026)
+// and go too, booked to their own account; House / Niko entries never go: they're not the company's.
 //
 // Like the Google Sheet copy (lib/expenses/sheet.ts), the app stays the record: an entry goes when
 // it's saved, again when it changes, and the cron catches up anything missed. It is OFF until Niko
@@ -39,6 +40,8 @@ export interface FeedSettings {
   payFrom: Record<Method, string | null>;
   /** The cost account every Site expense is booked to (the building's work in progress). */
   expenseAccount: string | null;
+  /** The account every Event expense is booked to (the marketing events). */
+  eventAccount: string | null;
   /** The QuickBooks class for Material / Service / Other (optional). */
   classFor: Record<Category, string | null>;
   /** The QuickBooks location for every entry (optional). */
@@ -64,6 +67,7 @@ export async function loadFeedSettings(): Promise<FeedSettings> {
     startDate: doc?.startDate ?? null,
     payFrom: Object.fromEntries(METHODS.map((m) => [m, doc?.payFrom?.[methodKey(m)] ?? null])) as Record<Method, string | null>,
     expenseAccount: doc?.expenseAccount ?? null,
+    eventAccount: doc?.eventAccount ?? null,
     classFor: { ...emptyCategories(), ...(doc?.classFor ?? {}) },
     location: doc?.location ?? null,
     inflowRules: (doc?.inflowRules ?? []).filter((r) => r && r.match && r.account),
@@ -136,7 +140,7 @@ export async function qboLists(): Promise<QboLists> {
 }
 
 /** First guesses for an empty form, from the names in The Lexington's books (nothing is saved). */
-export function suggestSettings(lists: QboLists): Pick<FeedSettings, "payFrom" | "expenseAccount" | "inflowRules"> {
+export function suggestSettings(lists: QboLists): Pick<FeedSettings, "payFrom" | "expenseAccount" | "eventAccount" | "inflowRules"> {
   const find = (test: (name: string) => boolean, types?: string[]) =>
     lists.accounts.find((a) => test(a.name.toLowerCase()) && (!types || types.includes(a.type)))?.id ?? null;
   const cash = find((n) => n.endsWith("cash on hand"), PAY_TYPES);
@@ -144,11 +148,15 @@ export function suggestSettings(lists: QboLists): Pick<FeedSettings, "payFrom" |
   return {
     payFrom: { ...emptyMethods(), Cash: cash, MoMo: cash },
     expenseAccount: find((n) => n.includes("construction work in progress")),
+    eventAccount: find((n) => /advertis|marketing|promotion/.test(n), ["Expense", "Other Expense"]),
     inflowRules: leo ? [{ match: "Leo", account: leo }] : [],
   };
 }
 
 /* ---------- one entry -> one QuickBooks transaction ---------- */
+
+/** Site and Event entries are the company's; House and Niko entries aren't. */
+export const forCompany = (x: Pick<Expense, "forWho">) => x.forWho === "Site" || x.forWho === "Event";
 
 type TxnType = "Purchase" | "Deposit";
 
@@ -176,7 +184,7 @@ const amountText = (n: number) => (Number(n) || 0).toLocaleString("en-GB", { min
 function contentHash(x: FeedDoc): string {
   return createHash("sha1")
     .update(
-      JSON.stringify([x.kind, x.date, x.amount, x.vat, x.vatRate, x.supplier, x.description, x.floor, x.method, x.category, x.material, x.qty, x.ref, x.receiptId ?? null])
+      JSON.stringify([x.kind, x.forWho, x.date, x.amount, x.vat, x.vatRate, x.supplier, x.description, x.floor, x.method, x.category, x.material, x.qty, x.ref, x.receiptId ?? null])
     )
     .digest("hex");
 }
@@ -186,7 +194,7 @@ function alreadySent(x: FeedDoc, conn: QboConnection): boolean {
 }
 
 export function planFor(x: FeedDoc, s: FeedSettings, lists: Pick<QboLists, "accounts">, conn: QboConnection): Plan {
-  if (x.forWho !== "Site") return { send: false, reason: `For ${x.forWho}, not the Site`, needsYou: false };
+  if (!forCompany(x)) return { send: false, reason: `For ${x.forWho}, not the company`, needsYou: false };
   // The start date only decides what goes the first time; something already sent keeps following its changes.
   if (!alreadySent(x, conn) && (!s.startDate || x.date < s.startDate)) return { send: false, reason: "Dated before the start date", needsYou: false };
 
@@ -198,7 +206,9 @@ export function planFor(x: FeedDoc, s: FeedSettings, lists: Pick<QboLists, "acco
   }
   const name = (id: string | null) => lists.accounts.find((a) => a.id === id)?.name ?? "?";
   const noTax = conn.country && conn.country !== "US" ? { GlobalTaxCalculation: "NotApplicable" } : {};
-  const location = s.location ? { DepartmentRef: { value: s.location } } : {};
+  const event = x.forWho === "Event";
+  // The location is the building's stage: it isn't one for a marketing event.
+  const location = s.location && !event ? { DepartmentRef: { value: s.location } } : {};
   const hash = contentHash(x);
   const ref = x.ref ?? x.id;
 
@@ -208,7 +218,7 @@ export function planFor(x: FeedDoc, s: FeedSettings, lists: Pick<QboLists, "acco
     if (!rule || !lists.accounts.some((a) => a.id === rule.account)) {
       return { send: false, reason: `Money in from "${x.supplier || "no name"}": choose where money from them goes`, needsYou: true };
     }
-    const note = [`${ref} from the site app`, `money in from ${x.supplier || "?"}`, `by ${x.method ?? "?"}`, x.description, x.createdBy ? `entered by ${x.createdBy}` : ""]
+    const note = [`${ref} from the site app`, event ? "marketing event" : "", `money in from ${x.supplier || "?"}`, `by ${x.method ?? "?"}`, x.description, x.createdBy ? `entered by ${x.createdBy}` : ""]
       .filter(Boolean)
       .join(" · ");
     return {
@@ -235,15 +245,18 @@ export function planFor(x: FeedDoc, s: FeedSettings, lists: Pick<QboLists, "acco
     };
   }
 
-  if (!s.expenseAccount || !lists.accounts.some((a) => a.id === s.expenseAccount)) {
-    return { send: false, reason: "Choose the cost account for site expenses", needsYou: true };
+  const costAccount = event ? s.eventAccount : s.expenseAccount;
+  if (!costAccount || !lists.accounts.some((a) => a.id === costAccount)) {
+    return { send: false, reason: event ? "Choose the account for marketing events" : "Choose the cost account for site expenses", needsYou: true };
   }
   const category = (x.category ?? "Other") as Category;
-  const classId = s.classFor[category] ?? null;
+  // The classes split the building's costs (material / service / other): marketing has none.
+  const classId = event ? null : (s.classFor[category] ?? null);
   const what = [x.material ? `${x.material}${x.qty ? ` x ${x.qty}` : ""}` : "", x.description].filter(Boolean).join(" · ");
   const vat = x.vat ? vatParts(x.amount, x.vatRate) : null;
   const note = [
     `${ref} from the site app`,
+    event ? "Marketing event" : "",
     x.category ?? "",
     x.floor ?? "",
     `paid by ${x.method ?? "?"}`,
@@ -257,7 +270,7 @@ export function planFor(x: FeedDoc, s: FeedSettings, lists: Pick<QboLists, "acco
     type: "Purchase",
     hash,
     vendor: x.supplier.trim() || null,
-    summary: `Expense from ${payAccount.name}, to ${name(s.expenseAccount)}`,
+    summary: `Expense from ${payAccount.name}, to ${name(costAccount)}`,
     build: (vendorId) => ({
       TxnDate: x.date,
       PaymentType: payAccount.type === "Credit Card" ? "CreditCard" : "Cash",
@@ -273,7 +286,7 @@ export function planFor(x: FeedDoc, s: FeedSettings, lists: Pick<QboLists, "acco
           DetailType: "AccountBasedExpenseLineDetail",
           Description: clip(what || x.supplier || ref, 4000),
           AccountBasedExpenseLineDetail: {
-            AccountRef: { value: s.expenseAccount },
+            AccountRef: { value: costAccount },
             ...(classId ? { ClassRef: { value: classId } } : {}),
           },
         },
@@ -341,7 +354,7 @@ async function attachReceipt(type: TxnType, txnId: string, x: FeedDoc): Promise<
   return id;
 }
 
-/** An entry that went to QuickBooks and is no longer in the app (or no longer a Site entry): remove it there by hand. */
+/** An entry that went to QuickBooks and is no longer in the app (or no longer the company's): remove it there by hand. */
 async function markGone(x: Pick<FeedDoc, "id" | "ref">, state: FeedState, reason: string): Promise<void> {
   if (!state.txnId) return;
   await getBuyersClient().create({
@@ -365,8 +378,8 @@ async function sendOne(x: FeedDoc, s: FeedSettings, lists: QboLists, conn: QboCo
   const plan = planFor(x, s, lists, conn);
 
   if (!plan.send) {
-    // It went before, and now isn't a Site entry any more: QuickBooks still has it.
-    if (state.txnId && x.forWho !== "Site") {
+    // It went before, and now isn't the company's any more: QuickBooks still has it.
+    if (state.txnId && !forCompany(x)) {
       await markGone(x, state, `Changed to "${x.forWho}" in the site app`);
       await client.patch(x.id).unset(["qbo"]).commit();
     }
@@ -451,7 +464,7 @@ async function loadEntries(ids: string[] | null, startDate: string | null): Prom
   return getBuyersClient().fetch<FeedDoc[]>(
     ids
       ? `*[_type == "siteExpense" && _id in $ids] ${FEED_FIELDS}`
-      : `*[_type == "siteExpense" && string::startsWith(_id, $prefix) && ((date >= $start && coalesce(forWho, "Site") == "Site") || defined(qbo.txnId))] | order(date asc, createdAt asc)[0...5000] ${FEED_FIELDS}`,
+      : `*[_type == "siteExpense" && string::startsWith(_id, $prefix) && ((date >= $start && coalesce(forWho, "Site") in ["Site", "Event"]) || defined(qbo.txnId))] | order(date asc, createdAt asc)[0...5000] ${FEED_FIELDS}`,
     { ids: ids ?? [], prefix: EXPENSE_PREFIX, start: startDate ?? "9999-12-31" }
   );
 }
@@ -493,7 +506,7 @@ export async function feedPending(limit = 25): Promise<{ sent: number; failed: n
   const due = all.filter((x) => {
     const plan = planFor(x, r.settings, lists, r.conn);
     const state = x.qbo?.realmId === r.conn.realmId ? (x.qbo ?? {}) : {};
-    if (!plan.send) return !!state.txnId && x.forWho !== "Site";
+    if (!plan.send) return !!state.txnId && !forCompany(x);
     return state.error || state.hash !== plan.hash || state.txnType !== plan.type;
   });
   const vendors = new Map<string, string>();

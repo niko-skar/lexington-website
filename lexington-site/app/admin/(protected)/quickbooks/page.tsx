@@ -196,10 +196,10 @@ async function FeedPanel({ conn }: { conn: QboConnection }) {
         Expenses into QuickBooks · <span>{s.enabled ? "ON" : "OFF"}</span>
       </h2>
       <p className={crm.sectionHint} style={{ maxWidth: "70ch" }}>
-        Every <b>Site</b> entry in the <Link href="/todo/expenses">expense app</Link> dated on or after the start date goes into QuickBooks
-        as it is saved, with its receipt photo: an expense as an Expense paid from the account for how it was paid, money in as a
-        Deposit. House, Niko and Event entries never go. A change in the app updates the entry in QuickBooks; nothing is ever deleted
-        there.
+        Every <b>Site</b> and <b>Event</b> entry in the <Link href="/todo/expenses">expense app</Link> dated on or after the start date
+        goes into QuickBooks as it is saved, with its receipt photo: an expense as an Expense paid from the account for how it was paid,
+        money in as a Deposit. House and Niko entries never go. A change in the app updates the entry in QuickBooks; nothing is ever
+        deleted there.
         {status.lastSentAt && ` Last sent ${when(status.lastSentAt)}.`}{" "}
         {status.sent > 0 && (status.sent === 1 ? "1 entry is in QuickBooks." : `${status.sent} entries are in QuickBooks.`)}
       </p>
@@ -305,10 +305,22 @@ async function FeedPanel({ conn }: { conn: QboConnection }) {
           </select>
         </label>
 
+        <label className={crm.field}>
+          <span>Every marketing event (Event entry) is booked to</span>
+          <select name="eventAccount" defaultValue={pick(s.eventAccount, guess.eventAccount) ?? ""}>
+            <option value="">Choose the account for marketing events</option>
+            {otherAccounts.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.name} ({a.type})
+              </option>
+            ))}
+          </select>
+        </label>
+
         {lists.classes.length > 0 &&
           CATEGORIES.map((c) => (
             <label key={c} className={crm.field}>
-              <span>Class for {c}</span>
+              <span>Class for site {c.toLowerCase()}</span>
               <select name={classField(c)} defaultValue={s.classFor[c] ?? ""}>
                 <option value="">No class</option>
                 {lists.classes.map((x) => (
@@ -322,7 +334,7 @@ async function FeedPanel({ conn }: { conn: QboConnection }) {
 
         {lists.locations.length > 0 && (
           <label className={crm.field}>
-            <span>Location for every entry</span>
+            <span>Location for every site entry</span>
             <select name="location" defaultValue={s.location ?? ""}>
               <option value="">No location</option>
               {lists.locations.map((x) => (
