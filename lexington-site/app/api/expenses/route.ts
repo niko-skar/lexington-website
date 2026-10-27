@@ -2,6 +2,7 @@ import { after } from "next/server";
 
 import { createExpense, listExpenses } from "@/lib/expenses/server";
 import { syncExpense } from "@/lib/expenses/sheet";
+import { feedExpense } from "@/lib/quickbooks/feed";
 import { errorResponse, readJson, requireTodoUser } from "@/lib/todo/server";
 
 export const dynamic = "force-dynamic";
@@ -22,8 +23,9 @@ export async function POST(request: Request): Promise<Response> {
   try {
     const me = await requireTodoUser(true, "expenses");
     const expense = await createExpense(me, await readJson(request));
-    // Off to the Google Sheet once the phone has its answer (the cron catches up any miss).
+    // Off to the Google Sheet and QuickBooks once the phone has its answer (the crons catch up any miss).
     after(() => syncExpense(expense.id));
+    after(() => feedExpense(expense.id));
     return Response.json({ expense }, { status: 201 });
   } catch (error) {
     return errorResponse(error);

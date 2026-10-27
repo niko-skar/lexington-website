@@ -2,6 +2,7 @@ import { after } from "next/server";
 
 import { deleteExpense, updateExpense } from "@/lib/expenses/server";
 import { syncExpense, syncPending } from "@/lib/expenses/sheet";
+import { feedExpense } from "@/lib/quickbooks/feed";
 import { errorResponse, readJson, requireTodoUser } from "@/lib/todo/server";
 
 export const dynamic = "force-dynamic";
@@ -14,6 +15,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     const { id } = await params;
     const expense = await updateExpense(me, id, await readJson(request));
     after(() => syncExpense(expense.id));
+    after(() => feedExpense(expense.id));
     return Response.json({ expense });
   } catch (error) {
     return errorResponse(error);

@@ -174,8 +174,12 @@ function faultText(body: unknown): string | null {
 /**
  * One call to the QuickBooks accounting API for the connected company, e.g. qboApi("companyinfo/123").
  * A 401 renews the login and tries once more; 429 (too many requests) and 5xx wait and try once more.
+ * `form` sends multipart instead of JSON (the receipt uploads).
  */
-export async function qboApi<T>(path: string, init: { method?: "GET" | "POST"; body?: unknown; query?: Record<string, string> } = {}): Promise<T> {
+export async function qboApi<T>(
+  path: string,
+  init: { method?: "GET" | "POST"; body?: unknown; form?: () => FormData; query?: Record<string, string> } = {}
+): Promise<T> {
   const live = await liveConnection();
   const keys = live.keys;
   let conn = live.conn;
@@ -187,13 +191,15 @@ export async function qboApi<T>(path: string, init: { method?: "GET" | "POST"; b
     let res: Response;
     try {
       res = await fetch(url, {
-        method: init.method ?? "GET",
+        method: init.form ? "POST" : (init.method ?? "GET"),
         headers: {
           Authorization: `Bearer ${conn.accessToken}`,
           Accept: "application/json",
-          ...(init.body ? { "Content-Type": "application/json" } : {}),
+          // A multipart body sets its own Content-Type (with the boundary).
+          ...(init.body && !init.form ? { "Content-Type": "application/json" } : {}),
         },
-        body: init.body ? JSON.stringify(init.body) : undefined,
+        // A fresh form each try: a sent one can't be read again.
+        body: init.form ? init.form() : init.body ? JSON.stringify(init.body) : undefined,
         cache: "no-store",
       });
     } catch (error) {

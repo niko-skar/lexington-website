@@ -1425,3 +1425,15 @@
 .dayFlagOk {
   color: var(--x-ok);
 }
+
+/* Receipt first: the photo comes before the typing, and the app fills in the form from it. */
+.receiptFirst {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px dashed var(--x-line);
+  border-radius: 8px;
+  background: var(--x-bg);
+  font-size: 14px;
+  font-weight: 600;
+}

@@ -18,6 +18,7 @@ import {
   type Expense,
   type ForWho,
 } from "@/lib/expenses/shared";
+import type { ReceiptReading } from "@/lib/expenses/readReceipt";
 import { MAX_UNIT, qtyUnit, UNITS, type StoreItem } from "@/lib/store/shared";
 import { photoAt } from "@/lib/todo/shared";
 import { errorText, send } from "./api";
@@ -146,6 +147,13 @@ export function ExpenseForm({
   const [armed, setArmed] = useState(false);
   const receipt = useReceiptSlot();
   const amountRef = useRef<HTMLInputElement>(null);
+  // Receipt first: a new entry's receipt is read as soon as it's uploaded, and fills what's still empty.
+  const [reading, setReading] = useState<{ state: "reading" | "done" | "failed"; note: string } | null>(null);
+  const readFor = useRef<string | null>(null);
+  const now = useRef({ amount, supplier, description, category, material, qty, vat, method, dateTouched, kind });
+  useEffect(() => {
+    now.current = { amount, supplier, description, category, material, qty, vat, method, dateTouched, kind };
+  });
 
   // Past midnight with the page still open: a new entry is for the new day.
   useEffect(() => {
@@ -163,6 +171,91 @@ export function ExpenseForm({
 
   // The parent locks the list while a save is on its way.
   useEffect(() => onBusy(saving), [saving, onBusy]);
+
+  /** Puts what the receipt says into the fields that are still empty (what was typed stays). */
+  const fillFrom = useCallback((r: ReceiptReading) => {
+    if (!r.readable) {
+      setReading({ state: "failed", note: ["The app couldn't read this as a receipt: fill in the form yourself.", ...r.notes].join(" ") });
+      return;
+    }
+    const v = now.current;
+    const filled: string[] = [];
+    if (r.amount && !v.amount.trim()) {
+      setAmount(r.amount.toFixed(2));
+      filled.push("amount");
+    }
+    if (r.date && !v.dateTouched) {
+      setDate(r.date);
+      setDateTouched(true);
+      filled.push("date");
+    }
+    if (r.supplier && !v.supplier.trim()) {
+      setSupplier(r.supplier);
+      filled.push(v.kind === "inflow" ? "from" : "supplier");
+    }
+    if (r.description && !v.description.trim()) {
+      setDescription(r.description);
+      filled.push("description");
+    }
+    if (r.vat && !v.vat) {
+      setVat(true);
+      if (r.vatRate) setVatRate(String(r.vatRate));
+      filled.push("VAT");
+    }
+    if (r.method && !v.method) {
+      setMethod(r.method);
+      filled.push(v.kind === "inflow" ? "received by" : "paid by");
+    }
+    if (v.kind !== "inflow") {
+      if (r.category && !v.category) {
+        setCategory(r.category);
+        filled.push("what for");
+      }
+      if ((v.category ?? r.category) === "Material") {
+        if (r.material && !v.material.trim()) {
+          setMaterial(r.material);
+          filled.push("material");
+        }
+        if (r.qty && v.qty === 1) {
+          setQty(r.qty);
+          filled.push("quantity");
+        }
+      }
+    }
+    const seen = [r.invoiceNumber ? `receipt no. ${r.invoiceNumber}` : "", r.supplierTin ? `supplier TIN ${r.supplierTin}` : ""].filter(Boolean).join(", ");
+    setReading({
+      state: "done",
+      note: [
+        filled.length ? `Filled in from the receipt: ${filled.join(", ")}. Check them before saving.` : "Read the receipt: everything it shows was already filled in.",
+        seen ? `It also shows ${seen}.` : "",
+        ...r.notes,
+      ]
+        .filter(Boolean)
+        .join(" "),
+    });
+  }, []);
+
+  const stored = receipt.slot?.state === "ready" ? receipt.slot.stored : undefined;
+  useEffect(() => {
+    if (x || !stored || readFor.current === stored.id) return;
+    const id = stored.id;
+    readFor.current = id;
+    setReading({ state: "reading", note: "Reading the receipt…" });
+    send<{ reading: ReceiptReading }>("/api/expenses/receipt/read", "POST", { receiptId: id }).then(
+      ({ reading: r }) => {
+        if (readFor.current === id) fillFrom(r);
+      },
+      (e) => {
+        if (readFor.current === id) setReading({ state: "failed", note: `${errorText(e)} Fill in the form yourself.` });
+      }
+    );
+  }, [x, stored, fillFrom]);
+
+  const removeReceipt = () => {
+    readFor.current = null;
+    setReading(null);
+    receipt.clear();
+  };
 
   const inflow = kind === "inflow";
   const isMaterial = !inflow && category === "Material";
@@ -262,6 +355,8 @@ export function ExpenseForm({
         ? await send<{ expense: Expense }>(`/api/expenses/${x.id}`, "PATCH", body)
         : await send<{ expense: Expense }>("/api/expenses", "POST", body);
       receipt.clear(true);
+      readFor.current = null;
+      setReading(null);
       setSaving(false);
       onSaved(expense, !!x);
     } catch (err) {
@@ -335,6 +430,25 @@ export function ExpenseForm({
             </button>
           ))}
         </div>
+
+        {!x && !receipt.slot && !kept && (
+          <div className={site.receiptFirst}>
+            <span>Have the receipt? Start with it: the app reads it and fills in the rest.</span>
+            <div className={styles.slotButtons}>
+              <label htmlFor={RECEIPT_CAMERA} role="button" tabIndex={0}>
+                📷 Photo of the receipt
+              </label>
+              <label htmlFor={RECEIPT_FILE} role="button" tabIndex={0}>
+                Upload
+              </label>
+            </div>
+          </div>
+        )}
+        {reading && (
+          <p className={reading.state === "failed" ? site.receiptNeeded : site.storeNote} role="status" aria-live="polite">
+            {reading.note}
+          </p>
+        )}
 
         <div className={site.formHead}>
           <h2 className={site.formTitle}>
@@ -548,9 +662,15 @@ export function ExpenseForm({
               <span className={site.pdf}>PDF</span>
             )}
             <span className={receipt.slot.state === "error" ? styles.slotError : site.previewText}>
-              {receipt.slot.state === "uploading" ? "Uploading…" : receipt.slot.state === "ready" ? "Receipt ready" : receipt.slot.error}
+              {receipt.slot.state === "uploading"
+                ? "Uploading…"
+                : receipt.slot.state === "ready"
+                  ? reading?.state === "reading"
+                    ? "Reading the receipt…"
+                    : "Receipt ready"
+                  : receipt.slot.error}
             </span>
-            <button type="button" className={styles.linkButton} onClick={() => receipt.clear()}>
+            <button type="button" className={styles.linkButton} onClick={removeReceipt}>
               Remove
             </button>
           </div>

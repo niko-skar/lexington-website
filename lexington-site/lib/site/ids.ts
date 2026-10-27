@@ -19,6 +19,10 @@ export const EXPENSE_COUNTER_ID = `expensecounter-${TAG}`;
 export const SHEET_DELETION_PREFIX = `expensegone-${TAG}-`;
 /** Small settings for the expenses (the Google Sheet's address once it has answered). */
 export const EXPENSE_SETTINGS_ID = `expensesettings-${TAG}`;
+/** How site expenses go into QuickBooks (accounts, start date, on/off). */
+export const QBO_FEED_ID = `qbofeed-${TAG}`;
+/** Entries already in QuickBooks that then left the app (deleted, or no longer a Site entry): to remove there by hand. */
+export const QBO_GONE_PREFIX = `qbogone-${TAG}-`;
 
 export const newId = (prefix: string) => prefix + randomBytes(6).toString("hex");
 

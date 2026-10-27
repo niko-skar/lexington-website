@@ -2,7 +2,7 @@ import "server-only";
 import { randomBytes } from "node:crypto";
 
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
-import { EXPENSE_COUNTER_ID, EXPENSE_PREFIX, isId, newId, SHEET_DELETION_PREFIX } from "@/lib/site/ids";
+import { EXPENSE_COUNTER_ID, EXPENSE_PREFIX, isId, newId, QBO_GONE_PREFIX, SHEET_DELETION_PREFIX } from "@/lib/site/ids";
 import { itemForPurchase } from "@/lib/store/server";
 import { cleanText, TodoError } from "@/lib/todo/server";
 import type { TodoMe } from "@/lib/todo/shared";
@@ -232,12 +232,24 @@ export async function updateExpense(me: TodoMe, id: string, body: Record<string,
   return expense;
 }
 
-/** Gone from the app at once; the Google Sheet row is marked "Deleted" and its receipt moved aside. */
+/**
+ * Gone from the app at once; the Google Sheet row is marked "Deleted" and its receipt moved aside.
+ * One that already went to QuickBooks is listed on the QuickBooks page to remove there by hand
+ * (the app never deletes anything in the books).
+ */
 export async function deleteExpense(id: string): Promise<void> {
   if (!isId(EXPENSE_PREFIX, id)) throw new TodoError(404, "That entry isn't there any more.");
   const client = getBuyersClient();
-  const before = await client.fetch<{ receipt?: string; ref?: string; fileId?: string; synced?: string } | null>(
-    `*[_id == $id && _type == "siteExpense"][0]{ "receipt": receipt.asset._ref, ref, "fileId": sheet.fileId, "synced": sheet.syncedAt }`,
+  const before = await client.fetch<{
+    receipt?: string;
+    ref?: string;
+    fileId?: string;
+    synced?: string;
+    qboType?: string;
+    qboTxn?: string;
+    qboRealm?: string;
+  } | null>(
+    `*[_id == $id && _type == "siteExpense"][0]{ "receipt": receipt.asset._ref, ref, "fileId": sheet.fileId, "synced": sheet.syncedAt, "qboType": qbo.txnType, "qboTxn": qbo.txnId, "qboRealm": qbo.realmId }`,
     { id }
   );
   if (!before) return;
@@ -245,6 +257,19 @@ export async function deleteExpense(id: string): Promise<void> {
   // Only rows the sheet already has need marking.
   if (before.synced) {
     tx.create({ _id: `${SHEET_DELETION_PREFIX}${randomBytes(6).toString("hex")}`, _type: "expenseSheetDeletion", expenseId: id, ref: before.ref ?? null, fileId: before.fileId ?? null, at: new Date().toISOString() });
+  }
+  if (before.qboTxn) {
+    tx.create({
+      _id: `${QBO_GONE_PREFIX}${randomBytes(6).toString("hex")}`,
+      _type: "qboGone",
+      expenseId: id,
+      ref: before.ref ?? null,
+      txnType: before.qboType ?? null,
+      txnId: before.qboTxn,
+      realmId: before.qboRealm ?? null,
+      reason: "Deleted in the site app",
+      at: new Date().toISOString(),
+    });
   }
   await tx.commit();
   if (before.receipt) await dropReceipt(before.receipt);

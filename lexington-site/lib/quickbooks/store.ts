@@ -180,7 +180,7 @@ export async function deleteConnection(): Promise<void> {
 // The log: every call to Intuit that failed, every sign-in/renewal/disconnect, with Intuit's own
 // reference (intuit_tid) so a support ticket can point at the exact request.
 
-export type QboAction = "connect" | "callback" | "refresh" | "api" | "test" | "disconnect";
+export type QboAction = "connect" | "callback" | "refresh" | "api" | "test" | "disconnect" | "feed";
 
 export interface QboLogLine {
   id: string;
