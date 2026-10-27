@@ -169,9 +169,11 @@ interface FeedState {
   attachableId?: string | null;
   syncedAt?: string;
   error?: string | null;
+  /** Set while a run is adding it to QuickBooks, so a second run at the same time doesn't add it twice. */
+  sendingAt?: string | null;
 }
 
-type FeedDoc = Expense & { qbo?: FeedState };
+type FeedDoc = Expense & { qbo?: FeedState; rev?: string };
 
 export type Plan =
   | { send: false; reason: string; /** Shown on the QuickBooks page: Niko has to choose something. */ needsYou: boolean }
@@ -354,6 +356,58 @@ async function attachReceipt(type: TxnType, txnId: string, x: FeedDoc): Promise<
   return id;
 }
 
+type QboLine = Record<string, unknown> & { Id?: string; DetailType?: string; Description?: string; LinkedTxn?: unknown[] };
+type QboTxn = Record<string, unknown> & { Id: string; SyncToken: string; Line?: QboLine[] };
+
+/**
+ * The body that changes a transaction already in QuickBooks to `body` (a sparse update). An
+ * Expense's lines are replaced by the ones sent. A Deposit keeps every line it has and adds the ones
+ * sent without an Id, sparse or full update alike (a corrected amount went in as a second line,
+ * 27 Oct 2026; tried on the practice company), and the API can't remove a deposit line. So the
+ * entry's line goes onto the deposit's first line, and any other line it has is set to 0.
+ */
+function updateBody(type: TxnType, current: QboTxn, body: Record<string, unknown>): Record<string, unknown> {
+  const sparse = { ...body, Id: current.Id, SyncToken: current.SyncToken, sparse: true };
+  if (type === "Purchase") return sparse;
+  const lines = (current.Line ?? []).filter((l) => l.Id && l.DetailType === "DepositLineDetail" && !l.LinkedTxn?.length);
+  if (!lines.length) return sparse;
+  const first = lines.reduce((a, b) => (Number(a.Id) <= Number(b.Id) ? a : b));
+  const [line] = body.Line as QboLine[];
+  const zeroed = lines
+    .filter((l) => l.Id !== first.Id)
+    .map((l) => ({ Id: l.Id, Amount: 0, DetailType: l.DetailType, Description: l.Description, DepositLineDetail: l.DepositLineDetail }));
+  return { ...sparse, Line: [{ ...line, Id: first.Id }, ...zeroed] };
+}
+
+const CLAIM_MS = 5 * 60_000;
+
+/**
+ * Marks the entry as being added, unless another run already is (two saves seconds apart each start
+ * a run). The mark only takes on the entry as last read, so two runs can't both get it.
+ */
+async function claim(x: FeedDoc, state: FeedState, realmId: string): Promise<boolean> {
+  const fresh = (at?: string | null) => !!at && Date.now() - Date.parse(at) < CLAIM_MS;
+  if (fresh(state.sendingAt)) return false;
+  const client = getBuyersClient();
+  let rev = x.rev;
+  for (let attempt = 0; attempt < 3 && rev; attempt++) {
+    try {
+      await client.patch(x.id).ifRevisionId(rev).set({ "qbo.sendingAt": new Date().toISOString(), "qbo.realmId": realmId }).commit();
+      return true;
+    } catch {
+      // Changed since it was read: by another run (leave it to that one), or by something else
+      // that writes to the entry, like the Google Sheet copy (try again on the entry as it is now).
+      const now = await client.fetch<{ rev: string; txnId?: string; sendingAt?: string; realmId?: string } | null>(
+        `*[_id == $id][0]{ "rev": _rev, "txnId": qbo.txnId, "sendingAt": qbo.sendingAt, "realmId": qbo.realmId }`,
+        { id: x.id }
+      );
+      if (!now || (now.realmId === realmId && (now.txnId || fresh(now.sendingAt)))) return false;
+      rev = now.rev;
+    }
+  }
+  return false;
+}
+
 /** An entry that went to QuickBooks and is no longer in the app (or no longer the company's): remove it there by hand. */
 async function markGone(x: Pick<FeedDoc, "id" | "ref">, state: FeedState, reason: string): Promise<void> {
   if (!state.txnId) return;
@@ -370,7 +424,7 @@ async function markGone(x: Pick<FeedDoc, "id" | "ref">, state: FeedState, reason
   });
 }
 
-type Outcome = "sent" | "same" | "skipped" | "failed";
+type Outcome = "sent" | "same" | "skipped" | "busy" | "failed";
 
 async function sendOne(x: FeedDoc, s: FeedSettings, lists: QboLists, conn: QboConnection, vendors: Map<string, string>): Promise<Outcome> {
   const client = getBuyersClient();
@@ -400,11 +454,8 @@ async function sendOne(x: FeedDoc, s: FeedSettings, lists: QboLists, conn: QboCo
     let txnId: string | null = null;
     if (state.txnId) {
       try {
-        const current = await qboApi<Record<TxnType, { Id: string; SyncToken: string }>>(`${path}/${state.txnId}`);
-        const updated = await qboApi<Record<TxnType, { Id: string }>>(path, {
-          method: "POST",
-          body: { ...body, Id: current[plan.type].Id, SyncToken: current[plan.type].SyncToken, sparse: true },
-        });
+        const current = await qboApi<Record<TxnType, QboTxn>>(`${path}/${state.txnId}`);
+        const updated = await qboApi<Record<TxnType, { Id: string }>>(path, { method: "POST", body: updateBody(plan.type, current[plan.type], body) });
         txnId = updated[plan.type].Id;
       } catch (error) {
         // Deleted in QuickBooks by hand: it goes in again as new.
@@ -413,6 +464,7 @@ async function sendOne(x: FeedDoc, s: FeedSettings, lists: QboLists, conn: QboCo
       }
     }
     if (!txnId) {
+      if (!(await claim(x, state, conn.realmId))) return "busy";
       const existing = await findExisting(plan.type, x);
       txnId = existing ? existing.Id : (await qboApi<Record<TxnType, { Id: string }>>(path, { method: "POST", body }))[plan.type].Id;
     }
@@ -449,6 +501,7 @@ async function sendOne(x: FeedDoc, s: FeedSettings, lists: QboLists, conn: QboCo
     await client
       .patch(x.id)
       .set({ "qbo.error": clip(message, 400), "qbo.failedAt": new Date().toISOString(), "qbo.realmId": conn.realmId })
+      .unset(["qbo.sendingAt"])
       .commit()
       .catch(() => {});
     await writeLog({ action: "feed", ok: false, httpStatus: error instanceof QboError ? error.httpStatus : null, intuitTid: error instanceof QboError ? error.intuitTid : null, message: `${x.ref ?? x.id}: ${message}` });
@@ -458,7 +511,7 @@ async function sendOne(x: FeedDoc, s: FeedSettings, lists: QboLists, conn: QboCo
 
 /* ---------- running it ---------- */
 
-const FEED_FIELDS = FIELDS.replace(/}\s*$/, `, "qbo": qbo }`);
+const FEED_FIELDS = FIELDS.replace(/}\s*$/, `, "qbo": qbo, "rev": _rev }`);
 
 async function loadEntries(ids: string[] | null, startDate: string | null): Promise<FeedDoc[]> {
   return getBuyersClient().fetch<FeedDoc[]>(
@@ -488,10 +541,15 @@ export async function feedExpense(id: string): Promise<void> {
   try {
     const r = await ready();
     if (!r) return;
-    const [x] = await loadEntries([id], null);
-    if (!x) return;
     const lists = await qboLists();
-    await sendOne(x, r.settings, lists, r.conn, new Map());
+    // Saved twice within seconds: the first save's run may still be adding it. Wait for that run
+    // to finish, then send this version (rather than leaving it for the catch-up).
+    for (let attempt = 0; attempt < 8; attempt++) {
+      const [x] = await loadEntries([id], null);
+      if (!x) return;
+      if ((await sendOne(x, r.settings, lists, r.conn, new Map())) !== "busy") return;
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+    }
   } catch (error) {
     console.error("[quickbooks feed]", id, error instanceof Error ? error.message : error);
   }
