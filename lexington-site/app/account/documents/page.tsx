@@ -11,6 +11,8 @@ export const metadata = {
 export default async function AccountDocumentsPage() {
   const { buyer } = await requireCurrentBuyer();
   const standard = await getBuyersClient().fetch<StandardAgreements | null>(standardAgreementsQuery);
+  // The draft the buyer is reviewing (with their own details once they have sent them) comes first.
+  const draft = buyer.contractDraft;
 
   return (
     <main className={styles.page}>
@@ -35,9 +37,18 @@ export default async function AccountDocumentsPage() {
       {/* Drafts for review sit here too, so the heading doesn't say "signed". */}
       <div className={styles.section}>
         <h2 className={styles.sectionTitle}>Agreements</h2>
-        {buyer.signedAgreements && buyer.signedAgreements.length > 0 ? (
+        {draft?.fileUrl || (buyer.signedAgreements && buyer.signedAgreements.length > 0) ? (
           <div className={styles.docList}>
-            {buyer.signedAgreements.map((doc, i) => (
+            {draft?.fileUrl && (
+              <a href={draft.fileUrl} target="_blank" rel="noreferrer" className={styles.docLink}>
+                <div className={styles.docName}>
+                  {draft.label || "Sale and Purchase Agreement (draft for your review)"}
+                  {draft.detailsAddedAt && <small>Includes the details you sent</small>}
+                </div>
+                <span>Download</span>
+              </a>
+            )}
+            {(buyer.signedAgreements ?? []).map((doc, i) => (
               <a key={i} href={doc.fileUrl} target="_blank" rel="noreferrer" className={styles.docLink}>
                 {doc.label}
                 <span>Download</span>

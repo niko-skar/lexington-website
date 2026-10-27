@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { requireCurrentBuyer, balanceFor } from "@/lib/auth/currentBuyer";
 import { formatUSD, formatFloor } from "@/lib/format";
 import { formatGHS, formatMethod, usdEquivalent } from "@/lib/currency";
@@ -17,11 +19,70 @@ export default async function AccountOverviewPage() {
   const listPrice = buyer.listPriceUSD ?? 0;
   const discount = listPrice > buyer.contractPriceUSD ? listPrice - buyer.contractPriceUSD : 0;
   const discountPercent = discount > 0 ? Math.round((discount / listPrice) * 1000) / 10 : 0;
+  // Next steps show while a draft agreement is on the account (the buyer's details go into it).
+  const draft = buyer.contractDraft;
+  const detailsSent = buyer.buyerDetails?.submittedAt;
 
   return (
     <main className={styles.page}>
       <div className={styles.eyebrow}>Welcome back</div>
       <h1 className={styles.title}>{buyer.name}</h1>
+
+      {draft && (draft.fileUrl || draft.fillBaseUrl) && (
+        <section className={styles.section} aria-labelledby="next-steps">
+          <h2 id="next-steps" className={styles.sectionTitle}>
+            Next Steps
+          </h2>
+          <ol className={styles.stepList}>
+            <li className={detailsSent ? styles.stepDone : styles.step}>
+              <span className={styles.stepMark}>{detailsSent ? "✓" : "1"}</span>
+              <div>
+                <div className={styles.stepTitle}>Review your draft agreement</div>
+                <div className={styles.stepText}>
+                  Read it, ideally with your lawyer. You can send us any questions or changes with your details.
+                </div>
+                {draft.fileUrl && (
+                  <a href={draft.fileUrl} target="_blank" rel="noreferrer" className={styles.stepLink}>
+                    Download the draft
+                  </a>
+                )}
+              </div>
+            </li>
+            {draft.fillBaseUrl && (
+              <li className={detailsSent ? styles.stepDone : styles.step}>
+                <span className={styles.stepMark}>{detailsSent ? "✓" : "2"}</span>
+                <div>
+                  <div className={styles.stepTitle}>Add your details</div>
+                  <div className={styles.stepText}>
+                    {detailsSent
+                      ? `Done on ${new Date(detailsSent).toLocaleDateString("en-GB", { day: "numeric", month: "long" })}. They are now in your draft agreement.`
+                      : "Your citizenship, ID, home address and an emergency contact. They go straight into your agreement."}
+                  </div>
+                  <Link href="/account/details" className={styles.stepLink}>
+                    {detailsSent ? "Check or change them" : "Add your details"}
+                  </Link>
+                </div>
+              </li>
+            )}
+            <li className={styles.step}>
+              <span className={styles.stepMark}>{draft.fillBaseUrl ? "3" : "2"}</span>
+              <div>
+                <div className={styles.stepTitle}>Sign the agreement</div>
+                <div className={styles.stepText}>We will send you the final agreement to sign.</div>
+              </div>
+            </li>
+            {draft.paymentStep && (
+              <li className={styles.step}>
+                <span className={styles.stepMark}>{draft.fillBaseUrl ? "4" : "3"}</span>
+                <div>
+                  <div className={styles.stepTitle}>Payment</div>
+                  <div className={styles.stepText}>{draft.paymentStep}</div>
+                </div>
+              </li>
+            )}
+          </ol>
+        </section>
+      )}
 
       <div className={styles.grid}>
         <div className={styles.card}>

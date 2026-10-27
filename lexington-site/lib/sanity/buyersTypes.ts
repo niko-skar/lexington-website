@@ -33,6 +33,35 @@ export interface BuyerAccount {
   listPriceUSD?: number;
   payments?: Payment[];
   signedAgreements?: SignedAgreement[];
+  contractDraft?: ContractDraft;
+  buyerDetails?: BuyerDetails;
+}
+
+/** The draft agreement on the buyer's dashboard, with the next steps (only the account query projects the urls). */
+export interface ContractDraft {
+  label?: string;
+  fileUrl?: string;
+  /** The same draft with markers where the buyer's own details go (lib/contracts/fill.ts). */
+  fillBaseUrl?: string;
+  paymentStep?: string;
+  detailsAddedAt?: string;
+}
+
+/** What the buyer sent from the portal for their agreement. */
+export interface BuyerDetails {
+  citizenOfGhana?: boolean;
+  otherCitizenship?: string;
+  idType?: "ghana-card" | "passport";
+  idNumber?: string;
+  idCountry?: string;
+  address?: string;
+  emergencyName?: string;
+  emergencyRelationship?: string;
+  emergencyAddress?: string;
+  emergencyEmail?: string;
+  emergencyPhone?: string;
+  comments?: string;
+  submittedAt?: string;
 }
 
 export interface BuyerAccountSummary {

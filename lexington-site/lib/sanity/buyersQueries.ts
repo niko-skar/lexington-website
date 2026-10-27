@@ -6,6 +6,13 @@ export const buyerAccountByEmailQuery = defineQuery(`
     signedAgreements[]{
       label,
       "fileUrl": file.asset->url
+    },
+    "contractDraft": contractDraft{
+      label,
+      paymentStep,
+      detailsAddedAt,
+      "fileUrl": current.asset->url,
+      "fillBaseUrl": fillBase.asset->url
     }
   }
 `);

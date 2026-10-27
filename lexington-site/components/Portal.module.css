@@ -209,3 +209,232 @@
   gap: 8px;
   align-items: flex-start;
 }
+
+/* ---- next steps and the buyer's details ---------------------------------- */
+
+.stepList {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.step,
+.stepDone {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  padding: 18px 20px;
+  background: var(--paper-dim);
+  border: 1px solid var(--stone-lt);
+  border-radius: var(--radius);
+}
+
+.stepDone {
+  background: var(--paper);
+}
+
+.stepMark {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--clay);
+  border-radius: 50%;
+  color: var(--clay);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.stepDone .stepMark {
+  border-color: var(--sage);
+  background: var(--sage);
+  color: var(--paper);
+}
+
+.stepTitle {
+  font-family: var(--font-serif);
+  font-size: var(--fs-400, 1.15rem);
+  color: var(--ink);
+  margin-bottom: 4px;
+}
+
+.stepText {
+  color: #555;
+  font-size: var(--fs-200);
+  line-height: 1.6;
+}
+
+.stepLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  margin-top: 10px;
+  padding: 0 12px;
+  border: 1px solid var(--clay);
+  border-radius: var(--radius);
+  color: var(--clay);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transition: background 0.15s var(--ease), color 0.15s var(--ease);
+}
+
+.stepLink:hover {
+  background: var(--clay);
+  color: var(--paper);
+}
+
+.docName {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.docLink .docName small {
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--sage);
+}
+
+.lead {
+  max-width: 62ch;
+  color: #555;
+  line-height: 1.7;
+  margin-bottom: var(--space-5);
+}
+
+.inlineLink {
+  color: var(--clay);
+  text-decoration: underline;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  max-width: 720px;
+}
+
+.fieldset {
+  border: 1px solid var(--stone-lt);
+  border-radius: var(--radius);
+  background: var(--paper-dim);
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.legend {
+  padding: 0 6px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sage);
+}
+
+.hint {
+  color: #555;
+  font-size: var(--fs-200);
+}
+
+.choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+}
+
+.choice,
+.check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--fs-200);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.choice input,
+.check input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--clay);
+}
+
+.fieldRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.field span {
+  font-size: 13px;
+  color: #555;
+}
+
+.field input,
+.field textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--stone);
+  border-radius: var(--radius);
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px;
+}
+
+.field input:focus,
+.field textarea:focus {
+  outline: 2px solid var(--clay);
+  outline-offset: 1px;
+}
+
+.formOk {
+  color: var(--sage);
+  font-size: var(--fs-200);
+  margin-bottom: var(--space-5);
+}
+
+.form .formOk {
+  margin-bottom: 0;
+}
+
+.formErr {
+  color: var(--clay);
+  font-size: var(--fs-200);
+}
+
+.submit {
+  align-self: flex-start;
+  min-height: 46px;
+  padding: 0 26px;
+  border: none;
+  border-radius: var(--radius);
+  background: var(--clay);
+  color: var(--paper);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.submit:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}

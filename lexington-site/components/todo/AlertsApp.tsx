@@ -41,7 +41,7 @@ function Linked({ text }: { text: string }) {
 
 function AlertCard({ alert, fresh, opened }: { alert: OwnerAlert; fresh: boolean; opened: boolean }) {
   const tone =
-    alert.kind === "enquiry" || alert.kind === "reservation" || alert.kind === "lead" || alert.kind === "chat"
+    alert.kind === "enquiry" || alert.kind === "reservation" || alert.kind === "lead" || alert.kind === "chat" || alert.kind === "buyer"
       ? alerts.kindPeople
       : alert.kind === "ads" || alert.kind === "todo"
         ? alerts.kindAds
