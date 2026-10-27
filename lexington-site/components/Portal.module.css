@@ -326,18 +326,27 @@
   border-radius: var(--radius);
   background: var(--paper-dim);
   padding: var(--space-5);
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
   min-width: 0;
 }
 
+/* Floated, the legend sits inside the box like a heading. On the box's top edge (the default),
+   the edge ran through the text. */
 .legend {
-  padding: 0 6px;
+  float: left;
+  width: 100%;
+  margin-bottom: 14px;
   font-size: 11px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--sage);
+}
+
+.legend + * {
+  clear: both;
+}
+
+.fieldset > * + * {
+  margin-top: 14px;
 }
 
 .hint {
@@ -359,6 +368,12 @@
   font-size: var(--fs-200);
   color: var(--ink);
   cursor: pointer;
+}
+
+/* On a line of its own, so its box keeps the same space below it as the others. */
+.check {
+  display: flex;
+  width: fit-content;
 }
 
 .choice input,
