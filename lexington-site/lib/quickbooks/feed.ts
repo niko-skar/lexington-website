@@ -10,7 +10,7 @@ import { fetchCompany, qboApi, QboError } from "./client";
 import { loadConnection, writeLog, type QboConnection } from "./store";
 
 // Site expenses into QuickBooks (Niko, 27 Oct 2026: "automate the expenses going into the site app
-// and getting entered into quickbooks"). Each Site entry in /todo/expenses becomes one QuickBooks
+// and getting entered into quickbooks"). Each Site or Event entry in /todo/expenses becomes one QuickBooks
 // transaction: an expense becomes an Expense (Purchase) paid from the account chosen for how it was
 // paid, booked to the chosen cost account; money in becomes a Deposit into that account from the
 // account its rule names (money from Leo = his shareholder loan, the only loan the company has).

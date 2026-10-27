@@ -20,7 +20,7 @@ const OK_TEXT: Record<string, string> = {
   tested: "The test worked: see the first line of the log below.",
   disconnected: "QuickBooks is disconnected. The website can no longer read or write the books.",
   saved: "Saved. Nothing was sent: saving only sets where entries will go.",
-  on: "The expenses feed is on. Site entries from the start date go to QuickBooks as they are saved.",
+  on: "The expenses feed is on. Site and Event entries from the start date go to QuickBooks as they are saved.",
   off: "The expenses feed is off. Nothing more goes to QuickBooks until you switch it on again.",
   done: "Taken off the list.",
 };
