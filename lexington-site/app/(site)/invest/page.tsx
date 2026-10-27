@@ -1,3 +1,4 @@
+import { parseOffer } from "@/lib/agents/factsCore";
 import { pageMetadata } from "@/lib/seo";
 import { client } from "@/lib/sanity/client";
 import { urlFor } from "@/lib/sanity/image";
@@ -5,6 +6,7 @@ import { financingPlanQuery, galleryImagesQuery, siteSettingsQuery } from "@/lib
 import type { FinancingPlan, GalleryImage, SiteSettings } from "@/lib/sanity/types";
 
 import { PageIntro } from "@/components/PageIntro";
+import { OfferBand } from "@/components/OfferBand";
 import { SplitSection } from "@/components/SplitSection";
 import { Button } from "@/components/Button";
 import { Reveal } from "@/components/Reveal";
@@ -27,10 +29,19 @@ export default async function InvestPage() {
   ]);
 
   const rentalImage = images.find((i) => i.category === "interior");
+  // The current offer (site settings → "Current offer"): shown while it is switched on and its last day
+  // has not passed (Accra is on UTC), the same test the lead replies and the ads use.
+  const offer = parseOffer(
+    siteSettings.promoBanner?.message,
+    siteSettings.promoBanner?.enabled,
+    new Date().toISOString().slice(0, 10)
+  );
 
   return (
     <>
       <PageIntro {...siteSettings.investIntro} />
+
+      {offer && !offer.ended && <OfferBand message={offer.text} />}
 
       <section className="section sectionStone" style={{ paddingTop: "clamp(32px, 4vw, 56px)" }}>
         <div className="wrap">

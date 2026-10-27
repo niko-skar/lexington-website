@@ -1,9 +1,4 @@
-import { client } from "@/lib/sanity/client";
-import { siteSettingsQuery } from "@/lib/sanity/queries";
-import type { SiteSettings } from "@/lib/sanity/types";
-
 import { SiteHeader } from "@/components/SiteHeader";
-import { PromoBanner } from "@/components/PromoBanner";
 import { SiteFooter } from "@/components/SiteFooter";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import {
@@ -12,14 +7,11 @@ import {
 } from "@/components/analytics/GoogleTagManager";
 import { VisitTracker } from "@/components/analytics/VisitTracker";
 
-export default async function SiteLayout({
+export default function SiteLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const siteSettings = await client.fetch<SiteSettings>(siteSettingsQuery);
-  const banner = siteSettings.promoBanner;
-
   return (
     <>
       {/* Google Tag Manager (GA4, Meta Pixel, Google Ads) is mounted here, never in the root
@@ -30,7 +22,6 @@ export default async function SiteLayout({
         Skip to content
       </a>
       <SiteHeader />
-      {banner?.enabled && banner.message && <PromoBanner message={banner.message} />}
       {/* The page itself: what screen readers jump to, and what the skip link lands on. */}
       <main id="main" tabIndex={-1}>
         {children}
