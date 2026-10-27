@@ -150,6 +150,14 @@ export const buyerAccount = defineType({
         ),
     }),
     defineField({
+      name: "listPriceUSD",
+      title: "Advertised price (USD)",
+      description: "Optional. The price before this buyer's discount. When it is higher than the contract price, the buyer's dashboard shows the advertised price, the discount and the saving.",
+      type: "number",
+      hidden: ({ document }) => document?.role === "admin" || document?.role === "site",
+      validation: (Rule) => Rule.positive(),
+    }),
+    defineField({
       name: "payments",
       title: "Payments",
       type: "array",
