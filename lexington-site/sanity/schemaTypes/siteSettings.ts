@@ -11,7 +11,7 @@ export const siteSettings = defineType({
   title: "Site Settings",
   type: "document",
   groups: [
-    { name: "banner", title: "Promo Banner" },
+    { name: "banner", title: "Current Offer" },
     { name: "contact", title: "Contact Info" },
     { name: "home", title: "Home Page" },
     { name: "pages", title: "Page Intros" },
@@ -19,13 +19,14 @@ export const siteSettings = defineType({
   fields: [
     defineField({
       name: "promoBanner",
-      title: "Promo banner",
-      description: "A scrolling announcement bar shown site-wide, just below the header.",
+      title: "Current offer",
+      description:
+        "The offer shown at the top of the Invest page. The lead replies, ads and daily posts also read it, so keep this shape: \"Phase 1 pricing ends 30th of November — 15% off with full payment or 8% off with flexible payment plans up to 18 months.\" The last day and the percentages are taken from these words. Switch it off and the page, the replies and the ads stop mentioning an offer.",
       type: "object",
       group: "banner",
       fields: [
-        defineField({ name: "enabled", title: "Show banner", type: "boolean", initialValue: true }),
-        defineField({ name: "message", title: "Message", type: "string" }),
+        defineField({ name: "enabled", title: "Offer is running", type: "boolean", initialValue: true }),
+        defineField({ name: "message", title: "Offer wording", type: "string" }),
       ],
     }),
 

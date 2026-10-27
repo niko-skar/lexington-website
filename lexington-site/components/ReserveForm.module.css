@@ -1,8 +1,8 @@
 /* The "Reserve a residence" form: four short steps in one form. */
 
-/* Clear of the sticky header (about 100px) and the promo banner under it (about 44px). */
+/* Clear of the sticky header (about 100px). */
 .wrap {
-  scroll-margin-top: 165px;
+  scroll-margin-top: 120px;
 }
 
 /* ---------- progress ---------- */
@@ -471,7 +471,7 @@
 /* ---------- done ---------- */
 
 .done {
-  scroll-margin-top: 165px;
+  scroll-margin-top: 120px;
   padding: clamp(24px, 4vw, 40px);
   border: 1px solid var(--brass);
   background: rgba(176, 141, 87, 0.06);

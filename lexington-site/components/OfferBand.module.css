@@ -1,0 +1,49 @@
+/* The current offer, a solid clay band under the Invest page's dark intro. */
+.band {
+  background: var(--clay);
+  color: var(--paper);
+  padding-block: clamp(32px, 4vw, 52px);
+}
+
+.inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-5) var(--space-7);
+}
+
+.copy {
+  flex: 1 1 520px;
+  min-width: 0;
+}
+
+.eyebrow {
+  font-family: var(--font-sans);
+  font-size: var(--fs-100);
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--brass-lt);
+}
+
+.headline {
+  margin-top: 10px;
+  font-size: var(--fs-600);
+  color: var(--paper);
+  text-wrap: balance;
+}
+
+.detail {
+  margin-top: 12px;
+  max-width: 62ch;
+  font-size: var(--fs-400);
+  line-height: 1.5;
+  color: var(--paper);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
