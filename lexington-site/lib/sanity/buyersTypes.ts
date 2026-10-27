@@ -29,6 +29,8 @@ export interface BuyerAccount {
   /** Admin accounts have no unit or contract price. */
   unitNumber: string;
   contractPriceUSD: number;
+  /** The price before this buyer's discount; the dashboard shows the saving when it is above the contract price. */
+  listPriceUSD?: number;
   payments?: Payment[];
   signedAgreements?: SignedAgreement[];
 }

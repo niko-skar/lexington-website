@@ -13,6 +13,10 @@ export default async function AccountOverviewPage() {
   const payments = buyer.payments ?? [];
   const mostRecent = [...payments].sort((a, b) => (b.date ?? "").localeCompare(a.date ?? ""))[0];
   const mostRecentUSD = mostRecent ? usdEquivalent(mostRecent) : null;
+  // The saving only shows when an advertised price above the contract price is on the account.
+  const listPrice = buyer.listPriceUSD ?? 0;
+  const discount = listPrice > buyer.contractPriceUSD ? listPrice - buyer.contractPriceUSD : 0;
+  const discountPercent = discount > 0 ? Math.round((discount / listPrice) * 1000) / 10 : 0;
 
   return (
     <main className={styles.page}>
@@ -32,8 +36,23 @@ export default async function AccountOverviewPage() {
             </div>
           )}
         </div>
+        {discount > 0 && (
+          <>
+            <div className={styles.card}>
+              <div className={styles.cardLabel}>Advertised Price</div>
+              <div className={styles.cardValue}>{formatUSD(listPrice)}</div>
+            </div>
+            <div className={styles.card}>
+              <div className={styles.cardLabel}>Your Discount</div>
+              <div className={styles.cardValueSage}>−{formatUSD(discount)}</div>
+              <div className={styles.empty} style={{ marginTop: 8 }}>
+                {discountPercent}% off · you save {formatUSD(discount)}
+              </div>
+            </div>
+          </>
+        )}
         <div className={styles.card}>
-          <div className={styles.cardLabel}>Contract Price</div>
+          <div className={styles.cardLabel}>{discount > 0 ? "Your Price" : "Contract Price"}</div>
           <div className={styles.cardValue}>{formatUSD(buyer.contractPriceUSD)}</div>
         </div>
         <div className={styles.card}>
