@@ -176,6 +176,8 @@ export async function createTask(me: TodoMe, body: Record<string, unknown>): Pro
 // buzzes the office's phones; a site job the office adds buzzes the phones of the site logins that
 // open the to-do list. House jobs stay the office's own. A tap opens the job itself.
 const firstName = (name: string) => name.trim().split(/\s+/)[0] || "Someone";
+/** The job in one line for a phone alert: its note, or that it's only a photo. */
+const jobLine = (task: TodoTask) => (task.text ? clip(task.text.replace(/\s+/g, " "), 200) : "A photo, no note.");
 
 async function tellTheOtherSide(me: TodoMe, task: TodoTask): Promise<void> {
   if (task.list !== "site") return;
@@ -183,7 +185,7 @@ async function tellTheOtherSide(me: TodoMe, task: TodoTask): Promise<void> {
     // The office password signs in as "Admin": that's the office.
     const who = me.kind === "admin" && me.name === "Admin" ? "The office" : firstName(me.name);
     const title = `${who} added ${task.urgent ? "an urgent job" : "a job"}`;
-    const what = task.text ? clip(task.text.replace(/\s+/g, " "), 200) : "A photo, no note.";
+    const what = jobLine(task);
     const where = task.area ? areaLabel(task.area) : null;
     const open = `/todo?open=${task.id}`;
     const image = task.photoUrl ? photoAt(task.photoUrl, 720) : undefined;
@@ -204,6 +206,39 @@ async function tellTheOtherSide(me: TodoMe, task: TodoTask): Promise<void> {
     await pushToPeople(people, { title, body: where ? `${what}\n${where}` : what, url: open, tag: `todo-${task.id}`, ...(image ? { image } : {}) });
   } catch (error) {
     console.error("[todo] new-job alert failed:", error instanceof Error ? error.message : error);
+  }
+}
+
+// Niko, 27 Oct 2026: "also notify me when albert ticks a job done". The app offers Undo for a few
+// seconds after a tick, so the office hears only once that has passed, and only if the job is still
+// done from that same tick: an undone job says nothing, and of several ticks only the last one
+// speaks. A note or a photo of the fix added in the meantime goes with it.
+const DONE_GRACE_MS = 15_000;
+
+async function tellTheOfficeDone(me: TodoMe, id: string, doneAt: string): Promise<void> {
+  try {
+    await new Promise((resolve) => setTimeout(resolve, DONE_GRACE_MS));
+    const task = await getTask(id);
+    if (!task || task.status !== "done" || task.doneAt !== doneAt) return;
+    const open = `/todo?open=${task.id}`;
+    const image = task.fixUrl ?? task.photoUrl;
+    await notifyOwner({
+      kind: "todo",
+      title: `${firstName(me.name)} ticked ${task.urgent ? "an urgent job" : "a job"} done`,
+      lines: [
+        jobLine(task),
+        ...(task.area ? [areaLabel(task.area)] : []),
+        ...(task.doneNote ? [`Note: ${task.doneNote}`] : []),
+        ...(task.fixUrl ? ["With a photo of the fix."] : []),
+      ],
+      links: [{ label: "Open the job", url: open }],
+      urgent: true,
+      tag: `todo-done-${task.id}`,
+      open,
+      image: image ? photoAt(image, 720) : undefined,
+    });
+  } catch (error) {
+    console.error("[todo] done alert failed:", error instanceof Error ? error.message : error);
   }
 }
 
@@ -228,6 +263,9 @@ export async function changeTask(me: TodoMe, id: string, body: Record<string, un
       .patch(id)
       .set({ status: "done", doneAt: now, doneBy: me.name, ...(note ? { doneNote: note } : {}), ...(fixId ? { donePhoto: photoRef(fixId) } : {}) })
       .commit();
+    // The foreman ticked it: the office hears once the moment for Undo has passed (from the
+    // latest tick only, so a double tap still makes one alert).
+    if (me.kind === "site") after(() => tellTheOfficeDone(me, id, now));
   } else if (action === "reopen") {
     await client.patch(id).set({ status: "open", reopenedAt: now, reopenedBy: me.name }).unset(["doneAt", "doneBy", "doneNote", "donePhoto"]).commit();
     if (before.fix) await dropPhoto(before.fix);
