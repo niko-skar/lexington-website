@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createHash, createHmac, randomUUID, timingSafeEqual } from "node:crypto";
+import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 
 import { claudeConfigured, writeWithClaude } from "@/lib/ai/claude";
 import { notifyOwner } from "@/lib/alerts/notify";
@@ -8,6 +8,7 @@ import { firstName, todayISO } from "@/lib/crm";
 import { internationalDigits } from "@/lib/format";
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
 import { SITE_URL } from "@/lib/seo";
+import { cardVersion } from "@/lib/unitCard";
 
 import {
   AGENT_METADATA,
@@ -149,8 +150,7 @@ async function send(thread: ChatThread, outgoing: Outgoing): Promise<string> {
  */
 function cardUrl(unit: UnitFact): string {
   const base = (process.env.VERCEL_ENV !== "production" && process.env.CARD_BASE_URL?.replace(/\/+$/, "")) || SITE_URL;
-  const version = createHash("sha1").update(`${unit.priceUSD}|${unit.status}|${unit.areaSqm}|${unit.floor}|${unit.type}`).digest("hex").slice(0, 10);
-  return `${base}/api/unit-card/${encodeURIComponent(unit.unitNumber)}?v=${version}`;
+  return `${base}/api/unit-card/${encodeURIComponent(unit.unitNumber)}?v=${cardVersion(unit)}`;
 }
 
 /** Sends the cards after a reply (each one drawn first, so Meta never waits on it). Answers the ones that went. */

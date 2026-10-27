@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 
+import { lockedFor, loginRules, recordFailure, recordSuccess, tooManyTries } from "@/lib/auth/loginGuard";
 import { verifyPassword } from "@/lib/auth/password";
 import { createBuyerSession } from "@/lib/auth/session";
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
@@ -29,6 +30,11 @@ export async function loginAction(
   // exists, only that the combination didn't work.
   const invalid: LoginState = { status: "error", message: "Invalid email or password." };
 
+  // Wrong tries are counted per connection and per account (security check, 27 Oct 2026).
+  const rules = await loginRules("account", email);
+  const wait = await lockedFor(rules);
+  if (wait) return { status: "error", message: tooManyTries(wait) };
+
   let buyer: BuyerAccount | null;
   try {
     buyer = await getBuyersClient().fetch<BuyerAccount | null>(buyerAccountByEmailQuery, { email });
@@ -38,14 +44,17 @@ export async function loginAction(
   }
 
   if (!buyer || !buyer.passwordHash) {
+    await recordFailure(rules);
     return invalid;
   }
 
   const valid = await verifyPassword(password, buyer.passwordHash);
   if (!valid) {
+    await recordFailure(rules);
     return invalid;
   }
 
+  await recordSuccess(rules);
   const isAdmin = buyer.role === "admin";
   const isSite = buyer.role === "site";
   // The site app (to-do, store, expenses) signs in through this same action (hidden next=/todo...);

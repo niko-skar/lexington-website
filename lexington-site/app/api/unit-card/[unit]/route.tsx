@@ -2,6 +2,7 @@ import { ImageResponse } from "next/og";
 
 import { formatFloor, formatUSD } from "@/lib/format";
 import { client } from "@/lib/sanity/client";
+import { cardVersion } from "@/lib/unitCard";
 
 // A residence's card as a picture, drawn like its card on the website (the name, AVAILABLE, the
 // floor, type and size, the price and the floor plan), for the chat assistant to send in Messenger,
@@ -61,10 +62,20 @@ function font(family: string, weight: number): Promise<ArrayBuffer | null> {
   return fonts.get(key)!;
 }
 
-export async function GET(_request: Request, { params }: { params: Promise<{ unit: string }> }): Promise<Response> {
+export async function GET(request: Request, { params }: { params: Promise<{ unit: string }> }): Promise<Response> {
   const name = decodeURIComponent((await params).unit).trim().slice(0, 40);
   const unit = name ? await client.fetch<CardUnit | null>(QUERY, { unit: name }, { cache: "no-store" }) : null;
   if (!unit) return new Response("No such residence.", { status: 404 });
+
+  // Only the current card is drawn: any other address goes to it (security check, 27 Oct 2026), so
+  // asking with made-up versions can't make the server draw pictures over and over.
+  const version = cardVersion({ ...unit, type: unit.bedroomType });
+  const url = new URL(request.url);
+  if (url.searchParams.get("v") !== version || [...url.searchParams.keys()].length !== 1) {
+    const current = new URL(`/api/unit-card/${encodeURIComponent(unit.unitNumber)}`, url);
+    current.searchParams.set("v", version);
+    return new Response(null, { status: 307, headers: { Location: current.toString(), "Cache-Control": "public, max-age=60, s-maxage=60" } });
+  }
 
   const [serif, sans, sansBold] = await Promise.all([font("Playfair Display", 600), font("Inter", 400), font("Inter", 600)]);
   const status = STATUS[unit.status] ?? STATUS.available;

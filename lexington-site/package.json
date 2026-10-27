@@ -21,11 +21,11 @@
     "@vercel/speed-insights": "^2.0.0",
     "bcryptjs": "^3.0.3",
     "jose": "^6.2.12",
-    "next": "^16.3.3",
+    "next": "^16.4.3",
     "next-sanity": "^13.1.1",
     "pdf-lib": "^1.17.1",
-    "react": "^19.2.7",
-    "react-dom": "^19.2.7",
+    "react": "^19.2.9",
+    "react-dom": "^19.2.9",
     "resend": "^6.17.2",
     "sanity": "^6.4.0",
     "server-only": "^0.0.1",
@@ -38,7 +38,7 @@
     "@types/react-dom": "^19",
     "@types/web-push": "^3.6.4",
     "eslint": "^9",
-    "eslint-config-next": "^16.3.3",
+    "eslint-config-next": "^16.4.3",
     "tsx": "^4.23.0",
     "typescript": "^5"
   },
@@ -46,5 +46,11 @@
     "esbuild@0.28.1": true,
     "sharp@0.34.5": true,
     "unrs-resolver@1.12.2": true
+  },
+  "overrides": {
+    "dompurify@3.4.14": "3.4.17",
+    "undici@6.28.0": "6.29.1",
+    "undici@7.29.0": "7.30.1",
+    "zod@4.4.3": "4.6.7"
   }
 }
