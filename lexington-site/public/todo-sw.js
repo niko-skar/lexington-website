@@ -15,8 +15,10 @@ self.addEventListener("fetch", (event) => {
   );
 });
 
-// Phone alerts for the office (23 Oct 2026, instead of emails): every push shows a notification
-// (an iPhone stops sending them to an app that stays silent), and the icon shows the unread count.
+// Phone alerts for the office (23 Oct 2026, instead of emails), and since 27 Oct 2026 for the
+// foreman too (a new job from the office): every push shows a notification (an iPhone stops
+// sending them to an app that stays silent), and the icon shows the office's unread count. A job's
+// photo shows with it where the phone can (Android), only ever from the website's own image store.
 self.addEventListener("push", (event) => {
   let data = {};
   try {
@@ -24,18 +26,20 @@ self.addEventListener("push", (event) => {
   } catch {
     data = { body: event.data ? event.data.text() : "" };
   }
+  const image = typeof data.image === "string" && data.image.startsWith("https://cdn.sanity.io/") ? data.image : undefined;
   const shown = self.registration.showNotification(data.title || "The Lexington", {
     body: data.body || "Open the app to see it.",
     tag: data.tag || undefined,
     icon: "/todo/icon-192.png",
     badge: "/todo/icon-192.png",
+    ...(image ? { image } : {}),
     data: { url: typeof data.url === "string" && data.url.startsWith("/todo") ? data.url : "/todo/alerts" },
   });
   const badge = typeof data.unread === "number" && self.navigator.setAppBadge ? self.navigator.setAppBadge(data.unread).catch(() => {}) : null;
   event.waitUntil(Promise.all([shown, badge]));
 });
 
-// A tap opens the alert in the app: the open app if there is one, else a new one.
+// A tap opens the alert (or the job) in the app: the open app if there is one, else a new one.
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const url = new URL((event.notification.data && event.notification.data.url) || "/todo/alerts", self.location.origin).href;

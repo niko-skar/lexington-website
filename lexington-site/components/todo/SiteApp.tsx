@@ -7,8 +7,9 @@ import type { Expense } from "@/lib/expenses/shared";
 import { needsReorder, type StoreData, type StoreItem } from "@/lib/store/shared";
 import { sectionHref, SECTIONS, type Section, type TodoList, type TodoMe, type TodoTask } from "@/lib/todo/shared";
 import { AlertsApp } from "./AlertsApp";
-import { startPolling } from "./api";
+import { send, startPolling } from "./api";
 import { ExpensesApp } from "./ExpensesApp";
+import { usePhoneAlerts } from "./PhoneAlerts";
 import { appClass, SiteNav } from "./SiteChrome";
 import { StoreApp } from "./StoreApp";
 import { TodoApp } from "./TodoApp";
@@ -138,6 +139,8 @@ export function SiteApp({
   initial,
   initialList,
   openAlert,
+  openJob,
+  seenAlert,
   startedOffline,
 }: {
   me: TodoMe;
@@ -146,6 +149,10 @@ export function SiteApp({
   initialList?: TodoList;
   /** Opened from a phone alert: the alert to show. */
   openAlert?: string;
+  /** Opened from a phone alert about a job: the job to show. */
+  openJob?: string;
+  /** ...and (the office) the alert it came with, which has now been seen. */
+  seenAlert?: string;
   startedOffline: boolean;
 }) {
   const [section, setSection] = useState<Section>(first);
@@ -156,6 +163,17 @@ export function SiteApp({
   const current = useRef(first);
   const scrollAt = useRef<Partial<Record<Section, number>>>({});
   const hasAlerts = me.sections.includes("alerts");
+  // This phone's alerts, for whoever is signed in (the office's, or the foreman's new jobs).
+  const phone = usePhoneAlerts(me);
+
+  // Opened from a phone alert about a job: that alert has been seen (the badge goes down).
+  useEffect(() => {
+    if (!seenAlert || !hasAlerts) return;
+    send<{ unread: number }>("/api/alerts", "POST", { read: [seenAlert] }).then(
+      (result) => setUnread(result.unread),
+      () => {}
+    );
+  }, [seenAlert, hasAlerts]);
 
   // The other parts, fetched quietly once the first one is on screen.
   useEffect(() => {
@@ -244,7 +262,16 @@ export function SiteApp({
       <InstallHint />
       {show("todo") && (
         <div hidden={section !== "todo"}>
-          <TodoApp me={me} active={section === "todo"} initialTasks={data.todo ?? null} initialList={initialList} startedOffline={startedOffline && first === "todo"} fresh={first === "todo"} />
+          <TodoApp
+            me={me}
+            active={section === "todo"}
+            initialTasks={data.todo ?? null}
+            initialList={initialList}
+            openJob={openJob}
+            phone={phone}
+            startedOffline={startedOffline && first === "todo"}
+            fresh={first === "todo"}
+          />
         </div>
       )}
       {show("store") && (
@@ -274,6 +301,7 @@ export function SiteApp({
             fresh={first === "alerts"}
             openAlert={openAlert}
             onUnread={setUnread}
+            phone={phone}
           />
         </div>
       )}

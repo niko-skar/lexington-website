@@ -1,11 +1,12 @@
 import "server-only";
 import { createHash } from "node:crypto";
 
-import { alertsClient, clip, LIVE, newAlertId, PREFIX, pushToPhones, SUB_PREFIX, unreadCount, vapid } from "./notify";
+import { alertsClient, clip, LIVE, newAlertId, OFFICE, PREFIX, pushToPeople, pushToPhones, SUB_PREFIX, unreadCount, vapid } from "./notify";
 import type { AlertsData, OwnerAlert, PushState } from "./shared";
 
 // The reading side of Niko's alerts (the office only: the API checks who asks), and the phones
-// that get them. Saving one is notifyOwner() in ./notify.
+// that get them: the office's, and since 27 Oct 2026 a site login's (the foreman gets a buzz when
+// the office adds a job). Saving one is notifyOwner() in ./notify.
 export { notifyOwner, unreadCount } from "./notify";
 
 const ID_RE = LIVE ? /^alert-live-[a-f0-9]{12}$/ : /^alert-dev-[a-f0-9]{12}$/;
@@ -15,15 +16,14 @@ const SHOWN = 120;
 const FIELDS = `{ "id": _id, kind, title, "lines": coalesce(lines, []), "links": coalesce(links[]{ label, url }, []), "urgent": coalesce(urgent, false), createdAt, "readAt": coalesce(readAt, null) }`;
 
 export async function listAlerts(): Promise<AlertsData> {
-  const [alerts, unread, push] = await Promise.all([
+  const [alerts, unread] = await Promise.all([
     alertsClient().fetch<OwnerAlert[]>(
       `*[_type == "ownerAlert" && string::startsWith(_id, $prefix)] | order(createdAt desc)[0...${SHOWN}] ${FIELDS}`,
       { prefix: PREFIX }
     ),
     unreadCount(),
-    pushState(),
   ]);
-  return { alerts, unread, push };
+  return { alerts, unread };
 }
 
 /** Marks alerts read: all of them, or the ones named. Answers how many it looked at. */
@@ -43,11 +43,12 @@ export async function markRead(which: "all" | string[]): Promise<number> {
 
 /* ---------- the phones that get them ---------- */
 
-export async function pushState(): Promise<PushState> {
+/** The website's side of phone alerts for one person ("office", or a site login's id): its keys, and that person's phones. */
+export async function pushState(owner: string): Promise<PushState> {
   const keys = vapid();
   const subs = await alertsClient().fetch<Array<{ _id: string; name?: string; createdAt?: string }>>(
-    `*[_type == "pushSubscription" && string::startsWith(_id, $prefix)] | order(createdAt asc){ _id, name, createdAt }`,
-    { prefix: SUB_PREFIX }
+    `*[_type == "pushSubscription" && string::startsWith(_id, $prefix) && coalesce(owner, $office) == $owner] | order(createdAt asc){ _id, name, createdAt }`,
+    { prefix: SUB_PREFIX, office: OFFICE, owner }
   );
   return {
     configured: Boolean(keys),
@@ -80,11 +81,14 @@ export function cleanSubscription(value: unknown): { endpoint: string; p256dh: s
   return { endpoint, p256dh, auth };
 }
 
-/** This phone gets the alerts from now on (asked again on every app start: the same phone is one entry). */
-export async function savePushSubscription(sub: { endpoint: string; p256dh: string; auth: string }, name: string): Promise<string> {
+/**
+ * This phone gets the alerts of the person signed in on it from now on. Asked again on every app
+ * start: the same phone is one entry, and it moves to whoever signed in on it last.
+ */
+export async function savePushSubscription(sub: { endpoint: string; p256dh: string; auth: string }, name: string, owner: string): Promise<string> {
   const id = subId(sub.endpoint);
   const client = alertsClient();
-  const since = await client.fetch<string | null>(`*[_id == $id][0].createdAt`, { id });
+  const before = await client.fetch<{ createdAt?: string; owner?: string } | null>(`*[_id == $id][0]{ createdAt, owner }`, { id });
   await client.createOrReplace({
     _id: id,
     _type: "pushSubscription",
@@ -92,21 +96,35 @@ export async function savePushSubscription(sub: { endpoint: string; p256dh: stri
     p256dh: sub.p256dh,
     auth: sub.auth,
     name: clip(name.trim() || "Phone", 40),
-    createdAt: since ?? new Date().toISOString(),
+    owner,
+    createdAt: before?.createdAt && (before.owner ?? OFFICE) === owner ? before.createdAt : new Date().toISOString(),
   });
   return id;
 }
 
-export async function removePushSubscription(endpointOrId: string): Promise<void> {
+/** This phone stops getting them. Only ever one of the asking person's own phones. */
+export async function removePushSubscription(endpointOrId: string, owner: string): Promise<void> {
   const id = SUB_ID_RE.test(endpointOrId) ? endpointOrId : subId(endpointOrId);
-  await alertsClient().delete(id);
+  const client = alertsClient();
+  const sub = await client.fetch<{ owner?: string } | null>(`*[_id == $id && _type == "pushSubscription"][0]{ owner }`, { id });
+  if (sub && (sub.owner ?? OFFICE) === owner) await client.delete(id);
 }
 
-/** "Send a test": a phone alert to the phone that asked (it also lands in the list). */
-export async function sendTest(subscriptionId: string): Promise<{ sent: number; failed: number }> {
+/**
+ * "Send a test": a phone alert to the phone that asked, if it is one of theirs. The office's lands
+ * in the Alerts list too; a site login's is only the buzz.
+ */
+export async function sendTest(subscriptionId: string, owner: string): Promise<{ sent: number; failed: number }> {
   if (!SUB_ID_RE.test(subscriptionId)) return { sent: 0, failed: 0 };
+  if (owner !== OFFICE) {
+    return pushToPeople(
+      [owner],
+      { title: "Phone alerts work", body: "This is how new jobs from the office will show up.", url: "/todo", tag: `test-${subscriptionId}` },
+      subscriptionId
+    );
+  }
   const id = newAlertId();
-  const line = "This is how new enquiries, Facebook leads and messages handed to you will show up.";
+  const line = "This is how new enquiries, Facebook leads, messages handed to you and jobs the foreman adds will show up.";
   await alertsClient().create({
     _id: id,
     _type: "ownerAlert",

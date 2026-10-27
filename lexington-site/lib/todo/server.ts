@@ -1,13 +1,17 @@
 import "server-only";
 import { randomBytes, randomInt } from "node:crypto";
+import { after } from "next/server";
 
+import { clip, notifyOwner, pushToPeople } from "@/lib/alerts/notify";
 import { hashPassword } from "@/lib/auth/password";
 import { getAdminSession, getBuyerSession } from "@/lib/auth/session";
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
 import {
+  areaLabel,
   AREAS,
   MAX_NOTE,
   MAX_TEXT,
+  photoAt,
   SECTIONS,
   SITE_SECTIONS,
   type Section,
@@ -160,7 +164,47 @@ export async function createTask(me: TodoMe, body: Record<string, unknown>): Pro
   });
   const task = await getTask(id);
   if (!task) throw new TodoError(502, "It was saved but couldn't be read back. Pull down to refresh.");
+  // Once the phone has its answer: the other side hears about the new job.
+  after(() => tellTheOtherSide(me, task));
   return task;
+}
+
+/* ---------- a new job reaches the other side's phone ---------- */
+
+// Niko, 27 Oct 2026: "i need a notification if albert adds anything to the to do list, same for
+// him to get notifications from me". A job a site login adds lands in the office's Alerts and
+// buzzes the office's phones; a site job the office adds buzzes the phones of the site logins that
+// open the to-do list. House jobs stay the office's own. A tap opens the job itself.
+const firstName = (name: string) => name.trim().split(/\s+/)[0] || "Someone";
+
+async function tellTheOtherSide(me: TodoMe, task: TodoTask): Promise<void> {
+  if (task.list !== "site") return;
+  try {
+    // The office password signs in as "Admin": that's the office.
+    const who = me.kind === "admin" && me.name === "Admin" ? "The office" : firstName(me.name);
+    const title = `${who} added ${task.urgent ? "an urgent job" : "a job"}`;
+    const what = task.text ? clip(task.text.replace(/\s+/g, " "), 200) : "A photo, no note.";
+    const where = task.area ? areaLabel(task.area) : null;
+    const open = `/todo?open=${task.id}`;
+    const image = task.photoUrl ? photoAt(task.photoUrl, 720) : undefined;
+    if (me.kind === "site") {
+      await notifyOwner({
+        kind: "todo",
+        title,
+        lines: where ? [what, where] : [what],
+        links: [{ label: "Open the job", url: open }],
+        urgent: true,
+        tag: `todo-${task.id}`,
+        open,
+        image,
+      });
+      return;
+    }
+    const people = (await listSiteAccounts()).filter((a) => a.sections.includes("todo")).map((a) => a.id);
+    await pushToPeople(people, { title, body: where ? `${what}\n${where}` : what, url: open, tag: `todo-${task.id}`, ...(image ? { image } : {}) });
+  } catch (error) {
+    console.error("[todo] new-job alert failed:", error instanceof Error ? error.message : error);
+  }
 }
 
 type Action = "done" | "reopen" | "proof" | "edit";

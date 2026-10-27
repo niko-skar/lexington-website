@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
  * page shows its own sign-in so the home-screen app never leaves /todo. The store room and the
  * expenses are in the same app (one page, so moving between them is instant).
  */
-export default async function TodoPage({ searchParams }: { searchParams: Promise<{ list?: string }> }) {
+export default async function TodoPage({ searchParams }: { searchParams: Promise<{ list?: string; open?: string; alert?: string }> }) {
   const me = await getTodoUser();
   if (!me) return <TodoSignIn />;
   // A storekeeper's login opens only the store room.
@@ -22,8 +22,12 @@ export default async function TodoPage({ searchParams }: { searchParams: Promise
     if (me.sections.includes("store")) redirect("/todo/store");
     return <p style={{ padding: 24 }}>This login doesn&rsquo;t open anything yet. Ask the office.</p>;
   }
+  const params = await searchParams;
   // /todo?list=house opens the office's private house list straight away (a site login never can).
-  const initialList: TodoList = me.kind === "admin" && (await searchParams).list === "house" ? "house" : "site";
+  const initialList: TodoList = me.kind === "admin" && params.list === "house" ? "house" : "site";
+  // A tap on a phone alert about a new job: /todo?open=<job>, and for the office &alert=<its alert>.
+  const openJob = typeof params.open === "string" && /^sitetask-(live|dev)-[a-f0-9]{12}$/.test(params.open) ? params.open : undefined;
+  const seenAlert = me.kind === "admin" && typeof params.alert === "string" && /^alert-(live|dev)-[a-f0-9]{12}$/.test(params.alert) ? params.alert : undefined;
 
   let tasks: TodoTask[] = [];
   let failed = false;
@@ -33,5 +37,7 @@ export default async function TodoPage({ searchParams }: { searchParams: Promise
     console.error("[todo] list failed:", error instanceof Error ? error.message : error);
     failed = true;
   }
-  return <SiteApp me={me} section="todo" initial={{ todo: tasks }} initialList={initialList} startedOffline={failed} />;
+  return (
+    <SiteApp me={me} section="todo" initial={{ todo: tasks }} initialList={initialList} openJob={openJob} seenAlert={seenAlert} startedOffline={failed} />
+  );
 }

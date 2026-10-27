@@ -2,9 +2,11 @@
 // and instead build in notifications onto the site to do app". What the website used to email him
 // (enquiries, reservations, Facebook leads, chats handed over, the daily ads check, the daily posts,
 // receipt copies) is now a line in the app's Alerts tab; the ones he has to act on also buzz his
-// phone. Only the office sees them: a site login (the foreman) never does.
+// phone. Only the office sees them: a site login (the foreman) never does. Since 27 Oct 2026 a job
+// the foreman adds to the to-do list is one too; the foreman gets no Alerts tab, only a buzz on his
+// own phone when the office adds a site job (lib/todo/server.ts).
 
-export const ALERT_KINDS = ["enquiry", "reservation", "lead", "chat", "ads", "post", "receipt", "test"] as const;
+export const ALERT_KINDS = ["enquiry", "reservation", "lead", "chat", "ads", "post", "receipt", "todo", "test"] as const;
 export type AlertKind = (typeof ALERT_KINDS)[number];
 
 export const KIND_LABEL: Record<AlertKind, string> = {
@@ -15,6 +17,7 @@ export const KIND_LABEL: Record<AlertKind, string> = {
   ads: "Ads check",
   post: "Daily post",
   receipt: "Receipt",
+  todo: "Site to-do",
   test: "Test",
 };
 
@@ -46,14 +49,13 @@ export interface PushState {
   /** The website can send phone alerts (its keys are set). */
   configured: boolean;
   publicKey: string | null;
-  /** The phones that get them. */
+  /** The phones that get the signed-in person's alerts (the office's, or one site login's). */
   devices: PushDevice[];
 }
 
 export interface AlertsData {
   alerts: OwnerAlert[];
   unread: number;
-  push: PushState;
 }
 
 export const MAX_TITLE = 160;

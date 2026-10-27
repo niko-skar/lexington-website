@@ -1,19 +1,20 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 
-import { KIND_LABEL, type AlertsData, type OwnerAlert, type PushState } from "@/lib/alerts/shared";
+import { KIND_LABEL, type AlertsData, type OwnerAlert } from "@/lib/alerts/shared";
 import type { TodoMe } from "@/lib/todo/shared";
 import { AccessSheet } from "./AccessSheet";
 import alerts from "./Alerts.module.css";
 import { dayName, send, startPolling } from "./api";
+import { OfficePhoneCard, type PhoneAlerts } from "./PhoneAlerts";
 import { SiteHeader, SiteMenu } from "./SiteChrome";
 import styles from "./Todo.module.css";
 
 // Niko's alerts (the office only), in place of the emails the website used to send him (23 Oct
 // 2026). New ones stay marked "New" while the tab is open, then count as read. The card at the top
-// turns on phone alerts: the ones he has to act on buzz the phone (the app must be on the iPhone's
-// home screen for that; Apple allows it nowhere else).
+// turns on phone alerts (./PhoneAlerts): the ones he has to act on buzz the phone (the app must be
+// on the iPhone's home screen for that; Apple allows it nowhere else).
 
 type ToastData = { text: string; tone?: "error" };
 
@@ -42,7 +43,7 @@ function AlertCard({ alert, fresh, opened }: { alert: OwnerAlert; fresh: boolean
   const tone =
     alert.kind === "enquiry" || alert.kind === "reservation" || alert.kind === "lead" || alert.kind === "chat"
       ? alerts.kindPeople
-      : alert.kind === "ads"
+      : alert.kind === "ads" || alert.kind === "todo"
         ? alerts.kindAds
         : alerts.kindQuiet;
   return (
@@ -87,188 +88,6 @@ function AlertCard({ alert, fresh, opened }: { alert: OwnerAlert; fresh: boolean
   );
 }
 
-/* ---------- phone alerts ---------- */
-
-const never = () => () => {};
-type Support = "yes" | "home-screen" | "no";
-const useSupport = () =>
-  useSyncExternalStore<Support>(
-    never,
-    () => {
-      const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
-      const standalone =
-        window.matchMedia("(display-mode: standalone)").matches || (navigator as Navigator & { standalone?: boolean }).standalone === true;
-      if ("serviceWorker" in navigator && "PushManager" in window && "Notification" in window) return "yes";
-      return ios && !standalone ? "home-screen" : "no";
-    },
-    () => "yes"
-  );
-
-function deviceName(): string {
-  const ua = navigator.userAgent;
-  if (/iphone/i.test(ua)) return "iPhone";
-  if (/ipad/i.test(ua)) return "iPad";
-  if (/android/i.test(ua)) return "Android phone";
-  if (/mac os/i.test(ua)) return "Mac";
-  if (/windows/i.test(ua)) return "Windows computer";
-  return "Phone";
-}
-
-/** The website's public key in the form the phone wants it. */
-function keyBytes(base64url: string): Uint8Array<ArrayBuffer> {
-  const base64 = (base64url + "=".repeat((4 - (base64url.length % 4)) % 4)).replace(/-/g, "+").replace(/_/g, "/");
-  const raw = atob(base64);
-  const out = new Uint8Array(new ArrayBuffer(raw.length));
-  for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
-  return out;
-}
-
-async function thisPhone(): Promise<PushSubscription | null> {
-  const reg = await navigator.serviceWorker.getRegistration("/todo/");
-  return reg ? reg.pushManager.getSubscription() : null;
-}
-
-const useDenied = () => useSyncExternalStore(never, () => "Notification" in window && Notification.permission === "denied", () => false);
-
-function PhoneAlerts({ push, onPush, toast }: { push: PushState; onPush: (p: PushState) => void; toast: (t: ToastData) => void }) {
-  const support = useSupport();
-  const deniedBefore = useDenied();
-  const [mine, setMine] = useState<{ id: string | null; on: boolean } | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [deniedNow, setBlocked] = useState(false);
-  const blocked = deniedBefore || deniedNow;
-  const checked = useRef(false);
-
-  // Is this phone already getting them? Tell the website again once per start (it may have forgotten it).
-  useEffect(() => {
-    if (support !== "yes" || !push.configured || checked.current) return;
-    checked.current = true;
-    void (async () => {
-      try {
-        const sub = await thisPhone();
-        if (!sub) return setMine({ id: null, on: false });
-        const saved = await send<{ id: string; push: PushState }>("/api/alerts/push", "POST", { subscription: sub.toJSON(), device: deviceName() });
-        setMine({ id: saved.id, on: true });
-        onPush(saved.push);
-      } catch {
-        setMine({ id: null, on: false });
-      }
-    })();
-  }, [support, push.configured, onPush]);
-
-  const turnOn = async () => {
-    if (!push.publicKey) return;
-    setBusy(true);
-    try {
-      // Asked straight from the tap: iPhones only show the question then.
-      const permission = await Notification.requestPermission();
-      if (permission !== "granted") {
-        setBlocked(permission === "denied");
-        toast({ text: "Phone alerts need your OK. Tap Allow when the phone asks.", tone: "error" });
-        return;
-      }
-      const reg = (await navigator.serviceWorker.getRegistration("/todo/")) ?? (await navigator.serviceWorker.register("/todo-sw.js", { scope: "/todo" }));
-      await navigator.serviceWorker.ready;
-      const sub = (await reg.pushManager.getSubscription()) ?? (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(push.publicKey) }));
-      const saved = await send<{ id: string; push: PushState }>("/api/alerts/push", "POST", { subscription: sub.toJSON(), device: deviceName() });
-      setMine({ id: saved.id, on: true });
-      onPush(saved.push);
-      toast({ text: "Phone alerts are on. Send a test to see one." });
-    } catch (e) {
-      toast({ text: e instanceof Error && e.message ? e.message : "Couldn't turn phone alerts on. Try again.", tone: "error" });
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const turnOff = async () => {
-    setBusy(true);
-    try {
-      const sub = await thisPhone();
-      const endpoint = sub?.endpoint;
-      await sub?.unsubscribe().catch(() => false);
-      const result = await send<{ push: PushState }>("/api/alerts/push", "DELETE", mine?.id ? { id: mine.id } : { endpoint });
-      onPush(result.push);
-      setMine({ id: null, on: false });
-      toast({ text: "Phone alerts are off for this phone. They still land here." });
-    } catch (e) {
-      toast({ text: e instanceof Error ? e.message : "That didn't work. Try again.", tone: "error" });
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const test = async () => {
-    if (!mine?.id) return;
-    setBusy(true);
-    try {
-      await send("/api/alerts/push", "POST", { test: mine.id });
-      toast({ text: "Test sent. It should buzz in a few seconds." });
-    } catch (e) {
-      toast({ text: e instanceof Error ? e.message : "The test didn't go. Try again.", tone: "error" });
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const others = push.devices.filter((d) => d.id !== mine?.id).length;
-  let body: React.ReactNode;
-  if (!push.configured) body = <p>Not switched on on the website yet. Everything still lands in this list.</p>;
-  else if (support === "home-screen")
-    body = (
-      <p>
-        To get alerts on this iPhone, open the app from your home screen (Share <span aria-hidden="true">⬆︎</span>, then <b>Add to Home Screen</b>) and turn them on there.
-      </p>
-    );
-  else if (support === "no") body = <p>This browser can&rsquo;t show phone alerts. Everything still lands in this list.</p>;
-  else if (blocked && !mine?.on)
-    body = (
-      <p>
-        Alerts are blocked for this app. On the iPhone: <b>Settings → Notifications → Site to-do → Allow Notifications</b>, then come back here.
-      </p>
-    );
-  else if (!mine) body = <p>Checking this phone…</p>;
-  else if (mine.on)
-    body = (
-      <>
-        <p>
-          <b>On for this phone.</b> New enquiries, reservations, Facebook leads, messages handed to you and problems buzz it.
-        </p>
-        <div className={alerts.phoneButtons}>
-          <button type="button" className={alerts.primary} onClick={() => void test()} disabled={busy}>
-            Send a test
-          </button>
-          <button type="button" className={alerts.secondary} onClick={() => void turnOff()} disabled={busy}>
-            Turn off
-          </button>
-        </div>
-      </>
-    );
-  else
-    body = (
-      <>
-        <p>Get a buzz on this phone for new enquiries, reservations, Facebook leads, messages handed to you and problems.</p>
-        <div className={alerts.phoneButtons}>
-          <button type="button" className={alerts.primary} onClick={() => void turnOn()} disabled={busy}>
-            {busy ? "Turning on…" : "Turn on phone alerts"}
-          </button>
-        </div>
-      </>
-    );
-
-  return (
-    <section className={alerts.phone} aria-label="Phone alerts">
-      <h2 className={alerts.phoneTitle}>Phone alerts</h2>
-      {body}
-      {push.configured && others > 0 && (
-        <p className={alerts.phoneMore}>
-          Also on {others} other {others === 1 ? "device" : "devices"}.
-        </p>
-      )}
-    </section>
-  );
-}
-
 /* ---------- the tab ---------- */
 
 export function AlertsApp({
@@ -279,6 +98,7 @@ export function AlertsApp({
   fresh,
   openAlert,
   onUnread,
+  phone,
 }: {
   me: TodoMe;
   /** On screen: only then does it keep itself fresh and count alerts as read. */
@@ -289,6 +109,8 @@ export function AlertsApp({
   /** Opened from a phone alert: that one is shown first. */
   openAlert?: string;
   onUnread: (n: number) => void;
+  /** This phone's alerts (the app keeps them for all its parts). */
+  phone: PhoneAlerts;
 }) {
   const [data, setData] = useState<AlertsData | null>(initial);
   const [offline, setOffline] = useState(startedOffline);
@@ -376,8 +198,6 @@ export function AlertsApp({
     return () => clearTimeout(timer);
   }, [active, opened, data]);
 
-  const onPush = useCallback((push: PushState) => setData((d) => (d ? { ...d, push } : d)), []);
-
   const list = data?.alerts ?? [];
   const groups: Array<{ day: string; items: OwnerAlert[] }> = [];
   for (const a of list) {
@@ -409,9 +229,9 @@ export function AlertsApp({
           <p className={styles.loading}>Loading the alerts…</p>
         ) : (
           <>
-            <PhoneAlerts push={data.push} onPush={onPush} toast={showToast} />
+            <OfficePhoneCard phone={phone} toast={showToast} />
             {list.length === 0 ? (
-              <p className={styles.empty}>No alerts yet. New enquiries, Facebook leads and messages handed to you will show up here.</p>
+              <p className={styles.empty}>No alerts yet. New enquiries, Facebook leads, messages handed to you and jobs the foreman adds will show up here.</p>
             ) : (
               groups.map((g) => (
                 <section key={g.day} className={styles.group}>

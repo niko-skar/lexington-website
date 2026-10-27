@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AREAS, areaLabel, listLabel, MAX_NOTE, MAX_TEXT, photoAt, type TodoList, type TodoMe, type TodoTask } from "@/lib/todo/shared";
 import { AccessSheet } from "./AccessSheet";
 import { dayName, errorText, send, startPolling, when } from "./api";
+import { JobAlertsCard, JobAlertsMenu, type PhoneAlerts } from "./PhoneAlerts";
 import { SiteHeader, SiteMenu } from "./SiteChrome";
 import styles from "./Todo.module.css";
 import { useUploadSlot } from "./useUploadSlot";
@@ -38,6 +39,8 @@ export function TodoApp({
   active,
   initialTasks,
   initialList = "site",
+  openJob,
+  phone,
   startedOffline,
   fresh,
 }: {
@@ -47,6 +50,10 @@ export function TodoApp({
   /** Null when the app opened on another part and the list hasn't arrived yet. */
   initialTasks: TodoTask[] | null;
   initialList?: TodoList;
+  /** Opened from a phone alert about a new job: that job is shown, lit up for a moment. */
+  openJob?: string;
+  /** This phone's alerts: a site login turns its buzz for new jobs on here. */
+  phone?: PhoneAlerts;
   startedOffline: boolean;
   /** The page came with this part's data just now (it's the part the app opened on). */
   fresh: boolean;
@@ -54,12 +61,15 @@ export function TodoApp({
   const isAdmin = me.kind === "admin";
   // The office changes any job; the foreman the ones he added himself (26 Oct 2026).
   const canChange = (task: TodoTask) => isAdmin || (!!task.createdById && task.createdById === me.id);
+  // The job a phone alert opened (it came with the page), on its own list and tab.
+  const [openTask] = useState(() => (openJob ? (initialTasks ?? []).find((t) => t.id === openJob) : undefined));
   const [tasks, setTasks] = useState<TodoTask[]>(initialTasks ?? []);
   const [loaded, setLoaded] = useState(initialTasks !== null);
   // Which list is on screen: the site (shared with the foreman) or the house (the office only).
-  const [list, setList] = useState<TodoList>(isAdmin ? initialList : "site");
+  const [list, setList] = useState<TodoList>(isAdmin ? (openTask?.list ?? initialList) : "site");
   const tasksRef = useRef<TodoTask[]>(initialTasks ?? []);
-  const [tab, setTab] = useState<Tab>("open");
+  const [tab, setTab] = useState<Tab>(openTask?.status === "done" ? "done" : "open");
+  const [lit, setLit] = useState(openTask?.id ?? "");
   const [offline, setOffline] = useState(startedOffline);
   const [signedOut, setSignedOut] = useState(false);
   const [toast, setToast] = useState<ToastData | null>(null);
@@ -157,6 +167,24 @@ export function TodoApp({
     else if (Date.now() - lastLoadedAt.current > 4_000) void refresh();
     return startPolling(refresh, 5_000, 20_000);
   }, [active, refresh]);
+
+  // Opened from a phone alert: the job comes into view, lit up for a few seconds, and the address
+  // drops the alert's part so a reload doesn't do it again. A job deleted since then says so.
+  useEffect(() => {
+    if (!openJob) return;
+    const url = new URL(window.location.href);
+    url.searchParams.delete("open");
+    url.searchParams.delete("alert");
+    window.history.replaceState(null, "", url.pathname + url.search);
+    if (!openTask) {
+      if (startedOffline) return;
+      const timer = setTimeout(() => showToast({ text: "That job isn't on the list any more." }), 400);
+      return () => clearTimeout(timer);
+    }
+    document.getElementById(openTask.id)?.scrollIntoView({ block: "center" });
+    const timer = setTimeout(() => setLit(""), 4000);
+    return () => clearTimeout(timer);
+  }, [openJob, openTask, startedOffline, showToast]);
 
   /* ---------- changes ---------- */
 
@@ -321,6 +349,8 @@ export function TodoApp({
 
       <main className={styles.main}>
         {!loaded && <p className={styles.loading}>Loading the list…</p>}
+        {/* A site login (the foreman): a buzz on his phone when the office adds a job. The office turns its alerts on in Alerts. */}
+        {loaded && tab === "open" && !isAdmin && phone && <JobAlertsCard phone={phone} toast={showToast} />}
         {loaded && tab === "open" && (
           <div className={styles.addBar}>
             <label htmlFor={NEW_CAMERA} className={styles.addPhoto} role="button" tabIndex={0}>
@@ -347,7 +377,7 @@ export function TodoApp({
                   {group.title} <span>{group.items.length}</span>
                 </h2>
                 {group.items.map((task) => (
-                  <article key={task.id} className={`${styles.card} ${task.urgent ? styles.cardUrgent : ""}`}>
+                  <article key={task.id} id={task.id} className={`${styles.card} ${task.urgent ? styles.cardUrgent : ""} ${lit === task.id ? styles.cardLit : ""}`}>
                     {task.photoUrl && (
                       <button type="button" className={styles.photo} onClick={() => setLightbox(task.photoUrl)} aria-label="Open the photo">
                         {/* eslint-disable-next-line @next/next/no-img-element -- a resized copy from the image store */}
@@ -357,7 +387,8 @@ export function TodoApp({
                     <div className={styles.cardBody}>
                       {task.urgent && <span className={styles.urgent}>Urgent</span>}
                       {task.text ? <p className={styles.text}>{task.text}</p> : <p className={styles.textMuted}>No note, see the photo.</p>}
-                      <p className={styles.meta}>
+                      {/* "just now" on the server can be "1 min ago" a second later on the phone: no hydration error over that. */}
+                      <p className={styles.meta} suppressHydrationWarning>
                         Added {ago(task.createdAt)}
                         {task.createdBy ? ` by ${task.createdBy}` : ""}
                       </p>
@@ -415,11 +446,11 @@ export function TodoApp({
           ) : (
             doneGroups.map((group) => (
               <section key={group.day} className={styles.group}>
-                <h2 className={styles.groupTitle}>
+                <h2 className={styles.groupTitle} suppressHydrationWarning>
                   {group.day} <span>{group.items.length}</span>
                 </h2>
                 {group.items.map((task) => (
-                  <article key={task.id} className={`${styles.card} ${styles.doneCard}`}>
+                  <article key={task.id} id={task.id} className={`${styles.card} ${styles.doneCard} ${lit === task.id ? styles.cardLit : ""}`}>
                     <div className={styles.doneRow}>
                       {task.photoUrl ? (
                         <button type="button" className={styles.thumb} onClick={() => setLightbox(task.photoUrl)} aria-label="Open the photo">
@@ -433,7 +464,7 @@ export function TodoApp({
                       )}
                       <div className={styles.doneText}>
                         <p className={styles.text}>{task.text || "No note"}</p>
-                        <p className={styles.doneMeta}>
+                        <p className={styles.doneMeta} suppressHydrationWarning>
                           ✓ Done{task.doneBy ? ` by ${task.doneBy}` : ""}
                           {task.doneAt ? ` · ${when(task.doneAt)}` : ""}
                           {house ? "" : ` · ${areaLabel(task.area)}`}
@@ -574,6 +605,7 @@ export function TodoApp({
               </div>
             </>
           )}
+          {!isAdmin && phone && <JobAlertsMenu phone={phone} toast={showToast} onDone={() => setMenuOpen(false)} />}
         </SiteMenu>
       )}
 
