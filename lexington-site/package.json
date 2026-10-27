@@ -21,7 +21,7 @@
     "@vercel/speed-insights": "^2.0.0",
     "bcryptjs": "^3.0.3",
     "jose": "^6.2.12",
-    "next": "^16.3.3",
+    "next": "^16.4.3",
     "next-sanity": "^13.1.1",
     "pdf-lib": "^1.17.1",
     "react": "^19.2.7",
@@ -38,7 +38,7 @@
     "@types/react-dom": "^19",
     "@types/web-push": "^3.6.4",
     "eslint": "^9",
-    "eslint-config-next": "^16.3.3",
+    "eslint-config-next": "^16.4.3",
     "tsx": "^4.23.0",
     "typescript": "^5"
   },
