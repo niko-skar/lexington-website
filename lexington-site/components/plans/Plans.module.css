@@ -1,0 +1,723 @@
+/* Floor plans (admin): the as-built floor in quiet greys underneath, the homes drawn on top in ink,
+   each home a soft fill of its own. Laptop first; on a phone the panel goes under the plan. */
+
+.app {
+  --plan-board: #fbfaf6;
+  --plan-common: #e4e4df;
+  --plan-outdoor: #dde9ef;
+  --plan-unhomed: #efe9dc;
+  --plan-wall: #23282b;
+  --plan-struct: #9aa1a3;
+  padding: var(--space-4) clamp(12px, 2vw, 24px) var(--space-6);
+}
+
+.devBanner {
+  margin-bottom: 10px;
+  padding: 8px 12px;
+  border: 1px dashed var(--brass);
+  border-radius: var(--radius);
+  font-size: 13px;
+  color: var(--brass-text);
+  background: #fbf6ea;
+}
+
+/* ---- top: title, floors, layouts --------------------------------------------------------------- */
+
+.top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 20px;
+  margin-bottom: 10px;
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: clamp(24px, 2.4vw, 32px);
+  font-weight: 500;
+}
+
+.floors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.floor,
+.floorOn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 56px;
+  padding: 6px 10px;
+  border: 1px solid var(--stone-lt);
+  border-radius: var(--radius);
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.floor small,
+.floorOn small {
+  font-size: 10.5px;
+  font-weight: 500;
+  color: #6b7072;
+}
+
+.floorOn {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper);
+}
+
+.floorOn small {
+  color: #c9cdcf;
+}
+
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 8px 0;
+  border-top: 1px solid var(--stone-lt);
+}
+
+.options,
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.option,
+.optionOn {
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--stone-lt);
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.optionOn {
+  border-color: var(--clay);
+  background: #f6e9e1;
+  font-weight: 700;
+}
+
+.btn,
+.btnPrimary,
+.danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--stone-lt);
+  border-radius: var(--radius);
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.btn:disabled,
+.btnPrimary:disabled,
+.danger:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.btnPrimary {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.danger {
+  margin-top: 4px;
+  color: #8f1d12;
+  border-color: #e6b3ab;
+}
+
+.menu {
+  position: relative;
+}
+
+.menu > summary {
+  list-style: none;
+}
+
+.menu > summary::-webkit-details-marker {
+  display: none;
+}
+
+.menuBody {
+  position: absolute;
+  right: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 260px;
+  margin-top: 6px;
+  padding: 12px;
+  border: 1px solid var(--stone-lt);
+  border-radius: var(--radius);
+  background: var(--paper);
+  box-shadow: 0 10px 30px rgba(20, 24, 26, 0.12);
+}
+
+.save_saved,
+.save_dirty,
+.save_saving,
+.save_error {
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.save_saved {
+  color: #4c5646;
+}
+
+.save_dirty,
+.save_saving {
+  color: var(--brass-text);
+}
+
+.save_error {
+  color: #8f1d12;
+}
+
+.conflict {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0;
+  padding: 8px 12px;
+  border-left: 3px solid #b3261e;
+  border-radius: var(--radius);
+  background: #fdf0ee;
+  font-size: 13.5px;
+}
+
+/* ---- the plan and the panel ---------------------------------------------------------------------- */
+
+.main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 14px;
+  align-items: start;
+}
+
+.canvas {
+  position: relative;
+  height: calc(100vh - 230px);
+  min-height: 460px;
+  overflow: hidden;
+  border: 1px solid var(--stone-lt);
+  border-radius: var(--radius);
+  background: var(--plan-board);
+  touch-action: none;
+  user-select: none;
+  cursor: default;
+}
+
+.drawing {
+  cursor: crosshair;
+}
+
+.svg {
+  display: block;
+}
+
+.slab {
+  fill: #f1ede3;
+  stroke: var(--plan-struct);
+}
+
+.grid {
+  stroke: var(--sky);
+  opacity: 0.55;
+}
+
+.column {
+  fill: #b9bec0;
+  stroke: #8d9496;
+}
+
+.core {
+  fill: #e0e3e3;
+  stroke: #8d9496;
+}
+
+.void rect,
+.void line {
+  fill: #ffffff;
+  stroke: #a8aeb0;
+}
+
+.room {
+  stroke: none;
+}
+
+.roomOn {
+  stroke: var(--clay);
+  stroke-dasharray: 60 40;
+}
+
+.homeEdge {
+  stroke-dasharray: 160 90;
+  opacity: 0.9;
+}
+
+.wall_external,
+.wall_party,
+.wall_corridor,
+.wall_partition,
+.wall_glazing,
+.wall_balustrade {
+  stroke: var(--plan-wall);
+}
+
+.wall_external {
+  fill: #2c3135;
+}
+
+.wall_party {
+  fill: #45413c;
+}
+
+.wall_corridor {
+  fill: #5a5550;
+}
+
+.wall_partition {
+  fill: #8c8780;
+}
+
+.wall_glazing {
+  fill: #cfe3ef;
+  stroke: #4c87b3;
+}
+
+.wall_balustrade {
+  fill: #c3cbcf;
+  stroke: #6f7c83;
+}
+
+.wallOn {
+  stroke: var(--clay);
+  fill: #b5583a;
+}
+
+.wallPreview {
+  fill: rgba(181, 88, 58, 0.45);
+  stroke: var(--clay);
+  stroke-dasharray: 40 30;
+}
+
+.opening line,
+.opening path,
+.openingOn line,
+.openingOn path {
+  stroke: var(--plan-wall);
+}
+
+.openingOn line,
+.openingOn path {
+  stroke: var(--clay);
+}
+
+.cut {
+  fill: var(--plan-board);
+  stroke: none;
+}
+
+.bubble circle {
+  fill: var(--paper);
+  stroke: var(--sky);
+}
+
+.bubble text {
+  font-size: 10.5px;
+  font-weight: 700;
+  fill: #2f5068;
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+
+.roomText text {
+  text-anchor: middle;
+  dominant-baseline: central;
+  paint-order: stroke;
+  stroke: rgba(251, 250, 246, 0.85);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+
+.homeText {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  fill: var(--ink);
+}
+
+.roomName {
+  font-size: 11.5px;
+  font-weight: 600;
+  fill: #2a2f31;
+}
+
+.roomNameless {
+  font-size: 11px;
+  font-style: italic;
+  fill: #8a8f91;
+}
+
+.roomArea {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  fill: #4a4f50;
+}
+
+.handle {
+  fill: var(--paper);
+  stroke: var(--clay);
+  stroke-width: 2;
+}
+
+.dimText {
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  fill: var(--clay);
+  text-anchor: middle;
+  dominant-baseline: central;
+  paint-order: stroke;
+  stroke: var(--plan-board);
+  stroke-width: 3px;
+}
+
+.hint {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: #5a5f60;
+}
+
+.canvas > .hint {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  padding: 4px 8px;
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.9);
+  pointer-events: none;
+}
+
+.toolTip {
+  position: absolute;
+  left: 50%;
+  top: 10px;
+  transform: translateX(-50%);
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgba(21, 24, 26, 0.82);
+  color: #fff;
+  font-size: 12.5px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.zoom {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.zoom button {
+  min-width: 40px;
+  min-height: 36px;
+  border: 1px solid var(--stone-lt);
+  border-radius: var(--radius);
+  background: var(--paper);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* ---- panel ------------------------------------------------------------------------------------- */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: calc(100vh - 230px);
+  min-height: 460px;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--stone-lt);
+  border-radius: var(--radius);
+  background: var(--paper);
+}
+
+.blockTitle {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #5a5f60;
+}
+
+.settings,
+.position {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip,
+.chipOn {
+  min-height: 32px;
+  padding: 0 11px;
+  border: 1px solid var(--stone-lt);
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.chipOn {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--paper);
+  font-weight: 600;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  font-size: 12px;
+  color: #5a5f60;
+}
+
+.fieldRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.num,
+.text {
+  min-height: 36px;
+  width: 100%;
+  padding: 0 10px;
+  border: 1px solid var(--stone-lt);
+  border-radius: var(--radius);
+  background: #fff;
+  color: var(--ink);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.num {
+  text-align: right;
+}
+
+.homes {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.homes th {
+  padding: 4px 4px 6px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-align: right;
+  text-transform: uppercase;
+  color: #6b7072;
+}
+
+.homes th:first-child {
+  text-align: left;
+}
+
+.homes td {
+  padding: 3px 4px;
+  border-top: 1px solid #eeebe3;
+}
+
+.homes tfoot td {
+  font-weight: 700;
+}
+
+.homes .num {
+  min-height: 30px;
+  width: 64px;
+  padding: 0 6px;
+  font-size: 13px;
+}
+
+.numCell {
+  text-align: right;
+}
+
+.homeName {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.dot {
+  width: 11px;
+  height: 11px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+
+.band_none,
+.band_ok,
+.band_adjust,
+.band_rescind {
+  display: inline-block;
+  min-width: 52px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.band_none {
+  color: #8a8f91;
+}
+
+.band_ok {
+  background: #e1e7dc;
+  color: #3f4a3a;
+}
+
+.band_adjust {
+  background: #f3e8d4;
+  color: var(--brass-text-deep);
+}
+
+.band_rescind {
+  background: #f8d9d4;
+  color: #8f1d12;
+}
+
+.problems {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.linkBtn {
+  margin-left: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--clay);
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* ---- copy to floors ---------------------------------------------------------------------------- */
+
+.dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(21, 24, 26, 0.4);
+}
+
+.dialogBody {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: min(520px, 100%);
+  padding: 18px;
+  border-radius: var(--radius);
+  background: var(--paper);
+}
+
+.dialogTitle {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 22px;
+  font-weight: 500;
+}
+
+.dialogActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+@media (max-width: 1000px) {
+  .main {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .canvas {
+    height: 62vh;
+    min-height: 360px;
+  }
+
+  .panel {
+    max-height: none;
+    min-height: 0;
+    overflow: visible;
+  }
+}

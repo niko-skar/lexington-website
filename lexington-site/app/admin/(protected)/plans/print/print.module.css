@@ -1,0 +1,169 @@
+/* One home's plan for the sale agreement's annex: A4 landscape, black on white. */
+
+@page {
+  size: A4 landscape;
+  margin: 12mm;
+}
+
+.page {
+  padding: 16px;
+  background: #fff;
+}
+
+.noPrint {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: #555;
+}
+
+.sheet {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 260px;
+  gap: 18px;
+  align-items: start;
+  max-width: 1100px;
+  aspect-ratio: 297 / 210;
+  padding: 18px;
+  border: 1px solid #ddd;
+  background: #fff;
+}
+
+.plan {
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+}
+
+.structure {
+  fill: #c9c9c9;
+  stroke: #999;
+  stroke-width: 10;
+}
+
+.room {
+  fill: #fbf7ee;
+}
+
+.outdoor {
+  fill: #eef4f7;
+}
+
+.niaEdge {
+  fill: none;
+  stroke: #b5583a;
+  stroke-dasharray: 160 90;
+}
+
+.wall_external,
+.wall_party,
+.wall_corridor {
+  fill: #1f2326;
+}
+
+.wall_partition {
+  fill: #6d6a66;
+}
+
+.wall_glazing {
+  fill: #d7e8f2;
+  stroke: #2f5068;
+  stroke-width: 12;
+}
+
+.wall_balustrade {
+  fill: #b8c1c5;
+}
+
+.door {
+  fill: #fff;
+}
+
+.window {
+  fill: #d7e8f2;
+  stroke: #2f5068;
+  stroke-width: 10;
+}
+
+.text text {
+  text-anchor: middle;
+  dominant-baseline: central;
+  font-weight: 700;
+  fill: #1f2326;
+}
+
+.text .small {
+  font-weight: 400;
+}
+
+.dim line,
+.scale line {
+  stroke: #1f2326;
+}
+
+.dim text,
+.scale text {
+  text-anchor: middle;
+  fill: #1f2326;
+}
+
+.info {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 12.5px;
+  color: #1f2326;
+}
+
+.unit {
+  font-family: var(--font-serif);
+  font-size: 34px;
+  line-height: 1;
+}
+
+.where {
+  font-size: 12px;
+  color: #555;
+}
+
+.areas {
+  border-collapse: collapse;
+}
+
+.areas th {
+  padding: 4px 8px 4px 0;
+  font-weight: 400;
+  text-align: left;
+}
+
+.areas td {
+  padding: 4px 0;
+  font-weight: 700;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.note {
+  margin: 0;
+  font-size: 10.5px;
+  line-height: 1.45;
+  color: #444;
+}
+
+@media print {
+  .noPrint {
+    display: none;
+  }
+
+  .page {
+    padding: 0;
+  }
+
+  .sheet {
+    max-width: none;
+    border: 0;
+    padding: 0;
+  }
+}

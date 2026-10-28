@@ -15,6 +15,7 @@ const NAV_LINKS = [
   { href: "/admin/dashboard", label: "Dashboard" },
   { href: "/admin/progress", label: "Site updates" },
   { href: "/admin/asbuilt", label: "As-built" },
+  { href: "/admin/plans", label: "Floor plans" },
   { href: "/todo", label: "Site to-do" },
   { href: "/todo/store", label: "Store" },
   { href: "/todo/expenses", label: "Expenses" },
