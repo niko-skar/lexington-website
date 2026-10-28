@@ -53,8 +53,25 @@ function floorRows(floor: Floor): (string | number | null)[][] {
   const rows: (string | number | null)[][] = [];
   const diff = (a: number | null, d: number | null) => (a === null || d === null ? null : a - d);
 
+  const fixed = resolveFloor(floor).fixed;
+  if (fixed) {
+    rows.push([
+      floor.name,
+      "Fixed point",
+      gridRef(fixed.el),
+      "Everything on this floor is measured from this column; it stays where the drawing has it",
+      null,
+      null,
+      null,
+      "",
+      "",
+    ]);
+  }
+  const misfit = (plan: number, typed: number) =>
+    Math.abs(plan - typed) > 10 ? `doesn't fit the others: the plan gives ${Math.round(plan)}` : "fits";
+
   for (const gap of [...gapsOf(floor, "x"), ...gapsOf(floor, "y")]) {
-    const built = gap.measured || gap.actual !== gap.design ? gap.actual : null;
+    const built = gap.measured ? gap.typed : Math.round(gap.actual) !== Math.round(gap.design) ? gap.actual : null;
     rows.push([
       floor.name,
       `Grid ${gap.from.id} to ${gap.to.id}`,
@@ -64,7 +81,7 @@ function floorRows(floor: Floor): (string | number | null)[][] {
       built,
       diff(built, gap.design),
       "",
-      "",
+      gap.measured ? misfit(gap.actual, gap.typed) : built !== null ? "from the other figures" : "",
     ]);
   }
 
@@ -176,10 +193,10 @@ function floorRows(floor: Floor): (string | number | null)[][] {
           lineId,
           axis === "x" ? `Along grid ${lineId}, face to face (taped)` : `Down grid ${lineId}, face to face (taped)`,
           g.design,
-          g.measured ? g.actual : null,
-          g.measured ? g.actual - g.design : null,
+          g.typed,
+          g.typed !== null ? g.typed - g.design : null,
           g.next.el.at ? when(g.next.el.at) : "",
-          "",
+          g.typed !== null ? misfit(g.actual, g.typed) : "",
         ]);
       }
     }
@@ -215,15 +232,9 @@ function floorRows(floor: Floor): (string | number | null)[][] {
         "Column face to the slab edge (taped)",
         null,
         f.figure.d,
-        f.role === "check" ? f.off : null,
+        f.off,
         f.figure.at ? when(f.figure.at) : "",
-        f.role === "edge"
-          ? "places the edge"
-          : f.role === "item"
-            ? "places the column"
-            : Math.abs(f.off) > 10
-              ? `doesn't add up: the plan gives ${Math.round(f.now)}`
-              : "fits",
+        misfit(f.now, f.figure.d),
       ]);
     }
   }

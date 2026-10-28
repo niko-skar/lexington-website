@@ -17,6 +17,7 @@ import {
   edgeSegment,
   extentsOf,
   gapsOf,
+  gridFit,
   gridLines,
   linePos,
   resolveFloor,
@@ -313,9 +314,25 @@ export function PlanView({
       if (el) hotLines.add(selection.axis === "x" ? `y:${el.y}` : `x:${el.x}`);
     }
 
-    // Grid lines (under the drawing).
+    const builtAt = (axis: "x" | "y", id: string, design: number) => linePos(floor, axis, id, "actual") ?? design;
+
+    // Grid lines (under the drawing), as built. Where one came out away from the drawing, the
+    // drawing's line shows faintly too.
+    for (const g of [...xLines, ...yLines]) {
+      const built = builtAt(g.axis, g.id, g.design);
+      if (Math.abs(built - g.design) < 5) continue;
+      const v = g.axis === "x" ? sx(g.design) : sy(g.design);
+      if (v < -20 || v > (g.axis === "x" ? W : H) + 20) continue;
+      under.push(
+        g.axis === "x" ? (
+          <line key={`dx${g.id}`} x1={v} x2={v} y1={bubbleY + 11} y2={H} className={s.gridDrawn} />
+        ) : (
+          <line key={`dy${g.id}`} y1={v} y2={v} x1={bubbleX + 11} x2={W} className={s.gridDrawn} />
+        ),
+      );
+    }
     for (const g of xLines) {
-      const x = sx(g.design + (g.shift ?? 0));
+      const x = sx(builtAt("x", g.id, g.design));
       if (x < -20 || x > W + 20) continue;
       under.push(
         <line
@@ -329,7 +346,7 @@ export function PlanView({
       );
     }
     for (const g of yLines) {
-      const y = sy(g.design + (g.shift ?? 0));
+      const y = sy(builtAt("y", g.id, g.design));
       if (y < -20 || y > H + 20) continue;
       under.push(
         <line
@@ -358,15 +375,22 @@ export function PlanView({
       ["y", gapsOf(floor, "y")],
     ] as const) {
       for (const gap of gaps) {
-        const a = (axis === "x" ? sx : sy)(gap.from.design + (gap.from.shift ?? 0));
-        const b = (axis === "x" ? sx : sy)(gap.to.design + (gap.to.shift ?? 0));
+        const a = (axis === "x" ? sx : sy)(builtAt(axis, gap.from.id, gap.from.design));
+        const b = (axis === "x" ? sx : sy)(builtAt(axis, gap.to.id, gap.to.design));
         const span = b - a;
         if (b < -10 || a > (axis === "x" ? W : H) + 10) continue;
         const sel: Selection = { kind: "gap", axis, to: gap.to.id };
         const hot = sameSel(selection, sel);
-        const diff = Math.abs(gap.actual - gap.design);
-        const cls = hot ? `${s.dimText} ${s.dimHot}` : gap.measured ? DIM_CLASS[statusFor(diff, tol)] : s.dimText;
-        const label = mm(gap.actual);
+        const fit = gap.measured ? gridFit(floor, axis, gap.to.id) : undefined;
+        const clash = fit !== undefined && Math.abs(fit.off) > tol.warn;
+        const cls = hot
+          ? `${s.dimText} ${s.dimHot}`
+          : clash
+            ? `${s.dimText} ${s.dimClash}`
+            : gap.measured
+              ? DIM_CLASS[statusFor(Math.abs(gap.typed - gap.design), tol)]
+              : s.dimText;
+        const label = gap.measured ? `${mm(gap.typed)}${clash ? " !" : ""}` : mm(gap.actual);
         const key = `gap${axis}${gap.to.id}`;
         if (axis === "x") {
           over.push(
@@ -425,7 +449,7 @@ export function PlanView({
     let prevX = -Infinity;
     let stepX = false;
     for (const g of xLines) {
-      const x = sx(g.design + (g.shift ?? 0));
+      const x = sx(builtAt("x", g.id, g.design));
       stepX = x - prevX < 23 ? !stepX : false;
       prevX = x;
       if (x < -20 || x > W + 20) continue;
@@ -437,7 +461,7 @@ export function PlanView({
     let prevY = -Infinity;
     let stepY = false;
     for (const g of yLines) {
-      const y = sy(g.design + (g.shift ?? 0));
+      const y = sy(builtAt("y", g.id, g.design));
       stepY = y - prevY < 23 ? !stepY : false;
       prevY = y;
       if (y < -20 || y > H + 20) continue;
@@ -535,16 +559,20 @@ export function PlanView({
             continue;
           const sel: Selection = { kind: "colgap", axis, list: g.next.list, key: g.next.el._key };
           const hot = sameSel(selection, sel);
+          const clash = g.off !== null && Math.abs(g.off) > tol.warn;
           const cls = hot
             ? `${s.dimText} ${s.dimHot}`
-            : g.measured
-              ? DIM_CLASS[statusFor(Math.abs(g.actual - g.design), tol)]
-              : s.colGapText;
-          const label = mm(g.actual);
+            : clash
+              ? `${s.dimText} ${s.dimClash}`
+              : g.typed !== null
+                ? DIM_CLASS[statusFor(Math.abs(g.typed - g.design), tol)]
+                : s.colGapText;
+          const label = g.typed !== null ? `${mm(g.typed)}${clash ? " !" : ""}` : mm(g.actual);
+          const lineCls = clash ? s.clashLine : s.colGapLine;
           const key = `cg${axis}${g.next.el._key}`;
           if (axis === "x") {
             over.push(
-              <line key={`${key}l`} x1={a} x2={b} y1={at} y2={at} className={s.colGapLine} />,
+              <line key={`${key}l`} x1={a} x2={b} y1={at} y2={at} className={lineCls} />,
               tick(a, at, `${key}a`),
               tick(b, at, `${key}b`),
             );
@@ -557,7 +585,7 @@ export function PlanView({
             hits.push({ sel, x: a, y: at - 17, w: b - a, h: 24 });
           } else {
             over.push(
-              <line key={`${key}l`} y1={a} y2={b} x1={at} x2={at} className={s.colGapLine} />,
+              <line key={`${key}l`} y1={a} y2={b} x1={at} x2={at} className={lineCls} />,
               tick(at, a, `${key}a`),
               tick(at, b, `${key}b`),
             );
@@ -605,11 +633,11 @@ export function PlanView({
         if (across ? at < -10 || at > W + 10 : at < -10 || at > H + 10) continue;
         const sel: Selection = { kind: "edge", key: r.edge._key, via: { list: r.item.list, key: r.item.el._key } };
         const hot = sameSel(selection, sel);
-        // A figure taped from this column is shown exactly as typed; red when it doesn't add up.
+        // A figure taped from this column is shown exactly as typed; red when it is well out from the others.
         const fig = figures.find(
           (f) => f.edge._key === r.edge._key && f.item.list === r.item.list && f.item.el._key === r.item.el._key,
         );
-        const clash = fig !== undefined && fig.role === "check" && Math.abs(fig.off) > tol.ok;
+        const clash = fig !== undefined && Math.abs(fig.off) > tol.warn;
         const cls = hot
           ? `${s.dimText} ${s.dimHot}`
           : clash
@@ -733,6 +761,24 @@ export function PlanView({
           );
         }
       }
+    }
+
+    // The fixed point: everything on the floor is measured from this column.
+    const fixed = resolveFloor(floor).fixed;
+    const fb = fixed ? boxOf(floor, fixed.el, "actual") : null;
+    if (fb) {
+      const cx = sx((fb.x0 + fb.x1) / 2);
+      const cy = sy((fb.y0 + fb.y1) / 2);
+      const r = Math.max(10, (Math.max(fb.x1 - fb.x0, fb.y1 - fb.y0) * k) / 2 + 6);
+      if (cx > -40 && cx < W + 40 && cy > -40 && cy < H + 40)
+        over.push(
+          <g key="fixedpt" aria-label="Fixed point">
+            <circle cx={cx} cy={cy} r={r} className={s.fixedRing} />
+            <text x={cx} y={cy - r - 9} className={s.fixedText}>
+              Fixed point
+            </text>
+          </g>,
+        );
     }
 
     // The selected box: how far each face is from its grid lines.
@@ -1320,7 +1366,7 @@ export function PlanView({
           <span className={s.swatch} style={{ background: "var(--ink)" }} /> Not measured yet
         </span>
         <span className={s.legendItem}>
-          <span className={s.swatch} style={{ background: "var(--sage)" }} /> Within {tol.ok} mm
+          <span className={s.swatch} style={{ background: "var(--sage)" }} /> Within {tol.ok} mm of the drawing
         </span>
         <span className={s.legendItem}>
           <span className={s.swatch} style={{ background: "var(--brass)" }} /> {tol.ok}–{tol.warn} mm off
@@ -1329,7 +1375,10 @@ export function PlanView({
           <span className={s.swatch} style={{ background: "var(--clay)" }} /> More than {tol.warn} mm off
         </span>
         <span className={s.legendItem}>
-          <span className={s.swatch} style={{ background: "#b3261e" }} /> 1890 ! = your figures don&rsquo;t add up
+          <span className={s.swatch} style={{ background: "#b3261e" }} /> 1870 ! = more than {tol.warn} mm out from your other figures
+        </span>
+        <span className={s.legendItem}>
+          <span className={s.swatch} style={{ background: "transparent", borderColor: "var(--sky)", borderRadius: 999 }} /> Fixed point: everything is measured from it
         </span>
         {showBelow && (
           <span className={s.legendItem}>

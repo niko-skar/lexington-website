@@ -37,16 +37,27 @@ export function lineOf(floor: Floor, axis: Axis, id: string): GridLine | undefin
   return floor.grid.find((g) => g.axis === axis && g.id === id);
 }
 
+/** A grid line's stored position: the drawing plus any spacing taped between grid lines (see shiftsForGap). */
+const storedPos = (line: GridLine) => line.design + (line.shift ?? 0);
+
+/**
+ * Where a grid line is. "actual": where all the figures taped on the floor put it, measured from
+ * the fixed column (see resolveFloor), so every line is one straight line.
+ */
 export function linePos(floor: Floor, axis: Axis, id: string, mode: Mode): number | null {
   const line = lineOf(floor, axis, id);
   if (!line) return null;
-  return line.design + (mode === "actual" ? (line.shift ?? 0) : 0);
+  if (mode === "design") return line.design;
+  return resolveFloor(floor).lines.get(`${axis}:${id}`) ?? storedPos(line);
 }
 
 export interface Gap {
   from: GridLine;
   to: GridLine;
   design: number;
+  /** As stored: the drawing, or the spacing taped between the two lines. */
+  typed: number;
+  /** On the plan: where all the figures put the two lines. */
   actual: number;
   measured: boolean;
 }
@@ -62,7 +73,8 @@ export function gapsOf(floor: Floor, axis: Axis): Gap[] {
       from,
       to,
       design: to.design - from.design,
-      actual: to.design + (to.shift ?? 0) - (from.design + (from.shift ?? 0)),
+      typed: round1(storedPos(to) - storedPos(from)),
+      actual: round1((linePos(floor, axis, to.id, "actual") ?? 0) - (linePos(floor, axis, from.id, "actual") ?? 0)),
       measured: to.measured === true,
     });
   }
@@ -70,8 +82,8 @@ export function gapsOf(floor: Floor, axis: Axis): Gap[] {
 }
 
 /**
- * Changing one gap moves that line and every line after it by the same amount,
- * so every other gap stays as it was. Returns the new shift of each moved line.
+ * The stored spacings after one is typed: that line and every line after it shift by the same
+ * amount, so every other stored spacing stays as it was. Returns the new shift of each moved line.
  */
 export function shiftsForGap(
   floor: Floor,
@@ -81,7 +93,7 @@ export function shiftsForGap(
 ): { id: string; key: string; shift: number }[] {
   const gap = gapsOf(floor, axis).find((g) => g.to.id === toId);
   if (!gap) return [];
-  const delta = newGap - gap.actual;
+  const delta = newGap - gap.typed;
   const lines = gridLines(floor, axis);
   const start = lines.findIndex((l) => l.id === toId);
   return lines.slice(start).map((l) => ({ id: l.id, key: l._key, shift: round1((l.shift ?? 0) + delta) }));
@@ -184,38 +196,74 @@ export function chainLines(floor: Floor, axis: Axis): string[] {
   return lines.map((l) => l.id).filter((id) => chainOf(floor, axis, id).length >= 2);
 }
 
-// ---- where everything is: from all the figures together ------------------------------------
+// ---- where everything is: one fixed column, straight grid lines, every figure together ----------
 
 export type Face = "l" | "r" | "t" | "b";
 
 /**
- * One figure taped from a column's face to a slab edge, and how it sits with everything
- * else. A figure is never changed: it places the edge, or places the column, or (when both
- * are already placed by other figures) it is compared, and any difference is a clash.
+ * The column everything on a floor is measured from (Niko, 28 Oct 2026: "fixing one point on the
+ * furthermost bottom right hand column so all the measurements start from there and fan out"):
+ * the right-most column on the lowest row. N/7 on the ground to 6th floors, M/7 on the 7th.
+ * It stays exactly where the drawing has it.
  */
+export function fixedColumnOf(floor: Floor): ColumnEl | null {
+  let best: ColumnEl | null = null;
+  let bestX = -Infinity;
+  let bestY = -Infinity;
+  for (const c of floor.columns) {
+    if (c.kind !== "column") continue;
+    const x = lineOf(floor, "x", c.x)?.design;
+    const y = lineOf(floor, "y", c.y)?.design;
+    if (x === undefined || y === undefined) continue;
+    if (y > bestY || (y === bestY && x > bestX)) {
+      best = c;
+      bestX = x;
+      bestY = y;
+    }
+  }
+  return best;
+}
+
+export type FitKind = "gap" | "edge" | "edgeGrid" | "grid";
+
+/**
+ * One figure taped on site, exactly as typed, and how well it fits all the others: the same
+ * distance on the plan, with every grid line straight and the fixed column where the drawing has it.
+ */
+export interface FigureFit {
+  kind: FitKind;
+  /** Across the page (x) or down it (y). */
+  axis: Axis;
+  /** As typed, mm: face to face (gap), face to edge, edge from its grid line, or grid spacing. */
+  typed: number;
+  /** The same distance on the plan, mm. */
+  fitted: number;
+  /** The plan less the figure, mm: how far this figure is from fitting the others. */
+  off: number;
+  /** A gap: the two items, and the row or line it was taped along. */
+  prev?: TapeItem;
+  next?: TapeItem;
+  lineId?: string;
+  /** A figure to a slab edge: the column it was taped from, and its face. */
+  item?: TapeItem;
+  face?: Face;
+  edge?: SlabEdge;
+  figure?: EdgeFigure;
+  /** A grid spacing. */
+  from?: GridLine;
+  to?: GridLine;
+}
+
+/** One figure taped from a column's face to a slab edge (a FigureFit of kind "edge"). */
 export interface FigureCheck {
   item: TapeItem;
   edge: SlabEdge;
   figure: EdgeFigure;
   /** The face that looks at the edge (from the drawing). */
   face: Face;
-  /** Face to edge as the plan now has it, mm. */
+  /** Face to edge as the plan has it, mm. */
   now: number;
-  /** "edge": this figure placed the edge; "item": it placed the column; "check": it was compared. */
-  role: "edge" | "item" | "check";
-  /** The plan less the figure, mm (0 unless the figure was only compared). */
-  off: number;
-  /** For a comparison: what placed the edge (its grid measurement, or another column's figure). */
-  edgeBy?: EdgePlacer;
-}
-
-export type EdgePlacer = { kind: "grid" } | { kind: "figure"; item: TapeItem; figure: EdgeFigure };
-
-/** A column taped from the grid lines and also by a gap from the column before it, the two not agreeing. */
-export interface FaceClash {
-  item: TapeItem;
-  axis: Axis;
-  /** Where the gap puts its centre, less where its faces from the grid lines do, mm. */
+  /** The plan less the figure, mm. */
   off: number;
 }
 
@@ -223,12 +271,17 @@ export interface Resolved {
   boxes: Map<string, Box>;
   /** Each slab edge's position as built: x for an up-and-down edge, y for an across one. */
   edges: Map<string, number>;
+  /** Each grid line's position as built, keyed "x:N", "y:7". */
+  lines: Map<string, number>;
+  /** The column everything is measured from (null on a floor without columns). */
+  fixed: TapeItem | null;
+  /** Every figure taped on the floor and how well it fits. */
+  fits: FigureFit[];
+  /** The figures to the slab edges (the same as fits of kind "edge"). */
   figures: FigureCheck[];
-  faceClashes: FaceClash[];
 }
 
 const resolvedCache = new WeakMap<Floor, Resolved>();
-const idOf = (it: TapeItem) => `${it.list}:${it.el._key}`;
 
 function edgeFrom(floor: Floor, edge: SlabEdge, mode: Mode): number | null {
   const line = linePos(floor, edge.axis, edge.ref, mode);
@@ -245,150 +298,246 @@ export function faceToward(floor: Floor, el: TapeEl, edge: SlabEdge): Face | nul
   return pos >= d.x1 ? "r" : pos <= d.x0 ? "l" : null;
 }
 
-const faceAt = (b: Box, face: Face) => (face === "l" ? b.x0 : face === "r" ? b.x1 : face === "t" ? b.y0 : b.y1);
-/** The edge lies at a larger x or y than the face. */
-const past = (face: Face) => face === "r" || face === "b";
+/** A taped figure counts as about 5 mm sure; the drawing's spacings only fill in where nothing was taped. */
+const FIGURE_WEIGHT = 1 / 5 ** 2;
+const DRAWING_WEIGHT = 1 / 300 ** 2;
+/** Beyond this many mm out, a figure is trusted less, so one wrong figure shows up on its own. */
+const ROBUST_MM = 15;
+
+/** An item's centre from its own grid lines and its size: taped where taped, the drawing elsewhere. */
+function itemGeometry(el: TapeEl): { ox: number; oy: number; w: number; h: number } {
+  const f = el.actual ?? el.design;
+  return {
+    ox: (f.l + f.r) / 2,
+    oy: (f.t + f.b) / 2,
+    w: has(el.w) ? el.w : f.r - f.l,
+    h: has(el.h) ? el.h : f.b - f.t,
+  };
+}
+
+/** One equation: sum of coef × position = rhs. A taped figure carries its fit. */
+interface Equation {
+  coef: [string, number][];
+  rhs: number;
+  weight: number;
+  fit?: Omit<FigureFit, "fitted" | "off">;
+}
+
+const lineVar = (axis: Axis, id: string) => `${axis}:${id}`;
+const edgeVar = (key: string) => `e:${key}`;
+
+/** Least squares over the unknown positions, with the fixed ones known. Returns every position. */
+function solveLeastSquares(eqs: Equation[], weights: number[], known: Map<string, number>): Map<string, number> {
+  const vars = [...new Set(eqs.flatMap((e) => e.coef.map(([v]) => v)))].filter((v) => !known.has(v)).sort();
+  const idx = new Map(vars.map((v, i) => [v, i] as const));
+  const n = vars.length;
+  const m = Array.from({ length: n }, () => new Float64Array(n + 1));
+  eqs.forEach((eq, k) => {
+    const w = eq.weight * weights[k];
+    let rhs = eq.rhs;
+    const free: [number, number][] = [];
+    for (const [v, a] of eq.coef) {
+      const fixed = known.get(v);
+      if (fixed !== undefined) rhs -= a * fixed;
+      else free.push([idx.get(v)!, a]);
+    }
+    for (const [i, ai] of free) {
+      m[i][n] += w * ai * rhs;
+      for (const [j, aj] of free) m[i][j] += w * ai * aj;
+    }
+  });
+  // Gaussian elimination with partial pivoting.
+  for (let col = 0; col < n; col += 1) {
+    let piv = col;
+    for (let r = col + 1; r < n; r += 1) if (Math.abs(m[r][col]) > Math.abs(m[piv][col])) piv = r;
+    [m[col], m[piv]] = [m[piv], m[col]];
+    const p = m[col][col];
+    if (Math.abs(p) < 1e-12) continue;
+    for (let r = 0; r < n; r += 1) {
+      if (r === col || m[r][col] === 0) continue;
+      const f = m[r][col] / p;
+      for (let c = col; c <= n; c += 1) m[r][c] -= f * m[col][c];
+    }
+  }
+  const out = new Map(known);
+  vars.forEach((v, i) => out.set(v, Math.abs(m[i][i]) < 1e-12 ? 0 : m[i][n] / m[i][i]));
+  return out;
+}
+
+const residualOf = (eq: Equation, sol: Map<string, number>) =>
+  eq.rhs - eq.coef.reduce((sum, [v, a]) => sum + a * (sol.get(v) ?? 0), 0);
 
 /**
- * Where every column, wall, lift core and slab edge really is, from every figure taped
- * (Niko, 22 Oct 2026: "any measurement I put in must be fixed"):
- * 1. Each column starts from its faces measured from the grid lines, or the drawing, with
- *    its measured size around its centre.
- * 2. Along each row and down each line, a column with a measured gap sits that gap past the
- *    one before it (so changing a gap carries on to the columns after it).
- * 3. Slab edges: one measured from its grid line stays there. Then the figures from columns
- *    to edges, oldest first: a figure places whichever end nothing else has placed (the edge,
- *    or a column with no gap or grid measurement on that axis); where both are placed already
- *    it is compared, and the difference is a clash, shown, never smoothed away.
- * No figure ever changes another one.
+ * Where every grid line, column, wall, lift core and slab edge really is (Niko, 28 Oct 2026: "fix
+ * one point on the furthermost bottom right hand column so all the measurements start from there
+ * and fan out, so everything has to be in relation to that one column"):
+ * 1. The fixed column (fixedColumnOf) stays where the drawing has it.
+ * 2. Every grid line is ONE straight line. Each column, wall and lift core stands on its two lines,
+ *    as on the drawing, or as taped from the string lines (its faces from the grid lines).
+ * 3. Where each line is comes from every figure taped on the floor together, measured out from the
+ *    fixed column: gaps between columns, sizes, figures to slab edges, edges from their grid lines,
+ *    spacings between grid lines. Where nothing was taped, the drawing's spacing fills in.
+ * 4. Figures that don't agree are not smoothed into the columns: each figure is kept exactly as
+ *    typed and shows how far it is from fitting the others (a figure well out is trusted less, so a
+ *    single wrong figure stands out on its own). A figure never moves a run of columns.
  */
 export function resolveFloor(floor: Floor): Resolved {
   const cached = resolvedCache.get(floor);
   if (cached) return cached;
-  const boxes = new Map<string, Box>();
   const lists: TapeList[] = ["columns", "cores"];
-  // Placed by a figure on this axis (faces from the grid lines, or a gap either side).
-  const fixed = { x: new Set<string>(), y: new Set<string>() };
-  for (const list of lists) {
-    for (const el of floor[list] as TapeEl[]) {
-      const b = boxFromFaces(floor, el, el.actual ?? el.design, "actual");
-      if (!b) continue;
-      const [cx, cy] = centreOf(b);
-      if (has(el.w)) {
-        b.x0 = cx - el.w / 2;
-        b.x1 = cx + el.w / 2;
-      }
-      if (has(el.h)) {
-        b.y0 = cy - el.h / 2;
-        b.y1 = cy + el.h / 2;
-      }
-      boxes.set(`${list}:${el._key}`, b);
-      if (el.actual) {
-        fixed.x.add(`${list}:${el._key}`);
-        fixed.y.add(`${list}:${el._key}`);
-      }
-    }
-  }
-  const faceClashes: FaceClash[] = [];
+  const items: TapeItem[] = lists.flatMap((list) => (floor[list] as TapeEl[]).map((el) => ({ list, el })));
+  const eqs: Equation[] = [];
+
+  // Gaps taped between neighbours along each row (x) and down each line (y).
   for (const axis of ["x", "y"] as const) {
     for (const lineId of chainLines(floor, axis)) {
       const chain = chainOf(floor, axis, lineId);
       for (let i = 1; i < chain.length; i += 1) {
-        const gap = axis === "x" ? chain[i].el.gx : chain[i].el.gy;
-        if (!has(gap)) continue;
-        const prev = boxes.get(idOf(chain[i - 1]));
-        const cur = boxes.get(idOf(chain[i]));
-        if (!prev || !cur) continue;
-        fixed[axis].add(idOf(chain[i - 1]));
-        fixed[axis].add(idOf(chain[i]));
-        const before = centreOf(cur)[axis === "x" ? 0 : 1];
-        if (axis === "x") {
-          const w = cur.x1 - cur.x0;
-          cur.x0 = prev.x1 + gap;
-          cur.x1 = cur.x0 + w;
-        } else {
-          const h = cur.y1 - cur.y0;
-          cur.y0 = prev.y1 + gap;
-          cur.y1 = cur.y0 + h;
-        }
-        // Also taped from the grid lines: the gap places it, and any difference is shown.
-        const off = round1(centreOf(cur)[axis === "x" ? 0 : 1] - before);
-        if (chain[i].el.actual && Math.abs(off) >= 0.5) faceClashes.push({ item: chain[i], axis, off });
+        const prev = chain[i - 1];
+        const next = chain[i];
+        const typed = axis === "x" ? next.el.gx : next.el.gy;
+        if (!has(typed)) continue;
+        const a = itemGeometry(prev.el);
+        const b = itemGeometry(next.el);
+        const va = axis === "x" ? lineVar("x", prev.el.x) : lineVar("y", prev.el.y);
+        const vb = axis === "x" ? lineVar("x", next.el.x) : lineVar("y", next.el.y);
+        // (line b + offset b - half b) - (line a + offset a + half a) = the gap
+        const rhs =
+          axis === "x" ? typed - b.ox + b.w / 2 + a.ox + a.w / 2 : typed - b.oy + b.h / 2 + a.oy + a.h / 2;
+        eqs.push({
+          // Both on one line (nothing to place): the gap is only compared.
+          coef: va === vb ? [] : [[vb, 1], [va, -1]],
+          rhs,
+          weight: FIGURE_WEIGHT,
+          fit: { kind: "gap", axis, typed, prev, next, lineId },
+        });
       }
     }
   }
 
-  // Slab edges, and the figures taped from columns to them.
+  // Figures taped from a column face to a slab edge.
+  const edgeList = floor.slab?.edges ?? [];
+  for (const item of items) {
+    for (const figure of item.el.edges ?? []) {
+      const edge = edgeList.find((e) => e._key === figure.edge);
+      const face = edge ? faceToward(floor, item.el, edge) : null;
+      if (!edge || !face) continue;
+      const g = itemGeometry(item.el);
+      const v = edge.axis === "y" ? lineVar("y", item.el.y) : lineVar("x", item.el.x);
+      const o = edge.axis === "y" ? g.oy : g.ox;
+      const half = (edge.axis === "y" ? g.h : g.w) / 2;
+      // Edge past the face: edge - (line + o + half) = d. Before it: (line + o - half) - edge = d.
+      const past = face === "b" || face === "r";
+      eqs.push({
+        coef: past ? [[edgeVar(edge._key), 1], [v, -1]] : [[v, 1], [edgeVar(edge._key), -1]],
+        rhs: past ? figure.d + o + half : figure.d - o + half,
+        weight: FIGURE_WEIGHT,
+        fit: { kind: "edge", axis: edge.axis, typed: figure.d, item, face, edge, figure },
+      });
+    }
+  }
+
+  // Slab edges from their grid lines: taped, or the drawing.
+  for (const edge of edgeList) {
+    if (!lineOf(floor, edge.axis, edge.ref)) continue;
+    const coef: [string, number][] = [
+      [edgeVar(edge._key), 1],
+      [lineVar(edge.axis, edge.ref), -1],
+    ];
+    if (has(edge.actual))
+      eqs.push({ coef, rhs: edge.actual, weight: FIGURE_WEIGHT, fit: { kind: "edgeGrid", axis: edge.axis, typed: edge.actual, edge } });
+    else eqs.push({ coef, rhs: edge.design, weight: DRAWING_WEIGHT });
+  }
+
+  // Spacings between neighbouring grid lines: taped, or the drawing.
+  for (const axis of ["x", "y"] as const) {
+    const lines = gridLines(floor, axis);
+    for (let i = 1; i < lines.length; i += 1) {
+      const from = lines[i - 1];
+      const to = lines[i];
+      const spacing = storedPos(to) - storedPos(from);
+      const coef: [string, number][] = [
+        [lineVar(axis, to.id), 1],
+        [lineVar(axis, from.id), -1],
+      ];
+      if (to.measured === true)
+        eqs.push({ coef, rhs: spacing, weight: FIGURE_WEIGHT, fit: { kind: "grid", axis, typed: round1(spacing), from, to } });
+      else eqs.push({ coef, rhs: spacing, weight: DRAWING_WEIGHT });
+    }
+  }
+
+  // The fixed column's two lines, so that it stays where the drawing has it. A floor without
+  // columns keeps its last line each way where it is stored.
+  const known = new Map<string, number>();
+  const fixedEl = fixedColumnOf(floor);
+  const fixedBox = fixedEl ? boxFromFaces(floor, fixedEl, fixedEl.design, "design") : null;
+  if (fixedEl && fixedBox) {
+    const g = itemGeometry(fixedEl);
+    const [cx, cy] = centreOf(fixedBox);
+    known.set(lineVar("x", fixedEl.x), cx - g.ox);
+    known.set(lineVar("y", fixedEl.y), cy - g.oy);
+  } else {
+    for (const axis of ["x", "y"] as const) {
+      const last = gridLines(floor, axis).at(-1);
+      if (last) known.set(lineVar(axis, last.id), storedPos(last));
+    }
+  }
+
+  // Solve; then trust figures that are well out a little less, and solve again (robust least squares).
+  const weights = eqs.map(() => 1);
+  let sol = solveLeastSquares(eqs, weights, known);
+  for (let round = 0; round < 25; round += 1) {
+    eqs.forEach((eq, k) => {
+      if (!eq.fit) return;
+      const r = Math.abs(residualOf(eq, sol));
+      weights[k] = r <= ROBUST_MM ? 1 : ROBUST_MM / r;
+    });
+    const next = solveLeastSquares(eqs, weights, known);
+    let moved = 0;
+    for (const [v, p] of next) moved = Math.max(moved, Math.abs(p - (sol.get(v) ?? 0)));
+    sol = next;
+    if (moved < 0.01) break;
+  }
+
+  // Every grid line (a line with nothing on it and no spacing stays where it is stored).
+  const lines = new Map<string, number>();
+  for (const g of floor.grid) lines.set(lineVar(g.axis, g.id), sol.get(lineVar(g.axis, g.id)) ?? storedPos(g));
+
+  const boxes = new Map<string, Box>();
+  for (const { list, el } of items) {
+    const lx = lines.get(lineVar("x", el.x));
+    const ly = lines.get(lineVar("y", el.y));
+    if (lx === undefined || ly === undefined) continue;
+    const g = itemGeometry(el);
+    const cx = lx + g.ox;
+    const cy = ly + g.oy;
+    boxes.set(`${list}:${el._key}`, { x0: cx - g.w / 2, x1: cx + g.w / 2, y0: cy - g.h / 2, y1: cy + g.h / 2 });
+  }
+
   const edges = new Map<string, number>();
-  const placedEdges = new Map<string, EdgePlacer>();
-  for (const edge of floor.slab?.edges ?? []) {
-    const p = edgeFrom(floor, edge, "actual");
-    if (p === null) continue;
-    edges.set(edge._key, p);
-    if (has(edge.actual)) placedEdges.set(edge._key, { kind: "grid" });
-  }
-  interface Pending {
-    item: TapeItem;
-    edge: SlabEdge;
-    figure: EdgeFigure;
-    face: Face;
-  }
-  const pending: Pending[] = [];
-  for (const list of lists) {
-    for (const el of floor[list] as TapeEl[]) {
-      for (const figure of el.edges ?? []) {
-        const edge = floor.slab?.edges.find((e) => e._key === figure.edge);
-        const face = edge ? faceToward(floor, el, edge) : null;
-        if (!edge || !face || !edges.has(edge._key) || !boxes.has(`${list}:${el._key}`)) continue;
-        pending.push({ item: { list, el }, edge, figure, face });
-      }
-    }
-  }
-  pending.sort((a, b) => (a.figure.at ?? "").localeCompare(b.figure.at ?? "") || a.figure._key.localeCompare(b.figure._key));
-  const placed = { x: new Set(fixed.x), y: new Set(fixed.y) };
-  const figures: FigureCheck[] = [];
-  const nowOf = (p: Pending) => {
-    const f = faceAt(boxes.get(idOf(p.item))!, p.face);
-    const e = edges.get(p.edge._key)!;
-    return past(p.face) ? e - f : f - e;
-  };
-  while (pending.length) {
-    // The oldest figure that can do something goes first; then look again from the start.
-    const i = pending.findIndex((p) => placed[p.edge.axis].has(idOf(p.item)) || placedEdges.has(p.edge._key));
-    if (i < 0) {
-      // Nothing else places either end: the oldest figure's column stays where the drawing has it.
-      placed[pending[0].edge.axis].add(idOf(pending[0].item));
-      continue;
-    }
-    const p = pending.splice(i, 1)[0];
-    const axis = p.edge.axis;
-    const edgeBy = placedEdges.get(p.edge._key);
-    if (placed[axis].has(idOf(p.item)) && edgeBy) {
-      const now = nowOf(p);
-      figures.push({ ...p, now: round1(now), role: "check", off: round1(now - p.figure.d), edgeBy });
-    } else if (edgeBy) {
-      // Nothing else places this column on this axis: the figure does, from the edge.
-      const b = boxes.get(idOf(p.item))!;
-      const shift = (past(p.face) ? 1 : -1) * (nowOf(p) - p.figure.d);
-      if (axis === "x") {
-        b.x0 += shift;
-        b.x1 += shift;
-      } else {
-        b.y0 += shift;
-        b.y1 += shift;
-      }
-      placed[axis].add(idOf(p.item));
-      figures.push({ ...p, now: p.figure.d, role: "item", off: 0, edgeBy });
-    } else {
-      // The edge isn't placed yet: this figure places it.
-      const f = faceAt(boxes.get(idOf(p.item))!, p.face);
-      edges.set(p.edge._key, past(p.face) ? f + p.figure.d : f - p.figure.d);
-      placedEdges.set(p.edge._key, { kind: "figure", item: p.item, figure: p.figure });
-      figures.push({ ...p, now: p.figure.d, role: "edge", off: 0 });
-    }
+  for (const edge of edgeList) {
+    const p = sol.get(edgeVar(edge._key));
+    if (p !== undefined) edges.set(edge._key, p);
   }
 
-  const resolved: Resolved = { boxes, edges, figures, faceClashes };
+  const fits: FigureFit[] = [];
+  eqs.forEach((eq) => {
+    if (!eq.fit) return;
+    const r = residualOf(eq, sol);
+    fits.push({ ...eq.fit, fitted: round1(eq.fit.typed - r), off: round1(-r) || 0 });
+  });
+  const figures: FigureCheck[] = fits
+    .filter((f) => f.kind === "edge")
+    .map((f) => ({ item: f.item!, edge: f.edge!, figure: f.figure!, face: f.face!, now: f.fitted, off: f.off }));
+
+  const resolved: Resolved = {
+    boxes,
+    edges,
+    lines,
+    fixed: fixedEl ? { list: "columns", el: fixedEl } : null,
+    fits,
+    figures,
+  };
   resolvedCache.set(floor, resolved);
   return resolved;
 }
@@ -396,6 +545,11 @@ export function resolveFloor(floor: Floor): Resolved {
 /** Where every column, wall and lift core really is (see resolveFloor). */
 export function resolvedBoxes(floor: Floor): Map<string, Box> {
   return resolveFloor(floor).boxes;
+}
+
+/** Is this the column the floor is measured from? */
+export function isFixedColumn(floor: Floor, el: { _key: string }): boolean {
+  return resolveFloor(floor).fixed?.el._key === el._key;
 }
 
 /** The figures taped to one slab edge, oldest first. */
@@ -410,27 +564,21 @@ export function itemFigures(floor: Floor, el: TapeEl): FigureCheck[] {
   return resolveFloor(floor).figures.filter((f) => f.item.el._key === el._key);
 }
 
-export interface Clash {
-  kind: "edge" | "faces";
-  item: TapeItem;
-  axis: Axis;
-  /** How far out, mm (signed: the plan less the figure). */
-  off: number;
-  figure?: FigureCheck;
+/** The fit of the gap taped onto `next` along one axis (the later of the two holds it). */
+export function gapFit(floor: Floor, axis: Axis, nextKey: string): FigureFit | undefined {
+  return resolveFloor(floor).fits.find((f) => f.kind === "gap" && f.axis === axis && f.next?.el._key === nextKey);
 }
 
-/** Every figure that doesn't add up with the others by more than `allow` mm, worst first. */
-export function clashesOf(floor: Floor, allow: number): Clash[] {
-  const r = resolveFloor(floor);
-  const out: Clash[] = [
-    ...r.figures
-      .filter((f) => f.role === "check" && Math.abs(f.off) > allow)
-      .map((f) => ({ kind: "edge" as const, item: f.item, axis: f.edge.axis, off: f.off, figure: f })),
-    ...r.faceClashes
-      .filter((c) => Math.abs(c.off) > allow)
-      .map((c) => ({ kind: "faces" as const, item: c.item, axis: c.axis, off: c.off })),
-  ];
-  return out.sort((a, b) => Math.abs(b.off) - Math.abs(a.off));
+/** The fit of a taped grid spacing (it is stored on the later line). */
+export function gridFit(floor: Floor, axis: Axis, toId: string): FigureFit | undefined {
+  return resolveFloor(floor).fits.find((f) => f.kind === "grid" && f.axis === axis && f.to?.id === toId);
+}
+
+/** Every figure that is out from the others by more than `allow` mm, worst first. */
+export function clashesOf(floor: Floor, allow: number): FigureFit[] {
+  return resolveFloor(floor)
+    .fits.filter((f) => Math.abs(f.off) > allow)
+    .sort((a, b) => Math.abs(b.off) - Math.abs(a.off));
 }
 
 export interface TapeGap {
@@ -439,13 +587,18 @@ export interface TapeGap {
   next: TapeItem;
   /** Clear gap, face to face, on the drawing. */
   design: number;
-  /** Clear gap as things stand (as built where measured). */
+  /** Clear gap on the plan (from all the figures together). */
   actual: number;
-  /** Centre to centre, as things stand and on the drawing. */
+  /** Centre to centre, on the plan and on the drawing. */
   cc: number;
   ccDesign: number;
   /** The gap itself was taped (it is stored on `next`). */
   measured: boolean;
+  /** As taped, face to face, and the same centre to centre with the sizes as they stand. */
+  typed: number | null;
+  typedCc: number | null;
+  /** The plan less the taped gap, mm. */
+  off: number | null;
 }
 
 /** Every gap along one row (axis x) or down one line (axis y). */
@@ -463,15 +616,21 @@ export function tapeGaps(floor: Floor, axis: Axis, lineId: string): TapeGap[] {
     const pd = boxOf(floor, prev.el, "design");
     const nd = boxOf(floor, next.el, "design");
     if (!pa || !na || !pd || !nd) continue;
+    const typed = axis === "x" ? next.el.gx : next.el.gy;
+    const actual = round1(na[lo] - pa[hi]);
+    const halves = (pa[hi] - pa[lo]) / 2 + (na[hi] - na[lo]) / 2;
     out.push({
       axis,
       prev,
       next,
       design: round1(nd[lo] - pd[hi]),
-      actual: round1(na[lo] - pa[hi]),
+      actual,
       cc: round1(centreOf(na)[c] - centreOf(pa)[c]),
       ccDesign: round1(centreOf(nd)[c] - centreOf(pd)[c]),
-      measured: has(axis === "x" ? next.el.gx : next.el.gy),
+      measured: has(typed),
+      typed: has(typed) ? typed : null,
+      typedCc: has(typed) ? round1(typed + halves) : null,
+      off: has(typed) ? round1(actual - typed) : null,
     });
   }
   return out;
@@ -759,7 +918,7 @@ export function allBoxes(floor: Floor): { list: BoxList; el: BoxEl }[] {
 export function extentsOf(floor: Floor): Box {
   const xs: number[] = [];
   const ys: number[] = [];
-  for (const g of floor.grid) (g.axis === "x" ? xs : ys).push(g.design + (g.shift ?? 0));
+  for (const g of floor.grid) (g.axis === "x" ? xs : ys).push(linePos(floor, g.axis, g.id, "actual") ?? g.design);
   for (const [x, y] of slabCorners(floor, "actual") ?? []) {
     xs.push(x);
     ys.push(y);

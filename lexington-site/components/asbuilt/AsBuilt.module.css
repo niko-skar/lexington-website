@@ -1897,3 +1897,75 @@ textarea.text {
   stroke-width: 1.4;
   stroke-dasharray: 4 3;
 }
+
+/* ---- one fixed column, straight grid lines (Niko, 28 Oct 2026) ------------------------------- */
+
+/* The drawing's own grid line, faintly, where the line came out somewhere else as built. */
+.gridDrawn {
+  stroke: var(--ab-grid);
+  stroke-width: 1;
+  stroke-dasharray: 2 4;
+  opacity: 0.35;
+}
+
+.fixedRing {
+  fill: none;
+  stroke: var(--sky);
+  stroke-width: 2;
+  stroke-dasharray: 5 3;
+}
+
+.fixedText {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  fill: #2f5068;
+  text-anchor: middle;
+  dominant-baseline: central;
+  paint-order: stroke;
+  stroke: var(--ab-board);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
+
+.fixedChip {
+  composes: status;
+  background: #dfe9f1;
+  color: #2f5068;
+}
+
+.fixedNote {
+  margin: 0;
+  padding: 10px 12px;
+  border-left: 3px solid var(--sky);
+  border-radius: var(--radius);
+  background: #eef4f8;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #2c3e4c;
+}
+
+/* "12 mm out" next to a taped gap: worth a look, or well out. */
+.offWarn {
+  color: var(--brass-text-deep);
+  font-weight: 700;
+}
+
+.offClash {
+  color: #8f1d12;
+  font-weight: 700;
+}
+
+.warnNote {
+  composes: clashNote;
+  border-left-color: var(--brass);
+  background: #fbf6ea;
+  color: #4a3b22;
+}
+
+.othersLine {
+  margin: 6px 0 0 !important;
+  font-size: 12.5px;
+  color: #5a4a46;
+  font-variant-numeric: tabular-nums;
+}

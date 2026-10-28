@@ -20,7 +20,7 @@ interface Props {
 
 const BASIS: Record<SetOutRow["basis"], string> = {
   measured: "Sits on the one below, as built",
-  drawing: "Drawing: the one below isn't measured yet",
+  drawing: "On its grid lines as built: the one below isn't measured yet",
   "nothing-below": "Drawing: nothing below it",
 };
 
@@ -43,7 +43,7 @@ function LineBlock({ line, onSelect }: { line: SetOutLine; onSelect: (sel: Selec
       {boxTitle(r.list, r.el)}
     </button>
   );
-  // Only the ones that follow a measured column below get a mark; the rest are the drawing.
+  // Only the ones that follow a measured column below get a mark; the rest stand on their grid lines as built.
   const from = (r: SetOutRow) => (r.basis === "measured" ? <span className={s.soBuilt}>on the one below</span> : null);
   const all = [first, ...line.links.map((l) => l.next)];
   const built = all.filter((r) => r.basis === "measured").length;
@@ -53,10 +53,10 @@ function LineBlock({ line, onSelect }: { line: SetOutLine; onSelect: (sel: Selec
         {line.axis === "x" ? `Along grid ${line.lineId}` : `Down grid ${line.lineId}`}
         <small>
           {built === 0
-            ? "all from the drawing: nothing below measured yet"
+            ? "nothing below measured yet: on the grid lines as built"
             : built === all.length
               ? "all on the columns below, as built"
-              : `${built} of ${all.length} on the columns below, the rest from the drawing`}
+              : `${built} of ${all.length} on the columns below, the rest on their grid lines as built`}
         </small>
       </div>
       <ol className={s.soList}>
@@ -280,7 +280,7 @@ export function SetOutView({ floors, floor, tol, pullBack, onTol, onPullBack, on
             <strong>{counts.measured}</strong> follow a measured one below
           </span>
           <span>
-            <strong>{counts.drawing}</strong> use the drawing (the one below isn&rsquo;t measured yet)
+            <strong>{counts.drawing}</strong> stand on their grid lines as built (the one below isn&rsquo;t measured yet)
           </span>
           {counts.none > 0 && (
             <span>

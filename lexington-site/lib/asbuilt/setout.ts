@@ -4,8 +4,9 @@ import type { Axis, BoxEl, BoxList, Faces, Floor, Tolerance } from "./types";
 /**
  * Setting out a floor's columns so they sit on the ones below (Niko, 15 Oct
  * 2026). For each column on this floor, find the one in the same place on the
- * floor below. If that one has been measured, carry its offset from the
- * drawing up (so the new column sits on it); otherwise use the drawing. Sizes
+ * floor below and carry its offset from the drawing up (so the new column sits
+ * on it): as measured, or, while it isn't measured, where its grid lines came
+ * out (every line is straight, measured from the fixed column; 28 Oct 2026). Sizes
  * always come from this floor's drawing, so a column that gets smaller going up
  * keeps the same face flush that the engineer drew.
  *

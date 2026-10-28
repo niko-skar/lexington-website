@@ -17,6 +17,7 @@ import {
   boxOf,
   boxStatus,
   chainLineOf,
+  chainOf,
   clashesOf,
   deviationOf,
   edgeDeviation,
@@ -25,8 +26,11 @@ import {
   edgeReaches,
   edgeSegment,
   findBox,
+  gapFit,
   gapsAround,
   gapsOf,
+  gridFit,
+  isFixedColumn,
   itemFigures,
   linePos,
   openingNeighbours,
@@ -39,8 +43,8 @@ import {
   statusFor,
   tapeGaps,
   tapeListOf,
-  type Clash,
   type FigureCheck,
+  type FigureFit,
   type Status,
   type TapeEl,
   type TapeItem,
@@ -86,15 +90,15 @@ const STATUS_CLASS: Record<Status, string> = {
   new: s.statusNew,
 };
 
-export function statusLabel(status: Status, worst: number | null): string {
+export function statusLabel(status: Status, worst: number | null, long = false): string {
   if (status === "none") return "Not measured yet";
   if (status === "new") return "Added on site";
   if (status === "ok") return worst ? `Within ${Math.max(1, Math.round(worst))} mm` : "Same as the drawing";
-  return `${Math.round(worst ?? 0)} mm off`;
+  return `${Math.round(worst ?? 0)} mm off${long ? " the drawing" : ""}`;
 }
 
-export function StatusChip({ status, worst }: { status: Status; worst: number | null }) {
-  return <span className={STATUS_CLASS[status]}>{statusLabel(status, worst)}</span>;
+export function StatusChip({ status, worst, long = false }: { status: Status; worst: number | null; long?: boolean }) {
+  return <span className={STATUS_CLASS[status]}>{statusLabel(status, worst, long)}</span>;
 }
 
 const nowIso = () => new Date().toISOString();
@@ -139,7 +143,7 @@ export function Sheet({ floor, selection, tol, busy, onClose, onSave }: SheetPro
         "removed" in el && el.removed ? (
           <span className={s.statusNone}>Marked not built</span>
         ) : (
-          <StatusChip status={boxStatus(floor, el, tol)} worst={dev?.worst ?? null} />
+          <StatusChip status={boxStatus(floor, el, tol)} worst={dev?.worst ?? null} long />
         );
       body = (
         <BoxBody
@@ -186,14 +190,15 @@ export function Sheet({ floor, selection, tol, busy, onClose, onSave }: SheetPro
     if (gap) {
       kind = "Grid spacing";
       title = `Grid ${gap.from.id} to ${gap.to.id}`;
-      const diff = Math.abs(gap.actual - gap.design);
-      chip = <StatusChip status={gap.measured ? statusFor(diff, tol) : "none"} worst={gap.measured ? diff : null} />;
+      const diff = Math.abs(gap.typed - gap.design);
+      chip = <StatusChip status={gap.measured ? statusFor(diff, tol) : "none"} worst={gap.measured ? diff : null} long />;
       body = (
         <GapBody
           key={`${floor.key}:${selection.axis}:${gap.to.id}:${floor._rev ?? ""}`}
           floor={floor}
           axis={selection.axis}
           toId={gap.to.id}
+          tol={tol}
           busy={busy}
           onSave={onSave}
         />
@@ -209,8 +214,8 @@ export function Sheet({ floor, selection, tol, busy, onClose, onSave }: SheetPro
       const between = gap.prev.list === "cores" || gap.next.list === "cores" ? "Column to lift core" : "Between columns";
       kind = selection.axis === "x" ? `${between}, along grid ${lineId}` : `${between}, down grid ${lineId}`;
       title = `${itemRef(gap.prev)} to ${itemRef(gap.next)}`;
-      const diff = Math.abs(gap.actual - gap.design);
-      chip = <StatusChip status={gap.measured ? statusFor(diff, tol) : "none"} worst={gap.measured ? diff : null} />;
+      const diff = Math.abs((gap.typed ?? gap.actual) - gap.design);
+      chip = <StatusChip status={gap.measured ? statusFor(diff, tol) : "none"} worst={gap.measured ? diff : null} long />;
       body = (
         <ColGapBody
           key={`${floor.key}:${selection.axis}:${selection.key}:${floor._rev ?? ""}`}
@@ -218,6 +223,7 @@ export function Sheet({ floor, selection, tol, busy, onClose, onSave }: SheetPro
           axis={selection.axis}
           list={selection.list}
           nextKey={selection.key}
+          tol={tol}
           busy={busy}
           onSave={onSave}
         />
@@ -304,23 +310,14 @@ function BoxBody({
       {!design && <p className={s.fact}>Added on site: not on the drawings.</p>}
       {isMeasured(el) && el.at && <p className={s.fact}>Last measured {when(el.at)}.</p>}
 
-      {tape && <TapeBlock floor={floor} list={tape} el={el as TapeEl} busy={busy} onSave={onSave} />}
-      {tape &&
-        resolveFloor(floor)
-          .faceClashes.filter((c) => c.item.el._key === el._key && Math.abs(c.off) > tol.ok)
-          .map((c) => (
-            <div key={c.axis} className={s.clashNote}>
-              <p>
-                <b>Doesn&rsquo;t add up by {mm(Math.abs(c.off))} mm.</b> Measured from the grid lines, and by the gap from
-                the column before it {c.axis === "x" ? "along its row" : "down its line"}: the two put it{" "}
-                {mm(Math.abs(c.off))} mm apart. The gap places it on the plan. One of them is off; tape them again:
-              </p>
-              <ul className={s.clashList}>
-                <li>{runText(floor, c.axis, c.item)}</li>
-                <li>Its faces from the grid lines (under &ldquo;Position from the grid lines&rdquo;)</li>
-              </ul>
-            </div>
-          ))}
+      {tape && isFixedColumn(floor, el) && (
+        <p className={s.fixedNote}>
+          <b>Fixed point.</b> Everything on this floor is measured from this column: it stays where the drawing has it,
+          and every grid line runs straight from it.
+        </p>
+      )}
+      {tape && !isFixedColumn(floor, el) && <LinesText floor={floor} el={el as TapeEl} />}
+      {tape && <TapeBlock floor={floor} list={tape} el={el as TapeEl} tol={tol} busy={busy} onSave={onSave} />}
       {tape && itemFigures(floor, el as TapeEl).length > 0 && (
         <FigureRows
           floor={floor}
@@ -392,12 +389,14 @@ function TapeBlock({
   floor,
   list,
   el,
+  tol,
   busy,
   onSave,
 }: {
   floor: Floor;
   list: TapeList;
   el: TapeEl;
+  tol: Tolerance;
   busy: boolean;
   onSave: SaveFn;
 }) {
@@ -405,9 +404,10 @@ function TapeBlock({
   const size = sizeOf(floor, el);
   const around = gapsAround(floor, el);
   const gapAt = (axis: Axis, side: "before" | "after") => around.find((a) => a.axis === axis)?.[side];
+  // Always what was typed, never the plan's figure: saving again must not change a figure.
   const recorded = (axis: Axis, side: "before" | "after", centres: boolean) => {
     const g = gapAt(axis, side);
-    return g && g.measured ? mm(centres ? g.cc : g.actual) : "";
+    return g && g.typed !== null ? mm(centres ? (g.typedCc ?? g.typed) : g.typed) : "";
   };
   const gapTexts = (centres: boolean) =>
     Object.fromEntries(TAPE_SIDES.map(({ axis, side }) => [`${axis}${side}`, recorded(axis, side, centres)]));
@@ -589,13 +589,17 @@ function TapeBlock({
           const now = centres ? g.cc : g.actual;
           const drawn = centres ? g.ccDesign : g.design;
           const key = `${axis}${side}`;
+          const out = g.off !== null && Math.abs(g.off) > tol.ok ? Math.abs(g.off) : null;
           return (
             <label key={key} className={s.gapRow} htmlFor={`gap-${key}`}>
               <span>
                 <b>{label}</b> · {itemName(other)}
                 <small>
                   drawing {mm(drawn)}
-                  {Math.round(now) !== Math.round(drawn) ? ` · now ${mm(now)}` : ""}
+                  {Math.round(now) !== Math.round(drawn) ? ` · plan ${mm(now)}` : ""}
+                  {out !== null && (
+                    <b className={out > tol.warn ? s.offClash : s.offWarn}> · {mm(out)} mm out</b>
+                  )}
                 </small>
               </span>
               <input
@@ -629,7 +633,8 @@ function TapeBlock({
         )}
       </div>
       <p className={s.hint} style={{ marginTop: 8 }}>
-        A gap moves the later column of the two. Columns further along that have their own gap taped move with it.
+        Every figure is kept as you type it. The grid lines stay straight from the fixed point; a gap that doesn&rsquo;t
+        fit your other figures shows how far out it is, and never moves the other columns.
       </p>
     </div>
   );
@@ -642,6 +647,7 @@ function ColGapBody({
   axis,
   list,
   nextKey,
+  tol,
   busy,
   onSave,
 }: {
@@ -649,14 +655,16 @@ function ColGapBody({
   axis: Axis;
   list: TapeList;
   nextKey: string;
+  tol: Tolerance;
   busy: boolean;
   onSave: SaveFn;
 }) {
   const next = findBox(floor, list, nextKey) as TapeEl | undefined;
   const lineId = next ? chainLineOf(floor, axis, { list, el: next }) : "";
   const gap = next ? tapeGaps(floor, axis, lineId).find((g) => g.next.el._key === nextKey) : undefined;
+  const fit = gapFit(floor, axis, nextKey);
   const [centres, setCentres] = useState(false);
-  const [text, setText] = useState(gap && gap.measured ? mm(gap.actual) : "");
+  const [text, setText] = useState(gap && gap.typed !== null ? mm(gap.typed) : "");
   if (!gap || !next) return null;
   const field = axis === "x" ? "gx" : "gy";
   const ps = sizeOf(floor, gap.prev.el);
@@ -668,7 +676,7 @@ function ColGapBody({
 
   const switchMode = (c: boolean) => {
     setCentres(c);
-    setText(gap.measured ? mm(c ? gap.cc : gap.actual) : "");
+    setText(gap.typed !== null ? mm(c ? (gap.typedCc ?? gap.typed) : gap.typed) : "");
   };
 
   const save = async () => {
@@ -691,8 +699,10 @@ function ColGapBody({
         From <span className={s.factStrong}>{itemName(gap.prev)}</span> to{" "}
         <span className={s.factStrong}>{itemName(gap.next)}</span>, {line}. Drawing: {mm(gap.design)} face to face (
         {mm(gap.ccDesign)} centre to centre).
-        {gap.measured && ` Taped: ${mm(gap.actual)} face to face.`}
+        {gap.typed !== null && ` Taped: ${mm(gap.typed)} face to face.`}
+        {gap.typed !== null && Math.round(gap.actual) !== Math.round(gap.typed) && ` On the plan: ${mm(gap.actual)}.`}
       </p>
+      {fit && <FitExplain floor={floor} fit={fit} tol={tol} />}
       <span className={s.side} role="group" aria-label="Measured as">
         <button
           type="button"
@@ -753,7 +763,8 @@ function ColGapBody({
         )}
       </div>
       <p className={s.hint}>
-        Saving moves {itemName(gap.next)}, and the columns after it that have their own gap taped.
+        Kept exactly as you type it. It helps place the grid lines with your other figures; if it doesn&rsquo;t fit them,
+        it shows how far out it is. It never moves a run of columns.
       </p>
     </>
   );
@@ -780,16 +791,11 @@ function FacesBlock({
   const isCore = list === "cores";
   const design = el.design;
   const current = boxOf(floor, el, "actual");
-  const lx = floor.grid.find((g) => g.axis === "x" && g.id === el.x);
-  const ly = floor.grid.find((g) => g.axis === "y" && g.id === el.y);
+  const lx = linePos(floor, "x", el.x, "actual");
+  const ly = linePos(floor, "y", el.y, "actual");
   const start: Faces | null =
-    current && lx && ly
-      ? {
-          l: current.x0 - (lx.design + (lx.shift ?? 0)),
-          r: current.x1 - (lx.design + (lx.shift ?? 0)),
-          t: current.y0 - (ly.design + (ly.shift ?? 0)),
-          b: current.y1 - (ly.design + (ly.shift ?? 0)),
-        }
+    current && lx !== null && ly !== null
+      ? { l: current.x0 - lx, r: current.x1 - lx, t: current.y0 - ly, b: current.y1 - ly }
       : (el.actual ?? el.design);
   const [faces, setFaces] = useState(() => initialFaces(start ?? { l: -500, r: 500, t: -500, b: 500 }, design));
   const [error, setError] = useState("");
@@ -830,9 +836,9 @@ function FacesBlock({
     const wall = isCore ? ((el.actual ?? el.design) as CoreFaces).wall : undefined;
     const value = isCore ? { ...parsed, wall } : parsed;
     const changes: Change[] = [{ path: pathOf(list, el._key, "actual"), value }];
-    // Faces from the string lines fix the position and the size outright.
+    // Faces from the string lines give the size too; the gaps stay as typed (compared, never cleared).
     if (compact) {
-      for (const f of ["w", "h", "gx", "gy"] as const) {
+      for (const f of ["w", "h"] as const) {
         if (has((el as TapeEl)[f])) changes.push({ path: pathOf(list, el._key, f), value: null });
       }
     }
@@ -1305,7 +1311,7 @@ function EdgeBody({
             </button>
           </div>
           <p className={s.hint}>
-            Kept exactly as you type it. If it doesn&rsquo;t add up with your other figures, it is shown in red, nothing
+            Kept exactly as you type it. If it doesn&rsquo;t fit your other figures, it is shown in red; nothing
             else moves.
           </p>
         </div>
@@ -1435,76 +1441,123 @@ function withoutFigure(el: TapeEl, edgeKey: string): EdgeFigure[] | null {
   return left.length ? left : null;
 }
 
-/** Off by more than the tolerance: the figures don't add up. */
-const clashing = (f: FigureCheck, tol: Tolerance) => f.role === "check" && Math.abs(f.off) > tol.ok;
+/** Off by more than the tolerance: the figure doesn't fit the others. */
+const clashing = (f: FigureCheck, tol: Tolerance) => Math.abs(f.off) > tol.ok;
 
-function figureStatus(f: FigureCheck, tol: Tolerance): { text: string; className: string } {
-  if (f.role === "edge") return { text: "Places the edge", className: s.statusNone };
-  if (f.role === "item") return { text: "Places the column", className: s.statusNone };
-  const off = Math.abs(f.off);
-  if (off <= tol.ok) return { text: off < 0.5 ? "Fits" : `Fits (${mm(off)} mm)`, className: s.statusOk };
-  return { text: `${mm(off)} mm out`, className: off <= tol.warn ? s.statusWarn : s.statusClash };
+export function fitStatus(off: number, tol: Tolerance): { text: string; className: string } {
+  const a = Math.abs(off);
+  if (a <= tol.ok) return { text: a < 0.5 ? "Fits" : `Fits (${mm(a)} mm)`, className: s.statusOk };
+  return { text: `${mm(a)} mm out`, className: a <= tol.warn ? s.statusWarn : s.statusClash };
 }
 
-/**
- * How an item got where it is along one axis, as the figures that put it there: "Down grid K: from
- * K/3 as drawn, K/3 to Lift 2 5380, Lift 2 depth 2500, Lift 2 to K/7 1870".
- */
+/** Every figure taped along an item's row or line: "Down grid K: K/3 to Lift 2 5380, Lift 2 depth 2500, ...". */
 export function runText(floor: Floor, axis: Axis, it: TapeItem): string {
   const lineId = chainLineOf(floor, axis, it);
-  const gaps = tapeGaps(floor, axis, lineId);
-  const items: TapeItem[] = [it];
-  const steps: { from: TapeItem; to: TapeItem; gap: number }[] = [];
-  let cur = it;
-  for (;;) {
-    const g = gaps.find((x) => x.next.el._key === cur.el._key && x.measured);
-    const gap = g ? (axis === "x" ? g.next.el.gx : g.next.el.gy) : null;
-    if (!g || !has(gap) || items.some((x) => x.el._key === g.prev.el._key)) break;
-    steps.unshift({ from: g.prev, to: g.next, gap });
-    items.unshift(g.prev);
-    cur = g.prev;
-  }
   const sizeWord = axis === "x" ? "width" : "depth";
   const parts: string[] = [];
-  items.forEach((x, k) => {
+  const chain = chainOf(floor, axis, lineId);
+  chain.forEach((x, k) => {
+    const gap = axis === "x" ? x.el.gx : x.el.gy;
+    if (k > 0 && has(gap)) parts.push(`${itemRef(chain[k - 1])} to ${itemRef(x)} ${mm(gap)}`);
     const size = axis === "x" ? x.el.w : x.el.h;
     if (has(size)) parts.push(`${itemRef(x)} ${sizeWord} ${mm(size)}`);
-    if (k < steps.length) parts.push(`${itemRef(steps[k].from)} to ${itemRef(steps[k].to)} ${mm(steps[k].gap)}`);
   });
-  const start = items[0];
-  const from = start.el.actual ? "as measured from the grid lines" : "where the drawing has it";
-  if (!steps.length) return `${itemRef(it)}: ${from}${parts.length ? `, ${parts.join(", ")}` : ""}`;
   const where = axis === "x" ? `Along grid ${lineId}` : `Down grid ${lineId}`;
-  return `${where}: from ${itemRef(start)} ${from}, ${parts.join(", ")}`;
+  return parts.length ? `${where}: ${parts.join(", ")}` : `${where}: nothing taped yet`;
 }
 
-/** Why a figure doesn't fit, and the figures to tape again. */
-function ClashExplain({ floor, f }: { floor: Floor; f: FigureCheck }) {
-  const axis = f.edge.axis;
-  const by = f.edgeBy;
-  const lines: string[] = [runText(floor, axis, f.item)];
-  let placer: string;
-  if (by?.kind === "figure") {
-    placer = `Your figure from ${itemRef(by.item)} (${mm(by.figure.d)}) places this edge`;
-    lines.push(runText(floor, axis, by.item));
-    lines.push(`From ${itemRef(by.item)} to the edge: ${mm(by.figure.d)}. From ${itemRef(f.item)}: ${mm(f.figure.d)}`);
-  } else {
-    placer = `The edge is where you measured it from grid ${f.edge.ref} (${offsetText(f.edge.axis, f.edge.actual ?? f.edge.design, f.edge.ref)})`;
-    lines.push(`The edge from grid ${f.edge.ref}`);
+/** The two grid lines a gap runs between, e.g. "5>7" for a gap from row 5 to row 7. */
+const spanOf = (f: FigureFit) =>
+  f.prev && f.next ? (f.axis === "x" ? [f.prev.el.x, f.next.el.x] : [f.prev.el.y, f.next.el.y]).join(">") : "";
+
+const fitWord = (f: FigureFit, tol: Tolerance) => (Math.abs(f.off) <= tol.ok ? "fits" : `${mm(Math.abs(f.off))} mm out`);
+
+/** Why a figure doesn't fit the others, and what to tape again. */
+function FitExplain({ floor, fit, tol }: { floor: Floor; fit: FigureFit; tol: Tolerance }) {
+  const out = Math.abs(fit.off);
+  if (out <= tol.ok) return null;
+  const r = resolveFloor(floor);
+  const from = r.fixed ? itemRef(r.fixed) : "the fixed point";
+  let what = "";
+  const checks: string[] = [];
+  let others: string[] = [];
+  if (fit.kind === "gap" && fit.prev && fit.next) {
+    const word = fit.axis === "x" ? "width" : "depth";
+    const size = (it: TapeItem) => {
+      const v = fit.axis === "x" ? it.el.w : it.el.h;
+      return has(v) ? mm(v) : "as drawn";
+    };
+    what = `${itemRef(fit.prev)} to ${itemRef(fit.next)}`;
+    checks.push(`This gap (${mm(fit.typed)} face to face)`);
+    checks.push(`The ${word} of ${itemRef(fit.prev)} (${size(fit.prev)}) and of ${itemRef(fit.next)} (${size(fit.next)})`);
+    checks.push(`${itemRef(fit.prev)} and ${itemRef(fit.next)} from their string lines: one may stand off its line`);
+    const span = spanOf(fit);
+    others = r.fits
+      .filter((f) => f !== fit && f.kind === "gap" && f.axis === fit.axis && spanOf(f) === span)
+      .map((f) => `${itemRef(f.prev!)} to ${itemRef(f.next!)} ${mm(f.typed)} (${fitWord(f, tol)})`);
+  } else if (fit.kind === "edge" && fit.item && fit.edge) {
+    what = `${itemRef(fit.item)} to the slab edge`;
+    checks.push(`This figure (${mm(fit.typed)})`);
+    checks.push(`${itemRef(fit.item)} from its string line: it may stand off its line`);
+    others = r.fits
+      .filter((f) => f !== fit && (f.kind === "edge" || f.kind === "edgeGrid") && f.edge?._key === fit.edge!._key)
+      .map((f) =>
+        f.kind === "edge"
+          ? `${itemRef(f.item!)} ${mm(f.typed)} (${fitWord(f, tol)})`
+          : `from grid ${f.edge!.ref} ${mm(f.typed)} (${fitWord(f, tol)})`,
+      );
+  } else if (fit.kind === "edgeGrid" && fit.edge) {
+    what = `the edge from grid ${fit.edge.ref}`;
+    checks.push(`The edge from grid ${fit.edge.ref} (${mm(fit.typed)})`);
+    others = r.fits
+      .filter((f) => f.kind === "edge" && f.edge?._key === fit.edge!._key)
+      .map((f) => `${itemRef(f.item!)} ${mm(f.typed)} (${fitWord(f, tol)})`);
+  } else if (fit.kind === "grid" && fit.from && fit.to) {
+    what = `grid ${fit.from.id} to ${fit.to.id}`;
+    checks.push(`This spacing (${mm(fit.typed)})`);
+    checks.push("The gaps between the columns on these two lines");
   }
   return (
-    <div className={s.clashNote}>
+    <div className={out > tol.warn ? s.clashNote : s.warnNote}>
       <p>
-        <b>{itemRef(f.item)} doesn&rsquo;t add up by {mm(Math.abs(f.off))} mm.</b> {placer}. Your other figures put{" "}
-        {itemRef(f.item)} {mm(f.now)} from it, not the {mm(f.figure.d)} you measured. One of these is off; tape them
-        again:
+        <b>{mm(out)} mm out.</b> With every grid line straight from {from}, your other figures make {what}{" "}
+        {mm(fit.fitted)}, not the {mm(fit.typed)} you taped. Nothing was moved for it. Tape again:
       </p>
       <ul className={s.clashList}>
-        {lines.map((l) => (
-          <li key={l}>{l}</li>
+        {checks.map((c) => (
+          <li key={c}>{c}</li>
         ))}
       </ul>
+      {others.length > 0 && (
+        <p className={s.othersLine}>
+          {fit.kind === "gap" ? "The same two lines elsewhere: " : "Your other figures to this edge: "}
+          {others.join("; ")}.
+        </p>
+      )}
     </div>
+  );
+}
+
+/** Where a column's own grid lines came out, measured from the fixed point (when they moved). */
+function LinesText({ floor, el }: { floor: Floor; el: TapeEl }) {
+  const fixed = resolveFloor(floor).fixed;
+  if (!fixed) return null;
+  const parts: string[] = [];
+  for (const axis of ["x", "y"] as const) {
+    const id = axis === "x" ? el.x : el.y;
+    const line = gridLines(floor, axis).find((g) => g.id === id);
+    const at = linePos(floor, axis, id, "actual");
+    if (!line || at === null) continue;
+    const d = Math.round(at - line.design);
+    if (Math.abs(d) < 1) continue;
+    const dir = axis === "x" ? (d > 0 ? "right" : "left") : d > 0 ? "down" : "up";
+    parts.push(`grid ${id} ${mm(Math.abs(d))} mm ${dir}`);
+  }
+  if (!parts.length) return null;
+  return (
+    <p className={s.fact}>
+      Measured from {itemRef(fixed)}, its grid lines came out {parts.join(" and ")} of the drawing.
+    </p>
   );
 }
 
@@ -1536,7 +1589,7 @@ function FigureRows({
       <div className={s.blockTitle}>{title}</div>
       <ul className={s.figList}>
         {figures.map((f) => {
-          const status = figureStatus(f, tol);
+          const status = fitStatus(f.off, tol);
           return (
             <li key={f.figure._key} className={s.figRow}>
               <span className={s.figName}>
@@ -1560,14 +1613,15 @@ function FigureRows({
       </ul>
       {figures
         .filter((f) => clashing(f, tol))
-        .map((f) => (
-          <ClashExplain key={f.figure._key} floor={floor} f={f} />
-        ))}
+        .map((f) => {
+          const fit = resolveFloor(floor).fits.find((x) => x.kind === "edge" && x.figure?._key === f.figure._key);
+          return fit ? <FitExplain key={f.figure._key} floor={floor} fit={fit} tol={tol} /> : null;
+        })}
     </div>
   );
 }
 
-/** Above the plan: every figure on this floor that doesn't add up, each a tap away. */
+/** Above the plan: every figure on this floor that is well out from the others, each a tap away. */
 export function ClashNotice({
   floor,
   tol,
@@ -1577,26 +1631,32 @@ export function ClashNotice({
   tol: Tolerance;
   onSelect: (selection: Selection) => void;
 }) {
-  const clashes = clashesOf(floor, tol.ok);
+  const clashes = clashesOf(floor, tol.warn);
   if (!clashes.length) return null;
-  const pick = (c: Clash): Selection =>
-    c.kind === "edge" && c.figure
-      ? { kind: "edge", key: c.figure.edge._key, via: { list: c.item.list, key: c.item.el._key } }
-      : { kind: "box", list: c.item.list, key: c.item.el._key };
+  const pick = (c: FigureFit): Selection =>
+    c.kind === "gap"
+      ? { kind: "colgap", axis: c.axis, list: c.next!.list, key: c.next!.el._key }
+      : c.kind === "edge"
+        ? { kind: "edge", key: c.edge!._key, via: { list: c.item!.list, key: c.item!.el._key } }
+        : c.kind === "edgeGrid"
+          ? { kind: "edge", key: c.edge!._key }
+          : { kind: "gap", axis: c.axis, to: c.to!.id };
+  const label = (c: FigureFit) =>
+    c.kind === "gap"
+      ? `${itemRef(c.prev!)} to ${itemRef(c.next!)}`
+      : c.kind === "edge"
+        ? `${itemRef(c.item!)} to the edge`
+        : c.kind === "edgeGrid"
+          ? `Edge from grid ${c.edge!.ref}`
+          : `Grid ${c.from!.id} to ${c.to!.id}`;
   return (
     <div className={s.clashBar} role="status">
       <span className={s.clashBarTitle}>
-        {clashes.length === 1 ? "1 figure doesn’t add up" : `${clashes.length} figures don’t add up`}
+        {clashes.length === 1 ? "1 figure doesn’t fit the others" : `${clashes.length} figures don’t fit the others`}
       </span>
-      {clashes.slice(0, 4).map((c) => (
-        <button
-          key={`${c.kind}${c.item.el._key}${c.figure?.figure._key ?? c.axis}`}
-          type="button"
-          className={s.clashChip}
-          onClick={() => onSelect(pick(c))}
-        >
-          {itemRef(c.item)}
-          {c.kind === "edge" ? " to the edge" : ": gap and grid"} · {mm(Math.abs(c.off))} mm
+      {clashes.slice(0, 4).map((c, i) => (
+        <button key={`${c.kind}${i}`} type="button" className={s.clashChip} onClick={() => onSelect(pick(c))}>
+          {label(c)} {mm(c.typed)} · {mm(Math.abs(c.off))} mm out
         </button>
       ))}
       {clashes.length > 4 && <span className={s.hint}>and {clashes.length - 4} more</span>}
@@ -1610,39 +1670,36 @@ function GapBody({
   floor,
   axis,
   toId,
+  tol,
   busy,
   onSave,
 }: {
   floor: Floor;
   axis: Axis;
   toId: string;
+  tol: Tolerance;
   busy: boolean;
   onSave: SaveFn;
 }) {
   const gap = gapsOf(floor, axis).find((g) => g.to.id === toId);
-  const [text, setText] = useState(gap ? mm(gap.actual) : "");
+  const fit = gridFit(floor, axis, toId);
+  const [text, setText] = useState(gap ? mm(gap.measured ? gap.typed : gap.actual) : "");
   if (!gap) return null;
-  const lines = gridLines(floor, axis);
-  const after = lines.slice(lines.findIndex((l) => l.id === toId)).map((l) => l.id);
   const typed = parseMm(text);
 
   const apply = async (value: number, measured: boolean) => {
     const shifts = shiftsForGap(floor, axis, toId, value);
-    const delta = value - gap.actual;
     const changes: Change[] = shifts.map((sh) => ({
       path: pathOf("grid", sh.key, "shift"),
       value: Math.round(sh.shift * 10) ? sh.shift : null,
     }));
     changes.push({ path: pathOf("grid", gap.to._key, "measured"), value: measured || null });
-    const dir = axis === "x" ? (delta > 0 ? "right" : "left") : delta > 0 ? "down" : "up";
-    const moved = Math.round(delta)
-      ? ` (line ${toId}${after.length > 1 ? " and the lines after it" : ""} moved ${mm(Math.abs(delta))} ${dir})`
-      : "";
+    const drawn = Math.round(value) !== Math.round(gap.design) ? ` (drawing ${mm(gap.design)})` : "";
     await onSave(
       changes,
       measured
-        ? `Grid ${gap.from.id} to ${toId} measured ${mm(value)}${moved}`
-        : `Grid ${gap.from.id} to ${toId} back to the drawing${moved}`,
+        ? `Grid ${gap.from.id} to ${toId} measured ${mm(value)}${drawn}`
+        : `Grid ${gap.from.id} to ${toId} back to the drawing`,
       `${axis}${toId}`,
     );
   };
@@ -1650,10 +1707,16 @@ function GapBody({
   return (
     <>
       <p className={s.fact}>
-        <span className={s.factStrong}>Drawing:</span> {mm(gap.design)}. <span className={s.factStrong}>Now:</span>{" "}
-        {mm(gap.actual)}
+        <span className={s.factStrong}>Drawing:</span> {mm(gap.design)}.{" "}
+        {gap.measured && (
+          <>
+            <span className={s.factStrong}>Taped:</span> {mm(gap.typed)}.{" "}
+          </>
+        )}
+        <span className={s.factStrong}>On the plan:</span> {mm(gap.actual)}
         {Math.round(gap.actual) !== Math.round(gap.design) ? ` (${signedMm(gap.actual - gap.design)})` : ""}.
       </p>
+      {fit && <FitExplain floor={floor} fit={fit} tol={tol} />}
       <div className={s.faceRow}>
         <label className={s.faceLabel} htmlFor="gap-v">
           Spacing
@@ -1672,9 +1735,8 @@ function GapBody({
         <span />
       </div>
       <p className={s.hint}>
-        This moves line {toId}
-        {after.length > 1 ? ` and every line after it (${after.slice(1).join(", ")})` : ""}, with everything set out
-        from them. To record the gap between two columns, tap the number between them instead.
+        Kept as you type it, with your other figures: the plan places the lines from all of them, measured from the
+        fixed point. To record the gap between two columns, tap the number between them instead.
       </p>
       <div className={s.row}>
         <button
@@ -1685,7 +1747,7 @@ function GapBody({
         >
           Save
         </button>
-        {(gap.measured || Math.round(gap.actual) !== Math.round(gap.design)) && (
+        {(gap.measured || Math.round(gap.typed) !== Math.round(gap.design)) && (
           <button type="button" className={s.btnQuiet} disabled={busy} onClick={() => apply(gap.design, false)}>
             Back to the drawing
           </button>

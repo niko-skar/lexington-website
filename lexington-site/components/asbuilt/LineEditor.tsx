@@ -3,7 +3,16 @@
 import { Fragment, useState } from "react";
 
 import { mm } from "@/lib/asbuilt/format";
-import { boxStatus, chainLines, chainOf, deviationOf, sizeOf, tapeGaps, type TapeItem } from "@/lib/asbuilt/geometry";
+import {
+  boxStatus,
+  chainLines,
+  chainOf,
+  deviationOf,
+  isFixedColumn,
+  sizeOf,
+  tapeGaps,
+  type TapeItem,
+} from "@/lib/asbuilt/geometry";
 import { pathOf } from "@/lib/asbuilt/paths";
 import type { Axis, Change, Floor, Selection, Tolerance } from "@/lib/asbuilt/types";
 
@@ -111,7 +120,9 @@ function LineEditor({
   const where = axis === "x" ? `Along grid ${lineId}` : `Down grid ${lineId}`;
 
   const recordedGaps = (centres: boolean) =>
-    Object.fromEntries(gaps.map((g) => [g.next.el._key, g.measured ? mm(centres ? g.cc : g.actual) : ""]));
+    Object.fromEntries(
+      gaps.map((g) => [g.next.el._key, g.typed !== null ? mm(centres ? (g.typedCc ?? g.typed) : g.typed) : ""]),
+    );
   const [centres, setCentres] = useState(false);
   const [sizes, setSizes] = useState<Record<string, { w: string; h: string }>>(() =>
     Object.fromEntries(
@@ -263,7 +274,11 @@ function LineEditor({
                 >
                   {itemName(it)}
                 </button>
-                <StatusChip status={boxStatus(floor, it.el, tol)} worst={dev?.worst ?? null} />
+                {isFixedColumn(floor, it.el) ? (
+                  <span className={s.fixedChip}>Fixed point</span>
+                ) : (
+                  <StatusChip status={boxStatus(floor, it.el, tol)} worst={dev?.worst ?? null} />
+                )}
                 <div className={s.lineSizes}>
                   <span className={s.lineSizeLabel}>Size</span>
                   {sizeInput("w", "width")}
@@ -278,7 +293,15 @@ function LineEditor({
                   </span>
                   <span>
                     Gap to {itemName(g.next)}
-                    <small>drawing {mm(centres ? g.ccDesign : g.design)}</small>
+                    <small>
+                      drawing {mm(centres ? g.ccDesign : g.design)}
+                      {g.off !== null && Math.abs(g.off) > tol.ok && (
+                        <b className={Math.abs(g.off) > tol.warn ? s.offClash : s.offWarn}>
+                          {" "}
+                          · {mm(Math.abs(g.off))} mm out
+                        </b>
+                      )}
+                    </small>
                   </span>
                   <input
                     className={
@@ -311,8 +334,8 @@ function LineEditor({
         </button>
       </div>
       <p className={s.hint}>
-        Width is across the page, depth is down it. A gap moves the column after it, and the columns further along that
-        have their own gap.
+        Width is across the page, depth is down it. Every figure is kept as you type it: the grid lines stay straight,
+        measured from the fixed point, and a gap that doesn&rsquo;t fit the others shows how far out it is.
       </p>
     </div>
   );
