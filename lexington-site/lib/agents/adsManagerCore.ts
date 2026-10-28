@@ -356,14 +356,15 @@ const dollars = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
 export function templateAdCopy(pack: FactPack, market: Market, angle: AngleKey, withOffer: boolean): AdCopy {
   const forSale = pack.units.filter((u) => u.status === "available");
   const lowest = forSale.length ? Math.min(...forSale.map((u) => u.priceUSD)) : null;
-  const from = lowest ? `Homes from ${dollars(lowest)}` : "Homes for sale";
+  const plus = pack.vat.on ? " + VAT" : "";
+  const from = lowest ? `Homes from ${dollars(lowest)}${plus}` : "Homes for sale";
   const reserve = `Reserve one with ${dollars(pack.reservationFeeUSD)}.`;
   const where = "East Legon, Accra";
   const offer = withOffer && pack.offer && !pack.offer.ended ? ` ${pack.offer.text}` : "";
   const texts: Record<AngleKey, AdCopy> = {
     price: {
       primary_text: `${from} at The Lexington, ${where}. ${reserve}${offer} Tap to see the prices and floor plans.`,
-      headline: lowest ? `From ${dollars(lowest)} in East Legon` : "Homes in East Legon",
+      headline: lowest ? `From ${dollars(lowest)}${plus} in East Legon` : "Homes in East Legon",
       description: "Studios to penthouses",
     },
     plan: {

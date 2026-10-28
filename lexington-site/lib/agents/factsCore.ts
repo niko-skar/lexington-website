@@ -19,6 +19,7 @@ import { formatUSD } from "@/lib/format";
 import { has3DModel } from "@/lib/models3d";
 import { RESERVATION_FEE_USD, unitTypeFor } from "@/lib/reservation/config";
 import { ESTIMATED_COMPLETION, POSTAL_ADDRESS, SITE_URL } from "@/lib/seo";
+import { NO_VAT, vatSuffix, type Vat } from "@/lib/vat";
 
 export interface RawFacts {
   units: Array<{
@@ -38,6 +39,8 @@ export interface RawFacts {
   amenities: Array<{ name: string; category: string }>;
   /** The newest site update posted with the progress reporter, if any. */
   latestUpdate?: { date: string; title?: string; text?: string } | null;
+  /** VAT on the prices (Site settings; off until registered). */
+  vat?: Vat;
 }
 
 export interface OfferFact {
@@ -82,6 +85,8 @@ export interface FactPack {
   units: UnitFact[];
   /** The offer the website banner shows now, or null when none runs. */
   offer: OfferFact | null;
+  /** VAT on the prices: while on, every price is before VAT and is written with "+ VAT". */
+  vat: Vat;
   reservationFeeUSD: number;
   finishes: Array<{ name: string; ratePerSqm: number; badge: string | null }>;
   extras: string[];
@@ -215,6 +220,7 @@ export function buildFactPack(raw: RawFacts, today: string): FactPack {
     today,
     units,
     offer,
+    vat: raw.vat ?? NO_VAT,
     reservationFeeUSD: RESERVATION_FEE_USD,
     finishes: raw.tiers.map((t) => ({ name: t.name, ratePerSqm: t.ratePerSqm, badge: t.badge ?? null })),
     extras: EXTRAS.map((e) => e.title),
@@ -294,7 +300,15 @@ export function factPackText(pack: FactPack): string {
   }
   add("");
 
-  add("FINISHES (added to the list price, per square metre of the unit)");
+  if (pack.vat.on) {
+    add(
+      "PRICES AND VAT",
+      `- Every price below (units, offer prices, finishes, parking and storage) is in US dollars and BEFORE VAT. VAT is added on top at ${pack.vat.rate}% (VAT 15%, NHIL 2.5%, GETFund 2.5%). Whenever you give one of these prices, write "+ VAT" right after it, e.g. "$120,000 + VAT". Never work out the VAT or a total yourself; the website's unit pop-up shows them.`,
+      `- The ${formatUSD(pack.reservationFeeUSD)} reservation fee is the amount to pay; it counts towards the price.`,
+      ""
+    );
+  }
+  add(`FINISHES (added to the list price, per square metre of the unit${pack.vat.on ? ", before VAT" : ""})`);
   for (const f of pack.finishes) {
     add(`- ${f.name}${f.badge ? ` (${f.badge})` : ""}: ${f.ratePerSqm > 0 ? `+${formatUSD(f.ratePerSqm)} per m²` : "included in the list price"}`);
   }
@@ -316,7 +330,7 @@ export function factPackText(pack: FactPack): string {
   }
 
   add(
-    "UNITS (only the ones marked available may be offered; prices in US dollars, Standard finish unless the unit says Premium)",
+    `UNITS (only the ones marked available may be offered; prices in US dollars${pack.vat.on ? " before VAT" : ""}, Standard finish unless the unit says Premium)`,
     "unit | type | floor | size | list price | offer price, full payment | offer price, plan | status | link"
   );
   for (const u of pack.units) {
@@ -326,9 +340,9 @@ export function factPackText(pack: FactPack): string {
         u.typeLine,
         u.floorName,
         `${u.areaSqm} m² (${u.areaSqft} sq ft)`,
-        `${formatUSD(u.priceUSD)}${u.baseFinish !== "Standard" ? ` (${u.baseFinish} finish)` : ""}`,
-        u.fullPaymentPriceUSD != null ? formatUSD(u.fullPaymentPriceUSD) : "-",
-        u.planPriceUSD != null ? formatUSD(u.planPriceUSD) : "-",
+        `${formatUSD(u.priceUSD)}${vatSuffix(pack.vat)}${u.baseFinish !== "Standard" ? ` (${u.baseFinish} finish)` : ""}`,
+        u.fullPaymentPriceUSD != null ? `${formatUSD(u.fullPaymentPriceUSD)}${vatSuffix(pack.vat)}` : "-",
+        u.planPriceUSD != null ? `${formatUSD(u.planPriceUSD)}${vatSuffix(pack.vat)}` : "-",
         u.status,
         u.status === "available" ? `${u.link} (reserve: ${u.reserveLink})${u.has3D ? " (has a 3D plan)" : ""}` : "-",
       ].join(" | ")
@@ -368,6 +382,8 @@ export function allowedPercents(pack: FactPack): Set<number> {
   const pcts = new Set<number>([100]);
   if (pack.offer?.fullPaymentPct != null) pcts.add(pack.offer.fullPaymentPct);
   if (pack.offer?.planPct != null) pcts.add(pack.offer.planPct);
+  // While VAT is on, its rate and its parts may be named.
+  if (pack.vat.on) for (const p of [pack.vat.rate, 15, 2.5]) pcts.add(p);
   const mortgageText = [pack.mortgage?.note ?? "", ...(pack.mortgage?.steps ?? [])].join(" ");
   for (const m of mortgageText.matchAll(/(\d+(?:\.\d+)?)\s*%/g)) pcts.add(Number(m[1]));
   return pcts;

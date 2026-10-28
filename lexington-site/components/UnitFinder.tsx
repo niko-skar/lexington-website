@@ -14,8 +14,11 @@ import { formatArea, type AreaUnit } from "@/lib/area";
 import { setAreaUnit, useAreaUnit } from "./useAreaUnit";
 import { floorTierName, isTierClamped, priceAtTier, tierAddon } from "@/lib/pricing";
 import { StatusBadge } from "./StatusBadge";
+import type { Vat } from "@/lib/vat";
+
 import { UnitDetailModal } from "./UnitDetailModal";
 import { CompareModal } from "./CompareModal";
+import { VatNote, VatTag } from "./Vat";
 import { has3DModel, levelOfPlan, warm3D } from "./Penthouse3D";
 import { PackageTiers } from "./PackageTiers";
 import styles from "./UnitFinder.module.css";
@@ -57,9 +60,11 @@ function typeRank(type: string) {
 interface UnitFinderProps {
   units: Unit[];
   tiers: PackageTier[];
+  /** VAT on the prices (Site settings; off until registered). */
+  vat: Vat;
 }
 
-export function UnitFinder({ units, tiers }: UnitFinderProps) {
+export function UnitFinder({ units, tiers, vat }: UnitFinderProps) {
   const [floor, setFloor] = useState<FloorFilter>("all");
   const [type, setType] = useState<TypeFilter>("all");
   const [status, setStatus] = useState<StatusFilter>("all");
@@ -157,7 +162,7 @@ export function UnitFinder({ units, tiers }: UnitFinderProps) {
   return (
     <div>
       <div className={styles.packages}>
-        <PackageTiers tiers={tiers} selected={selectedTier} onSelect={setSelectedTier} />
+        <PackageTiers tiers={tiers} selected={selectedTier} onSelect={setSelectedTier} vat={vat} />
       </div>
 
       {/* scrollMarginTop clears the sticky header (100px), so #pricing
@@ -315,6 +320,7 @@ export function UnitFinder({ units, tiers }: UnitFinderProps) {
                   <td>{formatArea(u.areaSqm, areaUnit)}</td>
                   <td className={styles.price}>
                     {formatUSD(priceAtTier(u, selectedTier, tiers))}
+                    <VatTag vat={vat} />
                     {clamped ? (
                       <span className={styles.priceNote}>{floorTierName(u, tiers)} included as standard</span>
                     ) : (
@@ -368,6 +374,7 @@ export function UnitFinder({ units, tiers }: UnitFinderProps) {
               </div>
               <div className={styles.cardPrice}>
                 {formatUSD(priceAtTier(u, selectedTier, tiers))}
+                <VatTag vat={vat} />
                 {clamped ? (
                   <span className={styles.priceNote}>{floorTierName(u, tiers)} included as standard</span>
                 ) : (
@@ -401,6 +408,7 @@ export function UnitFinder({ units, tiers }: UnitFinderProps) {
       {filtered.length === 0 && (
         <p className={styles.empty}>No units match these filters.</p>
       )}
+      <VatNote vat={vat} />
 
       {openUnit && (
         <UnitDetailModal
@@ -409,6 +417,7 @@ export function UnitFinder({ units, tiers }: UnitFinderProps) {
           locationPlan={openUnit.locationPlan}
           tiers={tiers}
           selectedTier={selectedTier}
+          vat={vat}
           onClose={() => {
             setSelectedUnit(null);
             setLinkClosed(true);
@@ -437,7 +446,7 @@ export function UnitFinder({ units, tiers }: UnitFinderProps) {
       )}
 
       {showCompare && compareUnits.length > 0 && (
-        <CompareModal units={compareUnits} tiers={tiers} onClose={() => setShowCompare(false)} />
+        <CompareModal units={compareUnits} tiers={tiers} vat={vat} onClose={() => setShowCompare(false)} />
       )}
     </div>
   );

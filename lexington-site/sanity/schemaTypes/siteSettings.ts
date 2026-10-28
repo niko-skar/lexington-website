@@ -12,6 +12,7 @@ export const siteSettings = defineType({
   type: "document",
   groups: [
     { name: "banner", title: "Current Offer" },
+    { name: "vat", title: "VAT" },
     { name: "contact", title: "Contact Info" },
     { name: "home", title: "Home Page" },
     { name: "pages", title: "Page Intros" },
@@ -27,6 +28,26 @@ export const siteSettings = defineType({
       fields: [
         defineField({ name: "enabled", title: "Offer is running", type: "boolean", initialValue: true }),
         defineField({ name: "message", title: "Offer wording", type: "string" }),
+      ],
+    }),
+
+    defineField({
+      name: "vat",
+      title: "VAT on prices",
+      description:
+        "Switch on once The Lexington is VAT-registered. Every price on the website, the unit pictures sent in chats, the AI replies and the ads then say \"+ VAT\", and each unit's pop-up shows the VAT and the total. Leave it off until then.",
+      type: "object",
+      group: "vat",
+      fields: [
+        defineField({ name: "on", title: "Add VAT to prices", type: "boolean", initialValue: false }),
+        defineField({
+          name: "rate",
+          title: "VAT rate (%)",
+          description: "20 = VAT 15% + NHIL 2.5% + GETFund 2.5% (confirmed by the accountant, 28 Oct 2026).",
+          type: "number",
+          initialValue: 20,
+          validation: (Rule) => Rule.min(1).max(50),
+        }),
       ],
     }),
 

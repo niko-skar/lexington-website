@@ -7,9 +7,11 @@ import type { GalleryImage, PackageTier, PackageTierKey, Unit, UnitLocationPlan 
 import { trackAction } from "@/lib/visits/client";
 import { urlFor } from "@/lib/sanity/image";
 import { formatFloor, formatUSD } from "@/lib/format";
+import { VatTag, VatTotal } from "./Vat";
 import { formatArea } from "@/lib/area";
 import { useAreaUnit } from "./useAreaUnit";
 import { floorTierName, isTierClamped, priceAtTier, tierAddon } from "@/lib/pricing";
+import type { Vat } from "@/lib/vat";
 import { Unit3DPlan, has3DModel, levelOfPlan } from "./Penthouse3D";
 import { StatusBadge } from "./StatusBadge";
 import { useDialog } from "./useDialog";
@@ -21,6 +23,7 @@ interface UnitDetailModalProps {
   locationPlan?: UnitLocationPlan;
   tiers: PackageTier[];
   selectedTier: PackageTierKey;
+  vat: Vat;
   onClose: () => void;
 }
 
@@ -39,6 +42,7 @@ export function UnitDetailModal({
   locationPlan,
   tiers,
   selectedTier,
+  vat,
   onClose,
 }: UnitDetailModalProps) {
   const dialogRef = useDialog<HTMLDivElement>(onClose);
@@ -76,6 +80,7 @@ export function UnitDetailModal({
             </div>
             <div className={styles.price}>
               {formatUSD(priceAtTier(unit, selectedTier, tiers))}
+              <VatTag vat={vat} />
               {clamped ? (
                 <span className={styles.priceNote}>{floorTierName(unit, tiers)} included as standard</span>
               ) : (
@@ -85,6 +90,7 @@ export function UnitDetailModal({
                   </span>
                 )
               )}
+              <VatTotal price={priceAtTier(unit, selectedTier, tiers)} vat={vat} />
             </div>
           </div>
           <StatusBadge status={unit.status} />

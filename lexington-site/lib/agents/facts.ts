@@ -2,6 +2,7 @@ import "server-only";
 
 import { todayISO } from "@/lib/crm";
 import { client } from "@/lib/sanity/client";
+import { vatFrom, type VatSetting } from "@/lib/vat";
 
 import { buildFactPack, type FactPack, type RawFacts } from "./factsCore";
 
@@ -11,7 +12,7 @@ const FACTS_QUERY = `{
   "units": *[_type == "unit"] | order(floor asc, unitNumber asc) {
     unitNumber, bedroomType, floor, areaSqm, priceUSD, status, minPackageTier
   },
-  "settings": *[_type == "siteSettings"][0]{ promoBanner, contactPhone, contactEmail, officeAddress },
+  "settings": *[_type == "siteSettings"][0]{ promoBanner, contactPhone, contactEmail, officeAddress, vat },
   "tiers": *[_type == "packageTiers"][0].tiers[]{ key, name, ratePerSqm, badge },
   "finance": *[_type == "financingPlan"][0]{ mortgageNote, mortgageRows[]{ milestone, timeframe, option1 }, serviceCharge },
   "amenities": *[_type == "amenity"] | order(order asc) { name, category },
@@ -25,6 +26,7 @@ interface FactsResult {
     contactPhone?: string;
     contactEmail?: string;
     officeAddress?: string;
+    vat?: VatSetting | null;
   } | null;
   tiers: RawFacts["tiers"] | null;
   finance: {
@@ -52,6 +54,7 @@ export async function loadFactPack(): Promise<FactPack> {
       serviceCharge: r.finance?.serviceCharge ?? null,
       amenities: r.amenities ?? [],
       latestUpdate: r.latest ?? null,
+      vat: vatFrom(r.settings),
     },
     todayISO()
   );

@@ -3,6 +3,7 @@ import { ImageResponse } from "next/og";
 import { formatFloor, formatUSD } from "@/lib/format";
 import { client } from "@/lib/sanity/client";
 import { cardVersion } from "@/lib/unitCard";
+import { vatFrom, type VatSetting } from "@/lib/vat";
 
 // A residence's card as a picture, drawn like its card on the website (the name, AVAILABLE, the
 // floor, type and size, the price and the floor plan), for the chat assistant to send in Messenger,
@@ -30,11 +31,13 @@ interface CardUnit {
   minPackageTier?: string;
   tierName?: string;
   plan?: { url?: string; w?: number; h?: number } | null;
+  vat?: VatSetting | null;
 }
 
 const QUERY = `*[_type == "unit" && unitNumber == $unit][0]{
   unitNumber, floor, bedroomType, areaSqm, priceUSD, status, minPackageTier,
   "tierName": *[_type == "packageTiers"][0].tiers[key == ^.minPackageTier][0].name,
+  "vat": *[_type == "siteSettings"][0].vat,
   "plan": floorPlans[0]->{ "url": image.asset->url, "w": image.asset->metadata.dimensions.width, "h": image.asset->metadata.dimensions.height }
 }`;
 
@@ -69,7 +72,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ unit
 
   // Only the current card is drawn: any other address goes to it (security check, 27 Oct 2026), so
   // asking with made-up versions can't make the server draw pictures over and over.
-  const version = cardVersion({ ...unit, type: unit.bedroomType });
+  const vat = vatFrom(unit);
+  const version = cardVersion({ ...unit, type: unit.bedroomType }, vat);
   const url = new URL(request.url);
   if (url.searchParams.get("v") !== version || [...url.searchParams.keys()].length !== 1) {
     const current = new URL(`/api/unit-card/${encodeURIComponent(unit.unitNumber)}`, url);
@@ -116,7 +120,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ unit
           </div>
         </div>
         <div style={{ marginTop: 26, fontSize: 40, color: "#555555" }}>{`Floor ${formatFloor(unit.floor)} · ${unit.bedroomType} · ${unit.areaSqm} sqm`}</div>
-        <div style={{ marginTop: 14, fontFamily: "Playfair", fontSize: 72, lineHeight: 1.1 }}>{formatUSD(unit.priceUSD)}</div>
+        <div style={{ marginTop: 14, display: "flex", alignItems: "baseline" }}>
+          <div style={{ fontFamily: "Playfair", fontSize: 72, lineHeight: 1.1 }}>{formatUSD(unit.priceUSD)}</div>
+          {vat.on ? (
+            <div style={{ marginLeft: 18, fontFamily: "Inter Bold", fontSize: 34, letterSpacing: 2, color: "#8a6c3e" }}>+ VAT</div>
+          ) : null}
+        </div>
         {tierNote ? <div style={{ marginTop: 6, fontSize: 28, color: "#8b4a34" }}>{tierNote}</div> : null}
 
         <div

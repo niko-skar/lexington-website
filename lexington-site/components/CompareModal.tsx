@@ -8,6 +8,9 @@ import { formatFloor, formatUSD } from "@/lib/format";
 import { formatArea, type AreaUnit } from "@/lib/area";
 import { useAreaUnit } from "./useAreaUnit";
 import { floorTierName, isTierClamped, priceAtTier, tierAddon } from "@/lib/pricing";
+import type { Vat } from "@/lib/vat";
+
+import { VatNote, VatTag } from "./Vat";
 import { StatusBadge } from "./StatusBadge";
 import { useDialog } from "./useDialog";
 import styles from "./CompareModal.module.css";
@@ -15,6 +18,7 @@ import styles from "./CompareModal.module.css";
 interface CompareModalProps {
   units: Unit[];
   tiers: PackageTier[];
+  vat: Vat;
   onClose: () => void;
 }
 
@@ -25,7 +29,7 @@ const baseRows: { label: string; render: (u: Unit, area: AreaUnit) => ReactNode 
   { label: "Status", render: (u) => <StatusBadge status={u.status} /> },
 ];
 
-export function CompareModal({ units, tiers, onClose }: CompareModalProps) {
+export function CompareModal({ units, tiers, vat, onClose }: CompareModalProps) {
   const dialogRef = useDialog<HTMLDivElement>(onClose);
   const areaUnit = useAreaUnit();
 
@@ -80,6 +84,7 @@ export function CompareModal({ units, tiers, onClose }: CompareModalProps) {
                     return (
                       <td key={u._id}>
                         {formatUSD(priceAtTier(u, tier.key, tiers))}
+                        <VatTag vat={vat} />
                         {clamped ? (
                           <span className={styles.priceNote}>
                             {floorTierName(u, tiers)} included as standard
@@ -106,6 +111,7 @@ export function CompareModal({ units, tiers, onClose }: CompareModalProps) {
               ))}
             </tbody>
           </table>
+          <VatNote vat={vat} />
         </div>
       </div>
     </div>

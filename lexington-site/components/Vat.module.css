@@ -1,0 +1,27 @@
+/* VAT beside the prices (lib/vat.ts): quiet, never louder than the price itself. */
+
+.tag {
+  margin-left: 0.1em;
+  font-family: var(--font-sans);
+  font-size: 0.62em;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: var(--brass-text);
+  white-space: nowrap;
+}
+
+.total {
+  display: block;
+  margin-top: 4px;
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  color: #4a4f50;
+}
+
+.note {
+  margin: 14px 0 0;
+  font-size: 13px;
+  color: #5a5f60;
+}
