@@ -68,9 +68,23 @@ export interface Expense {
   receiptType: string | null;
   /** The receipt's copy in Google Drive, once the sheet has it. */
   driveUrl: string | null;
+  /** Money in that the bank's own text added, or confirmed when it was typed already. */
+  bank: BankNote | null;
   createdAt: string;
   createdBy: string;
   updatedAt: string;
+}
+
+/** What the bank's text said about a money in (lib/expenses/bankText.ts). */
+export interface BankNote {
+  /** The bank's time for it, "YYYY-MM-DD HH:MM". */
+  at: string;
+  /** The account as the text shows it (the bank hides the middle digits). */
+  account: string;
+  /** The balance the text gave after it. */
+  balance: number | null;
+  /** The entry was typed already and the text only confirmed it. */
+  matched: boolean;
 }
 
 export const isInflow = (x: Pick<Expense, "kind">) => x.kind === "inflow";

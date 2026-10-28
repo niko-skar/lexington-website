@@ -75,10 +75,127 @@ function SheetStatus() {
   );
 }
 
+/* ---------- in the ☰ menu: the bank's credit texts, passed on by the iPhone ---------- */
+
+type BankLast = { receivedAt: string; result: string; ref: string | null; amount: number | null };
+type BankState = { link: string; accounts: string[]; last: BankLast | null };
+
+function bankLine(last: BankLast | null) {
+  if (!last) return "not set up yet: nothing has come from your iPhone.";
+  const at = when(last.receivedAt);
+  const amount = last.amount ? `${money(last.amount)} ` : "";
+  if (last.result === "added") return `last one ${at}: ${amount}added as ${last.ref ?? "money in"}.`;
+  if (last.result === "matched") return `last one ${at}: ${amount}matched ${last.ref ?? "an entry"} you typed.`;
+  if (last.result === "other-account") return `last one ${at}: ${amount}on another account, not added.`;
+  if (last.result === "not-credit") return `your iPhone reached the app ${at} (not a credit text, so nothing was added).`;
+  if (last.result === "unreadable") return `last one ${at} couldn't be read: see Alerts.`;
+  return `last one ${at} couldn't be added: see Alerts.`;
+}
+
+function BankTexts() {
+  const [state, setState] = useState<BankState | null>(null);
+  const [open, setOpen] = useState(false);
+  const [armed, setArmed] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState("");
+
+  useEffect(() => {
+    fetch("/api/expenses/bank-text", { cache: "no-store" })
+      .then(async (r) => (r.ok ? setState((await r.json()) as BankState) : setNote("Couldn't check the bank texts.")))
+      .catch(() => setNote("Couldn't check the bank texts: no signal."));
+  }, []);
+
+  const copy = async () => {
+    if (!state) return;
+    try {
+      await navigator.clipboard.writeText(state.link);
+      setNote("Link copied. Paste it into the automation (step 5).");
+    } catch {
+      setNote("Couldn't copy it: press and hold the link to copy it.");
+    }
+  };
+
+  const renew = async () => {
+    if (!armed) {
+      setArmed(true);
+      return;
+    }
+    setArmed(false);
+    setBusy(true);
+    setNote("");
+    try {
+      setState(await send<BankState>("/api/expenses/bank-text", "POST", { action: "new-link" }));
+      setNote("New link made: the old one no longer works. Put this one in the automation.");
+    } catch (e) {
+      setNote(e instanceof Error ? e.message : "That didn't work.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (!state) return <p className={site.sheetLine}>{note || "Bank texts: checking…"}</p>;
+  const tail = state.accounts[0]?.replace(/^.*x/, "");
+  return (
+    <>
+      <p className={site.sheetLine}>
+        Bank texts{tail ? ` (account ending ${tail})` : ""}: {bankLine(state.last)}
+      </p>
+      <div className={styles.menuList}>
+        <button type="button" onClick={() => setOpen(!open)}>
+          {open ? "Hide the iPhone steps" : "Set up bank texts on this iPhone"}
+        </button>
+      </div>
+      {open && (
+        <>
+          <p className={site.sheetLine}>
+            Each &ldquo;Credit Alert&rdquo; text from the bank then goes in by itself as money in from Leo, and on to QuickBooks. Your phone buzzes so you can change one
+            that wasn&rsquo;t from Leo. Only those texts are passed on, nothing else.
+          </p>
+          <ol className={site.bankSteps}>
+            <li>
+              Tap <b>Copy the link</b> below.
+            </li>
+            <li>
+              Open the <b>Shortcuts</b> app, tap <b>Automation</b>, then <b>+</b>.
+            </li>
+            <li>
+              Pick <b>Message</b>. In <b>Message Contains</b> type <b>Credit Alert</b>. Pick <b>Run Immediately</b>, then <b>Next</b>.
+            </li>
+            <li>
+              Tap <b>New Blank Automation</b>, <b>Add Action</b>, and pick <b>Get Contents of URL</b>.
+            </li>
+            <li>
+              Tap <b>URL</b> and paste the link.
+            </li>
+            <li>
+              Tap the <b>›</b> arrow. <b>Method</b>: POST. <b>Request Body</b>: JSON. <b>Add new field</b> → <b>Text</b>: key <b>text</b>, and for the value pick{" "}
+              <b>Shortcut Input</b>.
+            </li>
+            <li>
+              Tap <b>Done</b>. The next credit text shows up here by itself.
+            </li>
+          </ol>
+          <p className={site.bankLink}>{state.link}</p>
+          <div className={styles.menuList}>
+            <button type="button" onClick={() => void copy()}>
+              Copy the link
+            </button>
+            <button type="button" className={armed ? styles.dangerArmed : undefined} onClick={() => void renew()} disabled={busy}>
+              {busy ? "Making a new link…" : armed ? "Tap again: the old link stops working" : "Make a new link"}
+            </button>
+          </div>
+        </>
+      )}
+      {note && <p className={site.sheetLine}>{note}</p>}
+    </>
+  );
+}
+
 export function ExpensesApp({
   me,
   active,
   initial,
+  openEntry,
   startedOffline,
   fresh,
 }: {
@@ -87,6 +204,8 @@ export function ExpensesApp({
   active: boolean;
   /** Null when the app opened on another part and the expenses haven't arrived yet. */
   initial: ExpensesData | null;
+  /** Opened from a bank text's phone alert: that entry opens in the form. */
+  openEntry?: string;
   startedOffline: boolean;
   /** The page came with this part's data just now (it's the part the app opened on). */
   fresh: boolean;
@@ -174,6 +293,24 @@ export function ExpensesApp({
     setJustSaved(false);
     setFormKey((k) => k + 1);
   }, []);
+
+  // Opened from a bank text's phone alert: the entry opens in the form, ready to change, and the
+  // address drops the alert's part so a reload doesn't do it again.
+  const openedEntry = useRef(false);
+  useEffect(() => {
+    if (!openEntry || openedEntry.current || !loaded) return;
+    const timer = setTimeout(() => {
+      openedEntry.current = true;
+      const url = new URL(window.location.href);
+      url.searchParams.delete("open");
+      url.searchParams.delete("alert");
+      window.history.replaceState(null, "", url.pathname + url.search);
+      const x = expenses.find((e) => e.id === openEntry);
+      if (x) onEdit(x);
+      else if (!offline) showToast({ text: "That entry isn't there any more." });
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [openEntry, loaded, expenses, offline, onEdit, showToast]);
 
   const onSaved = useCallback(
     (expense: Expense, wasEdit: boolean) => {
@@ -264,6 +401,7 @@ export function ExpensesApp({
       {menuOpen && (
         <SiteMenu me={me} onClose={() => setMenuOpen(false)} onRefresh={() => void refresh()} onLogins={() => setAccessOpen(true)}>
           <SheetStatus />
+          <BankTexts />
         </SiteMenu>
       )}
       {accessOpen && <AccessSheet onClose={() => setAccessOpen(false)} />}

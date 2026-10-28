@@ -44,6 +44,7 @@ export const FIELDS = `{
   "receiptUrl": receipt.asset->url,
   "receiptType": receipt.asset->mimeType,
   "driveUrl": sheet.fileUrl,
+  "bank": bank{ at, account, balance, "matched": coalesce(matched, false) },
   createdAt,
   "createdBy": coalesce(createdBy, ""),
   "updatedAt": coalesce(updatedAt, sourceUpdatedAt, createdAt)
@@ -191,7 +192,8 @@ const receiptRef = (assetId: string) => ({
 
 /* ---------- saving ---------- */
 
-export async function createExpense(me: TodoMe, body: Record<string, unknown>): Promise<Expense> {
+/** A new entry. `extra` is saved with it as it is (the bank text's note on money in it added). */
+export async function createExpense(me: TodoMe, body: Record<string, unknown>, extra: Record<string, unknown> = {}): Promise<Expense> {
   const receiptId = cleanReceiptId(body.receiptId);
   const data = await fields(me, body, receiptId);
   const id = newId(EXPENSE_PREFIX);
@@ -201,6 +203,7 @@ export async function createExpense(me: TodoMe, body: Record<string, unknown>): 
     _type: "siteExpense",
     ref: await nextRef(data.kind),
     ...data,
+    ...extra,
     ...(receiptId ? { receipt: receiptRef(receiptId) } : {}),
     createdAt: now,
     createdBy: me.name,

@@ -43,7 +43,7 @@ function AlertCard({ alert, fresh, opened }: { alert: OwnerAlert; fresh: boolean
   const tone =
     alert.kind === "enquiry" || alert.kind === "reservation" || alert.kind === "lead" || alert.kind === "chat" || alert.kind === "buyer"
       ? alerts.kindPeople
-      : alert.kind === "ads" || alert.kind === "todo"
+      : alert.kind === "ads" || alert.kind === "todo" || alert.kind === "bank"
         ? alerts.kindAds
         : alerts.kindQuiet;
   return (

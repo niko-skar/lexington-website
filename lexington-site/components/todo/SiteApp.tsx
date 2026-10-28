@@ -140,6 +140,7 @@ export function SiteApp({
   initialList,
   openAlert,
   openJob,
+  openEntry,
   seenAlert,
   startedOffline,
 }: {
@@ -151,6 +152,8 @@ export function SiteApp({
   openAlert?: string;
   /** Opened from a phone alert about a job: the job to show. */
   openJob?: string;
+  /** Opened from a bank text's phone alert: the money in to show in the form. */
+  openEntry?: string;
   /** ...and (the office) the alert it came with, which has now been seen. */
   seenAlert?: string;
   startedOffline: boolean;
@@ -288,7 +291,14 @@ export function SiteApp({
       )}
       {show("expenses") && (
         <div hidden={section !== "expenses"}>
-          <ExpensesApp me={me} active={section === "expenses"} initial={data.expenses ?? null} startedOffline={startedOffline && first === "expenses"} fresh={first === "expenses"} />
+          <ExpensesApp
+            me={me}
+            active={section === "expenses"}
+            initial={data.expenses ?? null}
+            openEntry={openEntry}
+            startedOffline={startedOffline && first === "expenses"}
+            fresh={first === "expenses"}
+          />
         </div>
       )}
       {show("alerts") && (

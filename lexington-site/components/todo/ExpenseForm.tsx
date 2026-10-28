@@ -271,6 +271,14 @@ export function ExpenseForm({
   const vatPreview = vat && parsedAmount() > 0 && rate > 0 ? vatParts(parsedAmount(), rate) : null;
   const hasReceipt = !!receipt.slot || !!kept;
 
+  // New money in with the same day and amount as one already in (often the bank's text added it):
+  // saving it again would count it twice.
+  const twins = useMemo(() => {
+    const value = Math.round(parseFloat(amount.replace(/[^0-9.,]/g, "").replace(/,/g, "")) * 100) / 100;
+    if (x || !inflow || !(value > 0)) return [];
+    return expenses.filter((e) => isInflow(e) && e.date === date && Math.abs(e.amount - value) < 0.005);
+  }, [x, inflow, amount, date, expenses]);
+
   /* ---------- suggestions ---------- */
 
   const suppliers = useMemo(() => {
@@ -449,6 +457,13 @@ export function ExpenseForm({
             {reading.note}
           </p>
         )}
+        {x?.bank && (
+          <p className={site.storeNote}>
+            {x.bank.matched ? "Confirmed by your bank's text" : "Added by your bank's text"} of {niceDate(x.bank.at.slice(0, 10))}
+            {x.bank.at.length > 10 ? `, ${x.bank.at.slice(11)}` : ""} (account ending {x.bank.account.replace(/^.*x/, "")}).
+            {x.bank.matched ? "" : " Not from Leo? Change who it's from below, or delete it."}
+          </p>
+        )}
 
         <div className={site.formHead}>
           <h2 className={site.formTitle}>
@@ -485,6 +500,15 @@ export function ExpenseForm({
           <span>GH₵</span>
           <input id="exp-amount" ref={amountRef} type="text" inputMode="decimal" enterKeyHint="next" placeholder="0.00" value={amount} onChange={(e) => setAmount(e.target.value)} />
         </div>
+        {twins.length > 0 && (
+          <p className={site.receiptNeeded} role="status">
+            Already in for this day:{" "}
+            {twins
+              .map((t) => `${t.ref ?? "an entry"}, ${money(t.amount)}${t.supplier ? ` from ${t.supplier}` : ""}${t.bank && !t.bank.matched ? " (added by your bank's text)" : ""}`)
+              .join("; ")}
+            . Only save this if it&rsquo;s another payment.
+          </p>
+        )}
         <div className={site.vatRow} role="group" aria-label="VAT">
           <button type="button" className={!vat ? styles.chipOn : styles.chip} aria-pressed={!vat} onClick={() => setVat(false)}>
             No VAT
