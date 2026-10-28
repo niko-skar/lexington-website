@@ -23,6 +23,9 @@ export const EXPENSE_SETTINGS_ID = `expensesettings-${TAG}`;
 export const QBO_FEED_ID = `qbofeed-${TAG}`;
 /** Entries already in QuickBooks that then left the app (deleted, or no longer a Site entry): to remove there by hand. */
 export const QBO_GONE_PREFIX = `qbogone-${TAG}-`;
+/** Each bank text the iPhone passed on (so one text never counts twice), and their settings (the link's version, the account). */
+export const BANK_TEXT_PREFIX = `banktext-${TAG}-`;
+export const BANK_TEXT_SETTINGS_ID = `banktexts-${TAG}`;
 
 export const newId = (prefix: string) => prefix + randomBytes(6).toString("hex");
 

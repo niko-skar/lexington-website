@@ -924,6 +924,29 @@
   color: var(--x-accent);
   font-weight: 600;
 }
+/* The iPhone steps for the bank's credit texts, and the private link to paste. */
+.bankSteps {
+  margin: 0;
+  padding-left: 22px;
+  list-style: decimal;
+  display: grid;
+  gap: 6px;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--x-ink);
+}
+.bankLink {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--x-line);
+  border-radius: 8px;
+  background: var(--x-bg);
+  font-size: 12px;
+  color: var(--x-muted);
+  overflow-wrap: anywhere;
+  user-select: all;
+  -webkit-user-select: all;
+}
 
 /* ---------- expenses: the list ---------- */
 .ledger {

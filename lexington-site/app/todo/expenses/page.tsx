@@ -13,10 +13,14 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Expenses | The Lexington" };
 
 /** The expense log (the office only), moved here from the Claude page in Oct 2026. */
-export default async function ExpensesPage() {
+export default async function ExpensesPage({ searchParams }: { searchParams: Promise<{ open?: string; alert?: string }> }) {
   const me = await getTodoUser();
   if (!me) return <TodoSignIn next="/todo/expenses" />;
   if (me.kind !== "admin" || !me.sections.includes("expenses")) redirect("/todo");
+  // A tap on a bank text's phone alert: /todo/expenses?open=<entry>&alert=<its alert>.
+  const params = await searchParams;
+  const openEntry = typeof params.open === "string" && /^expense-(live|dev)-[a-z0-9]{12,24}$/.test(params.open) ? params.open : undefined;
+  const seenAlert = typeof params.alert === "string" && /^alert-(live|dev)-[a-f0-9]{12}$/.test(params.alert) ? params.alert : undefined;
 
   let expenses: Expense[] = [];
   let items: StoreItem[] = [];
@@ -27,5 +31,5 @@ export default async function ExpensesPage() {
     console.error("[expenses] load failed:", error instanceof Error ? error.message : error);
     failed = true;
   }
-  return <SiteApp me={me} section="expenses" initial={{ expenses: { expenses, items } }} startedOffline={failed} />;
+  return <SiteApp me={me} section="expenses" initial={{ expenses: { expenses, items } }} openEntry={openEntry} seenAlert={seenAlert} startedOffline={failed} />;
 }

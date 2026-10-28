@@ -366,6 +366,7 @@ export const ExpenseBook = memo(function ExpenseBook({
                         {xIn ? <span className={site.tagIn}>Money in</span> : x.floor ? <span className={site.tag}>{x.floor}</span> : null}
                         {x.category && x.category !== "Material" && <span className={site.tagMuted}>{x.category}</span>}
                         <span className={site.tagMuted}>{x.method || "—"}</span>
+                        {x.bank && <span className={site.tagMuted}>{x.bank.matched ? "Bank text ✓" : "From bank text"}</span>}
                         {x.vat && <span className={site.tagVat}>VAT {x.vatRate ?? ""}%</span>}
                         {x.receiptUrl && (
                           <button type="button" className={site.clip} onClick={() => onOpenReceipt(x)}>
