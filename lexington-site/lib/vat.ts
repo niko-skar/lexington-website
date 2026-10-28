@@ -1,8 +1,9 @@
 /**
- * VAT on the prices (Niko, 28 Oct 2026: "we have to start adding VAT to the prices on the website").
- * His accountant confirmed 20% (VAT 15% + NHIL 2.5% + GETFund 2.5%). Shown as "Price + VAT": every
- * price keeps its number with "+ VAT" after it, and the unit pop-up shows the VAT and the total.
- * One switch in Site settings → VAT, off until The Lexington is VAT-registered.
+ * VAT on the prices. Niko, 28 Oct 2026: "we have to start adding VAT to the prices on the website", first
+ * shown as "Price + VAT", then the same day "I want the full amount of vat added everywhere we show a
+ * price": every price people see has the VAT in it, labelled "incl. VAT". The prices kept in Sanity stay
+ * before VAT; withVat() makes the price that is shown. His accountant confirmed 20% (VAT 15% + NHIL
+ * 2.5% + GETFund 2.5%). One switch in Site settings → VAT.
  *
  * By law a price shown without a separate VAT line counts as including VAT (VAT Act 2025, s.44(5)),
  * so once the switch is on, every price must go through here.
@@ -39,14 +40,14 @@ export function vatAmount(price: number, vat: Vat): number {
   return vat.on ? Math.round((price * vat.rate) / 100) : 0;
 }
 
-/** What the buyer pays in all: the price plus its VAT. */
+/** What the buyer pays in all: the price plus its VAT. Every price shown goes through this. */
 export function withVat(price: number, vat: Vat): number {
   return price + vatAmount(price, vat);
 }
 
-/** " + VAT" to follow a price written out in words (or nothing while VAT is off). */
-export function vatSuffix(vat: Vat): string {
-  return vat.on ? " + VAT" : "";
+/** " incl. VAT" to follow a price that has the VAT in it (or nothing while VAT is off). */
+export function inclVatSuffix(vat: Vat): string {
+  return vat.on ? " incl. VAT" : "";
 }
 
 /**
@@ -59,10 +60,10 @@ export function feeVatSuffix(vat: Vat): string {
 
 /** One line for under a list of prices, or "" while VAT is off. */
 export function vatNote(vat: Vat): string {
-  return vat.on ? `Prices are in US dollars and exclude VAT, which is added at ${vat.rate}%.` : "";
+  return vat.on ? `Prices are in US dollars and include VAT at ${vat.rate}%.` : "";
 }
 
 /** For the card pictures' address: changes when the switch or the rate changes. */
 export function vatKey(vat: Vat): string {
-  return vat.on ? `vat${vat.rate}` : "novat";
+  return vat.on ? `incl${vat.rate}` : "novat";
 }

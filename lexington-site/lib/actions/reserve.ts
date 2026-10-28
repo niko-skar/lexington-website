@@ -32,7 +32,7 @@ import { SITE_URL } from "@/lib/seo";
 import { client } from "@/lib/sanity/client";
 import { siteSettingsQuery, unitByNumberQuery } from "@/lib/sanity/queries";
 import type { SiteSettings, Unit } from "@/lib/sanity/types";
-import { feeVatSuffix, vatFrom } from "@/lib/vat";
+import { feeVatSuffix, vatFrom, withVat } from "@/lib/vat";
 
 export interface ReserveFormState {
   status: "idle" | "success" | "error";
@@ -96,6 +96,8 @@ export async function submitReservation(
   }
 
   const siteSettings = await client.fetch<SiteSettings>(siteSettingsQuery);
+  // VAT (Site settings): prices are told with the VAT in it, and the fee says it has VAT in it.
+  const vat = vatFrom(siteSettings);
 
   // The unit they picked: check it is real and still available right now.
   let unit: Unit | null = null;
@@ -115,7 +117,7 @@ export async function submitReservation(
     }
   }
   const facts: UnitFacts | null = unit
-    ? { unitNumber: unit.unitNumber, bedroomType: unit.bedroomType, floor: unit.floor, areaSqm: unit.areaSqm, priceUSD: unit.priceUSD }
+    ? { unitNumber: unit.unitNumber, bedroomType: unit.bedroomType, floor: unit.floor, areaSqm: unit.areaSqm, priceUSD: withVat(unit.priceUSD, vat), vatIncluded: vat.on }
     : null;
   const type = unitTypeFor(unit?.bedroomType ?? input.unitType);
   const residence = residenceText(input, facts);
@@ -140,8 +142,6 @@ export async function submitReservation(
 
   // The form itself. It carries no bank details: which account to pay into depends on
   // how the buyer wants to pay, so a sales advisor agrees that with them and sends them.
-  // The fee has VAT in it: while VAT is on, the form and the email say so.
-  const vat = vatFrom(siteSettings);
   let pdf: Uint8Array | null = null;
   let held = ""; // why the form was not sent, in plain words
   try {

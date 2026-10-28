@@ -70,6 +70,10 @@ function dollarAmounts(text: string): Array<{ raw: string; value: number; end: n
   return out;
 }
 
+/** Words that put VAT on top of a price ("+ VAT", "excluding VAT", "VAT is added", "VAT ... on top"). */
+export const VAT_ON_TOP =
+  /\+\s*VAT\b|\bplus\s+VAT\b|\bexcl(?:\.|udes?|uding)?\s+VAT\b|\bbefore\s+VAT\b|\bVAT\b[^.\n]{0,30}\bon\s+top\b|\bVAT\s+(?:is|will\s+be)\s+added\b|\bVAT\s+extra\b|\bextra\s+VAT\b/i;
+
 /**
  * What in `text` the website does not back up, in plain words. Empty when everything checks out.
  * `theirWords` is what the person themselves wrote or answered: repeating their own budget back
@@ -88,24 +92,12 @@ export function factCheck(text: string, pack: FactPack, theirWords = ""): string
     if (!amounts.has(Math.round(value))) flag(`"${raw.trim()}" is not a price, fee or rate the website shows.`);
   }
 
-  // ---- VAT (Niko, 28 Oct 2026: "Price + VAT"). By law a price shown without VAT counts as
-  // including it, so while VAT is on every price says "+ VAT". The reservation fee has VAT in it
-  // (Niko, 28 Oct 2026), so it never does.
+  // ---- VAT (Niko, 28 Oct 2026: "I want the full amount of vat added everywhere we show a price").
+  // Every price in the pack already has the VAT in it, as the website shows it (the reservation fee
+  // too), so nothing may say VAT comes on top. "incl. VAT" is fine.
   if (pack.vat.on) {
-    const prices = allowedAmounts(pack);
-    const theirs = new Set(dollarAmounts(theirWords).map((d) => Math.round(d.value)));
-    for (const { raw, value, end } of dollarAmounts(text)) {
-      const v = Math.round(value);
-      const after = text.slice(end, end + 24);
-      if (v === pack.reservationFeeUSD && !theirs.has(v)) {
-        if (/^\s*(?:\+\s*VAT|plus\s+VAT|excl(?:\.|uding)?\s+VAT|before\s+VAT)/i.test(after))
-          flag(`"${raw.trim()}" is the reservation fee, which includes VAT: no "+ VAT" after it.`);
-        continue;
-      }
-      if (!prices.has(v) || theirs.has(v)) continue;
-      if (!/^\s*(?:\/\s*(?:m²|m2|sq\.?\s?m|sqm|space|sq\.?\s?ft)\s*)?(?:\+\s*VAT|plus\s+VAT|excl(?:\.|uding)?\s+VAT|before\s+VAT)/i.test(after))
-        flag(`"${raw.trim()}" needs "+ VAT" after it: prices are before VAT.`);
-    }
+    if (VAT_ON_TOP.test(text))
+      flag('Says VAT comes on top: every price already includes VAT (write "incl. VAT", or nothing).');
   } else if (/\bVAT\b|\bNHIL\b|GETFund|plus\s+tax|tax\s+(?:is\s+)?(?:included|inclusive)/i.test(text)) {
     flag("Talks about VAT or tax: the website doesn't show VAT yet, so leave tax questions to the sales team.");
   }

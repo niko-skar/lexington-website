@@ -14,12 +14,12 @@
  * Pure: lib/agents/facts.ts loads the data from Sanity; this file only reads it.
  */
 import { SQFT_PER_SQM } from "@/lib/area";
-import { EXTRAS } from "@/lib/extras";
+import { extrasFor } from "@/lib/extras";
 import { formatUSD } from "@/lib/format";
 import { has3DModel } from "@/lib/models3d";
 import { RESERVATION_FEE_USD, unitTypeFor } from "@/lib/reservation/config";
 import { ESTIMATED_COMPLETION, POSTAL_ADDRESS, SITE_URL } from "@/lib/seo";
-import { NO_VAT, feeVatSuffix, vatSuffix, type Vat } from "@/lib/vat";
+import { NO_VAT, feeVatSuffix, withVat, type Vat } from "@/lib/vat";
 
 export interface RawFacts {
   units: Array<{
@@ -65,6 +65,7 @@ export interface UnitFact {
   floorName: string;
   areaSqm: number;
   areaSqft: number;
+  /** The list price as the website shows it: with the VAT in it while VAT is on. */
   priceUSD: number;
   status: "available" | "reserved" | "sold";
   /** The price with the offer's full-payment discount, while an offer runs (available units only). */
@@ -85,7 +86,7 @@ export interface FactPack {
   units: UnitFact[];
   /** The offer the website banner shows now, or null when none runs. */
   offer: OfferFact | null;
-  /** VAT on the prices: while on, every price is before VAT and is written with "+ VAT". */
+  /** VAT on the prices: while on, every price here already has the VAT in it, as the website shows it. */
   vat: Vat;
   reservationFeeUSD: number;
   finishes: Array<{ name: string; ratePerSqm: number; badge: string | null }>;
@@ -187,6 +188,9 @@ export function buildFactPack(raw: RawFacts, today: string): FactPack {
   const parsed = parseOffer(raw.promoBanner?.message, raw.promoBanner?.enabled, today);
   // An offer whose last day has passed is not offered to anyone, whatever the banner still says.
   const offer = parsed && !parsed.ended ? parsed : null;
+  // Every price as the website shows it: with the VAT in it while VAT is on (Niko, 28 Oct 2026).
+  const vat = raw.vat ?? NO_VAT;
+  const shown = (usd: number) => withVat(usd, vat);
 
   const tierName = (key: string | null | undefined) => raw.tiers.find((t) => t.key === (key || "standard"))?.name ?? "Standard";
 
@@ -202,10 +206,10 @@ export function buildFactPack(raw: RawFacts, today: string): FactPack {
       floorName: floorName(u.floor),
       areaSqm: u.areaSqm,
       areaSqft: sqft(u.areaSqm),
-      priceUSD: u.priceUSD,
+      priceUSD: shown(u.priceUSD),
       status,
-      fullPaymentPriceUSD: open && offer?.fullPaymentPct != null ? discounted(u.priceUSD, offer.fullPaymentPct) : null,
-      planPriceUSD: open && offer?.planPct != null ? discounted(u.priceUSD, offer.planPct) : null,
+      fullPaymentPriceUSD: open && offer?.fullPaymentPct != null ? discounted(shown(u.priceUSD), offer.fullPaymentPct) : null,
+      planPriceUSD: open && offer?.planPct != null ? discounted(shown(u.priceUSD), offer.planPct) : null,
       link: `${SITE_URL}/residences?unit=${q}`,
       reserveLink: `${SITE_URL}/reserve?unit=${q}`,
       has3D: has3DModel(u.unitNumber),
@@ -220,10 +224,10 @@ export function buildFactPack(raw: RawFacts, today: string): FactPack {
     today,
     units,
     offer,
-    vat: raw.vat ?? NO_VAT,
+    vat,
     reservationFeeUSD: RESERVATION_FEE_USD,
-    finishes: raw.tiers.map((t) => ({ name: t.name, ratePerSqm: t.ratePerSqm, badge: t.badge ?? null })),
-    extras: EXTRAS.map((e) => e.title),
+    finishes: raw.tiers.map((t) => ({ name: t.name, ratePerSqm: shown(t.ratePerSqm), badge: t.badge ?? null })),
+    extras: extrasFor(vat).map((e) => e.title),
     mortgage: raw.mortgage?.note || mortgageSteps.length ? { note: raw.mortgage?.note ?? "", steps: mortgageSteps } : null,
     serviceCharge: raw.serviceCharge?.description
       ? {
@@ -303,12 +307,12 @@ export function factPackText(pack: FactPack): string {
   if (pack.vat.on) {
     add(
       "PRICES AND VAT",
-      `- Every price below (units, offer prices, finishes, parking and storage) is in US dollars and BEFORE VAT. VAT is added on top at ${pack.vat.rate}% (VAT 15%, NHIL 2.5%, GETFund 2.5%). Whenever you give one of these prices, write "+ VAT" right after it, e.g. "$120,000 + VAT". Never work out the VAT or a total yourself; the website's unit pop-up shows them.`,
-      `- The ${formatUSD(pack.reservationFeeUSD)} reservation fee already includes VAT: never write "+ VAT" after it ("${formatUSD(pack.reservationFeeUSD)} (VAT included)" is right). Whether or how it comes off the price is for the sales team to explain (no terms for that are given).`,
+      `- Every price below (units, offer prices, finishes, parking and storage) is in US dollars and already INCLUDES VAT at ${pack.vat.rate}% (VAT 15%, NHIL 2.5%, GETFund 2.5%), exactly as the website shows it. Give these prices as they are; you may write "incl. VAT" after one. Never write "+ VAT", never add VAT again and never work out a price before VAT.`,
+      `- The ${formatUSD(pack.reservationFeeUSD)} reservation fee includes VAT too ("${formatUSD(pack.reservationFeeUSD)} (VAT included)"). Whether or how it comes off the price is for the sales team to explain (no terms for that are given).`,
       ""
     );
   }
-  add(`FINISHES (added to the list price, per square metre of the unit${pack.vat.on ? ", before VAT" : ""})`);
+  add(`FINISHES (added to the list price, per square metre of the unit${pack.vat.on ? ", incl. VAT" : ""})`);
   for (const f of pack.finishes) {
     add(`- ${f.name}${f.badge ? ` (${f.badge})` : ""}: ${f.ratePerSqm > 0 ? `+${formatUSD(f.ratePerSqm)} per m²` : "included in the list price"}`);
   }
@@ -330,7 +334,7 @@ export function factPackText(pack: FactPack): string {
   }
 
   add(
-    `UNITS (only the ones marked available may be offered; prices in US dollars${pack.vat.on ? " before VAT" : ""}, Standard finish unless the unit says Premium)`,
+    `UNITS (only the ones marked available may be offered; prices in US dollars${pack.vat.on ? " incl. VAT" : ""}, Standard finish unless the unit says Premium)`,
     "unit | type | floor | size | list price | offer price, full payment | offer price, plan | status | link"
   );
   for (const u of pack.units) {
@@ -340,9 +344,9 @@ export function factPackText(pack: FactPack): string {
         u.typeLine,
         u.floorName,
         `${u.areaSqm} m² (${u.areaSqft} sq ft)`,
-        `${formatUSD(u.priceUSD)}${vatSuffix(pack.vat)}${u.baseFinish !== "Standard" ? ` (${u.baseFinish} finish)` : ""}`,
-        u.fullPaymentPriceUSD != null ? `${formatUSD(u.fullPaymentPriceUSD)}${vatSuffix(pack.vat)}` : "-",
-        u.planPriceUSD != null ? `${formatUSD(u.planPriceUSD)}${vatSuffix(pack.vat)}` : "-",
+        `${formatUSD(u.priceUSD)}${u.baseFinish !== "Standard" ? ` (${u.baseFinish} finish)` : ""}`,
+        u.fullPaymentPriceUSD != null ? formatUSD(u.fullPaymentPriceUSD) : "-",
+        u.planPriceUSD != null ? formatUSD(u.planPriceUSD) : "-",
         u.status,
         u.status === "available" ? `${u.link} (reserve: ${u.reserveLink})${u.has3D ? " (has a 3D plan)" : ""}` : "-",
       ].join(" | ")

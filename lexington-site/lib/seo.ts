@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
-import { NO_VAT, vatSuffix, type Vat } from "@/lib/vat";
+import { formatUSD } from "@/lib/format";
+import { NO_VAT, inclVatSuffix, withVat, type Vat } from "@/lib/vat";
 
 /**
  * The apex domain 301s to www, so www is the canonical origin. Everything we
@@ -15,9 +16,9 @@ export const SITE_NAME = "The Lexington";
 export const SITE_TITLE =
   "The Lexington — Shiashie, East Legon | A Skarlatos & Son Development";
 
-/** The site-wide description (search results, share previews, structured data); "+ VAT" follows the price while VAT is on. */
+/** The site-wide description (search results, share previews, structured data): the lowest price with the VAT in it while VAT is on. */
 export function siteDescription(vat: Vat = NO_VAT): string {
-  return `The Lexington: eight storeys of studio to three-bedroom residences and a penthouse duplex in Shiashie, East Legon, Accra. From $72,000${vatSuffix(vat)}. A Skarlatos & Son development.`;
+  return `The Lexington: eight storeys of studio to three-bedroom residences and a penthouse duplex in Shiashie, East Legon, Accra. From ${formatUSD(withVat(PRICE_FROM_USD, vat))}${inclVatSuffix(vat)}. A Skarlatos & Son development.`;
 }
 
 /**

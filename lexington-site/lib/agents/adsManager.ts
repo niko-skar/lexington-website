@@ -32,7 +32,7 @@ import { pilotSettings, readPilotSwitch, realShares } from "./adsPilot";
 import { dayIn, type Holder } from "./adsPilotCore";
 import { factCheck } from "./factcheck";
 import { loadFactPack } from "./facts";
-import { factPackText, type FactPack } from "./factsCore";
+import { allowedAmounts, factPackText, type FactPack } from "./factsCore";
 import { listLeadForms } from "./metaLeads";
 
 /**
@@ -585,7 +585,7 @@ export async function runAdsManager(opts: { mode?: "full" | "guard"; nowMs?: num
       angleResults: results,
       markets: ["ghana", "us", "uk", "canada"],
       marketsTried: keep.marketsTried as Market[],
-      vat: pack.vat.on,
+      prices: pack.vat.on ? [...allowedAmounts(pack)] : undefined,
     });
     if (mode === "guard") {
       plan = {

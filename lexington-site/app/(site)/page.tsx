@@ -17,7 +17,7 @@ import type {
   Unit,
 } from "@/lib/sanity/types";
 import { formatUSD } from "@/lib/format";
-import { vatFrom, vatSuffix } from "@/lib/vat";
+import { inclVatSuffix, vatFrom, withVat } from "@/lib/vat";
 import { ESTIMATED_COMPLETION } from "@/lib/seo";
 
 import { Hero } from "@/components/Hero";
@@ -45,6 +45,9 @@ export default async function HomePage() {
   // If everything is ever reserved or sold, "from" falls back to the cheapest
   // overall instead of reading "$Infinity".
   const startingPrice = Math.min(...(availableUnits.length > 0 ? availableUnits : units).map((u) => u.priceUSD));
+  // As people see it: with the VAT in it while VAT is on (lib/vat.ts).
+  const vat = vatFrom(siteSettings);
+  const startingShown = withVat(startingPrice, vat);
 
   const exteriorImages = images.filter((i) => i.category === "exterior");
   const interiorImages = images.filter((i) => i.category === "interior");
@@ -93,7 +96,7 @@ export default async function HomePage() {
             <StatStrip
               stats={[
                 { value: availableUnits.length, suffix: ` of ${units.length}`, label: "Units available" },
-                { value: startingPrice, prefix: "$", label: vatFrom(siteSettings).on ? "Starting from, plus VAT" : "Starting from" },
+                { value: startingShown, prefix: "$", label: vat.on ? "Starting from, incl. VAT" : "Starting from" },
                 { value: projectedYield, suffix: "%", label: "Projected rental yield" },
                 { value: 8, label: "Storeys, Shiashie skyline" },
                 { value: ESTIMATED_COMPLETION.year, prefix: `${ESTIMATED_COMPLETION.month} `, label: "Estimated completion", noGrouping: true },
@@ -115,8 +118,8 @@ export default async function HomePage() {
             Every floor plan is drawn to let daily life move naturally — from
             high-speed elevators and natural stone flooring to a back-up
             generator and water supply that never leave you waiting. Prices
-            from {formatUSD(startingPrice)}
-            {vatSuffix(vatFrom(siteSettings))}.
+            from {formatUSD(startingShown)}
+            {inclVatSuffix(vat)}.
           </p>
           <Button href="/residences" variant="outline-dark">
             Explore Floor Plans

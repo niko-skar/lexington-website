@@ -1,6 +1,7 @@
-import { EXTRAS } from "@/lib/extras";
-import { vatFrom, vatSuffix } from "@/lib/vat";
-import { pageMetadata } from "@/lib/seo";
+import { extrasFor } from "@/lib/extras";
+import { formatUSD } from "@/lib/format";
+import { inclVatSuffix, vatFrom, withVat } from "@/lib/vat";
+import { PRICE_FROM_USD, pageMetadata } from "@/lib/seo";
 import { client } from "@/lib/sanity/client";
 import { urlFor } from "@/lib/sanity/image";
 import {
@@ -20,17 +21,16 @@ import { VatNote } from "@/components/Vat";
 
 export const revalidate = 600;
 
-// The search snippet names the lowest price, so it says "+ VAT" too once VAT is switched on.
+// The search snippet names the lowest price: with the VAT in it while VAT is on, like every price.
 export async function generateMetadata() {
   const settings = await client.fetch<SiteSettings>(siteSettingsQuery);
+  const vat = vatFrom(settings);
   return pageMetadata({
     path: "/residences",
     title: "Residences & Floor Plans | The Lexington",
-    description: `Studio, one, two and three-bedroom residences and a penthouse duplex in Shiashie, East Legon. Live floor plans, availability and pricing from $72,000${vatSuffix(vatFrom(settings))}.`,
+    description: `Studio, one, two and three-bedroom residences and a penthouse duplex in Shiashie, East Legon. Live floor plans, availability and pricing from ${formatUSD(withVat(PRICE_FROM_USD, vat))}${inclVatSuffix(vat)}.`,
   });
 }
-
-const extras = EXTRAS;
 
 export default async function ResidencesPage() {
   const [units, images, siteSettings, packageTiers] = await Promise.all([
@@ -83,7 +83,7 @@ export default async function ResidencesPage() {
               Parking, storage and boys&rsquo; quarters.
             </h2>
           </Reveal>
-          <FeatureGrid items={extras} />
+          <FeatureGrid items={extrasFor(vatFrom(siteSettings))} />
           <VatNote vat={vatFrom(siteSettings)} />
           <p className="disclaimer" style={{ marginTop: 32 }}>
             All extras are alternatively available on monthly rental.

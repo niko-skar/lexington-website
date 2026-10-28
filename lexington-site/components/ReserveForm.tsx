@@ -28,7 +28,7 @@ import {
   type Option,
 } from "@/lib/reservation/config";
 import { trackAction } from "@/lib/visits/client";
-import { feeVatSuffix, type Vat } from "@/lib/vat";
+import { feeVatSuffix, inclVatSuffix, withVat, type Vat } from "@/lib/vat";
 import buttonStyles from "./Button.module.css";
 import styles from "./ReserveForm.module.css";
 
@@ -569,7 +569,7 @@ export function ReserveForm({ units, contactPhone, contactEmail, whatsappHref, v
                     />
                     <span className={styles.unitMain}>Unit {u.unitNumber}</span>
                     <span className={styles.unitMeta}>
-                      {u.floor === 0 ? "Ground floor" : `Floor ${formatFloor(u.floor)}`} · {formatArea(u.areaSqm, areaUnit)} · from {formatUSD(u.priceUSD)}
+                      {u.floor === 0 ? "Ground floor" : `Floor ${formatFloor(u.floor)}`} · {formatArea(u.areaSqm, areaUnit)} · from {formatUSD(withVat(u.priceUSD, vat))}{inclVatSuffix(vat)}
                     </span>
                   </label>
                 ))}

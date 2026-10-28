@@ -14,11 +14,11 @@ import { formatArea, type AreaUnit } from "@/lib/area";
 import { setAreaUnit, useAreaUnit } from "./useAreaUnit";
 import { floorTierName, isTierClamped, priceAtTier, tierAddon } from "@/lib/pricing";
 import { StatusBadge } from "./StatusBadge";
-import type { Vat } from "@/lib/vat";
+import { withVat, type Vat } from "@/lib/vat";
 
 import { UnitDetailModal } from "./UnitDetailModal";
 import { CompareModal } from "./CompareModal";
-import { VatIncl, VatNote, VatTag } from "./Vat";
+import { VatNote, VatTag } from "./Vat";
 import { has3DModel, levelOfPlan, warm3D } from "./Penthouse3D";
 import { PackageTiers } from "./PackageTiers";
 import styles from "./UnitFinder.module.css";
@@ -72,6 +72,8 @@ export function UnitFinder({ units, tiers, vat }: UnitFinderProps) {
   const [compareIds, setCompareIds] = useState<string[]>([]);
   const [showCompare, setShowCompare] = useState(false);
   const [selectedTier, setSelectedTier] = useState<PackageTierKey>("standard");
+  // A unit's price as people see it: at the chosen finishes, with the VAT in it while VAT is on.
+  const shownAt = (u: Unit) => withVat(priceAtTier(u, selectedTier, tiers), vat);
   // null sortColumn means "default order" — whatever seed/floor order the
   // units arrived in, unchanged until someone clicks a header.
   const [sortColumn, setSortColumn] = useState<SortColumn | null>(null);
@@ -319,18 +321,17 @@ export function UnitFinder({ units, tiers, vat }: UnitFinderProps) {
                   <td>{u.bedroomType}</td>
                   <td>{formatArea(u.areaSqm, areaUnit)}</td>
                   <td className={styles.price}>
-                    {formatUSD(priceAtTier(u, selectedTier, tiers))}
+                    {formatUSD(shownAt(u))}
                     <VatTag vat={vat} />
                     {clamped ? (
                       <span className={styles.priceNote}>{floorTierName(u, tiers)} included as standard</span>
                     ) : (
                       addon > 0 && (
                         <span className={styles.priceBreakdown}>
-                          {formatUSD(u.priceUSD)} + {formatUSD(addon)}
+                          {formatUSD(withVat(u.priceUSD, vat))} + {formatUSD(shownAt(u) - withVat(u.priceUSD, vat))}
                         </span>
                       )
                     )}
-                    <VatIncl price={priceAtTier(u, selectedTier, tiers)} vat={vat} />
                   </td>
                   <td>
                     <StatusBadge status={u.status} />
@@ -374,18 +375,17 @@ export function UnitFinder({ units, tiers, vat }: UnitFinderProps) {
                 Floor {formatFloor(u.floor)} · {u.bedroomType} · {formatArea(u.areaSqm, areaUnit)}
               </div>
               <div className={styles.cardPrice}>
-                {formatUSD(priceAtTier(u, selectedTier, tiers))}
+                {formatUSD(shownAt(u))}
                 <VatTag vat={vat} />
                 {clamped ? (
                   <span className={styles.priceNote}>{floorTierName(u, tiers)} included as standard</span>
                 ) : (
                   addon > 0 && (
                     <span className={styles.priceBreakdown}>
-                      {formatUSD(u.priceUSD)} + {formatUSD(addon)}
+                      {formatUSD(withVat(u.priceUSD, vat))} + {formatUSD(shownAt(u) - withVat(u.priceUSD, vat))}
                     </span>
                   )
                 )}
-                <VatIncl price={priceAtTier(u, selectedTier, tiers)} vat={vat} />
               </div>
               <div className={styles.cardActions}>
                 <span>

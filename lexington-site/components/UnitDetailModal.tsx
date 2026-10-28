@@ -7,11 +7,11 @@ import type { GalleryImage, PackageTier, PackageTierKey, Unit, UnitLocationPlan 
 import { trackAction } from "@/lib/visits/client";
 import { urlFor } from "@/lib/sanity/image";
 import { formatFloor, formatUSD } from "@/lib/format";
-import { VatTag, VatTotal } from "./Vat";
+import { VatTag } from "./Vat";
 import { formatArea } from "@/lib/area";
 import { useAreaUnit } from "./useAreaUnit";
 import { floorTierName, isTierClamped, priceAtTier, tierAddon } from "@/lib/pricing";
-import type { Vat } from "@/lib/vat";
+import { withVat, type Vat } from "@/lib/vat";
 import { Unit3DPlan, has3DModel, levelOfPlan } from "./Penthouse3D";
 import { StatusBadge } from "./StatusBadge";
 import { useDialog } from "./useDialog";
@@ -56,6 +56,9 @@ export function UnitDetailModal({
   const has3D = has3DModel(unit.unitNumber);
   const clamped = isTierClamped(unit, selectedTier, tiers);
   const addon = tierAddon(unit, selectedTier, tiers);
+  // As people see them: with the VAT in it while VAT is on.
+  const shown = withVat(priceAtTier(unit, selectedTier, tiers), vat);
+  const base = withVat(unit.priceUSD, vat);
 
   return (
     <div
@@ -79,18 +82,17 @@ export function UnitDetailModal({
               Floor {formatFloor(unit.floor)} · {unit.bedroomType} · {formatArea(unit.areaSqm, areaUnit)}
             </div>
             <div className={styles.price}>
-              {formatUSD(priceAtTier(unit, selectedTier, tiers))}
+              {formatUSD(shown)}
               <VatTag vat={vat} />
               {clamped ? (
                 <span className={styles.priceNote}>{floorTierName(unit, tiers)} included as standard</span>
               ) : (
                 addon > 0 && (
                   <span className={styles.priceBreakdown}>
-                    {formatUSD(unit.priceUSD)} + {formatUSD(addon)}
+                    {formatUSD(base)} + {formatUSD(shown - base)}
                   </span>
                 )
               )}
-              <VatTotal price={priceAtTier(unit, selectedTier, tiers)} vat={vat} />
             </div>
           </div>
           <StatusBadge status={unit.status} />

@@ -1,7 +1,7 @@
 import { client } from "@/lib/sanity/client";
 import { siteSettingsQuery } from "@/lib/sanity/queries";
 import type { SiteSettings } from "@/lib/sanity/types";
-import { vatFrom } from "@/lib/vat";
+import { vatFrom, withVat } from "@/lib/vat";
 import {
   POSTAL_ADDRESS,
   PRICE_FROM_USD,
@@ -51,9 +51,9 @@ export default async function StructuredData() {
       makesOffer: {
         "@type": "AggregateOffer",
         priceCurrency: "USD",
-        lowPrice: PRICE_FROM_USD,
+        lowPrice: withVat(PRICE_FROM_USD, vat),
         ...(vat.on
-          ? { priceSpecification: { "@type": "PriceSpecification", minPrice: PRICE_FROM_USD, priceCurrency: "USD", valueAddedTaxIncluded: false } }
+          ? { priceSpecification: { "@type": "PriceSpecification", minPrice: withVat(PRICE_FROM_USD, vat), priceCurrency: "USD", valueAddedTaxIncluded: true } }
           : {}),
         availability: "https://schema.org/PreOrder",
         category: "Residential apartments for sale",

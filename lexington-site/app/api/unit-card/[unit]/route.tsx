@@ -3,7 +3,7 @@ import { ImageResponse } from "next/og";
 import { formatFloor, formatUSD } from "@/lib/format";
 import { client } from "@/lib/sanity/client";
 import { cardVersion } from "@/lib/unitCard";
-import { vatFrom, type VatSetting } from "@/lib/vat";
+import { vatFrom, withVat, type VatSetting } from "@/lib/vat";
 
 // A residence's card as a picture, drawn like its card on the website (the name, AVAILABLE, the
 // floor, type and size, the price and the floor plan), for the chat assistant to send in Messenger,
@@ -73,7 +73,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ unit
   // Only the current card is drawn: any other address goes to it (security check, 27 Oct 2026), so
   // asking with made-up versions can't make the server draw pictures over and over.
   const vat = vatFrom(unit);
-  const version = cardVersion({ ...unit, type: unit.bedroomType }, vat);
+  // The price as the website shows it (with the VAT in it while VAT is on); the chat hashes the same figure.
+  const shown = withVat(unit.priceUSD, vat);
+  const version = cardVersion({ ...unit, priceUSD: shown, type: unit.bedroomType }, vat);
   const url = new URL(request.url);
   if (url.searchParams.get("v") !== version || [...url.searchParams.keys()].length !== 1) {
     const current = new URL(`/api/unit-card/${encodeURIComponent(unit.unitNumber)}`, url);
@@ -121,9 +123,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ unit
         </div>
         <div style={{ marginTop: 26, fontSize: 40, color: "#555555" }}>{`Floor ${formatFloor(unit.floor)} · ${unit.bedroomType} · ${unit.areaSqm} sqm`}</div>
         <div style={{ marginTop: 14, display: "flex", alignItems: "baseline" }}>
-          <div style={{ fontFamily: "Playfair", fontSize: 72, lineHeight: 1.1 }}>{formatUSD(unit.priceUSD)}</div>
+          <div style={{ fontFamily: "Playfair", fontSize: 72, lineHeight: 1.1 }}>{formatUSD(shown)}</div>
           {vat.on ? (
-            <div style={{ marginLeft: 18, fontFamily: "Inter Bold", fontSize: 34, letterSpacing: 2, color: "#8a6c3e" }}>+ VAT</div>
+            <div style={{ marginLeft: 18, fontFamily: "Inter Bold", fontSize: 34, letterSpacing: 2, color: "#8a6c3e" }}>incl. VAT</div>
           ) : null}
         </div>
         {tierNote ? <div style={{ marginTop: 6, fontSize: 28, color: "#8b4a34" }}>{tierNote}</div> : null}

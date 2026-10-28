@@ -21,7 +21,10 @@ export interface UnitFacts {
   bedroomType: string;
   floor: number;
   areaSqm: number;
+  /** As the website shows it. */
   priceUSD: number;
+  /** The price has the VAT in it (VAT on). */
+  vatIncluded?: boolean;
 }
 
 /** "Unit 205B, One bedroom" / "One bedroom (we'll confirm the unit)" / "We'll recommend a residence". */
@@ -44,7 +47,7 @@ export function answerRows(input: ReservationInput, unit: UnitFacts | null): Arr
   const residence = unit
     ? `Unit ${unit.unitNumber}: ${type?.fact ?? unit.bedroomType}, ${
         unit.floor === 0 ? "ground floor" : `floor ${formatFloor(unit.floor)}`
-      }, ${unit.areaSqm} sqm, list price ${formatUSD(unit.priceUSD)}`
+      }, ${unit.areaSqm} sqm, list price ${formatUSD(unit.priceUSD)}${unit.vatIncluded ? " incl. VAT" : ""}`
     : type
       ? `${type.fact}, unit not chosen yet`
       : input.unitType === UNSURE_TYPE

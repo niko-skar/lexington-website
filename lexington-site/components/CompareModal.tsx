@@ -8,9 +8,9 @@ import { formatFloor, formatUSD } from "@/lib/format";
 import { formatArea, type AreaUnit } from "@/lib/area";
 import { useAreaUnit } from "./useAreaUnit";
 import { floorTierName, isTierClamped, priceAtTier, tierAddon } from "@/lib/pricing";
-import type { Vat } from "@/lib/vat";
+import { withVat, type Vat } from "@/lib/vat";
 
-import { VatIncl, VatNote, VatTag } from "./Vat";
+import { VatNote, VatTag } from "./Vat";
 import { StatusBadge } from "./StatusBadge";
 import { useDialog } from "./useDialog";
 import styles from "./CompareModal.module.css";
@@ -81,9 +81,12 @@ export function CompareModal({ units, tiers, vat, onClose }: CompareModalProps) 
                   {units.map((u) => {
                     const clamped = isTierClamped(u, tier.key, tiers);
                     const addon = tierAddon(u, tier.key, tiers);
+                    // As people see them: with the VAT in it while VAT is on.
+                    const shown = withVat(priceAtTier(u, tier.key, tiers), vat);
+                    const base = withVat(u.priceUSD, vat);
                     return (
                       <td key={u._id}>
-                        {formatUSD(priceAtTier(u, tier.key, tiers))}
+                        {formatUSD(shown)}
                         <VatTag vat={vat} />
                         {clamped ? (
                           <span className={styles.priceNote}>
@@ -92,11 +95,10 @@ export function CompareModal({ units, tiers, vat, onClose }: CompareModalProps) 
                         ) : (
                           addon > 0 && (
                             <span className={styles.priceBreakdown}>
-                              {formatUSD(u.priceUSD)} + {formatUSD(addon)}
+                              {formatUSD(base)} + {formatUSD(shown - base)}
                             </span>
                           )
                         )}
-                        <VatIncl price={priceAtTier(u, tier.key, tiers)} vat={vat} />
                       </td>
                     );
                   })}

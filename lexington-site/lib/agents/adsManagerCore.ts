@@ -23,6 +23,9 @@
  * - At most six new ads a run, two per ad set.
  */
 
+import { inclVatSuffix } from "@/lib/vat";
+
+import { VAT_ON_TOP } from "./factcheck";
 import type { FactPack } from "./factsCore";
 
 export type Market = "ghana" | "us" | "uk" | "canada";
@@ -109,16 +112,16 @@ export function quotesOffer(text: string): boolean {
 }
 
 /**
- * A price written without "+ VAT" after it (the $10,000 reservation fee aside: it includes VAT): since 28 Oct 2026
- * prices are before VAT, and by law a price shown without VAT counts as including it.
+ * A price as ads gave it before VAT was in every price (Niko, 28 Oct 2026: "I want the full amount of vat
+ * added everywhere we show a price"): "+ VAT" after it, or a figure that is not one of today's prices,
+ * which all have the VAT in them. The $10,000 reservation fee (VAT included) and small amounts aside.
  */
-export function quotesPriceWithoutVat(text: string): boolean {
+export function quotesOldPrice(text: string, prices: ReadonlySet<number>): boolean {
+  if (VAT_ON_TOP.test(text)) return true;
   for (const m of text.matchAll(/(?:US)?\$\s?(\d{1,3}(?:,\d{3})+|\d+(?:\.\d+)?)(\s?k\b)?/gi)) {
-    const value = Number(m[1].replace(/,/g, "")) * (m[2] ? 1000 : 1);
+    const value = Math.round(Number(m[1].replace(/,/g, "")) * (m[2] ? 1000 : 1));
     if (value === 10_000 || value < 500) continue;
-    const after = text.slice((m.index ?? 0) + m[0].length, (m.index ?? 0) + m[0].length + 24);
-    if (!/^\s*(?:\/\s*(?:m²|m2|sq\.?\s?m|sqm|space)\s*|per\s+(?:sqm|m²|space)\s*)?(?:\+\s*VAT|plus\s+VAT|excl(?:\.|uding)?\s+VAT|before\s+VAT)/i.test(after))
-      return true;
+    if (!prices.has(value)) return true;
   }
   return false;
 }
@@ -160,8 +163,8 @@ export interface ManagerInput {
   markets: Market[];
   /** Markets already tried once (made by the manager), so they are not made again. */
   marketsTried: Market[];
-  /** VAT is on: an ad quoting a price without "+ VAT" is replaced. */
-  vat?: boolean;
+  /** While VAT is on: today's prices (all with the VAT in them). An ad quoting another figure, or "+ VAT", is replaced. */
+  prices?: number[];
 }
 
 export interface NewAd {
@@ -225,6 +228,7 @@ export function planManager(input: ManagerInput): ManagerPlan {
     return quotesOffer(ad.text) && (!input.offer || input.offer.ended);
   };
   const sets = input.adsets.filter((s) => s.status === "active");
+  const prices = input.prices?.length ? new Set(input.prices) : null;
 
   for (const set of sets) {
     const ads = input.ads.filter((a) => a.adsetId === set.id);
@@ -239,10 +243,11 @@ export function planManager(input: ManagerInput): ManagerPlan {
     for (const a of expired) {
       plan.pause.push({ adId: a.id, adsetId: set.id, name: a.name, cause: "offer", reason: "It quotes an offer that has ended." });
     }
-    // A price without "+ VAT" (VAT is on): switched off, and a new ad takes its place below.
-    const noVat = input.vat ? live.filter((a) => !expired.includes(a) && quotesPriceWithoutVat(a.text)) : [];
+    // A price from before VAT was in every price ("+ VAT", or a figure the website no longer shows):
+    // switched off, and a new ad takes its place below.
+    const noVat = prices ? live.filter((a) => !expired.includes(a) && quotesOldPrice(a.text, prices)) : [];
     for (const a of noVat) {
-      plan.pause.push({ adId: a.id, adsetId: set.id, name: a.name, cause: "vat", reason: 'It quotes a price without "+ VAT".' });
+      plan.pause.push({ adId: a.id, adsetId: set.id, name: a.name, cause: "vat", reason: "It quotes a price without the VAT in it." });
     }
     let keep = live.filter((a) => !expired.includes(a) && !noVat.includes(a));
 
@@ -378,15 +383,15 @@ const dollars = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
 export function templateAdCopy(pack: FactPack, market: Market, angle: AngleKey, withOffer: boolean): AdCopy {
   const forSale = pack.units.filter((u) => u.status === "available");
   const lowest = forSale.length ? Math.min(...forSale.map((u) => u.priceUSD)) : null;
-  const plus = pack.vat.on ? " + VAT" : "";
-  const from = lowest ? `Homes from ${dollars(lowest)}${plus}` : "Homes for sale";
+  const incl = inclVatSuffix(pack.vat);
+  const from = lowest ? `Homes from ${dollars(lowest)}${incl}` : "Homes for sale";
   const reserve = `Reserve one with ${dollars(pack.reservationFeeUSD)}${pack.vat.on ? ", VAT included" : ""}.`;
   const where = "East Legon, Accra";
   const offer = withOffer && pack.offer && !pack.offer.ended ? ` ${pack.offer.text}` : "";
   const texts: Record<AngleKey, AdCopy> = {
     price: {
       primary_text: `${from} at The Lexington, ${where}. ${reserve}${offer} Tap to see the prices and floor plans.`,
-      headline: lowest ? `From ${dollars(lowest)}${plus} in East Legon` : "Homes in East Legon",
+      headline: lowest ? `From ${dollars(lowest)}${incl} in East Legon` : "Homes in East Legon",
       description: "Studios to penthouses",
     },
     plan: {
