@@ -108,6 +108,21 @@ export function quotesOffer(text: string): boolean {
   return /\b\d{1,2}\s?%|\bdiscount|\boffer\b|\bpromo|\bphase 1 pricing/i.test(text);
 }
 
+/**
+ * A price written without "+ VAT" after it (the $10,000 reservation fee aside): since 28 Oct 2026
+ * prices are before VAT, and by law a price shown without VAT counts as including it.
+ */
+export function quotesPriceWithoutVat(text: string): boolean {
+  for (const m of text.matchAll(/(?:US)?\$\s?(\d{1,3}(?:,\d{3})+|\d+(?:\.\d+)?)(\s?k\b)?/gi)) {
+    const value = Number(m[1].replace(/,/g, "")) * (m[2] ? 1000 : 1);
+    if (value === 10_000 || value < 500) continue;
+    const after = text.slice((m.index ?? 0) + m[0].length, (m.index ?? 0) + m[0].length + 24);
+    if (!/^\s*(?:\/\s*(?:m²|m2|sq\.?\s?m|sqm|space)\s*|per\s+(?:sqm|m²|space)\s*)?(?:\+\s*VAT|plus\s+VAT|excl(?:\.|uding)?\s+VAT|before\s+VAT)/i.test(after))
+      return true;
+  }
+  return false;
+}
+
 export interface AdInfo {
   id: string;
   name: string;
@@ -145,6 +160,8 @@ export interface ManagerInput {
   markets: Market[];
   /** Markets already tried once (made by the manager), so they are not made again. */
   marketsTried: Market[];
+  /** VAT is on: an ad quoting a price without "+ VAT" is replaced. */
+  vat?: boolean;
 }
 
 export interface NewAd {
@@ -158,7 +175,7 @@ export interface NewAd {
 }
 
 export interface ManagerPlan {
-  pause: Array<{ adId: string; adsetId: string; name: string; cause: "offer" | "results" | "rejected"; reason: string }>;
+  pause: Array<{ adId: string; adsetId: string; name: string; cause: "offer" | "results" | "rejected" | "vat"; reason: string }>;
   create: NewAd[];
   /** Ad sets whose end date is taken off, so they keep running. */
   ongoing: Array<{ adsetId: string; name: string; reason: string }>;
@@ -222,7 +239,12 @@ export function planManager(input: ManagerInput): ManagerPlan {
     for (const a of expired) {
       plan.pause.push({ adId: a.id, adsetId: set.id, name: a.name, cause: "offer", reason: "It quotes an offer that has ended." });
     }
-    let keep = live.filter((a) => !expired.includes(a));
+    // A price without "+ VAT" (VAT is on): switched off, and a new ad takes its place below.
+    const noVat = input.vat ? live.filter((a) => !expired.includes(a) && quotesPriceWithoutVat(a.text)) : [];
+    for (const a of noVat) {
+      plan.pause.push({ adId: a.id, adsetId: set.id, name: a.name, cause: "vat", reason: 'It quotes a price without "+ VAT".' });
+    }
+    let keep = live.filter((a) => !expired.includes(a) && !noVat.includes(a));
 
     // Spending without real leads, while another ad in the set brings them.
     const spend = keep.reduce((s, a) => s + a.last14.spend, 0);

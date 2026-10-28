@@ -585,11 +585,12 @@ export async function runAdsManager(opts: { mode?: "full" | "guard"; nowMs?: num
       angleResults: results,
       markets: ["ghana", "us", "uk", "canada"],
       marketsTried: keep.marketsTried as Market[],
+      vat: pack.vat.on,
     });
     if (mode === "guard") {
       plan = {
         ...plan,
-        pause: plan.pause.filter((p) => p.cause === "offer"),
+        pause: plan.pause.filter((p) => p.cause === "offer" || p.cause === "vat"),
         create: plan.create.filter((c) => c.kind !== "challenger"),
         markets: [],
       };
