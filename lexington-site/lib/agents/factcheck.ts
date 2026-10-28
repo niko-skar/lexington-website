@@ -57,15 +57,15 @@ const CLAIMS: Array<[RegExp, string]> = [
 const norm = (unitNumber: string) => unitNumber.toLowerCase().replace(/\s+/g, "");
 
 /** Every dollar amount written in `text`, with how it was written. */
-function dollarAmounts(text: string): Array<{ raw: string; value: number }> {
-  const out: Array<{ raw: string; value: number }> = [];
+function dollarAmounts(text: string): Array<{ raw: string; value: number; end: number }> {
+  const out: Array<{ raw: string; value: number; end: number }> = [];
   for (const m of text.matchAll(/(?:US)?\$\s?(\d{1,3}(?:,\d{3})+|\d+(?:\.\d+)?)(\s?k\b|\s?(?:million|m)\b)?/gi)) {
     let value = Number(m[1].replace(/,/g, ""));
     if (m[2]) value *= /k/i.test(m[2]) ? 1000 : 1_000_000;
-    out.push({ raw: m[0], value });
+    out.push({ raw: m[0], value, end: (m.index ?? 0) + m[0].length });
   }
   for (const m of text.matchAll(/\b(?:USD|US\s+dollars?)\s?(\d{1,3}(?:,\d{3})+|\d+)/gi)) {
-    out.push({ raw: m[0], value: Number(m[1].replace(/,/g, "")) });
+    out.push({ raw: m[0], value: Number(m[1].replace(/,/g, "")), end: (m.index ?? 0) + m[0].length });
   }
   return out;
 }
@@ -86,6 +86,22 @@ export function factCheck(text: string, pack: FactPack, theirWords = ""): string
   for (const own of dollarAmounts(theirWords)) amounts.add(Math.round(own.value));
   for (const { raw, value } of dollarAmounts(text)) {
     if (!amounts.has(Math.round(value))) flag(`"${raw.trim()}" is not a price, fee or rate the website shows.`);
+  }
+
+  // ---- VAT (Niko, 28 Oct 2026: "Price + VAT"). By law a price shown without VAT counts as
+  // including it, so while VAT is on every price (not the reservation fee) says "+ VAT".
+  if (pack.vat.on) {
+    const prices = allowedAmounts(pack);
+    const theirs = new Set(dollarAmounts(theirWords).map((d) => Math.round(d.value)));
+    for (const { raw, value, end } of dollarAmounts(text)) {
+      const v = Math.round(value);
+      if (v === pack.reservationFeeUSD || !prices.has(v) || theirs.has(v)) continue;
+      const after = text.slice(end, end + 24);
+      if (!/^\s*(?:\/\s*(?:m²|m2|sq\.?\s?m|sqm|space|sq\.?\s?ft)\s*)?(?:\+\s*VAT|plus\s+VAT|excl(?:\.|uding)?\s+VAT|before\s+VAT)/i.test(after))
+        flag(`"${raw.trim()}" needs "+ VAT" after it: prices are before VAT.`);
+    }
+  } else if (/\bVAT\b|\bNHIL\b|GETFund|plus\s+tax|tax\s+(?:is\s+)?(?:included|inclusive)/i.test(text)) {
+    flag("Talks about VAT or tax: the website doesn't show VAT yet, so leave tax questions to the sales team.");
   }
 
   // ---- percentages

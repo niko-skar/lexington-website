@@ -9,6 +9,7 @@ import { internationalDigits } from "@/lib/format";
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
 import { SITE_URL } from "@/lib/seo";
 import { cardVersion } from "@/lib/unitCard";
+import { NO_VAT, type Vat } from "@/lib/vat";
 
 import {
   AGENT_METADATA,
@@ -148,19 +149,19 @@ async function send(thread: ChatThread, outgoing: Outgoing): Promise<string> {
  * when a price or status changes Meta and the website's cache fetch a fresh picture. A test copy can
  * point at itself with CARD_BASE_URL; the live site always uses its own address.
  */
-function cardUrl(unit: UnitFact): string {
+function cardUrl(unit: UnitFact, vat: Vat): string {
   const base = (process.env.VERCEL_ENV !== "production" && process.env.CARD_BASE_URL?.replace(/\/+$/, "")) || SITE_URL;
-  return `${base}/api/unit-card/${encodeURIComponent(unit.unitNumber)}?v=${cardVersion(unit)}`;
+  return `${base}/api/unit-card/${encodeURIComponent(unit.unitNumber)}?v=${cardVersion(unit, vat)}`;
 }
 
 /** Sends the cards after a reply (each one drawn first, so Meta never waits on it). Answers the ones that went. */
-async function sendCards(thread: ChatThread, cards: UnitFact[]): Promise<Array<{ unit: string; mid: string }>> {
+async function sendCards(thread: ChatThread, cards: UnitFact[], vat: Vat): Promise<Array<{ unit: string; mid: string }>> {
   if (!cards.length) return [];
-  await Promise.allSettled(cards.map((u) => fetch(cardUrl(u), { signal: AbortSignal.timeout(25_000), cache: "no-store" })));
+  await Promise.allSettled(cards.map((u) => fetch(cardUrl(u, vat), { signal: AbortSignal.timeout(25_000), cache: "no-store" })));
   const sent: Array<{ unit: string; mid: string }> = [];
   for (const unit of cards) {
     try {
-      sent.push({ unit: unit.unitNumber, mid: await send(thread, { image: cardUrl(unit) }) });
+      sent.push({ unit: unit.unitNumber, mid: await send(thread, { image: cardUrl(unit, vat) }) });
     } catch (error) {
       console.error(`[chat] the ${unit.unitNumber} card couldn't be sent:`, error instanceof Error ? error.message : error);
     }
@@ -302,6 +303,8 @@ interface Drafted {
   topic: HandoverTopic;
   reason: string;
   out: ChatOut | null;
+  /** VAT on the prices, for the card pictures. */
+  vat?: Vat;
 }
 
 // Problems another go can fix: too long, or prices in its words that belong on the cards.
@@ -355,7 +358,7 @@ async function draft(thread: ChatThread, nowMs: number): Promise<Drafted> {
           .map((n) => pack.units.find((u) => u.unitNumber === n))
           .filter((u): u is UnitFact => Boolean(u))
       : [];
-  return { text, cards, handover, topic, reason, out };
+  return { text, cards, handover, topic, reason, out, vat: pack.vat };
 }
 
 /** Alerts Niko about a chat (an alert in the site app that buzzes his phone), at most once an hour per chat. */
@@ -479,7 +482,7 @@ export async function handleChatEvent(ev: ChatEvent, nowMs = Date.now()): Promis
             fresh
           )) ?? current;
         // Then the homes, as the website's cards; kept on the reply so their echoes are known as ours.
-        const cards = mid ? await sendCards(current, d.cards) : [];
+        const cards = mid ? await sendCards(current, d.cards, d.vat ?? NO_VAT) : [];
         if (cards.length) {
           thread =
             (await updateThread(

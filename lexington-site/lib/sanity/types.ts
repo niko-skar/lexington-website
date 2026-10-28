@@ -121,6 +121,8 @@ export interface PageIntroContent {
 export interface SiteSettings {
   _id: string;
   promoBanner?: { enabled: boolean; message: string };
+  /** VAT on prices (see lib/vat.ts): off until The Lexington is VAT-registered. */
+  vat?: { on?: boolean | null; rate?: number | null } | null;
   contactPhone: string;
   contactEmail: string;
   notificationEmail: string;

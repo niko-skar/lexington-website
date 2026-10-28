@@ -1,6 +1,7 @@
 import { client } from "@/lib/sanity/client";
 import { siteSettingsQuery } from "@/lib/sanity/queries";
 import type { SiteSettings } from "@/lib/sanity/types";
+import { vatFrom } from "@/lib/vat";
 import {
   POSTAL_ADDRESS,
   PRICE_FROM_USD,
@@ -19,6 +20,7 @@ import {
  */
 export default async function StructuredData() {
   const settings = await client.fetch<SiteSettings>(siteSettingsQuery);
+  const vat = vatFrom(settings);
 
   // schema.org wants a dialable string; Sanity stores it formatted for humans
   // ("+233 (0)244 30 5262"), and the leading (0) is a domestic-only prefix.
@@ -50,6 +52,9 @@ export default async function StructuredData() {
         "@type": "AggregateOffer",
         priceCurrency: "USD",
         lowPrice: PRICE_FROM_USD,
+        ...(vat.on
+          ? { priceSpecification: { "@type": "PriceSpecification", minPrice: PRICE_FROM_USD, priceCurrency: "USD", valueAddedTaxIncluded: false } }
+          : {}),
         availability: "https://schema.org/PreOrder",
         category: "Residential apartments for sale",
       },

@@ -1,6 +1,7 @@
 "use client";
 
 import type { PackageTier, PackageTierKey } from "@/lib/sanity/types";
+import type { Vat } from "@/lib/vat";
 import { areaUnitLabel, formatRatePerArea } from "@/lib/area";
 import { useAreaUnit } from "./useAreaUnit";
 import styles from "./PackageTiers.module.css";
@@ -23,9 +24,10 @@ interface PackageTiersProps {
   tiers: PackageTier[];
   selected: PackageTierKey;
   onSelect: (key: PackageTierKey) => void;
+  vat: Vat;
 }
 
-export function PackageTiers({ tiers, selected, onSelect }: PackageTiersProps) {
+export function PackageTiers({ tiers, selected, onSelect, vat }: PackageTiersProps) {
   const areaUnit = useAreaUnit();
   if (tiers.length === 0) return null;
 
@@ -61,7 +63,10 @@ export function PackageTiers({ tiers, selected, onSelect }: PackageTiersProps) {
               ) : (
                 <>
                   +{formatRatePerArea(tier.ratePerSqm, areaUnit)}
-                  <small>per {areaUnitLabel(areaUnit)}</small>
+                  <small>
+                    per {areaUnitLabel(areaUnit)}
+                    {vat.on ? " + VAT" : ""}
+                  </small>
                 </>
               )}
             </div>

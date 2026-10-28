@@ -5,6 +5,7 @@
  * lib/agents/leadReply.ts does the loading, saving and sending.
  */
 import { formatUSD } from "@/lib/format";
+import { vatSuffix, type Vat } from "@/lib/vat";
 
 import { factPackText, longDate, type FactPack, type UnitFact } from "./factsCore";
 
@@ -149,18 +150,19 @@ function plural(typeLine: string) {
   return typeLine.replace(/apartment$/, "apartments").replace(/penthouse$/, "penthouses");
 }
 
-export function unitLine(u: UnitFact, feet: boolean): string {
+export function unitLine(u: UnitFact, feet: boolean, vat: Vat): string {
   const size = `${u.areaSqm} m²${feet ? ` (${u.areaSqft} sq ft)` : ""}`;
+  const plus = vatSuffix(vat);
   const offer =
     u.fullPaymentPriceUSD != null || u.planPriceUSD != null
       ? ` (offer: ${[
-          u.fullPaymentPriceUSD != null ? `${formatUSD(u.fullPaymentPriceUSD)} paying in full` : "",
-          u.planPriceUSD != null ? `${formatUSD(u.planPriceUSD)} on a payment plan` : "",
+          u.fullPaymentPriceUSD != null ? `${formatUSD(u.fullPaymentPriceUSD)}${plus} paying in full` : "",
+          u.planPriceUSD != null ? `${formatUSD(u.planPriceUSD)}${plus} on a payment plan` : "",
         ]
           .filter(Boolean)
           .join(", ")})`
       : "";
-  return `- ${u.unitNumber}: ${u.typeLine.toLowerCase()}, ${u.floorName}, ${size}, ${formatUSD(u.priceUSD)}${offer}${u.has3D ? ", with a 3D plan" : ""}\n  ${u.link}`;
+  return `- ${u.unitNumber}: ${u.typeLine.toLowerCase()}, ${u.floorName}, ${size}, ${formatUSD(u.priceUSD)}${plus}${offer}${u.has3D ? ", with a 3D plan" : ""}\n  ${u.link}`;
 }
 
 export interface ReplyText {
@@ -178,7 +180,7 @@ export function templateReply(ctx: LeadContext, pack: FactPack, picks: UnitFact[
 
   const lines: string[] = [`Hi ${first},`, "", "Thank you for your enquiry about The Lexington in Shiashie, East Legon.", ""];
   if (picks.length) {
-    lines.push(`These ${what} are available now:`, ...picks.map((u) => unitLine(u, feet)), "");
+    lines.push(`These ${what} are available now:`, ...picks.map((u) => unitLine(u, feet, pack.vat)), "");
   }
   lines.push(`You can see every available home, with floor plans and prices, here: ${pack.links.residences}`, "");
   if (offer) lines.push(`${offer.text}`, "");
@@ -201,7 +203,7 @@ export function templateReply(ctx: LeadContext, pack: FactPack, picks: UnitFact[
   const whatsapp = [
     `Hi ${first}, thank you for your enquiry about The Lexington in East Legon.`,
     cheapest
-      ? `${sameType ? `Available ${what} start at` : "Homes start at"} ${formatUSD(cheapest.priceUSD)} (${cheapest.unitNumber}, ${cheapest.areaSqm} m²).`
+      ? `${sameType ? `Available ${what} start at` : "Homes start at"} ${formatUSD(cheapest.priceUSD)}${vatSuffix(pack.vat)} (${cheapest.unitNumber}, ${cheapest.areaSqm} m²).`
       : "",
     offer?.fullPaymentPct != null && offer.planPct != null
       ? `${offer.endsOn ? `Until ${longDate(offer.endsOn).replace(/ \d{4}$/, "")}: ` : ""}${offer.fullPaymentPct}% off paying in full, or ${offer.planPct}% off on a payment plan.`

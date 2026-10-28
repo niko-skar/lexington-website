@@ -17,6 +17,7 @@ import type {
   Unit,
 } from "@/lib/sanity/types";
 import { formatUSD } from "@/lib/format";
+import { vatFrom, vatSuffix } from "@/lib/vat";
 import { ESTIMATED_COMPLETION } from "@/lib/seo";
 
 import { Hero } from "@/components/Hero";
@@ -92,7 +93,7 @@ export default async function HomePage() {
             <StatStrip
               stats={[
                 { value: availableUnits.length, suffix: ` of ${units.length}`, label: "Units available" },
-                { value: startingPrice, prefix: "$", label: "Starting from" },
+                { value: startingPrice, prefix: "$", label: vatFrom(siteSettings).on ? "Starting from, plus VAT" : "Starting from" },
                 { value: projectedYield, suffix: "%", label: "Projected rental yield" },
                 { value: 8, label: "Storeys, Shiashie skyline" },
                 { value: ESTIMATED_COMPLETION.year, prefix: `${ESTIMATED_COMPLETION.month} `, label: "Estimated completion", noGrouping: true },
@@ -114,7 +115,8 @@ export default async function HomePage() {
             Every floor plan is drawn to let daily life move naturally — from
             high-speed elevators and natural stone flooring to a back-up
             generator and water supply that never leave you waiting. Prices
-            from {formatUSD(startingPrice)}.
+            from {formatUSD(startingPrice)}
+            {vatSuffix(vatFrom(siteSettings))}.
           </p>
           <Button href="/residences" variant="outline-dark">
             Explore Floor Plans

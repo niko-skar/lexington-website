@@ -1,4 +1,5 @@
 import { EXTRAS } from "@/lib/extras";
+import { vatFrom, vatSuffix } from "@/lib/vat";
 import { pageMetadata } from "@/lib/seo";
 import { client } from "@/lib/sanity/client";
 import { urlFor } from "@/lib/sanity/image";
@@ -15,15 +16,19 @@ import { UnitFinder } from "@/components/UnitFinder";
 import { SplitSection } from "@/components/SplitSection";
 import { FeatureGrid } from "@/components/FeatureGrid";
 import { Reveal } from "@/components/Reveal";
+import { VatNote } from "@/components/Vat";
 
 export const revalidate = 600;
 
-export const metadata = pageMetadata({
-  path: "/residences",
-  title: "Residences & Floor Plans | The Lexington",
-  description:
-    "Studio, one, two and three-bedroom residences and a penthouse duplex in Shiashie, East Legon. Live floor plans, availability and pricing from $72,000.",
-});
+// The search snippet names the lowest price, so it says "+ VAT" too once VAT is switched on.
+export async function generateMetadata() {
+  const settings = await client.fetch<SiteSettings>(siteSettingsQuery);
+  return pageMetadata({
+    path: "/residences",
+    title: "Residences & Floor Plans | The Lexington",
+    description: `Studio, one, two and three-bedroom residences and a penthouse duplex in Shiashie, East Legon. Live floor plans, availability and pricing from $72,000${vatSuffix(vatFrom(settings))}.`,
+  });
+}
 
 const extras = EXTRAS;
 
@@ -49,7 +54,7 @@ export default async function ResidencesPage() {
 
       <section className="section sectionStone" style={{ paddingTop: "clamp(32px, 4vw, 56px)" }}>
         <div className="wrap">
-          <UnitFinder units={units} tiers={tiers} />
+          <UnitFinder units={units} tiers={tiers} vat={vatFrom(siteSettings)} />
         </div>
       </section>
 
@@ -79,6 +84,7 @@ export default async function ResidencesPage() {
             </h2>
           </Reveal>
           <FeatureGrid items={extras} />
+          <VatNote vat={vatFrom(siteSettings)} />
           <p className="disclaimer" style={{ marginTop: 32 }}>
             All extras are alternatively available on monthly rental.
           </p>
