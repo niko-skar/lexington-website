@@ -5,9 +5,9 @@ import { vatFrom } from "@/lib/vat";
 import {
   POSTAL_ADDRESS,
   PRICE_FROM_USD,
-  SITE_DESCRIPTION,
   SITE_NAME,
   SITE_URL,
+  siteDescription,
 } from "@/lib/seo";
 
 /**
@@ -41,7 +41,7 @@ export default async function StructuredData() {
       "@type": "ApartmentComplex",
       "@id": `${SITE_URL}/#development`,
       name: SITE_NAME,
-      description: SITE_DESCRIPTION,
+      description: siteDescription(vat),
       url: SITE_URL,
       numberOfFloors: 8,
       address: { "@type": "PostalAddress", ...POSTAL_ADDRESS },

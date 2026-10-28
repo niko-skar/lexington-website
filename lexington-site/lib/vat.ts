@@ -49,6 +49,14 @@ export function vatSuffix(vat: Vat): string {
   return vat.on ? " + VAT" : "";
 }
 
+/**
+ * The reservation fee is a set amount with VAT already in it (Niko, 28 Oct 2026: "the reservation
+ * fee includes vat"), so it never takes "+ VAT": " (VAT included)" follows it while VAT is on.
+ */
+export function feeVatSuffix(vat: Vat): string {
+  return vat.on ? " (VAT included)" : "";
+}
+
 /** One line for under a list of prices, or "" while VAT is off. */
 export function vatNote(vat: Vat): string {
   return vat.on ? `Prices are in US dollars and exclude VAT, which is added at ${vat.rate}%.` : "";

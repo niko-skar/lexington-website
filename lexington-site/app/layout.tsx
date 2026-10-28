@@ -7,9 +7,10 @@ import StructuredData from "@/components/analytics/StructuredData";
 
 import { client } from "@/lib/sanity/client";
 import { urlFor } from "@/lib/sanity/image";
-import { galleryImagesQuery } from "@/lib/sanity/queries";
-import type { GalleryImage } from "@/lib/sanity/types";
-import { SITE_DESCRIPTION, SITE_TITLE, SITE_URL } from "@/lib/seo";
+import { galleryImagesQuery, siteSettingsQuery } from "@/lib/sanity/queries";
+import type { GalleryImage, SiteSettings } from "@/lib/sanity/types";
+import { SITE_TITLE, SITE_URL, siteDescription } from "@/lib/seo";
+import { vatFrom } from "@/lib/vat";
 
 import "./globals.css";
 
@@ -29,7 +30,11 @@ const inter = Inter({
 // openGraph/twitter — so this block applies site-wide as-is, and every page
 // keeps the same branded share preview rather than only the home page.
 export async function generateMetadata(): Promise<Metadata> {
-  const images = await client.fetch<GalleryImage[]>(galleryImagesQuery);
+  const [images, settings] = await Promise.all([
+    client.fetch<GalleryImage[]>(galleryImagesQuery),
+    client.fetch<SiteSettings>(siteSettingsQuery),
+  ]);
+  const description = siteDescription(vatFrom(settings));
   const heroImage = images.find((i) => i.category === "exterior");
   const ogImageUrl = heroImage
     ? urlFor(heroImage.image).width(1200).height(630).fit("crop").url()
@@ -39,13 +44,13 @@ export async function generateMetadata(): Promise<Metadata> {
     metadataBase: new URL(SITE_URL),
     alternates: { canonical: "/" },
     title: SITE_TITLE,
-    description: SITE_DESCRIPTION,
+    description,
     icons: {
       icon: "/favicon.svg",
     },
     openGraph: {
       title: SITE_TITLE,
-      description: SITE_DESCRIPTION,
+      description,
       url: SITE_URL,
       siteName: "The Lexington",
       type: "website",
@@ -57,7 +62,7 @@ export async function generateMetadata(): Promise<Metadata> {
     twitter: {
       card: "summary_large_image",
       title: SITE_TITLE,
-      description: SITE_DESCRIPTION,
+      description,
       ...(ogImageUrl && { images: [ogImageUrl] }),
     },
   };

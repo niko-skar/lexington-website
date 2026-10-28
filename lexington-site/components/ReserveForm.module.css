@@ -399,6 +399,15 @@
   margin: 8px 0 10px;
 }
 
+.feeBox .feeVat {
+  margin: -6px 0 10px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--brass-text);
+}
+
 .consent {
   margin-bottom: var(--space-4);
 }

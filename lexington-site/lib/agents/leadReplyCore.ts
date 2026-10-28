@@ -5,7 +5,7 @@
  * lib/agents/leadReply.ts does the loading, saving and sending.
  */
 import { formatUSD } from "@/lib/format";
-import { vatSuffix, type Vat } from "@/lib/vat";
+import { feeVatSuffix, vatSuffix, type Vat } from "@/lib/vat";
 
 import { factPackText, longDate, type FactPack, type UnitFact } from "./factsCore";
 
@@ -185,7 +185,7 @@ export function templateReply(ctx: LeadContext, pack: FactPack, picks: UnitFact[
   lines.push(`You can see every available home, with floor plans and prices, here: ${pack.links.residences}`, "");
   if (offer) lines.push(`${offer.text}`, "");
   lines.push(
-    `A ${formatUSD(pack.reservationFeeUSD)} reservation holds a home: ${picks[0]?.reserveLink ?? pack.links.reserve}`,
+    `A ${formatUSD(pack.reservationFeeUSD)} reservation${feeVatSuffix(pack.vat)} holds a home: ${picks[0]?.reserveLink ?? pack.links.reserve}`,
     "",
     "So we can suggest the right home, could you tell us:",
     "- your budget,",

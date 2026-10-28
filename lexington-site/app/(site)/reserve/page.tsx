@@ -3,6 +3,7 @@ import { client } from "@/lib/sanity/client";
 import { siteSettingsQuery, unitOptionsQuery } from "@/lib/sanity/queries";
 import type { SiteSettings, UnitStatus } from "@/lib/sanity/types";
 import { RESERVATION_FEE_USD } from "@/lib/reservation/config";
+import { feeVatSuffix, vatFrom } from "@/lib/vat";
 import { phoneHref, whatsappUrl } from "@/lib/format";
 
 import { PageIntro } from "@/components/PageIntro";
@@ -11,12 +12,14 @@ import styles from "./reserve.module.css";
 
 export const revalidate = 300;
 
-export const metadata = pageMetadata({
-  path: "/reserve",
-  title: "Reserve a Residence | The Lexington",
-  description:
-    "Answer a few questions and we'll email you the reservation fee form. Reserve your residence at The Lexington in Shiashie, East Legon from $10,000.",
-});
+export async function generateMetadata() {
+  const settings = await client.fetch<SiteSettings>(siteSettingsQuery);
+  return pageMetadata({
+    path: "/reserve",
+    title: "Reserve a Residence | The Lexington",
+    description: `Answer a few questions and we'll email you the reservation fee form. Reserve your residence at The Lexington in Shiashie, East Legon from $10,000${feeVatSuffix(vatFrom(settings))}.`,
+  });
+}
 
 type UnitRow = ReserveUnit & { status: UnitStatus };
 
@@ -32,7 +35,8 @@ export default async function ReservePage() {
     .map(({ unitNumber, bedroomType, floor, areaSqm, priceUSD }) => ({ unitNumber, bedroomType, floor, areaSqm, priceUSD }));
 
   const whatsappHref = whatsappUrl(siteSettings.contactPhone, "Hi, I'd like to reserve a residence at The Lexington.");
-  const fee = `US$${RESERVATION_FEE_USD.toLocaleString("en-US")}`;
+  const vat = vatFrom(siteSettings);
+  const fee = `US$${RESERVATION_FEE_USD.toLocaleString("en-US")}${vat.on ? ", VAT included" : ""}`;
 
   return (
     <>
@@ -50,6 +54,7 @@ export default async function ReservePage() {
               contactPhone={siteSettings.contactPhone}
               contactEmail={siteSettings.contactEmail}
               whatsappHref={whatsappHref}
+              vat={vat}
             />
 
             <aside className={styles.aside} aria-label="What happens next">

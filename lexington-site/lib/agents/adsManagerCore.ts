@@ -109,7 +109,7 @@ export function quotesOffer(text: string): boolean {
 }
 
 /**
- * A price written without "+ VAT" after it (the $10,000 reservation fee aside): since 28 Oct 2026
+ * A price written without "+ VAT" after it (the $10,000 reservation fee aside: it includes VAT): since 28 Oct 2026
  * prices are before VAT, and by law a price shown without VAT counts as including it.
  */
 export function quotesPriceWithoutVat(text: string): boolean {
@@ -380,7 +380,7 @@ export function templateAdCopy(pack: FactPack, market: Market, angle: AngleKey, 
   const lowest = forSale.length ? Math.min(...forSale.map((u) => u.priceUSD)) : null;
   const plus = pack.vat.on ? " + VAT" : "";
   const from = lowest ? `Homes from ${dollars(lowest)}${plus}` : "Homes for sale";
-  const reserve = `Reserve one with ${dollars(pack.reservationFeeUSD)}.`;
+  const reserve = `Reserve one with ${dollars(pack.reservationFeeUSD)}${pack.vat.on ? ", VAT included" : ""}.`;
   const where = "East Legon, Accra";
   const offer = withOffer && pack.offer && !pack.offer.ended ? ` ${pack.offer.text}` : "";
   const texts: Record<AngleKey, AdCopy> = {

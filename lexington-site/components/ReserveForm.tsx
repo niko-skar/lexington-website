@@ -28,6 +28,7 @@ import {
   type Option,
 } from "@/lib/reservation/config";
 import { trackAction } from "@/lib/visits/client";
+import { feeVatSuffix, type Vat } from "@/lib/vat";
 import buttonStyles from "./Button.module.css";
 import styles from "./ReserveForm.module.css";
 
@@ -145,9 +146,11 @@ interface ReserveFormProps {
   contactPhone: string;
   contactEmail: string;
   whatsappHref: string;
+  /** VAT on the prices (Site settings): the fee, which has VAT in it, then says "VAT included". */
+  vat: Vat;
 }
 
-export function ReserveForm({ units, contactPhone, contactEmail, whatsappHref }: ReserveFormProps) {
+export function ReserveForm({ units, contactPhone, contactEmail, whatsappHref, vat }: ReserveFormProps) {
   const [state, formAction] = useActionState(submitReservation, initialState);
   const [step, setStep] = useState(1);
   const [values, setValues] = useState<Values>(EMPTY);
@@ -261,7 +264,7 @@ export function ReserveForm({ units, contactPhone, contactEmail, whatsappHref }:
               <li>Open the form and check your name and details.</li>
               <li>
                 One of our sales advisors will contact you to agree how you would like to pay the US$
-                {RESERVATION_FEE_USD.toLocaleString("en-US")} reservation fee, and will send you the bank details that match.
+                {RESERVATION_FEE_USD.toLocaleString("en-US")} reservation fee{feeVatSuffix(vat)}, and will send you the bank details that match.
               </li>
               <li>
                 Before you send any money, phone us on <a href={`tel:${contactPhone.replace(/[^\d+]/g, "")}`}>{contactPhone}</a>{" "}
@@ -700,6 +703,7 @@ export function ReserveForm({ units, contactPhone, contactEmail, whatsappHref }:
           <div className={styles.feeBox}>
             <div className="eyebrow">Reservation fee</div>
             <p className={styles.feeAmount}>US${RESERVATION_FEE_USD.toLocaleString("en-US")}</p>
+            {vat.on && <p className={styles.feeVat}>VAT included</p>}
             <p>
               When you press the button we email you the reservation fee form. A sales advisor then agrees with you how
               you would like to pay and sends you the bank details. Nothing is charged on this website.

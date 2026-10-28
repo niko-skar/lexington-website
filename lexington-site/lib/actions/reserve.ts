@@ -32,6 +32,7 @@ import { SITE_URL } from "@/lib/seo";
 import { client } from "@/lib/sanity/client";
 import { siteSettingsQuery, unitByNumberQuery } from "@/lib/sanity/queries";
 import type { SiteSettings, Unit } from "@/lib/sanity/types";
+import { feeVatSuffix, vatFrom } from "@/lib/vat";
 
 export interface ReserveFormState {
   status: "idle" | "success" | "error";
@@ -139,6 +140,8 @@ export async function submitReservation(
 
   // The form itself. It carries no bank details: which account to pay into depends on
   // how the buyer wants to pay, so a sales advisor agrees that with them and sends them.
+  // The fee has VAT in it: while VAT is on, the form and the email say so.
+  const vat = vatFrom(siteSettings);
   let pdf: Uint8Array | null = null;
   let held = ""; // why the form was not sent, in plain words
   try {
@@ -148,6 +151,7 @@ export async function submitReservation(
       apartmentFact: type?.fact ?? "To be confirmed",
       apartmentLine: type?.line ?? "Apartment to be confirmed",
       amountUSD: RESERVATION_FEE_USD,
+      vatIncluded: vat.on,
       issuedOn: new Date().toISOString().slice(0, 10),
       contact: { phone: siteSettings.contactPhone, email: siteSettings.contactEmail, address: siteSettings.officeAddress },
     });
@@ -161,7 +165,7 @@ export async function submitReservation(
   if (!resend) console.error("RESEND_API_KEY is not set: no reservation emails can go out.");
 
   const sendForm = Boolean(pdf) && !held && Boolean(resend);
-  const amountText = `USD ${RESERVATION_FEE_USD.toLocaleString("en-US")}`;
+  const amountText = `USD ${RESERVATION_FEE_USD.toLocaleString("en-US")}${feeVatSuffix(vat)}`;
   const whatsappHref = whatsappUrl(siteSettings.contactPhone, `Hi, I'm ${first}. I've asked for my reservation form for The Lexington.`);
   const attachment = pdf
     ? [{ filename: "Reservation-fee-form-The-Lexington.pdf", content: Buffer.from(pdf).toString("base64") }]

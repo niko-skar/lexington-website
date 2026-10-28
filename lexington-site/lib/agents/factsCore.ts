@@ -19,7 +19,7 @@ import { formatUSD } from "@/lib/format";
 import { has3DModel } from "@/lib/models3d";
 import { RESERVATION_FEE_USD, unitTypeFor } from "@/lib/reservation/config";
 import { ESTIMATED_COMPLETION, POSTAL_ADDRESS, SITE_URL } from "@/lib/seo";
-import { NO_VAT, vatSuffix, type Vat } from "@/lib/vat";
+import { NO_VAT, feeVatSuffix, vatSuffix, type Vat } from "@/lib/vat";
 
 export interface RawFacts {
   units: Array<{
@@ -282,7 +282,7 @@ export function factPackText(pack: FactPack): string {
 
   add(
     "RESERVING",
-    `- A reservation fee of ${formatUSD(pack.reservationFeeUSD)} holds a residence. Each available unit has its own reserve link below; the general one is ${pack.links.reserve}`,
+    `- A reservation fee of ${formatUSD(pack.reservationFeeUSD)}${feeVatSuffix(pack.vat)} holds a residence. Each available unit has its own reserve link below; the general one is ${pack.links.reserve}`,
     "- After a reservation request, the sales team agrees with the buyer how they will pay and then sends the matching bank details themselves.",
     ""
   );
@@ -304,7 +304,7 @@ export function factPackText(pack: FactPack): string {
     add(
       "PRICES AND VAT",
       `- Every price below (units, offer prices, finishes, parking and storage) is in US dollars and BEFORE VAT. VAT is added on top at ${pack.vat.rate}% (VAT 15%, NHIL 2.5%, GETFund 2.5%). Whenever you give one of these prices, write "+ VAT" right after it, e.g. "$120,000 + VAT". Never work out the VAT or a total yourself; the website's unit pop-up shows them.`,
-      `- The ${formatUSD(pack.reservationFeeUSD)} reservation fee is the amount to pay; it counts towards the price.`,
+      `- The ${formatUSD(pack.reservationFeeUSD)} reservation fee already includes VAT: never write "+ VAT" after it ("${formatUSD(pack.reservationFeeUSD)} (VAT included)" is right). Whether or how it comes off the price is for the sales team to explain (no terms for that are given).`,
       ""
     );
   }

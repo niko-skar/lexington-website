@@ -4,22 +4,29 @@ import { client } from "@/lib/sanity/client";
 import { urlFor } from "@/lib/sanity/image";
 import { financingPlanQuery, galleryImagesQuery, siteSettingsQuery } from "@/lib/sanity/queries";
 import type { FinancingPlan, GalleryImage, SiteSettings } from "@/lib/sanity/types";
+import { feeVatSuffix, vatFrom } from "@/lib/vat";
 
 import { PageIntro } from "@/components/PageIntro";
 import { OfferBand } from "@/components/OfferBand";
 import { SplitSection } from "@/components/SplitSection";
 import { Button } from "@/components/Button";
 import { Reveal } from "@/components/Reveal";
+import { VatIncluded } from "@/components/Vat";
 import planTableStyles from "@/components/PlanTable.module.css";
 
 export const revalidate = 600;
 
-export const metadata = pageMetadata({
-  path: "/invest",
-  title: "Invest & Financing | The Lexington",
-  description:
-    "Payment plans, reservation terms and finish packages for buyers at The Lexington in East Legon, Accra. Reserve your unit from $10,000.",
-});
+export async function generateMetadata() {
+  const settings = await client.fetch<SiteSettings>(siteSettingsQuery);
+  return pageMetadata({
+    path: "/invest",
+    title: "Invest & Financing | The Lexington",
+    description: `Payment plans, reservation terms and finish packages for buyers at The Lexington in East Legon, Accra. Reserve your unit from $10,000${feeVatSuffix(vatFrom(settings))}.`,
+  });
+}
+
+// The reservation row's dollar amounts in the payment tables: the fee has VAT in it (lib/vat.ts).
+const isFeeCell = (milestone: string, value?: string) => /reserv/i.test(milestone) && /\$\s?\d/.test(value ?? "");
 
 export default async function InvestPage() {
   const [financingPlan, images, siteSettings] = await Promise.all([
@@ -28,6 +35,7 @@ export default async function InvestPage() {
     client.fetch<SiteSettings>(siteSettingsQuery),
   ]);
 
+  const vat = vatFrom(siteSettings);
   const rentalImage = images.find((i) => i.category === "interior");
   // The current offer (site settings → "Current offer"): shown while it is switched on and its last day
   // has not passed (Accra is on UTC), the same test the lead replies and the ads use.
@@ -52,7 +60,8 @@ export default async function InvestPage() {
             </h2>
             <p style={{ marginTop: 16, color: "#555", maxWidth: 640 }}>
               All financing options are flexible with the exception of a
-              minimum $10,000 reservation — contact us for a custom package.
+              minimum $10,000 reservation{feeVatSuffix(vat)} — contact us for a
+              custom package.
             </p>
           </Reveal>
 
@@ -71,8 +80,14 @@ export default async function InvestPage() {
                   <tr key={row.milestone}>
                     <td>{row.milestone}</td>
                     <td>{row.timeframe}</td>
-                    <td>{row.option1}</td>
-                    <td>{row.option2 || "—"}</td>
+                    <td>
+                      {row.option1}
+                      {isFeeCell(row.milestone, row.option1) && <VatIncluded vat={vat} />}
+                    </td>
+                    <td>
+                      {row.option2 || "—"}
+                      {isFeeCell(row.milestone, row.option2) && <VatIncluded vat={vat} />}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -99,7 +114,10 @@ export default async function InvestPage() {
                   <tr key={row.milestone}>
                     <td>{row.milestone}</td>
                     <td>{row.timeframe}</td>
-                    <td>{row.option1}</td>
+                    <td>
+                      {row.option1}
+                      {isFeeCell(row.milestone, row.option1) && <VatIncluded vat={vat} />}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -243,7 +261,7 @@ export default async function InvestPage() {
             </h2>
             <p style={{ maxWidth: 560, margin: "18px auto 0", color: "#555", fontSize: 16.5 }}>
               Every financing option is flexible beyond the minimum $10,000
-              reservation. Tell us what you need.
+              reservation{feeVatSuffix(vat)}. Tell us what you need.
             </p>
             <div style={{ marginTop: 32 }}>
               <Button href="/contact" variant="brass">

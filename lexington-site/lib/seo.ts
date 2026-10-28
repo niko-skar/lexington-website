@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 
+import { NO_VAT, vatSuffix, type Vat } from "@/lib/vat";
+
 /**
  * The apex domain 301s to www, so www is the canonical origin. Everything we
  * hand to search engines — sitemap entries, the robots sitemap pointer,
@@ -13,8 +15,10 @@ export const SITE_NAME = "The Lexington";
 export const SITE_TITLE =
   "The Lexington — Shiashie, East Legon | A Skarlatos & Son Development";
 
-export const SITE_DESCRIPTION =
-  "The Lexington: eight storeys of studio to three-bedroom residences and a penthouse duplex in Shiashie, East Legon, Accra. From $72,000. A Skarlatos & Son development.";
+/** The site-wide description (search results, share previews, structured data); "+ VAT" follows the price while VAT is on. */
+export function siteDescription(vat: Vat = NO_VAT): string {
+  return `The Lexington: eight storeys of studio to three-bedroom residences and a penthouse duplex in Shiashie, East Legon, Accra. From $72,000${vatSuffix(vat)}. A Skarlatos & Son development.`;
+}
 
 /**
  * Sanity stores the address as a single human-readable line that includes a

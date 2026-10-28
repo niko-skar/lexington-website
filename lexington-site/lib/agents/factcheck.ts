@@ -89,14 +89,20 @@ export function factCheck(text: string, pack: FactPack, theirWords = ""): string
   }
 
   // ---- VAT (Niko, 28 Oct 2026: "Price + VAT"). By law a price shown without VAT counts as
-  // including it, so while VAT is on every price (not the reservation fee) says "+ VAT".
+  // including it, so while VAT is on every price says "+ VAT". The reservation fee has VAT in it
+  // (Niko, 28 Oct 2026), so it never does.
   if (pack.vat.on) {
     const prices = allowedAmounts(pack);
     const theirs = new Set(dollarAmounts(theirWords).map((d) => Math.round(d.value)));
     for (const { raw, value, end } of dollarAmounts(text)) {
       const v = Math.round(value);
-      if (v === pack.reservationFeeUSD || !prices.has(v) || theirs.has(v)) continue;
       const after = text.slice(end, end + 24);
+      if (v === pack.reservationFeeUSD && !theirs.has(v)) {
+        if (/^\s*(?:\+\s*VAT|plus\s+VAT|excl(?:\.|uding)?\s+VAT|before\s+VAT)/i.test(after))
+          flag(`"${raw.trim()}" is the reservation fee, which includes VAT: no "+ VAT" after it.`);
+        continue;
+      }
+      if (!prices.has(v) || theirs.has(v)) continue;
       if (!/^\s*(?:\/\s*(?:m²|m2|sq\.?\s?m|sqm|space|sq\.?\s?ft)\s*)?(?:\+\s*VAT|plus\s+VAT|excl(?:\.|uding)?\s+VAT|before\s+VAT)/i.test(after))
         flag(`"${raw.trim()}" needs "+ VAT" after it: prices are before VAT.`);
     }

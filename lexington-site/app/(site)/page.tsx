@@ -236,6 +236,7 @@ export default async function HomePage() {
               Secure your residence with a {reservationAmount} deposit.
             </h2>
             <p style={{ maxWidth: 560, margin: "18px auto 0", color: "#555", fontSize: 16.5 }}>
+              {vatFrom(siteSettings).on ? `The ${reservationAmount} deposit includes VAT. ` : ""}
               Flexible self-finance and mortgage payment plans are available,
               with early-payment discounts of up to 15%.
             </p>

@@ -14,6 +14,17 @@ export function VatTag({ vat }: { vat: Vat }) {
   );
 }
 
+/** "VAT included" after the reservation fee while VAT is on (the fee has VAT in it, see lib/vat.ts). */
+export function VatIncluded({ vat }: { vat: Vat }) {
+  if (!vat.on) return null;
+  return (
+    <>
+      {" "}
+      <span className={styles.included}>VAT included</span>
+    </>
+  );
+}
+
 /** Under a unit's price: the VAT and what the buyer pays in all. */
 export function VatTotal({ price, vat }: { price: number; vat: Vat }) {
   if (!vat.on) return null;

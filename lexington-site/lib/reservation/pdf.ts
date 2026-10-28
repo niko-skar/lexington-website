@@ -51,6 +51,8 @@ export interface ReservationFormData {
   /** "One-bedroom apartment", or "Apartment to be confirmed". */
   apartmentLine: string;
   amountUSD: number;
+  /** The fee has VAT in it (VAT on in Site settings): the form says "VAT included". */
+  vatIncluded?: boolean;
   /** YYYY-MM-DD */
   issuedOn: string;
   contact: { phone?: string; email?: string; address?: string };
@@ -148,6 +150,7 @@ export async function buildReservationFormPdf(
   draw("A SKARLATOS & SON DEVELOPMENT", MARGIN, PAGE_H - 86, sansBold, 7.5, BRASS_LT);
   draw("RESERVATION FEE FORM", PAGE_W - MARGIN, PAGE_H - 58, sansBold, 9, BRASS_LT, "right");
   draw(`USD ${money(data.amountUSD).replace(/\.00$/, "")}`, PAGE_W - MARGIN, PAGE_H - 84, serifBold, 20, PAPER, "right");
+  if (data.vatIncluded) draw("VAT INCLUDED", PAGE_W - MARGIN, PAGE_H - 101, sansBold, 7.5, BRASS_LT, "right");
 
   // ---- form facts ----
   let y = PAGE_H - 150;
@@ -177,7 +180,9 @@ export async function buildReservationFormPdf(
   const amountH = 82;
   page.drawRectangle({ x: MARGIN, y: y - amountH, width: CONTENT_W, height: amountH, color: PAPER_DIM, borderColor: STONE, borderWidth: 0.6 });
   label("Reservation fee", MARGIN + 22, y - 24);
-  draw(`USD ${money(data.amountUSD)}`, MARGIN + 22, y - 54, serifBold, 34);
+  const amount = `USD ${money(data.amountUSD)}`;
+  draw(amount, MARGIN + 22, y - 54, serifBold, 34);
+  if (data.vatIncluded) draw("VAT included", MARGIN + 22 + serifBold.widthOfTextAtSize(amount, 34) + 12, y - 54, sans, 12, GREY);
   const secures = fit("This fee secures your residence at The Lexington. Your sales advisor agrees with you how to pay it.", sans, 9.5, CONTENT_W - 44, 8);
   draw(secures.text, MARGIN + 22, y - 72, sans, secures.size, GREY);
 
@@ -242,7 +247,7 @@ export async function buildReservationFormPdf(
 
   // ---- agreement and signatures ----
   const agree = wrap(
-    `I would like to reserve the apartment described above at The Lexington and will pay the reservation fee of USD ${money(data.amountUSD)} using the bank details my sales advisor sends me. I understand that the unit number will be confirmed in writing, and that the full terms of my purchase will be set out in the Sale and Purchase Agreement.`,
+    `I would like to reserve the apartment described above at The Lexington and will pay the reservation fee of USD ${money(data.amountUSD)}${data.vatIncluded ? " (VAT included)" : ""} using the bank details my sales advisor sends me. I understand that the unit number will be confirmed in writing, and that the full terms of my purchase will be set out in the Sale and Purchase Agreement.`,
     sans, 8.5, CONTENT_W
   );
   agree.forEach((line, i) => draw(line, MARGIN, y - i * 12, sans, 8.5, INK));
