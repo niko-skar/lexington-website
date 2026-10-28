@@ -35,6 +35,15 @@ export function VatTotal({ price, vat }: { price: number; vat: Vat }) {
   );
 }
 
+/**
+ * Under a price in a list: what the buyer pays with VAT, so nobody has to work out the VAT to see the
+ * real amount (Niko, 28 Oct 2026: "so it's clear how much total the customer is paying").
+ */
+export function VatIncl({ price, vat }: { price: number; vat: Vat }) {
+  if (!vat.on) return null;
+  return <span className={styles.incl}>{formatUSD(withVat(price, vat))} incl. VAT</span>;
+}
+
 /** One line under a list of prices. */
 export function VatNote({ vat, className }: { vat: Vat; className?: string }) {
   const note = vatNote(vat);

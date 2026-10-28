@@ -20,6 +20,17 @@
   white-space: nowrap;
 }
 
+/* The price with VAT, under each price in the lists: plain to read, never hidden. */
+.incl {
+  display: block;
+  margin-top: 3px;
+  font-family: var(--font-sans);
+  font-size: max(12px, 0.76em);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
 .total {
   display: block;
   margin-top: 4px;

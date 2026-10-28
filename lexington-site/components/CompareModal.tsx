@@ -10,7 +10,7 @@ import { useAreaUnit } from "./useAreaUnit";
 import { floorTierName, isTierClamped, priceAtTier, tierAddon } from "@/lib/pricing";
 import type { Vat } from "@/lib/vat";
 
-import { VatNote, VatTag } from "./Vat";
+import { VatIncl, VatNote, VatTag } from "./Vat";
 import { StatusBadge } from "./StatusBadge";
 import { useDialog } from "./useDialog";
 import styles from "./CompareModal.module.css";
@@ -96,6 +96,7 @@ export function CompareModal({ units, tiers, vat, onClose }: CompareModalProps) 
                             </span>
                           )
                         )}
+                        <VatIncl price={priceAtTier(u, tier.key, tiers)} vat={vat} />
                       </td>
                     );
                   })}

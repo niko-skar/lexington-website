@@ -18,7 +18,7 @@ import type { Vat } from "@/lib/vat";
 
 import { UnitDetailModal } from "./UnitDetailModal";
 import { CompareModal } from "./CompareModal";
-import { VatNote, VatTag } from "./Vat";
+import { VatIncl, VatNote, VatTag } from "./Vat";
 import { has3DModel, levelOfPlan, warm3D } from "./Penthouse3D";
 import { PackageTiers } from "./PackageTiers";
 import styles from "./UnitFinder.module.css";
@@ -330,6 +330,7 @@ export function UnitFinder({ units, tiers, vat }: UnitFinderProps) {
                         </span>
                       )
                     )}
+                    <VatIncl price={priceAtTier(u, selectedTier, tiers)} vat={vat} />
                   </td>
                   <td>
                     <StatusBadge status={u.status} />
@@ -384,6 +385,7 @@ export function UnitFinder({ units, tiers, vat }: UnitFinderProps) {
                     </span>
                   )
                 )}
+                <VatIncl price={priceAtTier(u, selectedTier, tiers)} vat={vat} />
               </div>
               <div className={styles.cardActions}>
                 <span>
