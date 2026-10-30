@@ -8,7 +8,7 @@ import { PAGE_SECTIONS, sectionHref, sectionName, type PageSection, type TodoMe 
 import styles from "./Todo.module.css";
 
 // What every part of the site app shares: its header, the bar at the bottom (Home, then the parts this
-// login opens: To-do · Store · Expenses · Alerts · Roll call) and the ☰ menu.
+// login opens: To-do · Store · Expenses · Alerts · Concrete · Roll call) and the ☰ menu.
 
 /** Where the bar can go: the home page, a part drawn in this page, or the roll call (its own page). */
 export type View = PageSection | "home";
@@ -44,6 +44,14 @@ const ICONS: Record<NavItem, React.ReactNode> = {
       <path d="M10 20.5a2.2 2.2 0 0 0 4 0" />
     </svg>
   ),
+  concrete: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M2.5 17v-6.5H7l2 3V17M9 17h12.5" />
+      <path d="M10.5 13.5l8.5-5.5 2 3.5-8.5 4.5z" />
+      <circle cx="6" cy="18.5" r="1.7" />
+      <circle cx="17" cy="18.5" r="1.7" />
+    </svg>
+  ),
   rollcall: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M8 4h8v3H8z" />
@@ -56,11 +64,12 @@ const ICONS: Record<NavItem, React.ReactNode> = {
 // What a badge on the bar counts, for a screen reader.
 const BADGE_WORDS: Partial<Record<NavItem, string>> = { store: "to reorder", alerts: "new" };
 
-const navItems = (me: TodoMe): NavItem[] => [
-  "home",
-  ...PAGE_SECTIONS.filter((s) => me.sections.includes(s)),
-  ...(opensRollcall(me.sections) ? (["rollcall"] as const) : []),
-];
+/** Used now and then (Concrete, on pour days): on the bar when there's room, else from the home page's tile. */
+const NOW_AND_THEN: readonly NavItem[] = ["concrete"];
+const navItems = (me: TodoMe): NavItem[] => {
+  const all: NavItem[] = ["home", ...PAGE_SECTIONS.filter((s) => me.sections.includes(s)), ...(opensRollcall(me.sections) ? (["rollcall"] as const) : [])];
+  return all.length > 6 ? all.filter((item) => !NOW_AND_THEN.includes(item)) : all;
+};
 const navName = (item: NavItem) => (item === "home" ? "Home" : item === "rollcall" ? "Roll call" : sectionName(item));
 const navHref = (item: NavItem) => (item === "home" ? "/todo" : item === "rollcall" ? "/todo/rollcall" : sectionHref(item));
 

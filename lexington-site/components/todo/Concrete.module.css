@@ -1,0 +1,279 @@
+/* The concrete trucks (/todo/concrete, 30 Oct 2026). Colours come from .app in Todo.module.css. */
+
+.hint {
+  margin: 0 2px 4px;
+  font-size: 14px;
+  color: var(--x-muted);
+}
+.muted {
+  color: var(--x-muted);
+}
+.bad {
+  color: var(--x-warn);
+}
+
+/* ---------- a day ---------- */
+.pourLine {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--x-line);
+  border-radius: 10px;
+  background: var(--x-surface);
+}
+.pourLine p {
+  flex: 1;
+  margin: 0;
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+.pourLine button {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--x-line);
+  border-radius: 8px;
+  background: var(--x-bg);
+  color: var(--x-ink);
+  font-weight: 600;
+  font-size: 15px;
+}
+.dayStats {
+  margin: 0 2px 8px;
+  font-size: 14px;
+  color: var(--x-muted);
+}
+
+/* ---------- a truck ---------- */
+.truck {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  gap: 12px;
+  width: 100%;
+  margin-bottom: 10px;
+  padding: 10px;
+  border: 1px solid var(--x-line);
+  border-radius: 10px;
+  background: var(--x-surface);
+  color: var(--x-ink);
+  font: inherit;
+  text-align: left;
+}
+.truckBad {
+  border-color: var(--x-warn);
+  box-shadow: inset 4px 0 0 var(--x-warn);
+}
+.pending {
+  border-style: dashed;
+}
+.thumb {
+  display: block;
+  width: 76px;
+  height: 96px;
+  object-fit: cover;
+  border-radius: 6px;
+  background: var(--x-bg);
+}
+.body {
+  display: grid;
+  align-content: start;
+  gap: 3px;
+  min-width: 0;
+}
+.truckTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+.truckName {
+  margin: 0;
+  font-family: var(--x-display);
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+.line {
+  margin: 0;
+  font-size: 14px;
+  color: var(--x-muted);
+}
+.comment {
+  font-size: 14px;
+  font-style: italic;
+  overflow-wrap: anywhere;
+}
+.badge {
+  flex: none;
+  padding: 3px 8px;
+  border-radius: 99px;
+  font-family: var(--x-num);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.badgeOk {
+  background: var(--x-ok-soft);
+  color: var(--x-ok);
+}
+.badgeBad {
+  background: var(--x-warn-soft);
+  color: var(--x-warn);
+}
+.badgeCheck {
+  background: var(--x-amber-soft);
+  color: var(--x-amber);
+}
+.badgeWait {
+  background: var(--x-bg);
+  color: var(--x-muted);
+}
+.flags {
+  display: grid;
+  gap: 2px;
+  margin: 2px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.flagBad,
+.flagCheck {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+.flagBad {
+  color: var(--x-warn);
+}
+.flagCheck {
+  color: var(--x-amber);
+}
+.pendingButtons {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+.pendingButtons button {
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--x-line);
+  border-radius: 8px;
+  background: var(--x-bg);
+  color: var(--x-ink);
+  font-weight: 600;
+}
+
+/* ---------- the truck's sheet ---------- */
+.sheetPhoto {
+  display: block;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--x-bg);
+}
+.sheetPhoto img {
+  display: block;
+  width: 100%;
+  max-height: 30dvh;
+  object-fit: cover;
+}
+.reading {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--x-accent-soft);
+  font-size: 15px;
+  font-weight: 600;
+}
+.readNote {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--x-amber-soft);
+  color: var(--x-amber);
+  font-size: 14px;
+  font-weight: 600;
+}
+.road {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--x-line);
+  border-radius: 10px;
+  background: var(--x-bg);
+  font-size: 15px;
+}
+.roadMinutes {
+  min-width: 2ch;
+  font-family: var(--x-display);
+  font-size: 40px;
+  font-weight: 700;
+  line-height: 1;
+}
+.roadOk {
+  border-color: var(--x-ok);
+  background: var(--x-ok-soft);
+  color: var(--x-ok);
+}
+.roadBad {
+  border-color: var(--x-warn);
+  background: var(--x-warn-soft);
+  color: var(--x-warn);
+}
+.roadCheck {
+  border-color: var(--x-amber);
+  background: var(--x-amber-soft);
+  color: var(--x-amber);
+}
+.grid2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 10px;
+}
+.field {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.small {
+  margin: 0;
+  font-size: 13px;
+  color: var(--x-muted);
+}
+.toggleOff,
+.toggleOn {
+  min-height: 48px;
+  padding: 0 12px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 15px;
+}
+.toggleOff {
+  border: 1.5px dashed var(--x-line);
+  background: transparent;
+  color: var(--x-muted);
+}
+.toggleOn {
+  border: 0;
+  background: var(--x-ok);
+  color: var(--x-on-color);
+}
+.sheetLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.sheetLinks button {
+  flex: 1 1 160px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--x-line);
+  border-radius: 8px;
+  background: var(--x-bg);
+  color: var(--x-ink);
+  font-weight: 600;
+  font-size: 15px;
+}

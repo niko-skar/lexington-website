@@ -3,11 +3,13 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import type { AlertsData } from "@/lib/alerts/shared";
+import type { ConcreteData } from "@/lib/concrete/shared";
 import type { Expense } from "@/lib/expenses/shared";
 import { needsReorder, type StoreData, type StoreItem } from "@/lib/store/shared";
 import { PAGE_SECTIONS, sectionHref, type PageSection, type TodoList, type TodoMe, type TodoTask } from "@/lib/todo/shared";
 import { AlertsApp } from "./AlertsApp";
 import { send, startPolling } from "./api";
+import { ConcreteApp } from "./ConcreteApp";
 import { Dashboard } from "./Dashboard";
 import { ExpensesApp } from "./ExpensesApp";
 import { usePhoneAlerts } from "./PhoneAlerts";
@@ -23,7 +25,7 @@ import styles from "./Todo.module.css";
 
 export type { StoreData };
 export type ExpensesData = { expenses: Expense[]; items: StoreItem[] };
-export type SiteData = { todo?: TodoTask[]; store?: StoreData; expenses?: ExpensesData; alerts?: AlertsData };
+export type SiteData = { todo?: TodoTask[]; store?: StoreData; expenses?: ExpensesData; alerts?: AlertsData; concrete?: ConcreteData };
 
 // Since 30 Oct 2026 the app opens on its home page (/todo) and the to-do list is /todo/jobs.
 const sectionFrom = (path: string): View | null =>
@@ -33,7 +35,9 @@ const sectionFrom = (path: string): View | null =>
       ? "expenses"
       : path.startsWith("/todo/alerts")
         ? "alerts"
-        : path.startsWith("/todo/jobs")
+        : path.startsWith("/todo/concrete")
+          ? "concrete"
+          : path.startsWith("/todo/jobs")
           ? "todo"
           : path === "/todo" || path === "/todo/"
             ? "home"
@@ -49,6 +53,7 @@ async function load(section: PageSection): Promise<SiteData> {
   if (section === "todo") return { todo: (await get("/api/todo")).tasks };
   if (section === "store") return { store: await get("/api/store") };
   if (section === "alerts") return { alerts: await get("/api/alerts") };
+  if (section === "concrete") return { concrete: await get("/api/concrete") };
   const [x, s] = await Promise.all([get("/api/expenses"), get("/api/store")]);
   return { expenses: { expenses: x.expenses, items: s.items } };
 }
@@ -146,6 +151,7 @@ export function SiteApp({
   openAlert,
   openJob,
   openEntry,
+  openTruck,
   seenAlert,
   startedOffline,
 }: {
@@ -159,6 +165,8 @@ export function SiteApp({
   openJob?: string;
   /** Opened from a bank text's phone alert: the money in to show in the form. */
   openEntry?: string;
+  /** Opened from a phone alert about a concrete truck: the truck to show. */
+  openTruck?: string;
   /** ...and (the office) the alert it came with, which has now been seen. */
   seenAlert?: string;
   startedOffline: boolean;
@@ -322,6 +330,18 @@ export function SiteApp({
             openAlert={openAlert}
             onUnread={setUnread}
             phone={phone}
+          />
+        </div>
+      )}
+      {show("concrete") && (
+        <div hidden={section !== "concrete"}>
+          <ConcreteApp
+            me={me}
+            active={section === "concrete"}
+            initial={data.concrete ?? null}
+            openTruck={openTruck}
+            startedOffline={startedOffline && first === "concrete"}
+            fresh={first === "concrete"}
           />
         </div>
       )}

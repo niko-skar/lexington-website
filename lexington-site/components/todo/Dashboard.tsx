@@ -64,6 +64,15 @@ function tiles(d: DashboardData, unread: number): Tile[] {
     });
   }
   if (d.workers) out.push({ section: "workers", name: "Workers", big: `${d.workers.active} on the books`, small: "names, numbers, ID photos" });
+  if (d.concrete) {
+    const c = d.concrete;
+    const load = `${c.trucks} ${c.trucks === 1 ? "truck" : "trucks"} · ${Math.round(c.volume * 10) / 10} m³`;
+    out.push(
+      c.day === d.today
+        ? { section: "concrete", name: "Concrete", big: load, small: c.flagged ? `${c.flagged} to look at` : "all on time today", tone: c.flagged ? "warn" : "ok" }
+        : { section: "concrete", name: "Concrete", big: "No trucks today", small: c.day ? `last pour ${shortDay(c.day)}: ${load}` : "photo each waybill on pour days" }
+    );
+  }
   if (d.expenses) out.push({ section: "expenses", name: "Expenses", big: money(d.expenses.monthOut), small: `on site this month · ${d.expenses.monthCount} ${d.expenses.monthCount === 1 ? "entry" : "entries"}` });
   if (d.alerts) out.push({ section: "alerts", name: "Alerts", big: unread ? `${unread} new` : "All caught up", tone: unread ? "warn" : "ok" });
   return out;

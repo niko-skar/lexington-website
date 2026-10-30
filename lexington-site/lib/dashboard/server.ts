@@ -1,6 +1,8 @@
 import "server-only";
 
 import { unreadCount } from "@/lib/alerts/notify";
+import { listConcrete } from "@/lib/concrete/server";
+import { daySummary, truckFlags, trucksOn } from "@/lib/concrete/shared";
 import { rollcallAccess } from "@/lib/rollcall/shared";
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
 import { EXPENSE_PREFIX, ROLLCALL_PREFIX } from "@/lib/site/ids";
@@ -27,6 +29,8 @@ export interface DashboardData {
   rollcall?: { morning: SlotCount; afternoon: SlotCount; closing: SlotCount; onBooks: number; curing: number; checklists: number };
   payday?: { weekStart: string; paid: number; worked: number };
   workers?: { active: number };
+  /** Concrete trucks: today's (with how many don't add up), else the last pour day's. */
+  concrete?: { day: string | null; trucks: number; volume: number; flagged: number };
   /** The roll call isn't moved in from its Claude page yet (one tile says so instead of three empty ones). */
   rollcallMoving?: boolean;
 }
@@ -135,16 +139,27 @@ async function rollcallParts(me: TodoMe, today: string): Promise<Pick<DashboardD
   return out;
 }
 
+async function concretePart(today: string): Promise<NonNullable<DashboardData["concrete"]>> {
+  const { trucks, days } = await listConcrete();
+  const day = trucks.some((t) => t.day === today) ? today : (trucks[0]?.day ?? null);
+  if (!day) return { day: null, trucks: 0, volume: 0, flagged: 0 };
+  const list = trucksOn(trucks, day);
+  const pour = days.find((d) => d.day === day);
+  const sum = daySummary(list);
+  return { day, trucks: sum.trucks, volume: sum.volume, flagged: list.filter((t) => truckFlags(t, trucks, pour).some((f) => f.tone === "bad")).length };
+}
+
 /** The home page's figures for this login: only the parts it opens. */
 export async function getDashboard(me: TodoMe): Promise<DashboardData> {
   const today = ghanaDay();
   const has = (s: string) => me.sections.includes(s as never);
-  const [todo, store, expenses, unread, rollcall] = await Promise.all([
+  const [todo, store, expenses, unread, rollcall, concrete] = await Promise.all([
     has("todo") ? settle(todoPart(me, today)) : undefined,
     has("store") ? settle(storePart(me, today)) : undefined,
     has("expenses") ? settle(expensesPart(today)) : undefined,
     has("alerts") ? settle(unreadCount()) : undefined,
     has("rollcall") || has("payday") || has("workers") ? settle(rollcallParts(me, today)) : undefined,
+    has("concrete") ? settle(concretePart(today)) : undefined,
   ]);
   return {
     today,
@@ -153,5 +168,6 @@ export async function getDashboard(me: TodoMe): Promise<DashboardData> {
     ...(expenses ? { expenses } : {}),
     ...(unread !== undefined ? { alerts: { unread } } : {}),
     ...(rollcall ?? {}),
+    ...(concrete ? { concrete } : {}),
   };
 }

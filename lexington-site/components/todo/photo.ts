@@ -33,8 +33,8 @@ export async function shrink(file: File): Promise<Blob> {
   );
 }
 
-/** Where photos go: the to-do list's ("/api/todo/photo") or the store room's ("/api/store/photo"). */
-export type PhotoEndpoint = "/api/todo/photo" | "/api/store/photo";
+/** Where photos go: the to-do list's ("/api/todo/photo"), the store room's ("/api/store/photo") or the waybills ("/api/concrete/photo"). */
+export type PhotoEndpoint = "/api/todo/photo" | "/api/store/photo" | "/api/concrete/photo";
 
 /** Shrinks and uploads one photo; resolves to the stored photo's id and address. */
 export async function uploadPhoto(file: File, endpoint: PhotoEndpoint = "/api/todo/photo"): Promise<{ id: string; url: string }> {

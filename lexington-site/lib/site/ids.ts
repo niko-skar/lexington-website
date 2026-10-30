@@ -28,6 +28,9 @@ export const BANK_TEXT_PREFIX = `banktext-${TAG}-`;
 export const BANK_TEXT_SETTINGS_ID = `banktexts-${TAG}`;
 /** The site roll call (Nov 2026, moved in from its Claude page): one document per page record, "rc-live-days--2026-11-02". */
 export const ROLLCALL_PREFIX = `rc-${TAG}-`;
+/** Concrete deliveries (30 Oct 2026): one document per truck, and one per pour day ("concreteday-live-2026-10-30"). */
+export const TRUCK_PREFIX = `concretetruck-${TAG}-`;
+export const POUR_DAY_PREFIX = `concreteday-${TAG}-`;
 
 export const newId = (prefix: string) => prefix + randomBytes(6).toString("hex");
 

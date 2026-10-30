@@ -7,7 +7,7 @@ import styles from "./Todo.module.css";
 
 const APP_ADDRESS = "https://www.lexington.com.gh/todo";
 
-const PART: Record<SiteSection, string> = { todo: "To-do list", store: "Store room", rollcall: "Roll call", payday: "Payday", workers: "Workers" };
+const PART: Record<SiteSection, string> = { todo: "To-do list", store: "Store room", rollcall: "Roll call", payday: "Payday", workers: "Workers", concrete: "Concrete" };
 // What each part is for, in the message the office sends with the login.
 const HOW: Record<SiteSection, string> = {
   todo: "To-do: tick each job when it's done, and add a photo of the fix if you can.",
@@ -15,6 +15,7 @@ const HOW: Record<SiteSection, string> = {
   rollcall: "Roll call: mark everyone Here or Absent at each check: morning, afternoon and closing.",
   payday: "Payday: record each payment as you make it.",
   workers: "Workers: add a new worker with their numbers and ID photo.",
+  concrete: "Concrete: when a concrete truck arrives, tap Truck arrived and photo its waybill; add the slump and cubes after the test.",
 };
 
 function message(name: string, email: string, password: string, sections: SiteSection[]) {

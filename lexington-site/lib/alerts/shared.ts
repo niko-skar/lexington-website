@@ -6,7 +6,7 @@
 // the foreman adds to the to-do list is one too; the foreman gets no Alerts tab, only a buzz on his
 // own phone when the office adds a site job (lib/todo/server.ts).
 
-export const ALERT_KINDS = ["enquiry", "reservation", "lead", "chat", "ads", "post", "receipt", "books", "todo", "buyer", "bank", "test"] as const;
+export const ALERT_KINDS = ["enquiry", "reservation", "lead", "chat", "ads", "post", "receipt", "books", "todo", "buyer", "bank", "concrete", "test"] as const;
 export type AlertKind = (typeof ALERT_KINDS)[number];
 
 export const KIND_LABEL: Record<AlertKind, string> = {
@@ -21,6 +21,7 @@ export const KIND_LABEL: Record<AlertKind, string> = {
   todo: "Site to-do",
   buyer: "Buyer portal",
   bank: "Bank text",
+  concrete: "Concrete",
   test: "Test",
 };
 
