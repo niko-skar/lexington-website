@@ -57,10 +57,11 @@ async function accountFor(email: string): Promise<Account | null> {
   return account;
 }
 
-/** What a site login opens. Logins made before the store existed (the foreman's) have both: Niko,
- *  22 Oct 2026: "albert and I can record materials going out". */
+/** What a site login opens. Logins made before the store existed (the foreman's) have the to-do list and
+ *  the store: Niko, 22 Oct 2026: "albert and I can record materials going out". Never the roll call or
+ *  Payday unless the office ticks them. */
 function siteSections(value: unknown): SiteSection[] {
-  if (!Array.isArray(value)) return [...SITE_SECTIONS];
+  if (!Array.isArray(value)) return ["todo", "store"];
   return SITE_SECTIONS.filter((s) => value.includes(s));
 }
 
@@ -187,7 +188,7 @@ async function tellTheOtherSide(me: TodoMe, task: TodoTask): Promise<void> {
     const title = `${who} added ${task.urgent ? "an urgent job" : "a job"}`;
     const what = jobLine(task);
     const where = task.area ? areaLabel(task.area) : null;
-    const open = `/todo?open=${task.id}`;
+    const open = `/todo/jobs?open=${task.id}`;
     const image = task.photoUrl ? photoAt(task.photoUrl, 720) : undefined;
     if (me.kind === "site") {
       await notifyOwner({
@@ -220,7 +221,7 @@ async function tellTheOfficeDone(me: TodoMe, id: string, doneAt: string): Promis
     await new Promise((resolve) => setTimeout(resolve, DONE_GRACE_MS));
     const task = await getTask(id);
     if (!task || task.status !== "done" || task.doneAt !== doneAt) return;
-    const open = `/todo?open=${task.id}`;
+    const open = `/todo/jobs?open=${task.id}`;
     const image = task.fixUrl ?? task.photoUrl;
     await notifyOwner({
       kind: "todo",
@@ -316,8 +317,8 @@ export async function deleteTask(me: TodoMe, id: string): Promise<void> {
 const MAX_BYTES = 4_400_000; // the phone shrinks photos first; Vercel refuses over 4.5 MB anyway
 const TYPES = ["image/jpeg", "image/png", "image/webp"];
 
-/** A phone photo into the private store, named "<kind>-<date>-<hex>" (to-do photos "todo-", the store's "store-"). */
-export async function storePhoto(file: File, kind: "todo" | "store" = "todo"): Promise<{ id: string; url: string }> {
+/** A phone photo into the private store, named "<kind>-<date>-<hex>" (to-do photos "todo-", the store's "store-", the roll call's "rollcall-"). */
+export async function storePhoto(file: File, kind: "todo" | "store" | "rollcall" = "todo"): Promise<{ id: string; url: string }> {
   if (!TYPES.includes(file.type)) throw new TodoError(415, "That file is not a JPEG, PNG or WebP photo.");
   if (file.size === 0) throw new TodoError(400, "No photo was sent.");
   if (file.size > MAX_BYTES) throw new TodoError(413, "That photo is too big (over 4 MB).");
@@ -329,8 +330,8 @@ export async function storePhoto(file: File, kind: "todo" | "store" = "todo"): P
   return { id: asset._id, url: asset.url };
 }
 
-/** Deletes a to-do (or store) photo nothing points at any more (a retake, a removed or deleted item). */
-export async function dropPhoto(assetId: string, kind: "todo" | "store" = "todo"): Promise<void> {
+/** Deletes a to-do (or store, or roll call) photo nothing points at any more (a retake, a removed or deleted item). */
+export async function dropPhoto(assetId: string, kind: "todo" | "store" | "rollcall" = "todo"): Promise<void> {
   if (!PHOTO_ID_RE.test(assetId)) return;
   const client = getBuyersClient();
   try {
@@ -362,7 +363,7 @@ export async function listSiteAccounts(): Promise<SiteAccount[]> {
 
 function cleanSections(value: unknown): SiteSection[] {
   const sections = siteSections(Array.isArray(value) ? value : []);
-  if (sections.length === 0) throw new TodoError(400, "Tick at least one: the to-do list or the store room.");
+  if (sections.length === 0) throw new TodoError(400, "Tick at least one part for this login.");
   return sections;
 }
 
@@ -379,7 +380,7 @@ export async function createSiteAccount(body: Record<string, unknown>): Promise<
   const email = cleanText(body.email, 120, "email").toLowerCase();
   if (!name) throw new TodoError(400, "Type the person's name.");
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new TodoError(400, "That email address doesn't look right.");
-  const sections = cleanSections(body.sections ?? SITE_SECTIONS);
+  const sections = cleanSections(body.sections ?? ["todo", "store"]);
   const client = getBuyersClient();
   const existing = await client.fetch<{ role?: string } | null>(`*[_type == "buyerAccount" && lower(email) == $email][0]{ role }`, { email });
   if (existing) throw new TodoError(409, "There's already a login with that email. Use a different email for this person.");

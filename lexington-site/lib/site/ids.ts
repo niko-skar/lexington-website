@@ -26,6 +26,8 @@ export const QBO_GONE_PREFIX = `qbogone-${TAG}-`;
 /** Each bank text the iPhone passed on (so one text never counts twice), and their settings (the link's version, the account). */
 export const BANK_TEXT_PREFIX = `banktext-${TAG}-`;
 export const BANK_TEXT_SETTINGS_ID = `banktexts-${TAG}`;
+/** The site roll call (Nov 2026, moved in from its Claude page): one document per page record, "rc-live-days--2026-11-02". */
+export const ROLLCALL_PREFIX = `rc-${TAG}-`;
 
 export const newId = (prefix: string) => prefix + randomBytes(6).toString("hex");
 

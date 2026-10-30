@@ -3,13 +3,24 @@
 import Link from "next/link";
 
 import { todoSignOutAction } from "@/lib/actions/todo";
-import { sectionHref, sectionName, type Section, type TodoMe } from "@/lib/todo/shared";
+import { opensRollcall } from "@/lib/rollcall/shared";
+import { PAGE_SECTIONS, sectionHref, sectionName, type PageSection, type TodoMe } from "@/lib/todo/shared";
 import styles from "./Todo.module.css";
 
-// What every part of the site app shares: its header, the bar at the bottom (To-do · Store ·
-// Expenses, only the parts this login opens) and the ☰ menu.
+// What every part of the site app shares: its header, the bar at the bottom (Home, then the parts this
+// login opens: To-do · Store · Expenses · Alerts · Roll call) and the ☰ menu.
 
-const ICONS: Record<Section, React.ReactNode> = {
+/** Where the bar can go: the home page, a part drawn in this page, or the roll call (its own page). */
+export type View = PageSection | "home";
+type NavItem = View | "rollcall";
+
+const ICONS: Record<NavItem, React.ReactNode> = {
+  home: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M3.5 11L12 4l8.5 7" />
+      <path d="M5.5 9.5V20h13V9.5M10 20v-5.5h4V20" />
+    </svg>
+  ),
   todo: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M4 7l2 2 3.5-3.5M4 15l2 2 3.5-3.5M13 8h7M13 16h7" />
@@ -33,13 +44,28 @@ const ICONS: Record<Section, React.ReactNode> = {
       <path d="M10 20.5a2.2 2.2 0 0 0 4 0" />
     </svg>
   ),
+  rollcall: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M8 4h8v3H8z" />
+      <path d="M8 5.5H5.5V21h13V5.5H16" />
+      <path d="M8.5 12l1.5 1.5 3-3M8.5 17h7" />
+    </svg>
+  ),
 };
 
 // What a badge on the bar counts, for a screen reader.
-const BADGE_WORDS: Partial<Record<Section, string>> = { store: "to reorder", alerts: "new" };
+const BADGE_WORDS: Partial<Record<NavItem, string>> = { store: "to reorder", alerts: "new" };
+
+const navItems = (me: TodoMe): NavItem[] => [
+  "home",
+  ...PAGE_SECTIONS.filter((s) => me.sections.includes(s)),
+  ...(opensRollcall(me.sections) ? (["rollcall"] as const) : []),
+];
+const navName = (item: NavItem) => (item === "home" ? "Home" : item === "rollcall" ? "Roll call" : sectionName(item));
+const navHref = (item: NavItem) => (item === "home" ? "/todo" : item === "rollcall" ? "/todo/rollcall" : sectionHref(item));
 
 /** The class for the app's outer box: room at the bottom for the bar when there is one. */
-export const appClass = (me: TodoMe) => (me.sections.length > 1 ? `${styles.app} ${styles.withNav}` : styles.app);
+export const appClass = (me: TodoMe) => (navItems(me).length > 1 ? `${styles.app} ${styles.withNav}` : styles.app);
 
 /** Each part's header: "Building works", the part's name, a line of counts, the ☰ button, then its tabs. */
 export function SiteHeader({
@@ -73,8 +99,8 @@ export function SiteHeader({
 }
 
 /**
- * The bar at the bottom. Switching parts happens on the phone at once (the parts stay loaded);
- * the links still carry the real address for a long-press or a new tab.
+ * The bar at the bottom. Switching parts of this page happens on the phone at once (they stay loaded); the
+ * roll call is its own page, so its item is a plain link. The links carry the real address for a long-press.
  */
 export function SiteNav({
   me,
@@ -83,31 +109,32 @@ export function SiteNav({
   badges,
 }: {
   me: TodoMe;
-  current: Section;
-  onGo: (section: Section) => void;
-  badges?: Partial<Record<Section, number>>;
+  current: View;
+  onGo: (view: View) => void;
+  badges?: Partial<Record<NavItem, number>>;
 }) {
-  if (me.sections.length < 2) return null;
+  const items = navItems(me);
+  if (items.length < 2) return null;
   return (
-    <nav className={styles.nav} aria-label="Parts of the app">
-      {me.sections.map((section) => {
-        const badge = badges?.[section] ?? 0;
+    <nav className={`${styles.nav} ${items.length > 5 ? styles.navMany : ""}`} aria-label="Parts of the app">
+      {items.map((item) => {
+        const badge = badges?.[item] ?? 0;
         return (
           <a
-            key={section}
-            href={sectionHref(section)}
-            className={section === current ? styles.navOn : styles.navItem}
-            aria-current={section === current ? "page" : undefined}
+            key={item}
+            href={navHref(item)}
+            className={item === current ? styles.navOn : styles.navItem}
+            aria-current={item === current ? "page" : undefined}
             onClick={(e) => {
-              if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+              if (item === "rollcall" || e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
               e.preventDefault();
-              onGo(section);
+              onGo(item);
             }}
           >
-            {ICONS[section]}
-            <span>{sectionName(section)}</span>
+            {ICONS[item]}
+            <span>{navName(item)}</span>
             {badge > 0 && (
-              <span className={styles.navBadge} aria-label={`${badge} ${BADGE_WORDS[section] ?? ""}`.trim()}>
+              <span className={styles.navBadge} aria-label={`${badge} ${BADGE_WORDS[item] ?? ""}`.trim()}>
                 {badge}
               </span>
             )}

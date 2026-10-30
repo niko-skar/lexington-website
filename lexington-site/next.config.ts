@@ -10,6 +10,11 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // The site roll call (30 Oct 2026) is one page of its own, public/todo/rollcall.html: just the app, no
+  // records (it asks /api/rollcall for those, signed in). The address the phone shows stays /todo/rollcall.
+  async rewrites() {
+    return [{ source: "/todo/rollcall", destination: "/todo/rollcall.html" }];
+  },
   async headers() {
     return [
       {

@@ -7,18 +7,25 @@ import styles from "./Todo.module.css";
 
 const APP_ADDRESS = "https://www.lexington.com.gh/todo";
 
-const PART: Record<SiteSection, string> = { todo: "To-do list", store: "Store room" };
+const PART: Record<SiteSection, string> = { todo: "To-do list", store: "Store room", rollcall: "Roll call", payday: "Payday", workers: "Workers" };
+// What each part is for, in the message the office sends with the login.
+const HOW: Record<SiteSection, string> = {
+  todo: "To-do: tick each job when it's done, and add a photo of the fix if you can.",
+  store: "Store: record every material that leaves the store (tap the item, Take out).",
+  rollcall: "Roll call: mark everyone Here or Absent at each check: morning, afternoon and closing.",
+  payday: "Payday: record each payment as you make it.",
+  workers: "Workers: add a new worker with their numbers and ID photo.",
+};
 
 function message(name: string, email: string, password: string, sections: SiteSection[]) {
-  const what = sections.length === 2 ? "site to-do list and store room" : sections[0] === "store" ? "store room" : "site to-do list";
+  const what = sections.map((s) => PART[s].toLowerCase()).join(", ").replace(/, ([^,]*)$/, " and $1");
   return [
-    `Hi ${name.split(" ")[0]}, this is the Lexington ${what}.`,
+    `Hi ${name.split(" ")[0]}, this is the Lexington site app (${what}).`,
     `Open: ${APP_ADDRESS}`,
     `Email: ${email}`,
     `Password: ${password}`,
     "Then in Chrome tap ⋮ and Add to Home screen (or Install app) so it opens like an app.",
-    ...(sections.includes("todo") ? ["Tick each job when it's done, and add a photo of the fix if you can."] : []),
-    ...(sections.includes("store") ? ["Record every material that leaves the store: Store, tap the item, Take out."] : []),
+    ...SITE_SECTIONS.filter((s) => sections.includes(s)).map((s) => HOW[s]),
   ].join("\n");
 }
 
@@ -63,7 +70,7 @@ export function AccessSheet({ onClose }: { onClose: () => void }) {
   const [accounts, setAccounts] = useState<SiteAccount[] | null>(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [sections, setSections] = useState<SiteSection[]>([...SITE_SECTIONS]);
+  const [sections, setSections] = useState<SiteSection[]>(["todo", "store"]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState<{ title: string; text: string } | null>(null);
@@ -86,7 +93,7 @@ export function AccessSheet({ onClose }: { onClose: () => void }) {
       setResult({ title: `Send this to ${account.name}`, text: message(account.name, account.email, data.password, account.sections) });
       setName("");
       setEmail("");
-      setSections([...SITE_SECTIONS]);
+      setSections(["todo", "store"]);
     } catch (e) {
       setError(e instanceof Error ? e.message : "That didn't work.");
     } finally {
@@ -150,8 +157,9 @@ export function AccessSheet({ onClose }: { onClose: () => void }) {
       <div className={styles.sheet} role="dialog" aria-label="Site logins">
         <h2 className={styles.sheetTitle}>Site logins</h2>
         <p className={styles.sheetNote}>
-          These logins open only what is ticked: the to-do list (tick jobs off, add photos of the fix) and/or the store room (take out, bring back, count;
-          never prices). Only the office adds jobs, sees the expenses or changes store items.
+          These logins open only what is ticked: the to-do list, the store room (never prices), and the roll call&rsquo;s three parts: Roll call
+          (marking), Payday (wages and payments) and Workers (names, numbers, ID photos). Without Payday a login never sees an amount. Only the
+          office sees the expenses and the alerts.
         </p>
 
         {result && (

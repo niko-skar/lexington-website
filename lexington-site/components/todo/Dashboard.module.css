@@ -1,0 +1,56 @@
+/* The site app's home page (30 Oct 2026): a tile per part. Colours come from .app in Todo.module.css. */
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 4px;
+}
+.tile {
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  min-height: 118px;
+  padding: 14px 14px 12px;
+  border: 1px solid var(--x-line);
+  border-radius: 12px;
+  background: var(--x-surface);
+  color: var(--x-ink);
+  text-align: left;
+  box-shadow: inset 4px 0 0 var(--x-line);
+}
+.tile:active {
+  transform: translateY(1px);
+}
+.ok {
+  box-shadow: inset 4px 0 0 var(--x-accent);
+}
+.warn {
+  box-shadow: inset 4px 0 0 var(--x-warn);
+}
+/* Set here: the website gives headings and buttons its own fonts. */
+.name {
+  font-family: var(--x-display);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--x-muted);
+}
+.big {
+  font-family: var(--x-display);
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.05;
+}
+.small {
+  font-family: var(--x-body);
+  font-size: 13px;
+  line-height: 1.3;
+  color: var(--x-muted);
+}
+@media (min-width: 720px) {
+  .tiles {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

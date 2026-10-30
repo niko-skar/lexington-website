@@ -16,7 +16,7 @@ const NAV_LINKS = [
   { href: "/admin/progress", label: "Site updates" },
   { href: "/admin/asbuilt", label: "As-built" },
   { href: "/admin/plans", label: "Floor plans" },
-  { href: "/todo", label: "Site to-do" },
+  { href: "/todo", label: "Site app" },
   { href: "/todo/store", label: "Store" },
   { href: "/todo/expenses", label: "Expenses" },
   { href: "/admin/quickbooks", label: "QuickBooks" },

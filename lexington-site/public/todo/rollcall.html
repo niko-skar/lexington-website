@@ -1,0 +1,1432 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Site Roll Call</title>
+<link rel="manifest" href="/todo.webmanifest">
+<meta name="theme-color" content="#eceeec">
+<link rel="apple-touch-icon" href="/todo/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap">
+<style>
+/* Layout: one-thumb phone tool. Sticky day/round header, worker rows with two big buttons, bottom tab bar. */
+:root{
+  --bg:#EDEFEA; --surface:#FFFFFF; --ink:#1A231F; --muted:#5B6862; --line:#D3D9D2; --chip:#E3E8E1;
+  --accent:#1E6B4F; --accent-ink:#FFFFFF; --here-soft:#DDEFE5;
+  --absent:#B42318; --absent-soft:#FBE7E4; --late:#9A5700; --late-soft:#FBEFD9;
+  --display:"Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
+  --body:"Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#111613; --surface:#1A211D; --ink:#E6ECE8; --muted:#9AA8A1; --line:#2B3530; --chip:#25302A;
+  --accent:#52B78C; --accent-ink:#0A1410; --here-soft:#163529;
+  --absent:#F0806F; --absent-soft:#3A1C18; --late:#E9A94C; --late-soft:#382811; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#111613; --surface:#1A211D; --ink:#E6ECE8; --muted:#9AA8A1; --line:#2B3530; --chip:#25302A;
+  --accent:#52B78C; --accent-ink:#0A1410; --here-soft:#163529;
+  --absent:#F0806F; --absent-soft:#3A1C18; --late:#E9A94C; --late-soft:#382811; color-scheme:dark }
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:16px/1.4 var(--body);-webkit-tap-highlight-color:transparent}
+button,input,select{font:inherit;color:inherit}
+html{touch-action:manipulation}
+button{cursor:pointer;touch-action:manipulation}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.num{font-variant-numeric:tabular-nums}
+.wrap{max-width:640px;margin:0 auto;padding:0 16px 110px}
+
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding:12px 0 10px;border-bottom:1px solid var(--line)}
+.dayline{display:flex;align-items:center;gap:8px}
+.dayline h1{flex:1;margin:0;font:700 26px/1.1 var(--display);letter-spacing:.01em;text-align:center}
+.iconbtn{width:44px;height:44px;border-radius:10px;border:1px solid var(--line);background:var(--surface);font-size:22px;line-height:1}
+.seg{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:10px}
+.seg.three{grid-template-columns:repeat(3,minmax(0,1fr))}
+.seg button b{font-size:15px}
+.otrow{flex-wrap:wrap}
+.otctl{display:flex;align-items:center;gap:6px}
+.otctl .step{width:44px;height:44px;border-radius:10px;border:1px solid var(--line);background:var(--bg);font-weight:600;font-size:20px}
+.otctl .step:disabled{opacity:.4}
+.othrs{min-width:40px;text-align:center;font:700 20px/1 var(--display)}
+.finish{height:44px;padding:0 12px}
+.otmark{display:block;font-size:11px;color:var(--accent);font-weight:600}
+.seg button{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 4px;display:flex;flex-direction:column;align-items:center}
+.seg button b{font:600 17px/1.1 var(--display);letter-spacing:.03em;text-transform:uppercase}
+.seg button span{font-size:12px;color:var(--muted)}
+.seg button.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.seg button.on span{color:inherit;opacity:.75}
+.note{font-size:13px;color:var(--muted);margin:8px 0 0}
+.banner{margin-top:12px;background:var(--accent);color:var(--accent-ink);border-radius:12px;padding:12px 14px;display:flex;gap:10px;align-items:center;justify-content:space-between;border:0;width:100%;text-align:left}
+.banner b{font:700 19px/1.1 var(--display);text-transform:uppercase;letter-spacing:.03em}
+
+section.group{margin-top:20px}
+.ghead{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:8px}
+.ghead h2{margin:0;font:700 20px/1.1 var(--display);text-transform:uppercase;letter-spacing:.04em}
+.ghead small{color:var(--muted);font-size:13px}
+.linkbtn{border:0;background:none;color:var(--accent);font-weight:600;font-size:14px;padding:6px 0}
+.rows{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.wrow{display:flex;align-items:center;gap:10px;padding:10px 12px;border-top:1px solid var(--line)}
+.wrow:first-child{border-top:0}
+.wname{flex:1;min-width:0}
+.wname b{display:block;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.meta{font-size:13px;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center}
+.dots{display:inline-flex;gap:3px}
+.dots i{width:8px;height:8px;border-radius:50%;background:var(--chip);border:1px solid var(--line)}
+.dots i.in{background:var(--accent);border-color:var(--accent)}
+.dots i.out{background:var(--absent);border-color:var(--absent)}
+.pill{font-size:12px;font-weight:600;padding:1px 7px;border-radius:99px;background:var(--chip);color:var(--muted);white-space:nowrap}
+.pill.late{background:var(--late-soft);color:var(--late)}
+.pill.ok{background:var(--here-soft);color:var(--accent)}
+.pill.bad{background:var(--absent-soft);color:var(--absent)}
+.btns{display:flex;gap:6px}
+.yes,.no{min-width:74px;height:48px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface);font-weight:600}
+.yes.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.no.on{background:var(--absent);border-color:var(--absent);color:var(--surface)}
+.empty{padding:16px;color:var(--muted);font-size:14px}
+
+.awayhead{width:100%;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:12px 14px;border:1px dashed var(--line);border-radius:14px;background:transparent;text-align:left}
+.awayhead b{font:700 20px/1.1 var(--display);text-transform:uppercase;letter-spacing:.04em}
+.awayhead .num{color:var(--muted);font-weight:600;margin-left:6px}
+.awayhead .show{color:var(--accent);font-weight:600;font-size:14px}
+.group.away .rows{margin-top:8px}
+.group.away .wname b{color:var(--muted)}
+
+/* Payday */
+.weeknav{display:flex;align-items:center;gap:8px}
+.weeknav h1{flex:1;text-align:center;margin:0;font:700 24px/1.1 var(--display)}
+.totals{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.totals div{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px}
+.totals small{display:block;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.totals b{font:700 22px/1.15 var(--display)}
+.totals .due{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.totals .due small{color:inherit;opacity:.75}
+.bymethod{font-size:13px;color:var(--muted);margin-top:8px}
+.actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.btn{height:44px;padding:0 16px;border-radius:10px;border:1px solid var(--line);background:var(--surface);font-weight:600}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.danger{color:var(--absent)}
+
+.pcard{padding:12px;border-top:1px solid var(--line)}
+.pcard:first-child{border-top:0}
+.pline{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.pline b{font-weight:600}
+.amount{font:700 21px/1.1 var(--display);white-space:nowrap}
+.week6{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin:8px 0 6px}
+.dcell{text-align:center;font-size:11px;color:var(--muted)}
+.bars{display:flex;gap:2px;height:10px;margin-top:2px}
+.bars i{flex:1;border-radius:2px;background:var(--chip)}
+.bars i.in{background:var(--accent)}
+.bars i.out{background:var(--absent)}
+button.dcell{border:0;background:none;padding:3px 2px;border-radius:8px;font-family:inherit;width:100%}
+button.dcell.sel{background:var(--chip);color:var(--ink)}
+.dcell.ov .bars{opacity:.35}
+.paymark{display:block;font-size:11px;font-weight:700;color:var(--ink)}
+.dayedit{margin:0 0 8px;background:var(--bg);border-radius:10px;padding:10px;display:grid;gap:8px}
+.dayedit .chips button{height:44px}
+.calc{font-size:13px;color:var(--muted)}
+.lates{margin:6px 0 0;padding:0;list-style:none;display:grid;gap:4px}
+.lates li{display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--late-soft);color:var(--late);border-radius:8px;padding:6px 8px;font-size:13px}
+.lates li.waived{background:var(--chip);color:var(--muted)}
+.lates li.waived span{text-decoration:line-through}
+.lates button{border:1px solid currentColor;background:transparent;color:inherit;border-radius:8px;padding:4px 8px;font-size:12px;font-weight:600;white-space:nowrap}
+.paybar{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+.paybar button{flex:1;min-width:80px;height:44px;border-radius:10px;border:1px solid var(--line);background:var(--bg);font-weight:600}
+.paid{margin-top:10px;display:flex;justify-content:space-between;align-items:center;gap:8px;background:var(--here-soft);color:var(--accent);border-radius:10px;padding:8px 10px;font-size:14px;font-weight:600}
+.paid button{border:0;background:none;color:inherit;text-decoration:underline;font-size:13px}
+.payform{margin-top:10px;display:grid;gap:8px;background:var(--bg);border-radius:10px;padding:10px}
+.payform .row{display:flex;gap:8px;flex-wrap:wrap}
+.payform label{font-size:12px;color:var(--muted);display:grid;gap:3px;flex:1;min-width:120px}
+.field{height:44px;border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:0 10px;width:100%}
+.hist{display:grid}
+.hist button{display:flex;justify-content:space-between;gap:8px;padding:12px;border:0;border-top:1px solid var(--line);background:none;text-align:left}
+.hist button:first-child{border-top:0}
+
+/* Workers */
+.addform{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px;display:grid;gap:10px;margin-top:12px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{height:40px;padding:0 12px;border-radius:99px;border:1px solid var(--line);background:var(--bg);font-weight:500}
+.chips button.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.settings{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.settings label{font-size:13px;color:var(--muted);display:grid;gap:4px}
+.nick{font-weight:500;color:var(--muted)}
+.exportbox{margin-top:10px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px}
+.exportbox .paybar{margin-top:8px}
+.ro{margin:12px 0 0;background:var(--absent-soft);color:var(--absent);border:1px solid var(--absent);border-radius:12px;padding:12px 14px;font-size:14px}
+.ro b{display:block;font-size:15px;margin-bottom:2px}
+.ro.warn{background:var(--late-soft);color:var(--late);border-color:var(--late)}
+.contact{margin-top:2px;user-select:text}
+.idbox{display:grid;gap:6px}
+.thumb{border:1px solid var(--line);border-radius:10px;padding:0;background:var(--surface);width:160px;max-width:100%;overflow:hidden}
+.thumb img{display:block;width:100%;aspect-ratio:1.586;object-fit:cover}
+.filebtn{display:inline-flex;align-items:center}
+.lightbox{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.85);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:16px}
+.lightbox img{max-width:100%;max-height:80%;border-radius:8px}
+h3.sub{font:700 18px/1.1 var(--display);text-transform:uppercase;letter-spacing:.04em;margin:26px 0 8px}
+
+nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--surface);border-top:1px solid var(--line);display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px))}
+nav.tabs button{border:0;background:none;height:50px;border-radius:10px;font:600 17px/1 var(--display);text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+nav.tabs button.on{color:var(--ink);background:var(--chip)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(80px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 14px;border-radius:10px;font-size:14px;z-index:9;max-width:calc(100% - 32px)}
+.loading{padding:40px 0;color:var(--muted);text-align:center}
+/* Curing */
+.pour .pline .linkbtn{padding:0}
+.drybtn{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;margin-top:8px;border-color:var(--absent);color:var(--absent);background:var(--absent-soft)}
+.drybtns{display:grid;grid-template-columns:3fr 2fr;gap:8px;margin-top:8px}
+.drybtns .drybtn{margin-top:0;padding:0 8px}
+.drybtns .gal{background:var(--surface)}
+.drythumbs{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px}
+.drything{display:grid;gap:2px;justify-items:start}
+.drythumb{border:1px solid var(--line);border-radius:8px;padding:0;background:var(--surface);width:76px;height:76px;overflow:hidden}
+.drythumb img{display:block;width:100%;height:100%;object-fit:cover}
+.lates.dry li{justify-content:flex-start;background:var(--absent-soft);color:var(--absent)}
+.lates.dry li span{flex:1}
+.lates.dry .drythumb{flex:none;width:44px;height:44px}
+.lates.dry li.waived{background:var(--chip);color:var(--muted)}
+.pourform .row{display:flex;gap:8px;flex-wrap:wrap}
+.linkbtn.danger{color:var(--absent)}
+/* Before the pour (30 Oct 2026) */
+.checks{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:6px}
+.check{display:flex;align-items:center;gap:10px;width:100%;min-height:48px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--bg);text-align:left;font-weight:500}
+.check .box{flex:none;width:26px;height:26px;border-radius:7px;border:2px solid var(--muted);display:grid;place-items:center;font-weight:700;font-size:16px;color:transparent}
+.check.on{background:var(--here-soft);border-color:var(--accent)}
+.check.on .box{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.check .ctext{flex:1;min-width:0}
+.check small{display:block;font-size:12px;color:var(--muted);font-weight:400}
+.checks.done .check{min-height:0;padding:6px 10px;font-size:14px}
+.check.miss .box{border-color:var(--absent);color:var(--absent)}
+.addcheck{display:flex;gap:8px;margin-top:8px}
+.addcheck .field{flex:1;min-width:0}
+.pourbtn{width:100%;margin-top:10px}
+.clrow{display:flex;gap:6px;align-items:center}
+.clrow .field{flex:1;min-width:0}
+.clrow .iconbtn{flex:none;font-size:18px}
+.clrow .iconbtn:disabled{opacity:.35}
+.cltext{font:inherit;height:auto;min-height:44px;padding:8px 10px;line-height:1.3;resize:vertical}
+.chips button.none{border-style:dashed}
+/* The Lexington app (Nov 2026): the ones already marked or paid sit below the rest */
+.donehead{margin:0;padding:8px 12px;border-top:1px solid var(--line);background:var(--bg);color:var(--muted);font:600 13px/1.2 var(--body);letter-spacing:.04em;text-transform:uppercase}
+nav.tabs button.home{color:var(--accent)}
+.addworkerbtn{width:100%;margin-top:12px}
+/* Typing in a box at 16px: iPhones zoom in on anything smaller */
+.field{font-size:16px}
+@media (prefers-reduced-motion:no-preference){ .yes,.no,.seg button{transition:background .12s,color .12s,border-color .12s} }
+</style>
+
+<div class="wrap" id="app"><p class="loading">Loading your site register…</p></div>
+<nav class="tabs" id="tabs">
+  <button data-act="home" data-v="home" class="home" hidden>Home</button>
+  <button data-act="tab" data-v="today">Today</button>
+  <button data-act="tab" data-v="week">Payday</button>
+  <button data-act="tab" data-v="workers">Workers</button>
+</nav>
+<div class="toast" id="toast" hidden></div>
+
+<script src="/todo/rollcall-shim.js"></script>
+<script>
+const DEF = {start:"08:00", lunchStart:"12:00", afternoon:"13:00", close:"17:00", satClose:"15:00", grace:15, otRate:30, curingDays:7,
+  rates:{mforeman:350, mason:200, labourer:120, carpenter:200, foreman:250, steelTon:2000, bendMachine:500, cutMachine:200, curing:100, curingDry:50}};
+const TRADES = {
+  mforeman:{label:"Foreman", group:"masonry"}, mason:{label:"Mason", group:"masonry"}, labourer:{label:"Labourer", group:"masonry"},
+  carpenter:{label:"Carpenter", group:"carpentry"}, foreman:{label:"Carpentry sub-foreman", group:"carpentry"},
+  steel:{label:"Steel bender", group:"steel"}};
+const GROUPS = [
+  {id:"masonry", label:"Masons & labourers"},
+  {id:"carpentry", label:"Carpenters"},
+  {id:"steel", label:"Steel benders"}];
+const SLOTS = [{id:"m", label:"Morning"}, {id:"a", label:"Afternoon"}, {id:"c", label:"Closing"}];
+// Saturdays have no lunch: just a morning and a closing check, closing earlier. Starts 17 Oct 2026,
+// so Saturdays already paid (marked with three checks) keep their figures.
+const SHORT_SAT_FROM = "2026-10-12";
+const isShortSat = d => d >= SHORT_SAT_FROM && parseYmd(d).getDay() === 6;
+const slotsFor = d => isShortSat(d) ? SLOTS.filter(sl => sl.id !== "a") : SLOTS;
+const closeFor = d => isShortSat(d) ? (S.settings.satClose || DEF.satClose) : S.settings.close;
+const METHODS = {cash:"Cash", momo:"MoMo", bank:"Bank"};
+// Steel machines hired by the day (24 Oct 2026): ticked on the days they're used, added up on Payday.
+const MACHINES = [
+  {id:"bending", label:"Steel bending machine", short:"Bending machine", rate:"bendMachine"},
+  {id:"cutting", label:"Steel cutting machine", short:"Cutting machine", rate:"cutMachine"}];
+const DOW = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+/* ---------- dates & money ---------- */
+const pad = n => String(n).padStart(2,"0");
+const ymd = d => d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+const parseYmd = s => { const [y,m,d] = s.split("-").map(Number); return new Date(y, m-1, d); };
+const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate()+n); return x; };
+const todayStr = () => ymd(new Date());
+const weekStart = s => { const d = parseYmd(s); return ymd(addDays(d, -((d.getDay()+6)%7))); };
+const weekDates = ws => [0,1,2,3,4,5].map(i => ymd(addDays(parseYmd(ws), i)));
+const toMin = hhmm => { const [h,m] = hhmm.split(":").map(Number); return h*60+m; };
+const hm = d => { const h = d.getHours(), m = d.getMinutes(); return (h%12||12)+":"+pad(m)+(h<12?"am":"pm"); };
+const dayLabel = s => { const d = parseYmd(s); return DOW[d.getDay()]+" "+d.getDate()+" "+MON[d.getMonth()]; };
+const weekLabel = ws => { const a = parseYmd(ws), b = addDays(a,5);
+  return a.getDate()+(a.getMonth()!==b.getMonth()?" "+MON[a.getMonth()]:"")+" – "+b.getDate()+" "+MON[b.getMonth()]; };
+const r2 = n => Math.round(n*100)/100;
+const ghs = n => "GH₵ "+Number(n||0).toLocaleString("en-GH",{minimumFractionDigits:2, maximumFractionDigits:2});
+const FR6 = ["","⅙","⅓","½","⅔","⅚"];
+const daysTxt = sixths => { const n = Math.round(sixths), w = Math.floor(n/6), f = n%6;
+  return (w||!f ? w : "")+FR6[f]+(n>0 && n<=6 ? " day" : " days"); };
+const nameHtml = w => esc(w.name) + (w.nick ? ` <span class="nick">“${esc(w.nick)}”</span>` : "");
+const esc = s => String(s??"").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+/* ---------- state ---------- */
+const S = { db:null, status:"loading", settings:DEF, workers:{}, days:{}, pays:{}, pours:{}, checklists:{}, can:{rollcall:true, payday:true, workers:true}, inApp:false,
+  tab:"today", date:todayStr(), slot:null, week:weekStart(todayStr()),
+  newTrade:"mason", payForm:null, editId:null, draft:{}, seen:{}, showAway:false };
+
+function autoSlot(){
+  const now = new Date(), m = now.getHours()*60+now.getMinutes();
+  if (m < toMin(S.settings.lunchStart)) return "m";
+  if (isShortSat(ymd(now))) return "c";
+  if (m < toMin(S.settings.close)-60) return "a";
+  return "c";
+}
+S.slot = autoSlot();
+(function(){ const n = new Date(); if (n.getDay()===6 && n.getHours()>=12) S.tab = "week"; })();
+// Who may see what (the Lexington app, Nov 2026): Today is the roll call, Payday the money, Workers the
+// people. A login without Payday never sees an amount. In a Claude page everything is open.
+const money = () => S.can.payday;
+const tabAllowed = t => t === "home" ? S.inApp : t === "today" ? S.can.rollcall : t === "week" ? S.can.payday : t === "workers" ? S.can.workers : false;
+const firstTab = () => ["today", "week", "workers"].find(tabAllowed) || "today";
+// A photo: in the Lexington app it's in the website's image store; in a Claude page, the page's own.
+const photoSrc = id => window.__rcCdn && /^image-[a-f0-9]+-\d+x\d+-[a-z]+$/.test(id)
+  ? esc(window.__rcCdn + id.slice(6).replace(/-([a-z]+)$/, ".$1") + "?w=1200&fit=max&auto=format") : "/_blob/" + esc(id);
+
+const special = w => w.trade !== "steel" && Number(w.rate) > 0;
+const rate = w => w.trade==="steel" ? 0 : special(w) ? Number(w.rate) : Number(S.settings.rates[w.trade] ?? DEF.rates[w.trade] ?? 0);
+const mark = (date, wid, slot) => S.days[date]?.marks?.[wid]?.[slot] || null;
+// A day's pay can be set by hand (half day, full day, nothing) instead of counting the three checks.
+const payOf = (date, wid) => { const p = S.days[date]?.pay?.[wid]; return typeof p === "number" ? p : null; };
+const PAYS = [["", "As marked"], ["0.5", "Half day"], ["1", "Full day"], ["0", "Nothing"]];
+const payTxt = p => p === 0.5 ? "½ day" : p === 1 ? "Full day" : p === 0 ? "No pay" : "";
+const workerList = (all) => Object.values(S.workers)
+  .filter(w => all || w.active !== false)
+  .sort((a,b) => (/foreman/.test(a.trade)?-1:0)-(/foreman/.test(b.trade)?-1:0) || a.name.localeCompare(b.name));
+
+const paidMinutes = () => { const s = S.settings;
+  return Math.max(60, toMin(s.close) - toMin(s.start) - Math.max(0, toMin(s.afternoon) - toMin(s.lunchStart))); };
+const paidMinutesOn = date => isShortSat(date) ? Math.max(60, toMin(closeFor(date)) - toMin(S.settings.start)) : paidMinutes();
+function lateInfo(w, date, m){
+  if (!m || m.s!=="in" || m.edited || w.trade==="steel") return null;
+  const t = new Date(m.t), mins = t.getHours()*60+t.getMinutes();
+  const late = mins - toMin(S.settings.start);
+  if (late < Number(S.settings.grace)) return null;
+  return { min:late, time:hm(t), ded:r2(late/paidMinutesOn(date)*rate(w)) };
+}
+
+/* ---------- writes: one save at a time per document; quick taps are merged into a single save ---------- */
+let chain = Promise.resolve();
+const SRV = {days:{}, pays:{}, workers:{}, pours:{}, checklists:{}};
+const Q = {};   // "days/2026-10-12" -> {patch: not sent yet, inflight: being saved, base, timer, waiters}
+const SRVKEY = {days:"days", payments:"pays", workers:"workers", pours:"pours", checklists:"checklists"};
+// Undo on-screen changes that the server refused: go back to what was last confirmed saved.
+function rollback(){
+  S.days = {...SRV.days}; S.pays = {...SRV.pays}; S.pours = {...SRV.pours}; S.checklists = {...SRV.checklists};
+  S.workers = Object.fromEntries(Object.entries(SRV.workers).map(([k, w]) => [k, {...w}]));
+}
+function writeDoc(path, patch, base){
+  const q = Q[path] || (Q[path] = {patch:null, inflight:null, base:{}, timer:null, waiters:[]});
+  q.patch = deepMerge(q.patch || {}, patch); q.base = {...q.base, ...base};
+  clearTimeout(q.timer); q.timer = setTimeout(() => flush(path), 250);
+  return new Promise(res => q.waiters.push(res));
+}
+async function flush(path){
+  const q = Q[path]; if (!q || q.inflight || !q.patch) return;
+  const patch = q.patch, waiters = q.waiters; q.patch = null; q.waiters = []; q.inflight = patch;
+  const [col, id] = path.split("/"), ref = S.db.doc(path);
+  const save = async () => { if (SRV[SRVKEY[col]]?.[id]) return ref.update(patch);
+    const snap = await ref.get(); return snap.exists ? ref.update(patch) : ref.set({...q.base, ...patch}); };
+  try {
+    try { await save(); }
+    catch(e){ if (e?.code !== "unavailable") throw e; await new Promise(r => setTimeout(r, 600 + Math.random()*600)); await save(); }
+  } catch(e){
+    q.inflight = null; rollback();
+    if (e?.code === "invalid_argument" || e?.code === "not_granted" || e?.code === "revoked") S.readOnly = true;
+    else S.saveError = "Your last change was not saved ("+(e?.message||e?.code||"connection problem")+"). Check your connection and tap it again.";
+    render();
+  }
+  q.inflight = null; waiters.forEach(r => r());
+  if (q.patch) flush(path);
+}
+// Changes still being saved, laid over what the server last sent, so a tap never flickers back.
+function withPending(col, map){
+  for (const path in Q){ const [c, id] = path.split("/"), q = Q[path]; if (c !== col) continue;
+    for (const p of [q.inflight, q.patch]) if (p) map[id] = deepMerge({...(map[id] || {})}, p); }
+  return map;
+}
+function deepMerge(t, p){ for (const k in p){ const v = p[k];
+  if (v && typeof v==="object" && !Array.isArray(v)) t[k] = deepMerge({...(t[k]||{})}, v); else t[k] = v; } return t; }
+
+function setMark(wid, s){
+  holdRows();
+  const date = S.date, slot = S.slot, cur = mark(date, wid, slot);
+  let val = null;
+  if (!cur || cur.s !== s){
+    if (date === todayStr()) val = {s, t:new Date().toISOString()};
+    else { const at = parseYmd(date), mm = toMin(slot==="m"?S.settings.start:slot==="a"?S.settings.afternoon:closeFor(date));
+      at.setHours(Math.floor(mm/60), mm%60); val = {s, t:at.toISOString(), edited:true}; }
+  }
+  const patch = {marks:{[wid]:{[slot]:val}}};
+  S.days[date] = deepMerge({date, ...(S.days[date]||{})}, patch);
+  render();
+  writeDoc("days/"+date, patch, {date});
+}
+function markRest(group){
+  holdRows();
+  const date = S.date, slot = S.slot, now = new Date().toISOString(), marks = {}, last = lastMarks(date);
+  workerList().filter(w => TRADES[w.trade].group===group && !mark(date, w.id, slot) && !awayInfo(w, date, slot, last))
+    .forEach(w => marks[w.id] = {[slot]: date===todayStr() ? {s:"in", t:now} : {s:"in", t:now, edited:true}});
+  if (!Object.keys(marks).length) return;
+  const patch = {marks};
+  S.days[date] = deepMerge({date, ...(S.days[date]||{})}, patch);
+  render();
+  writeDoc("days/"+date, patch, {date});
+}
+// "Not here": absent at their last check (earlier today, or the last day they were marked), so they
+// don't clog the register. Someone just marked Absent stays put until the next check, so rows never
+// jump while you're tapping. Mark them Here from the Not here list and they come back.
+function lastMarks(date){
+  const out = {};
+  for (const d of Object.keys(S.days).filter(d => d < date).sort().reverse()){
+    const marks = S.days[d]?.marks || {}, ids = slotsFor(d).map(sl => sl.id).reverse();
+    for (const wid in marks){ if (out[wid]) continue;
+      for (const id of ids){ const m = marks[wid]?.[id]; if (m){ out[wid] = {s:m.s, date:d}; break; } } }
+  }
+  return out;
+}
+function awayInfo(w, date, slot, last){
+  if (mark(date, w.id, slot)?.s === "in") return null;
+  const ids = slotsFor(date).map(sl => sl.id);
+  for (let i = ids.indexOf(slot) - 1; i >= 0; i--){ const m = mark(date, w.id, ids[i]); if (m) return m.s === "out" ? {since:date} : null; }
+  const l = last[w.id];
+  return l && l.s === "out" ? {since:l.date} : null;
+}
+
+/* ---------- week maths ---------- */
+function weekData(ws){
+  const dates = weekDates(ws), pay = S.pays[ws] || {}, waived = pay.waived || {}, paid = pay.paid || {};
+  const rows = [], steelRows = [], curing = curingByWorker(ws, waived);
+  for (const w of workerList(true)){
+    const cells = dates.map(d => slotsFor(d).map(sl => mark(d, w.id, sl.id)?.s || ""));
+    const any = cells.some(c => c.some(Boolean)) || dates.some(d => otOf(d, w.id) || payOf(d, w.id) != null) || !!curing[w.id];
+    if (!any && w.active === false && !paid[w.id]) continue;
+    if (w.trade === "steel"){ steelRows.push({w, cells, present:cells.filter(c => c[0]==="in").length}); continue; }
+    let sixths = 0, gross = 0, ded = 0, otH = 0; const lates = [], otDays = [], pays = [];
+    dates.forEach((d, i) => {
+      const po = payOf(d, w.id), t = cells[i].filter(x => x==="in").length, frac = po != null ? po : t/cells[i].length, earned = frac*rate(w);
+      sixths += Math.round(frac*6); gross += earned; pays.push(po);
+      const o = otOf(d, w.id); otH += o; otDays.push(o);
+      const li = lateInfo(w, d, mark(d, w.id, "m"));
+      if (li){ const key = w.id+"_"+d, off = !!waived[key], amt = Math.min(li.ded, earned);
+        lates.push({...li, date:d, key, off, amt}); if (!off) ded += amt; }
+    });
+    const otPay = r2(otH * Number(S.settings.otRate)), cure = curing[w.id] || null;
+    const curePay = cure ? r2(cure.pay) : 0, cureDed = cure ? r2(cure.ded) : 0;
+    rows.push({w, cells, sixths, pays, gross:r2(gross), ded:r2(ded), otH, otPay, otDays, cure, curePay, cureDed, net:r2(gross-ded+otPay+curePay-cureDed), lates, paid:paid[w.id]||null});
+  }
+  const machines = MACHINES.map(m => { const used = dates.filter(d => machineAmt(d, m.id) > 0);
+    return {m, used, total:r2(used.reduce((s, d) => s + machineAmt(d, m.id), 0))}; });
+  const machineTotal = r2(machines.reduce((s, x) => s + x.total, 0));
+  const due = r2(rows.reduce((s, r) => s + r.net, 0) + machineTotal);
+  const paidList = Object.values(paid).filter(Boolean);
+  const paidTotal = r2(paidList.reduce((s, p) => s + Number(p.amount||0), 0));
+  const byMethod = {}; paidList.forEach(p => byMethod[p.method] = r2((byMethod[p.method]||0) + Number(p.amount||0)));
+  return {dates, rows, steelRows, machines, machineTotal, due, paidTotal, byMethod, pay};
+}
+
+/* ---------- render ---------- */
+const app = document.getElementById("app");
+function render(){
+  const f = document.activeElement, fid = f && f.id, sel = fid && f.selectionStart;
+  document.querySelectorAll("#tabs button").forEach(b => { b.classList.toggle("on", b.dataset.v === S.tab); b.hidden = !tabAllowed(b.dataset.v); });
+  if (S.status === "loading") app.innerHTML = `<p class="loading">Loading your site register…</p>`;
+  else if (S.status === "nodb") app.innerHTML = window.__rcShim ? `<p class="loading">No signal: the roll call needs data the first time it opens on this phone. <button class="linkbtn" onclick="location.reload()">Try again</button></p>`
+    : `<p class="loading">Saving isn't available in this view. Open this page from your Claude account, signed in, to record attendance.</p>`;
+  else app.innerHTML = (S.readOnly ? `<div class="ro" role="alert"><b>View only: nothing you tap here is saved.</b> This account can see the register but can't mark attendance or record payments. Ask the owner to give you edit access, then reload the page.</div>` : "")
+    + (S.saveError ? `<div class="ro warn" role="alert">${esc(S.saveError)} <button class="linkbtn" data-act="dismisserr">OK</button></div>` : "")
+    + (S.tab === "today" ? viewToday() : S.tab === "week" ? viewWeek() : viewWorkers())
+    + "" + (S.viewPhoto ? `<div class="lightbox" data-act="closephoto"><img src="${photoSrc(S.viewPhoto)}" alt="ID card photo"><button class="btn">Close</button></div>` : "");
+  if (fid){ const el = document.getElementById(fid); if (el){ el.focus(); try{ if (sel!=null) el.setSelectionRange(sel, sel); }catch(e){} } }
+}
+
+function viewToday(){
+  const date = S.date, isToday = date === todayStr(), ws = workerList(), slots = slotsFor(date), last = lastMarks(date);
+  if (S.slot !== "o" && !slots.some(sl => sl.id === S.slot)) S.slot = "c";
+  const n = new Date(), payday = n.getDay()===6 && n.getHours()>=12 && isToday;
+  const counts = slots.map(sl => { const pool = ws.filter(w => (sl.id==="m" || w.trade!=="steel") && !awayInfo(w, date, sl.id, last));
+    return pool.filter(w => mark(date, w.id, sl.id)).length+"/"+pool.length; });
+  let h = `<header class="top">
+    <div class="dayline"><button class="iconbtn" data-act="day" data-v="-1" aria-label="Previous day">‹</button>
+      <h1>${isToday ? "Today · " : ""}${dayLabel(date)}</h1>
+      <button class="iconbtn" data-act="day" data-v="1" aria-label="Next day" ${isToday?"disabled":""}>›</button></div>
+    <div class="seg${slots.length === 2 ? " three" : ""}">${slots.map((sl,i) => `<button data-act="slot" data-v="${sl.id}" class="${S.slot===sl.id?"on":""}"><b>${sl.label}</b><span class="num">${counts[i]}</span></button>`).join("")}
+      <button data-act="slot" data-v="o" class="${S.slot==="o"?"on":""}"><b>Overtime</b><span class="num">${otTotal(date)}h</span></button></div>
+    ${slots.length === 2 ? `<p class="note">Saturday, no lunch: just morning and closing (${clock(closeFor(date))}). Here at both is a full day.</p>` : ""}
+    ${!isToday ? `<p class="note">Fixing a past day. Taps record the scheduled time, so no lateness is counted. <button class="linkbtn" data-act="gotoday">Back to today</button></p>` : ""}
+    ${payday && S.can.payday ? `<button class="banner" data-act="tab" data-v="week"><span><b>Payday</b><br>This week's pay report is ready.</span><span>Open ›</span></button>` : ""}
+  </header>`;
+  if (!ws.length) return h + `<section class="group"><div class="rows"><p class="empty">No workers yet. Add your masons, labourers, carpenters and steel benders on the Workers tab.</p></div></section>`;
+  if (S.slot === "o") return h + viewOvertime(date, ws, isToday);
+  const away = [];
+  for (const g of GROUPS){
+    const all = ws.filter(w => TRADES[w.trade].group === g.id);
+    if (!all.length) continue;
+    const steel = g.id === "steel", showRows = !steel || S.slot === "m";
+    const list = showRows ? all.filter(w => { const a = awayInfo(w, date, S.slot, last); if (a) away.push({w, a}); return !a; }) : all;
+    if (!list.length) continue;
+    h += `<section class="group" data-g="${g.id}"><div class="ghead"><h2>${g.label}</h2>`;
+    h += showRows && list.some(w => !mark(date, w.id, S.slot)) ? `<button class="linkbtn" data-act="rest" data-v="${g.id}">Mark rest here</button>` : `<small>${steel ? "Morning only" : ""}</small>`;
+    h += `</div><div class="rows">`;
+    if (!showRows){
+      const here = all.filter(w => mark(date, w.id, "m")?.s === "in").length;
+      h += `<p class="empty">Steel benders are marked once, in the morning. ${here} of ${all.length} were here today.</p>`;
+    } else h += markedLast(g, list, date);
+    h += `</div></section>`;
+  }
+  if (away.length){
+    h += `<section class="group away"><button class="awayhead" data-act="toggleaway" aria-expanded="${!!S.showAway}"><span><b>Not here</b><span class="num">${away.length}</span></span><span class="show">${S.showAway ? "Hide" : "Show"}</span></button>`;
+    h += S.showAway ? `<div class="rows">${away.map(({w, a}) => rowHtml(w, date, a)).join("")}</div>`
+      : `<p class="note">Absent at their last check, so they're off the list. Tap Show if one of them turns up.</p>`;
+    h += `</section>`;
+  }
+  if (parseYmd(date).getDay() !== 0) h += machinesHtml(date);
+  h += curingHtml(date);
+  return h;
+}
+
+const otOf = (date, wid) => Number(S.days[date]?.ot?.[wid]) || 0;
+// A machine's day keeps what it cost that day (the rate when it was ticked), so changing the rate
+// later leaves weeks already worked out as they were.
+const machineAmt = (date, id) => Math.max(0, Number(S.days[date]?.machines?.[id]) || 0);
+const machineRate = m => Number(S.settings.rates?.[m.rate] ?? DEF.rates[m.rate]) || 0;
+function setMachine(id){
+  const date = S.date, m = MACHINES.find(x => x.id === id), on = machineAmt(date, id) > 0;
+  if (!m) return;
+  if (!on && !(machineRate(m) > 0)) return toast("Set the "+m.label.toLowerCase()+"'s day rate first (Workers, Rates & hours).");
+  const patch = {machines:{[id]: on ? null : machineRate(m)}};
+  S.days[date] = deepMerge({date, ...(S.days[date]||{})}, patch);
+  render();
+  writeDoc("days/"+date, patch, {date});
+  toast(m.label+(on ? ": not used " : ": used ")+(date === todayStr() ? "today" : dayLabel(date)));
+}
+function machinesHtml(date){
+  const days = weekDates(weekStart(date));
+  return `<section class="group mach"><div class="ghead"><h2>Steel machines</h2><small>Tap Used on the days they work</small></div><div class="rows">` +
+    MACHINES.map(m => { const amt = machineAmt(date, m.id), on = amt > 0, n = days.filter(d => machineAmt(d, m.id) > 0).length;
+      return `<div class="wrow"><div class="wname"><b>${m.label}</b>
+        <span class="meta num">${money() ? ghs(on ? amt : machineRate(m)).replace(".00","")+" a day" : "Hired by the day"}${on ? ' <span class="pill ok">Used</span>' : ""}${n ? " · this week "+n+(n === 1 ? " day" : " days") : ""}</span></div>
+        <div class="btns"><button class="yes ${on?"on":""}" data-act="machine" data-v="${m.id}" aria-pressed="${on}">Used</button></div></div>`;
+    }).join("") + `</div></section>`;
+}
+const otTotal = date => Object.values(S.days[date]?.ot || {}).reduce((s, h) => s + (Number(h)||0), 0);
+
+/* ---------- curing (27 Oct 2026) ----------
+   Each pour is cured for a set number of days (7). Whoever cures it is paid a day rate for every
+   curing day (Sundays too: a Sunday is paid with the next week, as payday is Saturday), less a set
+   amount each time it's found dry, with a photo as proof. A pour keeps the amounts it was started
+   with, so changing the rates later leaves pours already going as they were. */
+const curingRate = () => Number(S.settings.rates?.curing ?? DEF.rates.curing) || 0;
+const curingDryRate = () => Number(S.settings.rates?.curingDry ?? DEF.rates.curingDry) || 0;
+const curingDays = () => Math.round(Number(S.settings.curingDays ?? DEF.curingDays)) || DEF.curingDays;
+const payWeekOf = d => weekStart(parseYmd(d).getDay() === 0 ? ymd(addDays(parseYmd(d), 1)) : d);
+function cureDays(p){
+  const n = Math.max(1, Math.min(60, Math.round(Number(p.days) || 7))), out = [];
+  if (!p.start) return out;
+  for (let i = 0; i < n; i++){ const d = ymd(addDays(parseYmd(p.start), i)); if (p.stopped && d > p.stopped) break; out.push(d); }
+  return out;
+}
+const livePours = () => Object.entries(S.pours).filter(([, p]) => p && !p.deleted && p.phase !== "check" && p.start && p.worker);
+const drySightings = p => Object.entries(p.dry || {}).filter(([, x]) => x && x.date);
+const defaultCurer = () => { const ws = workerList().filter(w => w.trade !== "steel");
+  return (ws.find(w => /albert/i.test(w.name)) || ws.find(w => w.trade === "mforeman") || ws[0])?.id || ""; };
+// What each worker earns from curing in a pay week: the day rate once for each day any of their pours
+// was curing, up to today (Niko: "each pour pays together, not separately"; pours curing the same day
+// pay it once, at the highest of their rates), less the fines not waived.
+function curingByWorker(ws, waived){
+  const today = todayStr(), out = {}, of = wid => out[wid] || (out[wid] = {byDay:{}, days:[], pay:0, fines:[], ded:0});
+  for (const [id, p] of livePours()){
+    for (const d of cureDays(p)) if (d <= today && payWeekOf(d) === ws){
+      const c = of(p.worker), day = c.byDay[d] || (c.byDay[d] = {d, rate:0, pours:[]});
+      day.rate = Math.max(day.rate, Number(p.rate) || 0); day.pours.push(p.what);
+    }
+    for (const [key, x] of drySightings(p)){
+      if (payWeekOf(x.date) !== ws) continue;
+      const c = of(p.worker), wkey = "dry_"+id+"_"+key, off = !!waived[wkey], amount = Number(x.amount) || 0;
+      c.fines.push({id, p, key, wkey, date:x.date, at:x.at, photo:x.photo, amount, off});
+      if (!off) c.ded += amount;
+    }
+  }
+  for (const c of Object.values(out)){
+    c.fines.sort((a, b) => String(a.at || a.date).localeCompare(String(b.at || b.date)));
+    c.days = Object.values(c.byDay).sort((a, b) => a.d.localeCompare(b.d));
+    c.pay = c.days.reduce((sum, x) => sum + x.rate, 0);
+  }
+  return out;
+}
+function curingHtml(date){
+  const pours = livePours().map(([id, p]) => ({id, p, days:cureDays(p)}));
+  const active = pours.filter(x => x.days.includes(date)).sort((a, b) => a.p.start.localeCompare(b.p.start));
+  // Pours still being checked, from the day they were started until they're poured.
+  const pending = pendingPours().filter(([, p]) => !p.planned || p.planned <= date).map(([id, p]) => ({id, p}))
+    .sort((a, b) => String(a.p.created || "").localeCompare(String(b.p.created || "")));
+  const later = ymd(addDays(parseYmd(date), 7)), before = ymd(addDays(parseYmd(date), -3));
+  const others = [
+    ...pours.filter(x => x.p.start > date && x.p.start <= later).map(x => esc(x.p.what)+": starts "+dayLabel(x.p.start)),
+    ...pours.filter(x => x.days.length && x.days[x.days.length - 1] < date && x.days[x.days.length - 1] >= before)
+      .map(x => esc(x.p.what)+": finished "+dayLabel(x.days[x.days.length - 1])+(x.p.stopped ? " (stopped early)" : ""))];
+  let h = `<section class="group cure"><div class="ghead"><h2>Curing</h2>${S.pourForm ? "" : `<button class="linkbtn" data-act="newpour">+ New pour</button>`}</div>`;
+  if (S.pourForm) h += pourFormHtml(date);
+  h += `<div class="rows">`;
+  if (!active.length && !pending.length) h += `<p class="empty">No concrete curing ${date === todayStr() ? "today" : "on "+dayLabel(date)}. Before a slab or columns are poured, tap + New pour and go through its checklist; tap Poured when it's done and the curing starts${money() ? ": "+ghs(curingRate()).replace(".00","")+" a day for good curing, "+ghs(curingDryRate()).replace(".00","")+" off each time you find it dry" : ""}.</p>`;
+  h += pending.map(x => checkCardHtml(x, date)).join("");
+  h += active.map(x => pourCardHtml(x, date)).join("");
+  h += `</div>`;
+  if (active.length > 1) h += `<p class="note">Paid once a day, however many pours are curing.</p>`;
+  if (others.length) h += `<p class="note">${others.join(" · ")}</p>`;
+  return h + `</section>`;
+}
+function pourCardHtml({id, p, days}, date){
+  const w = S.workers[p.worker], i = days.indexOf(date), today = todayStr();
+  const sofar = days.filter(d => d <= today).length, fines = drySightings(p), onDay = fines.filter(([, x]) => x.date === date);
+  return `<div class="pcard pour" data-pour="${id}">
+    <div class="pline"><b>${esc(p.what)}</b><button class="linkbtn" data-act="editpour" data-v="${id}">Change</button></div>
+    <p class="calc num">${w ? nameHtml(w) : "No one chosen"} · day ${i + 1} of ${days.length} (${dayLabel(days[0]).slice(4)} – ${dayLabel(days[days.length - 1]).slice(4)})${money() ? " · "+ghs(p.rate).replace(".00","")+" a day" : ""}</p>
+    <p class="calc num">So far ${sofar} of ${days.length} ${days.length === 1 ? "day" : "days"}${fines.length ? " · seen dry "+fines.length+(money() ? " × −"+ghs(p.dryFine).replace(".00","") : fines.length === 1 ? " time" : " times") : ""}</p>
+    ${p.check ? checkedLineHtml(id, p) : ""}
+    ${onDay.length ? `<div class="drythumbs">${onDay.map(([key, x]) => `<span class="drything">${x.photo ? `<button class="drythumb" data-act="viewphoto" data-v="${esc(x.photo)}" aria-label="Photo: found dry"><img src="${photoSrc(x.photo)}" alt=""></button>` : ""}
+      <span class="calc num">Dry${x.at ? " "+hm(new Date(x.at)) : ""}${money() ? " · −"+ghs(x.amount).replace(".00","") : ""}</span>
+      <button class="linkbtn danger" data-act="deldry" data-v="${id}|${key}">${S.confirmDry === key ? "Tap again to remove" : "Remove"}</button></span>`).join("")}</div>` : ""}
+    ${S.uploadingDry === id ? `<p class="calc">Uploading the photo…</p>`
+      : S.assets ? `<div class="drybtns"><label class="btn drybtn" for="dry-${id}">📷 Seen dry${money() ? ": −"+ghs(p.dryFine).replace(".00","") : ""}<input type="file" id="dry-${id}" accept="image/*" capture="environment" data-pour="${id}" hidden></label>
+        <label class="btn drybtn gal" for="drygal-${id}">From gallery<input type="file" id="drygal-${id}" accept="image/*" data-pour="${id}" hidden></label></div>`
+      : `<p class="calc">Photos can only be added by you, from your own account.</p>`}
+  </div>`;
+}
+function pourFormHtml(date){
+  const f = S.pourForm, old = f.id ? S.pours[f.id] : null, g = (k, fb) => esc(S.draft["np-"+k] ?? fb);
+  const who = S.draft["np-worker"] ?? f.worker, choices = workerList(true).filter(w => w.trade !== "steel" && (w.active !== false || w.id === who));
+  // A new pour starts with a checklist (or none, when it's already poured); a pour still being checked
+  // only has a name and who cures it: the curing amounts are set when it's poured.
+  const lists = liveChecklists(), list = old ? null : (S.draft["np-list"] ?? f.list ?? "none");
+  const checking = old ? old.phase === "check" : list !== "none" && !!S.checklists[list] && !S.checklists[list].deleted;
+  const whoField = `<label for="np-worker" class="calc">Who cures it (gets the pay)<select class="field" id="np-worker">${choices.map(w => `<option value="${w.id}" ${w.id === who ? "selected" : ""}>${esc(w.name)}${w.nick ? " “"+esc(w.nick)+"”" : ""}</option>`).join("")}</select></label>`;
+  let h = `<div class="addform pourform">
+    <span class="calc">${old ? (checking ? "Change this pour (not poured yet)" : "Change this pour") : "A new pour"}</span>
+    <label for="np-what" class="calc">${checking ? "What is being poured?" : "What was poured?"}<input class="field" id="np-what" autocomplete="off" placeholder="e.g. 3rd floor slab" value="${g("what", old?.what ?? "")}"></label>`;
+  if (!old) h += `<span class="calc">Checklist before the pour</span>
+    <div class="chips">${lists.map(([id, t]) => `<button data-act="nplist" data-v="${id}" class="${list === id ? "on" : ""}" aria-pressed="${list === id}">${esc(t.name)}</button>`).join("")}
+      <button data-act="nplist" data-v="none" class="none${checking ? "" : " on"}" aria-pressed="${!checking}">No checklist (already poured)</button></div>
+    ${S.can.workers ? `<button class="linkbtn" data-act="gochecklists">Edit checklists</button>` : ""}`;
+  if (checking) return h + whoField + `<p class="calc">Tick each check before the pour. When it's poured, tap Poured and the curing starts by itself${money() ? ": "+ghs(curingRate()).replace(".00","")+" a day for "+curingDays()+" days, "+ghs(curingDryRate()).replace(".00","")+" off each time it's found dry" : " for "+curingDays()+" days"}.</p>
+    <div class="row"><button class="btn primary" data-act="savepour">${old ? "Save" : "Start checklist"}</button><button class="btn" data-act="cancelpour">Cancel</button>
+      ${old ? `<button class="btn danger" data-act="delpour" data-v="${f.id}">${S.confirmDelPour === f.id ? "Tap again to delete" : "Delete pour"}</button>` : ""}</div>
+  </div>`;
+  return h + `<div class="settings">
+      <label for="np-start">First day of curing<input class="field" type="date" id="np-start" value="${g("start", old?.start ?? date)}"></label>
+      <label for="np-days">Days of curing<input class="field num" id="np-days" inputmode="numeric" value="${g("days", old?.days ?? curingDays())}"></label>
+      ${money() ? `<label for="np-rate">GH₵ a day of good curing<input class="field num" id="np-rate" inputmode="decimal" value="${g("rate", old?.rate ?? curingRate())}"></label>` : ""}
+      ${money() ? `<label for="np-dry">GH₵ off each time it's dry<input class="field num" id="np-dry" inputmode="decimal" value="${g("dry", old?.dryFine ?? curingDryRate())}"></label>` : ""}
+    </div>
+    ${whoField}
+    <div class="row"><button class="btn primary" data-act="savepour">${old ? "Save" : "Start curing"}</button><button class="btn" data-act="cancelpour">Cancel</button>
+      ${old ? (old.stopped ? `<button class="btn" data-act="stoppour" data-v="${f.id}|">Carry on curing</button>` : `<button class="btn" data-act="stoppour" data-v="${f.id}|${date}">Stop after ${dayLabel(date).slice(0, 3)}</button>`)
+        + `<button class="btn danger" data-act="delpour" data-v="${f.id}">${S.confirmDelPour === f.id ? "Tap again to delete" : "Delete pour"}</button>` : ""}</div>
+  </div>`;
+}
+function cureHtml(r){
+  const c = r.cure, n = c.days.length, names = [...new Set(c.days.flatMap(x => x.pours))];
+  const on = c.fines.filter(f => !f.off).length;
+  return `<p class="calc num">Curing: ${n ? n+(n === 1 ? " day" : " days")+" ("+names.map(esc).join(", ")+") = "+ghs(r.curePay) : "no curing days this week"}${r.cureDed ? " − seen dry "+on+"× "+ghs(r.cureDed) : ""}</p>`
+    + (c.fines.length ? `<ul class="lates dry">${c.fines.map(f => `<li class="${f.off ? "waived" : ""}">${f.photo ? `<button class="drythumb" data-act="viewphoto" data-v="${esc(f.photo)}" aria-label="Photo: found dry"><img src="${photoSrc(f.photo)}" alt=""></button>` : ""}
+      <span class="num">${dayLabel(f.date).slice(0, 3)}${f.at ? " "+hm(new Date(f.at)) : ""} · ${esc(f.p.what)} dry · −${ghs(f.amount)}</span>
+      <button data-act="waive" data-v="${esc(f.wkey)}">${f.off ? "Deduct" : "Waive"}</button></li>`).join("")}</ul>` : "");
+}
+/* ---------- before the pour (30 Oct 2026) ----------
+   Niko: "checklists for concrete pours, like check all holes and fill with pu foam, or are all the acrow
+   jacks in place ... that will automatically go for the concrete curing place later on". + New pour
+   starts a pour with a copy of one of his checklists (edited under Workers); he ticks each check before
+   the pour, and Poured turns it into a curing pour from that day, with the curing amounts set then. A
+   pour keeps its own copy of the list, so changing a checklist later leaves pours already started as
+   they were. Pours with no phase (made before this) are curing pours. */
+const STARTER_CHECKLISTS = [
+  {id:"slab", name:"Slab & beams", items:[
+    "All holes and gaps filled with PU foam",
+    "All acrow jacks in place and tight",
+    "Formwork level and at the right height, no sagging",
+    "Beam sides and slab edges braced",
+    "Steel as per the drawings: sizes, spacing, laps, all tied",
+    "Spacer blocks under the steel and at the sides",
+    "Starter bars for the columns above in place",
+    "Pipes, sleeves and electrical boxes fixed",
+    "Level pegs set for the slab thickness",
+    "Formwork clean: no wood, wire, rubbish or water",
+    "Concrete materials or truck ready, mixer and vibrators working",
+    "Water and covers ready for curing"]},
+  {id:"columns", name:"Columns", items:[
+    "All holes and gaps filled with PU foam",
+    "Formwork plumb and braced",
+    "No gap at the bottom of the formwork",
+    "Steel as per the drawings: bars, links, laps",
+    "Spacer blocks on all sides",
+    "Inside of the formwork clean",
+    "Vibrator working",
+    "Water and covers ready for curing"]}];
+const newKey = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+const clearDrafts = prefix => Object.keys(S.draft).filter(k => k.startsWith(prefix)).forEach(k => delete S.draft[k]);
+// A list's checks in order (ones taken out are left as null and skipped).
+const clItems = t => Object.entries(t?.items || {}).filter(([, x]) => x && x.text).sort((a, b) => (Number(a[1].n) || 0) - (Number(b[1].n) || 0));
+const liveChecklists = () => Object.entries(S.checklists).filter(([, t]) => t && !t.deleted && t.name)
+  .sort((a, b) => (Number(a[1].n) || 0) - (Number(b[1].n) || 0) || a[1].name.localeCompare(b[1].name));
+const pendingPours = () => Object.entries(S.pours).filter(([, p]) => p && !p.deleted && p.phase === "check");
+const checkItems = p => clItems(p.check);
+// The starter checklists, written once when there are none at all (fixed ids, so two phones can't make two).
+let seeded = false;
+function seedChecklists(){
+  if (seeded || S.readOnly || !S.db) return;
+  seeded = true;
+  STARTER_CHECKLISTS.forEach((t, i) => {
+    const items = {}; t.items.forEach((text, j) => items[t.id+(j + 1)] = {text, n:j + 1});
+    const data = {name:t.name, n:i + 1, items, created:new Date().toISOString()};
+    S.checklists[t.id] = {id:t.id, ...data};
+    S.db.doc("checklists/"+t.id).set(data).catch(() => {});
+  });
+}
+const whenChecked = (at, date) => { const d = new Date(at); return (ymd(d) === date ? "" : dayLabel(ymd(d)).slice(0, 3)+" ")+hm(d); };
+function checkCardHtml({id, p}, date){
+  const items = checkItems(p), done = items.filter(([, x]) => x.ok).length, left = items.length - done;
+  return `<div class="pcard pour prepour" data-pour="${id}">
+    <div class="pline"><b>${esc(p.what)}</b><button class="linkbtn" data-act="editpour" data-v="${id}">Change</button></div>
+    <p class="calc num"><span class="pill late">Before the pour</span> ${esc(p.check?.name || "Checklist")} · ${done} of ${items.length} checked</p>
+    <ul class="checks">${items.map(([k, x]) => `<li><button class="check${x.ok ? " on" : ""}" data-act="tick" data-v="${id}|${k}" aria-pressed="${!!x.ok}"><span class="box" aria-hidden="true">✓</span>
+      <span class="ctext">${esc(x.text)}${x.ok && x.at ? `<small>Checked ${whenChecked(x.at, date)}</small>` : ""}</span></button></li>`).join("")}</ul>
+    <div class="addcheck"><input class="field" id="ac-${id}" autocomplete="off" placeholder="Add a check for this pour" value="${esc(S.draft["ac-"+id] ?? "")}"><button class="btn" data-act="addcheck" data-v="${id}">Add</button></div>
+    <button class="btn pourbtn${left ? "" : " primary"}" data-act="poured" data-v="${id}">${!left ? "Poured: start curing" : S.confirmPoured === id ? "Tap again: poured with "+left+" not checked" : "Poured ("+left+" not checked yet)"}</button>
+  </div>`;
+}
+// On a curing card: how the checks stood when it was poured, with the list on a tap.
+function checkedLineHtml(id, p){
+  const items = checkItems(p), done = items.filter(([, x]) => x.ok).length, open = S.showChecks === id;
+  return `<p class="calc num">Checked before the pour: ${done} of ${items.length}${done < items.length ? " ("+(items.length - done)+" not checked)" : " ✓"} · <button class="linkbtn" data-act="showchecks" data-v="${id}" aria-expanded="${open}">${open ? "Hide" : "Show"}</button></p>
+    ${open ? `<ul class="checks done">${items.map(([, x]) => `<li class="check ${x.ok ? "on" : "miss"}"><span class="box" aria-hidden="true">${x.ok ? "✓" : "–"}</span><span class="ctext">${esc(x.text)}<small>${x.ok && x.at ? "Checked "+whenChecked(x.at, "") : x.ok ? "Checked" : "Not checked"}</small></span></li>`).join("")}</ul>` : ""}`;
+}
+// Workers tab: his checklists, each edited as a whole and saved at once.
+function checklistsHtml(){
+  const lists = liveChecklists();
+  let h = `<h3 class="sub" id="checklists">Pour checklists</h3><div class="rows">`;
+  if (!lists.length && S.clEdit !== "new") h += `<p class="empty">No checklists yet. Make one for each kind of pour.</p>`;
+  h += lists.map(([id, t]) => S.clEdit === id ? clEditHtml(id) : `<div class="wrow"><div class="wname"><b>${esc(t.name)}</b><span class="meta num">${clItems(t).length} checks</span></div>
+    <button class="btn" data-act="cledit" data-v="${id}">Edit</button></div>`).join("");
+  if (S.clEdit === "new") h += clEditHtml("new");
+  h += `</div>`;
+  if (S.clEdit !== "new") h += `<button class="linkbtn" data-act="cledit" data-v="new">+ New checklist</button>`;
+  return h + `<p class="calc">+ New pour on Today starts a pour with one of these. A change here is for pours started after it; pours already started keep their own list.</p>`;
+}
+function clEditHtml(id){
+  const d = S.clDraft; if (!d) return "";
+  return `<div class="pcard"><div class="payform" style="margin:0">
+    <label for="cl-name" class="calc">Name of the checklist</label><input class="field" id="cl-name" autocomplete="off" placeholder="e.g. Stairs" value="${esc(S.draft["cl-name"] ?? d.name)}">
+    ${d.items.map((x, i) => `<div class="clrow"><textarea class="field cltext" id="cl-i-${x.k}" rows="2" aria-label="Check ${i + 1}">${esc(S.draft["cl-i-"+x.k] ?? x.text)}</textarea>
+      <button class="iconbtn" data-act="clup" data-v="${x.k}" aria-label="Move up" ${i ? "" : "disabled"}>↑</button>
+      <button class="iconbtn" data-act="cldrop" data-v="${x.k}" aria-label="Take this check out">✕</button></div>`).join("")}
+    <div class="clrow"><input class="field" id="cl-new" autocomplete="off" placeholder="Add a check" value="${esc(S.draft["cl-new"] ?? "")}"><button class="btn" data-act="cladd">Add</button></div>
+    <div class="row"><button class="btn primary" data-act="clsave">Save checklist</button><button class="btn" data-act="clcancel">Cancel</button>
+      ${id !== "new" ? `<button class="btn danger" data-act="cldel" data-v="${id}">${S.confirmClDel === id ? "Tap again to delete" : "Delete checklist"}</button>` : ""}</div>
+  </div></div>`;
+}
+// What's typed into the checklist being edited, into its draft.
+function syncClDraft(){
+  const d = S.clDraft; if (!d) return;
+  if (S.draft["cl-name"] != null) d.name = S.draft["cl-name"];
+  d.items.forEach(x => { if (S.draft["cl-i-"+x.k] != null) x.text = S.draft["cl-i-"+x.k]; });
+}
+const clock = hhmm => { const m = toMin(hhmm), d = new Date(2000,0,1,Math.floor(m/60),m%60); return hm(d); };
+const hrs = h => { const w = Math.floor(h), half = h % 1; return (w || !half ? w : "") + (half ? "½" : "") + "h"; };
+
+function viewOvertime(date, ws, isToday){
+  const rateH = Number(S.settings.otRate);
+  let h = `<p class="note">Overtime is anything after ${clock(closeFor(date))}${money() ? ", paid at "+ghs(rateH).replace(".00","")+" an hour" : ""}. Only people who were here today are listed; steel benders aren't.
+    ${isToday ? "Tap <b>Finished now</b> when someone stops work and the hours are worked out to the nearest half hour. Adjust with − and +." : ""}</p>`;
+  for (const g of GROUPS.filter(g => g.id !== "steel")){
+    const list = ws.filter(w => TRADES[w.trade].group === g.id && (slotsFor(date).some(sl => mark(date, w.id, sl.id)?.s === "in") || otOf(date, w.id)));
+    if (!list.length) continue;
+    h += `<section class="group"><div class="ghead"><h2>${g.label}</h2></div><div class="rows">`;
+    h += list.map(w => {
+      const ot = otOf(date, w.id), atClose = mark(date, w.id, "c")?.s;
+      return `<div class="wrow otrow"><div class="wname"><b>${nameHtml(w)}</b>
+        <span class="meta">${atClose==="in" ? '<span class="pill ok">Here at closing</span>' : atClose==="out" ? '<span class="pill bad">Gone at closing</span>' : "Closing not marked"}
+        ${ot && money() ? `<span class="num">= ${ghs(ot*rateH)}</span>` : ""}</span></div>
+        <div class="otctl">
+          <button class="step" data-act="ot" data-w="${w.id}" data-v="-0.5" aria-label="Less overtime" ${ot?"":"disabled"}>−</button>
+          <span class="othrs num">${hrs(ot)}</span>
+          <button class="step" data-act="ot" data-w="${w.id}" data-v="0.5" aria-label="More overtime">+</button>
+          ${isToday ? `<button class="btn finish" data-act="otnow" data-w="${w.id}">Finished now</button>` : ""}
+        </div></div>`;
+    }).join("");
+    h += `</div></section>`;
+  }
+  return h;
+}
+function setOt(wid, hours){
+  const date = S.date, v = Math.max(0, Math.min(12, Math.round(hours*2)/2));
+  const patch = {ot:{[wid]:v}};
+  S.days[date] = deepMerge({date, ...(S.days[date]||{})}, patch);
+  render();
+  writeDoc("days/"+date, patch, {date});
+}
+
+// Marked rows go below the ones still to mark (Niko, 30 Oct 2026: "as I mark them present or absent, they
+// can move to the bottom list, so that I don't have to constantly scroll looking for names of people I
+// haven't marked yet"), once tapping stops for a moment: a row never moves out from under a finger.
+const SETTLE_MS = 1500;
+function markedLast(g, list, date){
+  const key = date+"|"+S.slot+"|"+g.id, frozen = S.freeze?.[key];
+  if (frozen && Date.now() - (S.lastMarkAt || 0) < SETTLE_MS){
+    const pos = new Map(frozen.map((id, i) => [id, i]));
+    return [...list].sort((a, b) => (pos.get(a.id) ?? 1e9) - (pos.get(b.id) ?? 1e9)).map(w => rowHtml(w, date)).join("");
+  }
+  const todo = list.filter(w => !mark(date, w.id, S.slot)), done = list.filter(w => mark(date, w.id, S.slot));
+  return todo.map(w => rowHtml(w, date)).join("") + (done.length ? `<p class="donehead">Marked · ${done.length}</p>` + done.map(w => rowHtml(w, date)).join("") : "");
+}
+// Just before a mark: the rows stay where they are on screen until tapping stops, then settle.
+function holdRows(){
+  S.freeze = {}; S.lastMarkAt = Date.now();
+  document.querySelectorAll("section.group[data-g]").forEach(sec => {
+    S.freeze[S.date+"|"+S.slot+"|"+sec.dataset.g] = [...sec.querySelectorAll('.wrow [data-act="mark"][data-v="in"]')].map(b => b.dataset.w);
+  });
+  clearTimeout(S.settleT); S.settleT = setTimeout(softRender, SETTLE_MS + 60);
+}
+// Add worker (Niko, 30 Oct 2026: "a simple button for add worker that lets me fill out all the information of
+// that worker once"): everything in one form, saved together.
+function newWorkerHtml(){
+  const n = S.newWorker, trade = n.trade, d = k => esc(S.draft["nw-"+k] ?? "");
+  return `<div class="addform newworker"><span class="calc">New worker</span>
+    <label for="nw-name" class="calc">Name<input class="field" id="nw-name" autocomplete="off" placeholder="Full name" value="${d("name")}"></label>
+    <div class="chips">${Object.entries(TRADES).map(([k, t]) => `<button data-act="nwtrade" data-v="${k}" class="${trade === k ? "on" : ""}" aria-pressed="${trade === k}">${t.label}</button>`).join("")}</div>
+    <label for="nw-nick" class="calc">Nickname (what the site calls them)<input class="field" id="nw-nick" autocomplete="off" value="${d("nick")}"></label>
+    ${trade !== "steel" && money() ? `<label for="nw-rate" class="calc">Special day rate, GH₵ (leave empty for the normal ${ghs(S.settings.rates[trade]).replace(".00","")})<input class="field num" id="nw-rate" inputmode="decimal" autocomplete="off" placeholder="Normal rate" value="${d("rate")}"></label>` : ""}
+    <div class="row">
+      <label for="nw-phone" class="calc">Phone number<input class="field num" id="nw-phone" type="tel" inputmode="tel" autocomplete="off" value="${d("phone")}"></label>
+      <label for="nw-momo" class="calc">MoMo number<input class="field num" id="nw-momo" type="tel" inputmode="tel" autocomplete="off" value="${d("momo")}"></label></div>
+    <label for="nw-momoname" class="calc">MoMo name (as registered)<input class="field" id="nw-momoname" autocomplete="off" value="${d("momoname")}"></label>
+    <div class="idbox"><span class="calc">ID card photo</span>
+      ${n.idPhoto ? `<button class="thumb" data-act="viewphoto" data-v="${esc(n.idPhoto)}" aria-label="View ID photo"><img src="${photoSrc(n.idPhoto)}" alt="ID card"></button>` : ""}
+      ${S.uploading === "new" ? `<span class="calc">Uploading photo…</span>` : S.assets ? `<label class="btn filebtn" for="nw-idphoto">${n.idPhoto ? "Replace photo" : "Add ID photo"}<input type="file" id="nw-idphoto" accept="image/*" hidden></label>` : ""}
+    </div>
+    <div class="row"><button class="btn primary" data-act="savenewworker">Save worker</button><button class="btn" data-act="cancelnewworker">Cancel</button></div>
+  </div>`;
+}
+function rowHtml(w, date, away){
+  const m = mark(date, w.id, S.slot), trade = TRADES[w.trade].label;
+  const dots = w.trade === "steel" ? "" : `<span class="dots" aria-hidden="true">${SLOTS.map(sl => `<i class="${mark(date, w.id, sl.id)?.s||""}"></i>`).join("")}</span>`;
+  let status = "";
+  if (m){ const t = hm(new Date(m.t));
+    status = m.s === "in" ? `<span class="pill ok">Here ${m.edited?"":t}</span>` : `<span class="pill bad">Absent</span>`;
+    if (S.slot === "m"){ const li = lateInfo(w, date, m); if (li) status += `<span class="pill late">${li.min} min late</span>`; } }
+  const po = w.trade === "steel" ? null : payOf(date, w.id);
+  if (po != null) status += `<span class="pill">Pay: ${po === 0.5 ? "½ day" : po === 1 ? "full day" : "none"}</span>`;
+  if (away && !m) status += `<span class="pill bad">Absent ${away.since === date ? "earlier today" : dayLabel(away.since)}</span>`;
+  return `<div class="wrow"><div class="wname"><b>${nameHtml(w)}</b>
+    <span class="meta">${dots}${trade}${w.trade!=="steel" && money()?" · "+ghs(rate(w)).replace(".00",""):""} ${status}</span></div>
+    <div class="btns"><button class="yes ${m?.s==="in"?"on":""}" data-act="mark" data-w="${w.id}" data-v="in" aria-pressed="${m?.s==="in"}">Here</button>
+    <button class="no ${m?.s==="out"?"on":""}" data-act="mark" data-w="${w.id}" data-v="out" aria-pressed="${m?.s==="out"}">Absent</button></div></div>`;
+}
+
+function viewWeek(){
+  const ws = S.week, W = weekData(ws), isCur = ws === weekStart(todayStr());
+  const remaining = r2(W.due - W.paidTotal);
+  let h = `<header class="top"><div class="weeknav">
+      <button class="iconbtn" data-act="week" data-v="-7" aria-label="Previous week">‹</button>
+      <h1>Pay week ${weekLabel(ws)}</h1>
+      <button class="iconbtn" data-act="week" data-v="7" aria-label="Next week" ${isCur?"disabled":""}>›</button></div>
+    <div class="totals"><div class="due"><small>To pay</small><b class="num">${ghs(W.due)}</b></div>
+      <div><small>Paid</small><b class="num">${ghs(W.paidTotal)}</b></div>
+      <div><small>Left</small><b class="num">${ghs(Math.max(0, remaining))}</b></div></div>
+    <p class="bymethod">${Object.keys(W.byMethod).length ? "Paid so far: "+Object.entries(W.byMethod).map(([k,v]) => METHODS[k]+" "+ghs(v)).join(" · ") : "Nothing paid yet this week."}
+      ${isCur ? " Figures update as you mark attendance." : ""} Tap a day under a name to pay it as a half or full day.</p>
+    <div class="actions"><button class="btn" data-act="copy">Copy report for WhatsApp</button>
+      ${S.downloads ? `<button class="btn" data-act="exportmenu" aria-expanded="${!!S.exportOpen}">Export to Excel</button>` : ""}</div>
+    ${S.downloads && S.exportOpen ? `<div class="exportbox"><span class="calc">${S.exporting ? "Building the spreadsheet…" : "Save a backup of attendance, overtime, deductions, steel machines, curing, pour checks, payments and workers:"}</span>
+      <div class="paybar"><button data-act="export" data-v="week" ${S.exporting?"disabled":""}>This week</button>
+      <button data-act="export" data-v="month" ${S.exporting?"disabled":""}>This month</button>
+      <button data-act="export" data-v="all" ${S.exporting?"disabled":""}>Everything</button></div></div>` : ""}
+  </header>`;
+
+  const byGroup = GROUPS.filter(g => g.id !== "steel").map(g => ({g, rows:W.rows.filter(r => TRADES[r.w.trade].group === g.id)}));
+  for (const {g, rows} of byGroup){
+    if (!rows.length) continue;
+    h += `<section class="group"><div class="ghead"><h2>${g.label}</h2><small class="num">${ghs(r2(rows.reduce((s,r)=>s+r.net,0)))}</small></div><div class="rows">`;
+    // Paid ones go below the ones still to pay (Niko, 30 Oct 2026: "if they're marked paid then can go down the list").
+    const due = rows.filter(r => !r.paid && r.net > 0), nothing = rows.filter(r => !r.paid && !(r.net > 0)), paidRows = rows.filter(r => r.paid);
+    h += [...due, ...nothing].map(r => payCard(r, W, ws)).join("") + (paidRows.length ? `<p class="donehead">Paid · ${paidRows.length}</p>` + paidRows.map(r => payCard(r, W, ws)).join("") : "");
+    h += `</div></section>`;
+  }
+  // steel benders: attendance only (they aren't paid through this register)
+  const steelHere = W.steelRows.filter(s => s.present);
+  if (steelHere.length){
+    h += `<section class="group"><div class="ghead"><h2>Steel benders</h2><small>Attendance only</small></div><div class="rows"><div class="pcard">
+      <p class="calc">${steelHere.map(s => nameHtml(s.w)+" "+s.present+(s.present === 1 ? " day" : " days")).join(" · ")}</p></div></div></section>`;
+  }
+  if (W.machineTotal || W.pay.paid?.machines) h += machinesPayHtml(W, ws);
+  if (!W.rows.length && !W.steelRows.length && !W.machineTotal) h += `<section class="group"><div class="rows"><p class="empty">No attendance recorded this week yet.</p></div></section>`;
+
+  // history
+  const weeks = Object.keys(S.pays).filter(k => k !== ws && Object.values(S.pays[k].paid||{}).some(Boolean)).sort().reverse();
+  if (weeks.length){
+    h += `<h3 class="sub">Payment history</h3><div class="rows hist">` + weeks.map(k => {
+      const ps = Object.values(S.pays[k].paid||{}).filter(Boolean), tot = r2(ps.reduce((s,p)=>s+Number(p.amount||0),0));
+      return `<button data-act="gotoweek" data-v="${k}"><span>${weekLabel(k)}<br><small class="calc">${ps.length} payment${ps.length===1?"":"s"}</small></span><b class="num">${ghs(tot)}</b></button>`;
+    }).join("") + `</div>`;
+  }
+  return h;
+}
+
+function machinesPayHtml(W, ws){
+  return `<section class="group"><div class="ghead"><h2>Steel machines</h2><small class="num">${ghs(W.machineTotal)}</small></div><div class="rows"><div class="pcard">` +
+    W.machines.map(x => { const each = [...new Set(x.used.map(d => machineAmt(d, x.m.id)))];
+      return `<div class="pline"><b>${x.m.short}</b><span class="amount num">${ghs(x.total)}</span></div>
+      <div class="week6">${W.dates.map(d => `<div class="dcell">${DOW[parseYmd(d).getDay()]}<div class="bars"><i class="${machineAmt(d, x.m.id) > 0 ? "in" : ""}"></i></div></div>`).join("")}</div>
+      <p class="calc num">${x.used.length ? x.used.length+(x.used.length === 1 ? " day" : " days")+(each.length === 1 ? " × "+ghs(each[0]).replace(".00","") : "")+" = "+ghs(x.total) : "Not used this week"}</p>`; }).join("") +
+    payControls("machines", W.pay.paid?.machines || null, W.machineTotal, ws, true) + `</div></div></section>`;
+}
+
+function payCard(r, W, ws){
+  const w = r.w;
+  return `<div class="pcard">
+    <div class="pline"><b>${nameHtml(w)} <span class="calc">${TRADES[w.trade].label}</span></b><span class="amount num">${ghs(r.net)}</span></div>
+    <div class="week6">${W.dates.map((d,i) => { const po = r.pays[i], sel = S.dayEdit?.w === w.id && S.dayEdit?.d === d;
+      return `<button class="dcell${po != null ? " ov" : ""}${sel ? " sel" : ""}" data-act="dayedit" data-w="${w.id}" data-v="${d}" aria-expanded="${sel}" aria-label="${dayLabel(d)}: change pay">${DOW[parseYmd(d).getDay()]}<div class="bars">${r.cells[i].map(s => `<i class="${s}"></i>`).join("")}</div>${po != null ? `<span class="paymark">${payTxt(po)}</span>` : ""}${r.otDays[i] ? `<span class="otmark num">+${hrs(r.otDays[i])}</span>` : ""}</button>`; }).join("")}</div>
+    ${dayEditHtml(r, W)}
+    <p class="calc num">${daysTxt(r.sixths)} × ${ghs(rate(w)).replace(".00","")} = ${ghs(r.gross)}${r.ded ? ` − late ${ghs(r.ded)}` : ""}${r.otH ? ` + overtime ${hrs(r.otH)} × ${ghs(S.settings.otRate).replace(".00","")} = ${ghs(r.otPay)}` : ""}</p>
+    ${r.lates.length ? `<ul class="lates">${r.lates.map(l => `<li class="${l.off?"waived":""}"><span class="num">${dayLabel(l.date).slice(0,3)} marked ${l.time} · ${l.min} min late · −${ghs(l.amt)}</span>
+      <button data-act="waive" data-v="${l.key}">${l.off ? "Deduct" : "Waive"}</button></li>`).join("")}</ul>` : ""}
+    ${r.cure ? cureHtml(r) : ""}
+    ${payControls(w.id, r.paid, r.net, ws)}
+  </div>`;
+}
+
+function dayEditHtml(r, W){
+  const de = S.dayEdit, i = de && de.w === r.w.id ? W.dates.indexOf(de.d) : -1;
+  if (i < 0) return "";
+  const po = r.pays[i], cur = po == null ? "" : String(po), marked = Math.round(r.cells[i].filter(x => x==="in").length*6/r.cells[i].length);
+  return `<div class="dayedit"><span class="calc">${dayLabel(de.d)}: pay ${esc(r.w.name.split(" ")[0])} for</span>
+    <div class="chips">${PAYS.map(([k,l]) => `<button data-act="setpay" data-w="${r.w.id}" data-v="${de.d}|${k}" class="${cur===k?"on":""}" aria-pressed="${cur===k}">${k === "" ? l+" ("+daysTxt(marked)+")" : l}</button>`).join("")}</div></div>`;
+}
+
+function payControls(id, paid, amount, ws, steel){
+  if (paid) return `<div class="paid"><span>Paid ${ghs(paid.amount)} by ${METHODS[paid.method]}${paid.to?" to "+esc(paid.to):""} · ${dayLabel(ymd(new Date(paid.at))).slice(0,3)} ${hm(new Date(paid.at))}${paid.ref?" · Ref "+esc(paid.ref):""}</span>
+    <button data-act="unpay" data-w="${id}">Undo</button></div>`;
+  const pf = S.payForm;
+  if (pf && pf.id === id && pf.ws === ws){
+    return `<div class="payform">
+      <div class="row"><label for="pf-amount">Amount (GH₵)<input class="field num" id="pf-amount" inputmode="decimal" value="${esc(S.draft["pf-amount"] ?? amount)}"></label>
+      ${steel ? `<label for="pf-to">Paid to<input class="field" id="pf-to" value="${esc(S.draft["pf-to"] ?? "")}" placeholder="Name"></label>` : ""}</div>
+      ${pf.method === "momo" && S.workers[id]?.momoName ? `<p class="calc">Send to ${esc(S.workers[id].momoName)}${S.workers[id].momo ? ", "+esc(S.workers[id].momo) : ""}</p>` : ""}
+      ${pf.method !== "cash" ? `<div class="row"><label for="pf-ref">${pf.method==="momo"?"MoMo number or transaction ID":"Bank reference"} (optional)<input class="field" id="pf-ref" value="${esc(S.draft["pf-ref"] ?? "")}"></label></div>` : ""}
+      <div class="row"><button class="btn primary" data-act="savepay" data-w="${id}">Record ${METHODS[pf.method]} payment</button><button class="btn" data-act="cancelpay">Cancel</button></div>
+    </div>`;
+  }
+  if (!(amount > 0)) return "";
+  return `<div class="paybar">${Object.entries(METHODS).map(([k,v]) => `<button data-act="pay" data-w="${id}" data-v="${k}">Pay ${v}</button>`).join("")}</div>`;
+}
+
+function viewWorkers(){
+  const all = workerList(true), s = S.settings;
+  let h = `<header class="top"><div class="dayline"><h1>Workers</h1></div></header>
+    ${S.newWorker ? newWorkerHtml() : `<button class="btn primary addworkerbtn" data-act="newworker">+ Add worker</button>`}`;
+  for (const g of GROUPS){
+    const list = all.filter(w => TRADES[w.trade].group === g.id);
+    h += `<section class="group"><div class="ghead"><h2>${g.label}</h2><small>${list.filter(w=>w.active!==false).length} active</small></div><div class="rows">`;
+    if (!list.length) h += `<p class="empty">None yet.</p>`;
+    h += list.map(w => {
+      if (S.editId === w.id) return `<div class="pcard"><div class="payform" style="margin:0">
+        <label for="ed-name">Name<input class="field" id="ed-name" value="${esc(S.draft["ed-name"] ?? w.name)}"></label>
+        <div class="chips">${Object.entries(TRADES).map(([k,t]) => `<button data-act="edtrade" data-v="${k}" class="${(S.draft.edTrade||w.trade)===k?"on":""}">${t.label}</button>`).join("")}</div>
+        <label for="ed-nick">Nickname (what the site calls them)<input class="field" id="ed-nick" autocomplete="off" value="${esc(S.draft["ed-nick"] ?? w.nick ?? "")}"></label>
+        ${(S.draft.edTrade||w.trade) !== "steel" && money() ? `<label for="ed-rate">Special day rate, GH₵ (leave empty for the normal ${ghs(S.settings.rates[S.draft.edTrade||w.trade]).replace(".00","")})<input class="field num" id="ed-rate" inputmode="decimal" autocomplete="off" placeholder="Normal rate" value="${esc(S.draft["ed-rate"] ?? (w.rate || ""))}"></label>` : ""}
+        <div class="row">
+          <label for="ed-phone">Phone number<input class="field num" id="ed-phone" type="tel" inputmode="tel" autocomplete="off" value="${esc(S.draft["ed-phone"] ?? w.phone ?? "")}"></label>
+          <label for="ed-momo">MoMo number<input class="field num" id="ed-momo" type="tel" inputmode="tel" autocomplete="off" value="${esc(S.draft["ed-momo"] ?? w.momo ?? "")}"></label></div>
+        <label for="ed-momoname">MoMo name (as registered)<input class="field" id="ed-momoname" autocomplete="off" value="${esc(S.draft["ed-momoname"] ?? w.momoName ?? "")}"></label>
+        <div class="idbox"><span class="calc">ID card photo</span>
+          ${w.idPhoto ? `<button class="thumb" data-act="viewphoto" data-v="${esc(w.idPhoto)}" aria-label="View ID photo"><img src="${photoSrc(w.idPhoto)}" alt="ID card of ${esc(w.name)}"></button>` : ""}
+          ${S.uploading === w.id ? `<span class="calc">Uploading photo…</span>` : S.assets ? `<div class="row">
+            <label class="btn filebtn" for="ed-idphoto">${w.idPhoto ? "Replace photo" : "Add ID photo"}<input type="file" id="ed-idphoto" accept="image/*" data-w="${w.id}" hidden></label>
+            ${w.idPhoto ? `<button class="btn danger" data-act="delphoto" data-w="${w.id}">${S.confirmDel === w.id ? "Tap again to delete" : "Remove photo"}</button>` : ""}</div>`
+            : `<span class="calc">Photos can only be added by you, from your own account.</span>`}
+        </div>
+        <div class="row"><button class="btn primary" data-act="saveworker" data-w="${w.id}">Save</button>
+        <button class="btn" data-act="toggleactive" data-w="${w.id}">${w.active===false?"Bring back":"Stopped working"}</button>
+        <button class="btn" data-act="canceledit">Cancel</button></div></div></div>`;
+      const contact = [w.phone ? "☎ "+esc(w.phone) : "", w.momo ? "MoMo "+esc(w.momo)+(w.momoName ? " ("+esc(w.momoName)+")" : "") : ""].filter(Boolean).join(" · ");
+      return `<div class="wrow"><div class="wname"><b>${nameHtml(w)}</b><span class="meta">${TRADES[w.trade].label}${w.trade!=="steel" && money()?" · "+ghs(rate(w)).replace(".00","")+"/day":""}${special(w) && money()?' <span class="pill late">Special rate</span>':""}${w.active===false?' <span class="pill">Not on site</span>':""}${w.idPhoto?' <span class="pill ok">ID</span>':""}</span>
+        ${contact ? `<span class="meta contact num">${contact}</span>` : ""}</div>
+        <button class="btn" data-act="edit" data-w="${w.id}">Edit</button></div>`;
+    }).join("");
+    h += `</div></section>`;
+  }
+  if (money()){
+  const v = k => esc(S.draft["st-"+k] ?? (k in s.rates ? s.rates[k] : s[k]));
+  h += `<h3 class="sub">Rates & hours</h3><div class="addform"><div class="settings">
+    <label for="st-mason">Mason, GH₵/day<input class="field num" id="st-mason" inputmode="decimal" value="${v("mason")}"></label>
+    <label for="st-labourer">Labourer, GH₵/day<input class="field num" id="st-labourer" inputmode="decimal" value="${v("labourer")}"></label>
+    <label for="st-carpenter">Carpenter, GH₵/day<input class="field num" id="st-carpenter" inputmode="decimal" value="${v("carpenter")}"></label>
+    <label for="st-mforeman">Foreman (masons), GH₵/day<input class="field num" id="st-mforeman" inputmode="decimal" value="${v("mforeman")}"></label>
+    <label for="st-foreman">Sub-foreman, GH₵/day<input class="field num" id="st-foreman" inputmode="decimal" value="${v("foreman")}"></label>
+    <label for="st-grace">Late after (minutes)<input class="field num" id="st-grace" inputmode="numeric" value="${v("grace")}"></label>
+    <label for="st-start">Start time<input class="field" type="time" id="st-start" value="${v("start")}"></label>
+    <label for="st-lunchStart">Lunch starts<input class="field" type="time" id="st-lunchStart" value="${v("lunchStart")}"></label>
+    <label for="st-afternoon">Lunch ends (afternoon check)<input class="field" type="time" id="st-afternoon" value="${v("afternoon")}"></label>
+    <label for="st-close">Closing time<input class="field" type="time" id="st-close" value="${v("close")}"></label>
+    <label for="st-satClose">Saturday closing (no lunch)<input class="field" type="time" id="st-satClose" value="${v("satClose")}"></label>
+    <label for="st-otRate">Overtime, GH₵/hour<input class="field num" id="st-otRate" inputmode="decimal" value="${v("otRate")}"></label>
+    <label for="st-bendMachine">Steel bending machine, GH₵/day<input class="field num" id="st-bendMachine" inputmode="decimal" value="${v("bendMachine")}"></label>
+    <label for="st-cutMachine">Steel cutting machine, GH₵/day<input class="field num" id="st-cutMachine" inputmode="decimal" value="${v("cutMachine")}"></label>
+    <label for="st-curing">Curing, GH₵ a day<input class="field num" id="st-curing" inputmode="decimal" value="${v("curing")}"></label>
+    <label for="st-curingDry">Curing found dry, GH₵ off<input class="field num" id="st-curingDry" inputmode="decimal" value="${v("curingDry")}"></label>
+    <label for="st-curingDays">Curing days per pour<input class="field num" id="st-curingDays" inputmode="numeric" value="${v("curingDays")}"></label>
+    </div>
+    <p class="calc">A day's pay is split into three: morning, afternoon and closing. On Saturdays there's no lunch, so it's two: morning and closing (Saturday closing time). To pay a half day or a full day instead, tap that day under the worker's name on Payday. Lateness is measured from the start time to when you tapped Here in the morning, and the deduction is minutes late ÷ ${paidMinutes()/60} working hours (start to closing, less lunch) × day rate. Overtime is paid per hour after closing time. The steel machines are ticked Used at the bottom of Today on the days they work; each day costs the rate set when it was ticked. Curing: the person curing is paid the curing rate once for each day any of their pours is curing, however many pours there are (a Sunday is paid with the next week), less the dry amount each time you find it dry and take the photo; a pour keeps the amounts it started with. Pour checklists are below: + New pour on Today starts one; tick the checks before the pour, and Poured starts the curing with these amounts.</p>
+    <button class="btn primary" data-act="savesettings">Save rates & hours</button></div>`;
+  }
+  h += checklistsHtml();
+  return h;
+}
+
+/* ---------- events ---------- */
+document.addEventListener("click", async e => {
+  const b = e.target.closest("[data-act]"); if (!b || b.tagName === "INPUT") return;
+  const a = b.dataset.act, v = b.dataset.v, wid = b.dataset.w;
+  if (a === "home"){ location.href = "/todo"; return; }
+  if (a === "tab"){ if (!tabAllowed(v)) return; S.tab = v; S.payForm = null; S.dayEdit = null; window.scrollTo(0,0); return render(); }
+  if (!S.db) return;
+  if (a === "dismisserr"){ S.saveError = null; return render(); }
+  const WRITES = ["mark","rest","ot","otnow","waive","pay","savepay","unpay","savenewworker","saveworker","toggleactive","savesettings","delphoto","setpay","machine","savepour","stoppour","delpour","deldry","tick","addcheck","poured","clsave","cldel"];
+  if (S.readOnly && WRITES.includes(a)){ window.scrollTo(0,0); return toast("View only. Ask the owner for edit access."); }
+  // A second tap is needed to pour with checks left, or to delete a checklist: anything else in between starts over.
+  if (a !== "poured") S.confirmPoured = null;
+  if (a !== "cldel") S.confirmClDel = null;
+  switch (a){
+    case "day": { const d = addDays(parseYmd(S.date), Number(v)); if (ymd(d) > todayStr()) return; S.date = ymd(d); break; }
+    case "gotoday": S.date = todayStr(); S.slot = autoSlot(); break;
+    case "slot": S.slot = v; break;
+    case "mark": return setMark(wid, v);
+    case "machine": return setMachine(v);
+    case "newpour": S.pourForm = {worker:defaultCurer(), list:liveChecklists()[0]?.[0] || "none"}; S.confirmDelPour = null; clearDrafts("np-"); break;
+    case "editpour": { const p = S.pours[v]; if (!p) break; S.pourForm = {id:v, worker:p.worker}; S.confirmDelPour = null;
+      Object.keys(S.draft).filter(k => k.startsWith("np-")).forEach(k => delete S.draft[k]); break; }
+    case "cancelpour": S.pourForm = null; break;
+    case "savepour": {
+      const f = S.pourForm; if (!f) break;
+      const old = f.id ? S.pours[f.id] : null, g = k => S.draft["np-"+k];
+      const what = String(g("what") ?? old?.what ?? "").trim();
+      if (!what) return toast("Say what was poured, e.g. 3rd floor slab.");
+      // A new pour that starts with its checklist: a copy of the list's checks, nothing curing yet.
+      const listId = old ? null : (g("list") ?? f.list ?? "none"), tpl = listId && listId !== "none" ? S.checklists[listId] : null;
+      if (tpl && !tpl.deleted){
+        const items = {}; clItems(tpl).forEach(([k, x], i) => items[k] = {text:x.text, n:i + 1, ok:false});
+        const wk = g("worker") ?? f.worker, curer = wk && S.workers[wk] ? wk : defaultCurer();
+        const id = S.db.collection("pours").doc().id, full = {what, phase:"check", planned:S.date, check:{list:listId, name:tpl.name, items}, worker:curer, dry:{}, created:new Date().toISOString()};
+        S.pours[id] = {...full}; writeDoc("pours/"+id, full, full);
+        S.pourForm = null; clearDrafts("np-");
+        toast("Checklist started: "+what); break; }
+      if (old && old.phase === "check"){
+        const wk = g("worker") ?? old.worker, change = {what, ...(wk && S.workers[wk] ? {worker:wk} : {})};
+        S.pours[f.id] = {...old, ...change}; writeDoc("pours/"+f.id, change, {});
+        S.pourForm = null; clearDrafts("np-");
+        toast("Pour saved"); break; }
+      const start = g("start") ?? old?.start ?? S.date;
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(start)) return toast("Pick the first day of curing.");
+      const num = (k, fb) => { const x = g(k); if (x == null || String(x).trim() === "") return fb; const n = Number(String(x).replace(/,/g, "")); return isFinite(n) && n >= 0 ? n : NaN; };
+      const days = num("days", old?.days ?? curingDays()), rateV = num("rate", old?.rate ?? curingRate()), dryV = num("dry", old?.dryFine ?? curingDryRate());
+      if (!(Number.isInteger(days) && days >= 1 && days <= 60)) return toast("Days of curing: a whole number from 1 to 60.");
+      if (!(rateV >= 0) || !(dryV >= 0)) return toast("The amounts must be numbers.");
+      const worker = g("worker") ?? f.worker;
+      if (!worker || !S.workers[worker]) return toast("Pick who cures it.");
+      const data = {what, start, days, rate:r2(rateV), dryFine:r2(dryV), worker};
+      if (old){ S.pours[f.id] = {...old, ...data}; writeDoc("pours/"+f.id, data, {}); }
+      else { const id = S.db.collection("pours").doc().id, full = {...data, dry:{}, created:new Date().toISOString()};
+        S.pours[id] = {...full}; writeDoc("pours/"+id, full, full); }
+      S.pourForm = null; Object.keys(S.draft).filter(k => k.startsWith("np-")).forEach(k => delete S.draft[k]);
+      toast(old ? "Pour saved" : "Curing started: "+what); break; }
+    case "stoppour": { const [id, d] = v.split("|"), p = S.pours[id]; if (!p) break;
+      const patch = {stopped:d || null}; S.pours[id] = {...p, ...patch}; writeDoc("pours/"+id, patch, {}); S.pourForm = null;
+      toast(d ? "Curing stopped after "+dayLabel(d) : "Curing carries on"); break; }
+    case "delpour": { if (S.confirmDelPour !== v){ S.confirmDelPour = v; break; }
+      S.confirmDelPour = null; if (!S.pours[v]) break; S.pours[v] = {...S.pours[v], deleted:true}; writeDoc("pours/"+v, {deleted:true}, {}); S.pourForm = null;
+      toast("Pour deleted: it no longer counts on Payday"); break; }
+    case "deldry": { const [id, key] = v.split("|"); if (S.confirmDry !== key){ S.confirmDry = key; break; }
+      S.confirmDry = null; const x = S.pours[id]?.dry?.[key]; if (!x) break;
+      const patch = {dry:{[key]:null}}; S.pours[id] = deepMerge({...S.pours[id]}, patch); writeDoc("pours/"+id, patch, {});
+      if (x.photo) S.assets?.delete(x.photo).catch(() => {});
+      toast("Taken off: no deduction for that one"); break; }
+    case "nplist": S.draft["np-list"] = v; break;
+    case "gochecklists": S.tab = "workers"; S.pourForm = null; render(); document.getElementById("checklists")?.scrollIntoView({block:"start"}); return;
+    case "tick": { const [id, k] = v.split("|"), p = S.pours[id], x = p?.check?.items?.[k]; if (!x || p.phase !== "check") break;
+      const patch = {check:{items:{[k]: x.ok ? {ok:false, at:null} : {ok:true, at:new Date().toISOString()}}}};
+      S.pours[id] = deepMerge({...p}, patch); writeDoc("pours/"+id, patch, {}); break; }
+    case "addcheck": { const p = S.pours[v], text = String(S.draft["ac-"+v] ?? "").trim(); if (!p || p.phase !== "check") break;
+      if (!text) return toast("Type the check first, then tap Add.");
+      const n = Math.max(0, ...checkItems(p).map(([, x]) => Number(x.n) || 0)) + 1, patch = {check:{items:{["c"+newKey()]:{text, n, ok:false}}}};
+      S.pours[v] = deepMerge({...p}, patch); writeDoc("pours/"+v, patch, {}); delete S.draft["ac-"+v];
+      toast("Check added to "+p.what); break; }
+    case "poured": { const p = S.pours[v]; if (!p || p.phase !== "check") break;
+      const left = checkItems(p).filter(([, x]) => !x.ok).length;
+      if (left && S.confirmPoured !== v){ S.confirmPoured = v; break; }
+      S.confirmPoured = null;
+      const curer = p.worker && S.workers[p.worker] ? p.worker : defaultCurer();
+      if (!curer) return toast("Add who cures it first (Workers tab).");
+      // From now on it's a curing pour like any other, with the curing amounts as they are today.
+      const data = {phase:"poured", poured:S.date, start:S.date, days:curingDays(), rate:curingRate(), dryFine:curingDryRate(), worker:curer};
+      S.pours[v] = {...p, ...data}; writeDoc("pours/"+v, data, {});
+      toast("Poured: "+p.what+". Curing starts "+(S.date === todayStr() ? "today" : dayLabel(S.date))); break; }
+    case "showchecks": S.showChecks = S.showChecks === v ? null : v; break;
+    case "cledit": { S.clEdit = v; clearDrafts("cl-");
+      const t = v === "new" ? null : S.checklists[v];
+      S.clDraft = {name:t?.name || "", items:t ? clItems(t).map(([k, x]) => ({k, text:x.text})) : []}; break; }
+    case "clcancel": S.clEdit = null; S.clDraft = null; clearDrafts("cl-"); break;
+    case "cladd": { if (!S.clDraft) break; const text = String(S.draft["cl-new"] ?? "").trim();
+      if (!text) return toast("Type the check first, then tap Add.");
+      syncClDraft(); S.clDraft.items.push({k:"c"+newKey(), text}); delete S.draft["cl-new"]; break; }
+    case "clup": { if (!S.clDraft) break; syncClDraft(); const a = S.clDraft.items, i = a.findIndex(x => x.k === v);
+      if (i > 0) [a[i - 1], a[i]] = [a[i], a[i - 1]]; break; }
+    case "cldrop": { if (!S.clDraft) break; syncClDraft(); S.clDraft.items = S.clDraft.items.filter(x => x.k !== v); delete S.draft["cl-i-"+v]; break; }
+    case "clsave": { if (!S.clDraft) break; syncClDraft();
+      const d = S.clDraft, name = String(d.name || "").trim(), items = d.items.map(x => ({k:x.k, text:String(x.text || "").trim()})).filter(x => x.text);
+      if (!name) return toast("Give the checklist a name, e.g. Stairs.");
+      if (!items.length) return toast("Add at least one check.");
+      const id = S.clEdit === "new" ? "cl"+newKey() : S.clEdit, old = S.checklists[id], map = {};
+      items.forEach((x, i) => map[x.k] = {text:x.text, n:i + 1});
+      for (const [k] of clItems(old)) if (!map[k]) map[k] = null;   // taken out
+      const data = {name, items:map, ...(old ? {} : {n:Date.now(), created:new Date().toISOString()})};
+      S.checklists[id] = deepMerge({id, ...(old || {})}, data); writeDoc("checklists/"+id, data, data);
+      S.clEdit = null; S.clDraft = null; clearDrafts("cl-");
+      toast("Checklist saved: "+name); break; }
+    case "cldel": { if (S.confirmClDel !== v){ S.confirmClDel = v; break; }
+      S.confirmClDel = null; const t = S.checklists[v]; if (!t) break;
+      S.checklists[v] = {...t, deleted:true}; writeDoc("checklists/"+v, {deleted:true}, {});
+      S.clEdit = null; S.clDraft = null; clearDrafts("cl-");
+      toast("Checklist deleted: "+t.name); break; }
+    case "ot": return setOt(wid, otOf(S.date, wid) + Number(v));
+    case "otnow": { const n = new Date(), mins = n.getHours()*60 + n.getMinutes() - toMin(closeFor(S.date));
+      if (mins < 15) return toast("It's not past closing time yet.");
+      setOt(wid, mins/60); return toast(S.workers[wid].name+": "+hrs(Math.round(mins/30)/2)+" overtime"); }
+    case "rest": return markRest(v);
+    case "toggleaway": S.showAway = !S.showAway; break;
+    case "week": { const d = ymd(addDays(parseYmd(S.week), Number(v))); if (d > weekStart(todayStr())) return; S.week = d; S.payForm = null; S.dayEdit = null; break; }
+    case "gotoweek": S.week = v; S.payForm = null; S.dayEdit = null; window.scrollTo(0,0); break;
+    case "dayedit": S.dayEdit = S.dayEdit?.w === wid && S.dayEdit?.d === v ? null : {w:wid, d:v}; break;
+    case "setpay": { const [d, k] = v.split("|"), val = k === "" ? null : Number(k), patch = {pay:{[wid]:val}};
+      S.days[d] = deepMerge({date:d, ...(S.days[d]||{})}, patch);
+      writeDoc("days/"+d, patch, {date:d}); S.dayEdit = null;
+      toast(S.workers[wid].name.split(" ")[0]+", "+dayLabel(d).slice(0,3)+": "+(val == null ? "paid as marked" : payTxt(val))); break; }
+    case "waive": { const cur = !!S.pays[S.week]?.waived?.[v]; const patch = {waived:{[v]:!cur}};
+      S.pays[S.week] = deepMerge({weekStart:S.week, ...(S.pays[S.week]||{})}, patch); writeDoc("payments/"+S.week, patch, {weekStart:S.week}); break; }
+    case "pay": { S.payForm = {id:wid, method:v, ws:S.week}; delete S.draft["pf-amount"]; delete S.draft["pf-ref"];
+      const w = S.workers[wid]; if (v === "momo" && w?.momo) S.draft["pf-ref"] = w.momo; break; }
+    case "cancelpay": S.payForm = null; break;
+    case "savepay": {
+      const amt = r2(Number(String(S.draft["pf-amount"] ?? document.getElementById("pf-amount").value).replace(/,/g,"")));
+      if (!(amt > 0)) return toast("Enter the amount you paid.");
+      const rec = {amount:amt, method:S.payForm.method, at:new Date().toISOString()};
+      const ref = (S.draft["pf-ref"]||"").trim(); if (ref) rec.ref = ref;
+      const to = (S.draft["pf-to"]||"").trim(); if (to) rec.to = to;
+      const patch = {paid:{[wid]:rec}};
+      S.pays[S.week] = deepMerge({weekStart:S.week, ...(S.pays[S.week]||{})}, patch);
+      writeDoc("payments/"+S.week, patch, {weekStart:S.week});
+      S.payForm = null; ["pf-amount","pf-ref","pf-to"].forEach(k => delete S.draft[k]);
+      toast("Recorded "+ghs(amt)+" by "+METHODS[rec.method]); break; }
+    case "unpay": { const patch = {paid:{[wid]:null}};
+      S.pays[S.week] = deepMerge({...(S.pays[S.week]||{})}, patch); writeDoc("payments/"+S.week, patch, {weekStart:S.week}); break; }
+    case "copy": return copyReport();
+    case "exportmenu": S.exportOpen = !S.exportOpen; break;
+    case "export": return exportXlsx(v);
+    case "newworker": S.newWorker = {trade:"mason"}; S.editId = null; clearDrafts("nw-"); break;
+    case "nwtrade": if (S.newWorker) S.newWorker.trade = v; break;
+    case "cancelnewworker": { const ph = S.newWorker?.idPhoto; S.newWorker = null; clearDrafts("nw-"); if (ph) S.assets?.delete(ph).catch(() => {}); break; }
+    case "savenewworker": {
+      const n = S.newWorker; if (!n) break;
+      const g = k => String(S.draft["nw-"+k] ?? "").trim(), name = g("name");
+      if (!name) return toast("Type the worker's name first.");
+      const rs = g("rate").replace(/,/g, ""), rn = Number(rs);
+      if (rs && !(rn > 0)) return toast("Special day rate must be a number, or leave it empty.");
+      const data = {name, trade:n.trade, active:true, created:new Date().toISOString(), nick:g("nick"), phone:g("phone"), momo:g("momo"), momoName:g("momoname"),
+        ...(rs && money() ? {rate:r2(rn)} : {}), ...(n.idPhoto ? {idPhoto:n.idPhoto} : {})};
+      const id = S.db.collection("workers").doc().id;
+      S.workers[id] = {id, ...data}; writeDoc("workers/"+id, data, data);
+      S.newWorker = null; clearDrafts("nw-");
+      toast("Added "+name); break; }
+    case "edit": S.editId = wid; S.confirmDel = null; ["ed-name","ed-nick","ed-rate","ed-phone","ed-momo","ed-momoname","edTrade"].forEach(k => delete S.draft[k]); break;
+    case "viewphoto": S.viewPhoto = v; break;
+    case "closephoto": S.viewPhoto = null; break;
+    case "delphoto": {
+      if (S.confirmDel !== wid){ S.confirmDel = wid; break; }
+      const w = S.workers[wid], old = w.idPhoto; S.confirmDel = null;
+      w.idPhoto = null; writeDoc("workers/"+wid, {idPhoto:null}, {name:w.name, trade:w.trade});
+      S.assets.delete(old).catch(() => {}); toast("ID photo removed"); break; }
+    case "edtrade": S.draft.edTrade = v; break;
+    case "canceledit": S.editId = null; break;
+    case "saveworker": {
+      const w = S.workers[wid], name = (S.draft["ed-name"] ?? w.name).trim() || w.name, trade = S.draft.edTrade || w.trade;
+      const phone = (S.draft["ed-phone"] ?? w.phone ?? "").trim(), momo = (S.draft["ed-momo"] ?? w.momo ?? "").trim(),
+        momoName = (S.draft["ed-momoname"] ?? w.momoName ?? "").trim(), nick = (S.draft["ed-nick"] ?? w.nick ?? "").trim();
+      const rs = String(S.draft["ed-rate"] ?? (w.rate || "")).replace(/,/g,"").trim(), rn = Number(rs);
+      if (rs && !(rn > 0)) return toast("Special day rate must be a number, or leave it empty.");
+      const rateVal = rs ? r2(rn) : null;
+      const change = {name, nick, trade, phone, momo, momoName, ...(money() ? {rate:rateVal} : {})};   // without Payday the rate is never touched
+      Object.assign(w, change);
+      writeDoc("workers/"+wid, change, {active:true}); S.editId = null; toast("Saved "+name); break; }
+    case "toggleactive": { const w = S.workers[wid], active = w.active === false;
+      w.active = active; writeDoc("workers/"+wid, {active}, {name:w.name, trade:w.trade}); S.editId = null; break; }
+    case "savesettings": {
+      const g = k => S.draft["st-"+k];
+      const num = (k, fb) => { const n = Number(g(k)); return g(k) != null && isFinite(n) && n >= 0 ? n : fb; };
+      const s = S.settings, next = {
+        start:g("start")||s.start, lunchStart:g("lunchStart")||s.lunchStart, afternoon:g("afternoon")||s.afternoon, close:g("close")||s.close, satClose:g("satClose")||s.satClose||DEF.satClose,
+        grace:num("grace", s.grace), otRate:num("otRate", s.otRate),
+        curingDays:Math.max(1, Math.min(60, Math.round(num("curingDays", s.curingDays ?? DEF.curingDays)))) || DEF.curingDays,
+        rates:{mforeman:num("mforeman", s.rates.mforeman), mason:num("mason", s.rates.mason), labourer:num("labourer", s.rates.labourer), carpenter:num("carpenter", s.rates.carpenter),
+          foreman:num("foreman", s.rates.foreman), steelTon:s.rates.steelTon,
+          bendMachine:num("bendMachine", s.rates.bendMachine ?? DEF.rates.bendMachine), cutMachine:num("cutMachine", s.rates.cutMachine ?? DEF.rates.cutMachine),
+          curing:num("curing", s.rates.curing ?? DEF.rates.curing), curingDry:num("curingDry", s.rates.curingDry ?? DEF.rates.curingDry)}};
+      S.settings = next; Object.keys(S.draft).filter(k => k.startsWith("st-")).forEach(k => delete S.draft[k]);
+      chain = chain.then(() => S.db.doc("config/settings").set(next)).catch(err => toast("Not saved: "+(err?.message||"try again")));
+      toast("Rates & hours saved"); break; }
+  }
+  render();
+});
+document.addEventListener("input", e => {
+  const el = e.target; if (!el.id) return;
+  S.draft[el.id] = el.value;
+});
+
+document.addEventListener("change", async e => {
+  const el = e.target;
+  if (el.dataset?.pour && el.files?.[0]){
+    const id = el.dataset.pour, p = S.pours[id], file = el.files[0]; el.value = "";
+    if (!p) return;
+    if (S.readOnly){ window.scrollTo(0,0); return toast("View only. Ask the owner for edit access."); }
+    if (!S.assets) return toast("Photos can only be added by you, from your own account.");
+    S.uploadingDry = id; render();
+    try {
+      const res = await S.assets.upload(await shrink(file));
+      const taken = file.lastModified ? new Date(file.lastModified) : null;
+      const at = taken && ymd(taken) === S.date && taken <= new Date() ? taken : S.date === todayStr() ? new Date() : null;
+      const key = "d"+Date.now().toString(36), x = {date:S.date, ...(at ? {at:at.toISOString()} : {}), photo:res.id, amount:Number(p.dryFine) || 0};
+      const patch = {dry:{[key]:x}};
+      S.pours[id] = deepMerge({...S.pours[id]}, patch);
+      writeDoc("pours/"+id, patch, {});
+      toast("Found dry"+(money() ? ": −"+ghs(x.amount) : "")+" ("+p.what+")");
+    } catch(err){
+      const c = err?.code;
+      toast(c === "unsupported_type" ? "That file type isn't supported. Use a JPG or PNG photo."
+        : c === "too_large" ? "That photo is too large. Try a smaller one."
+        : "Photo not saved: "+(err?.message || "try again"));
+    }
+    S.uploadingDry = null; render(); return;
+  }
+  if (el.id === "nw-idphoto" && el.files?.[0] && S.assets && S.newWorker){
+    const file = el.files[0], old = S.newWorker.idPhoto; el.value = "";
+    S.uploading = "new"; render();
+    try { const res = await S.assets.upload(await shrink(file)); if (S.newWorker) S.newWorker.idPhoto = res.id; if (old) S.assets.delete(old).catch(() => {}); toast("ID photo added"); }
+    catch(err){ toast("Photo not saved: "+(err?.message || "try again")); }
+    S.uploading = null; render(); return;
+  }
+  if (el.id !== "ed-idphoto" || !el.files?.[0] || !S.assets) return;
+  const wid = el.dataset.w, w = S.workers[wid], old = w.idPhoto;
+  S.uploading = wid; render();
+  try {
+    const blob = await shrink(el.files[0]);
+    const res = await S.assets.upload(blob);
+    w.idPhoto = res.id;
+    await writeDoc("workers/"+wid, {idPhoto:res.id}, {name:w.name, trade:w.trade});
+    if (old) S.assets.delete(old).catch(() => {});
+    toast("ID photo saved");
+  } catch(err){
+    const c = err?.code;
+    toast(c === "unsupported_type" ? "That file type isn't supported. Use a JPG or PNG photo."
+      : c === "too_large" ? "That photo is too large. Try a smaller one."
+      : "Photo not saved: "+(err?.message || "try again"));
+  }
+  S.uploading = null; render();
+});
+async function shrink(file){
+  try {
+    const bmp = await createImageBitmap(file), sc = Math.min(1, 1600/Math.max(bmp.width, bmp.height));
+    const c = document.createElement("canvas"); c.width = Math.round(bmp.width*sc); c.height = Math.round(bmp.height*sc);
+    c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height);
+    return await new Promise(r => c.toBlob(b => r(b || file), "image/jpeg", 0.85));
+  } catch(e){ return file; }
+}
+
+/* ---------- Excel backup ---------- */
+function loadXlsx(){
+  if (window.XLSX) return Promise.resolve(window.XLSX);
+  return new Promise((ok, fail) => { const sc = document.createElement("script");
+    sc.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+    sc.onload = () => ok(window.XLSX); sc.onerror = () => fail(new Error("Could not load the spreadsheet tool. Check your connection.")); document.head.appendChild(sc); });
+}
+async function exportXlsx(range){
+  if (S.exporting) return;
+  S.exporting = true; render();
+  try {
+    const XLSX = await loadXlsx(), today = todayStr();
+    let from, to, label;
+    if (range === "week"){ from = S.week; to = ymd(addDays(parseYmd(S.week), 6)); label = "week-"+S.week; }
+    else if (range === "month"){ from = today.slice(0,8)+"01"; to = today; label = today.slice(0,7); }
+    else { const keys = Object.keys(S.days).concat(Object.keys(S.pays)).sort(); from = keys[0] || today; to = today; label = "all-to-"+today; }
+    const s = S.settings, workers = workerList(true);
+    const slotTxt = m => !m ? "" : m.s === "in" ? "Here"+(m.edited ? "" : " "+hm(new Date(m.t))) : "Absent";
+
+    // Attendance: one row per worker per day with any record
+    const att = [];
+    for (const d of Object.keys(S.days).filter(d => d >= from && d <= to).sort()){
+      const pay = S.pays[weekStart(d)] || {};
+      for (const w of workers){
+        const ms = SLOTS.map(sl => mark(d, w.id, sl.id)), ot = otOf(d, w.id);
+        const po = w.trade === "steel" ? null : payOf(d, w.id);
+        if (!ms.some(Boolean) && !ot && po == null) continue;
+        const steel = w.trade === "steel", t = slotsFor(d).filter(sl => mark(d, w.id, sl.id)?.s === "in").length;
+        const li = lateInfo(w, d, ms[0]), dayPay = steel ? 0 : r2((po != null ? po : t/slotsFor(d).length)*rate(w)), waived = li && !!pay.waived?.[w.id+"_"+d];
+        att.push({"Date":d, "Day":DOW[parseYmd(d).getDay()], "Worker":w.name, "Nickname":w.nick||"", "Trade":TRADES[w.trade].label,
+          "Morning":slotTxt(ms[0]), "Afternoon":steel ? "" : slotTxt(ms[1]), "Closing":steel ? "" : slotTxt(ms[2]),
+          "Minutes late":li ? li.min : "", "Late deduction (GHS)":li ? Math.min(li.ded, dayPay) : "", "Deduction waived":li ? (waived ? "Yes" : "No") : "",
+          "Pay set by hand":po != null ? payTxt(po) : "", "Day pay (GHS)":steel ? "" : dayPay, "Overtime hours":ot || "", "Overtime pay (GHS)":ot ? r2(ot*s.otRate) : ""});
+      }
+    }
+    // Weekly pay and payments
+    const weeks = new Set(); for (let d = parseYmd(weekStart(from)); ymd(d) <= to; d = addDays(d, 7)) weeks.add(ymd(d));
+    const pays = [];
+    for (const ws of [...weeks].sort()){
+      const W = weekData(ws);
+      for (const r of W.rows){ if (!r.net && !r.paid) continue;
+        pays.push({"Week starting":ws, "Worker":r.w.name, "Nickname":r.w.nick||"", "Trade":TRADES[r.w.trade].label, "Days worked":r2(r.sixths/6),
+          "Day rate (GHS)":rate(r.w), "Wages (GHS)":r.gross, "Late deductions (GHS)":r.ded, "Overtime hours":r.otH, "Overtime pay (GHS)":r.otPay,
+          "Curing pay (GHS)":r.curePay || "", "Curing deductions (GHS)":r.cureDed || "",
+          "Amount due (GHS)":r.net, "Amount paid (GHS)":r.paid ? r.paid.amount : "", "Paid by":r.paid ? METHODS[r.paid.method] : "",
+          "Paid on":r.paid ? ymd(new Date(r.paid.at))+" "+hm(new Date(r.paid.at)) : "", "Reference":r.paid?.ref || "", "Paid to":r.paid?.to || ""}); }
+      const mp = W.pay.paid?.machines;
+      if (W.machineTotal || mp) pays.push({"Week starting":ws, "Worker":"Steel machines", "Nickname":"", "Trade":W.machines.map(x => x.m.short+" "+x.used.length+(x.used.length === 1 ? " day" : " days")).join(", "),
+        "Days worked":"", "Day rate (GHS)":"", "Wages (GHS)":W.machineTotal, "Late deductions (GHS)":"", "Overtime hours":"", "Overtime pay (GHS)":"",
+        "Curing pay (GHS)":"", "Curing deductions (GHS)":"",
+        "Amount due (GHS)":W.machineTotal, "Amount paid (GHS)":mp ? mp.amount : "", "Paid by":mp ? METHODS[mp.method] : "",
+        "Paid on":mp ? ymd(new Date(mp.at))+" "+hm(new Date(mp.at)) : "", "Reference":mp?.ref || "", "Paid to":mp?.to || ""});
+    }
+    const mach = Object.keys(S.days).filter(d => d >= from && d <= to && MACHINES.some(m => machineAmt(d, m.id) > 0)).sort()
+      .map(d => ({"Date":d, "Day":DOW[parseYmd(d).getDay()], ...Object.fromEntries(MACHINES.map(m => [m.label+" (GHS)", machineAmt(d, m.id) || ""]))}));
+    const staff = workers.map(w => ({"Name":w.name, "Nickname":w.nick||"", "Trade":TRADES[w.trade].label, "Day rate (GHS)":w.trade==="steel" ? "" : rate(w),
+      "Phone":w.phone||"", "MoMo number":w.momo||"", "MoMo name":w.momoName||"", "On site":w.active===false ? "No" : "Yes", "ID photo saved":w.idPhoto ? "Yes" : "No"}));
+
+    const wb = XLSX.utils.book_new();
+    const add = (rows, name, empty) => { const sh = rows.length ? XLSX.utils.json_to_sheet(rows) : XLSX.utils.aoa_to_sheet([[empty]]);
+      if (rows.length) sh["!cols"] = Object.keys(rows[0]).map(k => ({wch:Math.max(k.length, ...rows.map(r => String(r[k]).length)) + 2}));
+      XLSX.utils.book_append_sheet(wb, sh, name); };
+    add(pays, "Weekly pay", "No pay weeks in this range.");
+    add(att, "Attendance", "No attendance in this range.");
+    add(mach, "Machines", "No steel machine days in this range.");
+    // A week's backup holds what that payday paid, so a Sunday before it is in (it's paid with this week).
+    const cureIn = d => range === "week" ? payWeekOf(d) === from : d >= from && d <= to;
+    const cure = [], perDay = {};
+    for (const [id, p] of livePours()){
+      const wn = S.workers[p.worker]?.name || "";
+      for (const d of cureDays(p)) if (cureIn(d) && d <= today){
+        const row = perDay[p.worker+"|"+d] || (perDay[p.worker+"|"+d] = {"Date":d, "Day":DOW[parseYmd(d).getDay()], "Paid with week of":payWeekOf(d), "Pour":"", "Curing by":wn, "What":"Curing day", "Amount (GHS)":0, "Waived":""});
+        row["Pour"] = row["Pour"] ? row["Pour"]+", "+p.what : p.what;
+        row["Amount (GHS)"] = Math.max(row["Amount (GHS)"], Number(p.rate) || 0);
+      }
+      for (const [key, x] of drySightings(p)) if (cureIn(x.date)){
+        const off = !!S.pays[payWeekOf(x.date)]?.waived?.["dry_"+id+"_"+key];
+        cure.push({"Date":x.date, "Day":DOW[parseYmd(x.date).getDay()], "Paid with week of":payWeekOf(x.date), "Pour":p.what, "Curing by":wn, "What":"Found dry"+(x.at ? " at "+hm(new Date(x.at)) : ""), "Amount (GHS)":-(Number(x.amount) || 0), "Waived":off ? "Yes" : "No"});
+      }
+    }
+    cure.push(...Object.values(perDay));
+    cure.sort((a, b) => a.Date.localeCompare(b.Date));
+    add(cure, "Curing", "No curing in this range.");
+    // Pour checklists: every check of each pour started or poured in the range, ticked or not.
+    const checks = [];
+    for (const [, p] of Object.entries(S.pours).filter(([, p]) => p && !p.deleted && p.check)){
+      const day = p.poured || p.planned || "";
+      if (range !== "all" && !(day >= from && day <= to)) continue;
+      for (const [, x] of checkItems(p)) checks.push({"Pour":p.what, "Poured on":p.poured || "Not poured yet", "Checklist":p.check.name || "", "Check":x.text,
+        "Checked":x.ok ? "Yes" : "No", "When checked":x.ok && x.at ? ymd(new Date(x.at))+" "+hm(new Date(x.at)) : ""});
+    }
+    add(checks, "Pour checks", "No pour checklists in this range.");
+    add(staff, "Workers", "No workers yet.");
+    const buf = XLSX.write(wb, {type:"array", bookType:"xlsx"});
+    await S.downloads.save({filename:"site-roll-call-"+label+".xlsx", data:buf});
+    toast("Backup saved"); S.exportOpen = false;
+  } catch(err){
+    if (err?.code !== "declined") toast(err?.code === "rate_limited" ? "A save is already open. Finish that first." : "Export failed: "+(err?.message || "try again"));
+  }
+  S.exporting = false; render();
+}
+
+function copyReport(){
+  const W = weekData(S.week);
+  const lines = ["Site wages, week "+weekLabel(S.week), ""];
+  for (const r of W.rows){ if (!r.net && !r.paid) continue;
+    let l = `${r.w.name}${r.w.nick ? " “"+r.w.nick+"”" : ""} (${TRADES[r.w.trade].label}): ${daysTxt(r.sixths)} = ${ghs(r.gross)}`;
+    if (r.ded) l += ` − late ${ghs(r.ded)}`;
+    if (r.otH) l += ` + overtime ${hrs(r.otH)} ${ghs(r.otPay)}`;
+    if (r.curePay) l += ` + curing ${r.cure.days.length} ${r.cure.days.length === 1 ? "day" : "days"} ${ghs(r.curePay)}`;
+    if (r.cureDed) l += ` − found dry ${r.cure.fines.filter(f => !f.off).length}× ${ghs(r.cureDed)}`;
+    if (r.ded || r.otH || r.curePay || r.cureDed) l += ` = ${ghs(r.net)}`;
+    if (r.paid) l += ` · PAID ${ghs(r.paid.amount)} ${METHODS[r.paid.method]}`;
+    lines.push(l); }
+  if (W.machineTotal || W.pay.paid?.machines){
+    let l = "Steel machines: "+(W.machines.filter(x => x.used.length).map(x => x.m.short.toLowerCase()+" "+x.used.length+(x.used.length === 1 ? " day" : " days")+" "+ghs(x.total)).join(", ") || "none used");
+    const p = W.pay.paid?.machines; if (p) l += " · PAID "+ghs(p.amount)+" "+METHODS[p.method]+(p.to ? " to "+p.to : "");
+    lines.push(l); }
+  lines.push("", "Total due: "+ghs(W.due), "Paid: "+ghs(W.paidTotal));
+  const txt = lines.join("\n");
+  const fallback = () => { const ta = document.createElement("textarea"); ta.value = txt; ta.className = "field"; ta.style.height = "200px";
+    ta.id = "copybox"; const old = document.getElementById("copybox"); old && old.remove();
+    document.querySelector(".actions").after(ta); ta.select(); toast("Select all and copy the text below."); };
+  try { navigator.clipboard.writeText(txt).then(() => toast("Report copied. Paste it into WhatsApp."), fallback); } catch(e){ fallback(); }
+}
+
+let toastT;
+function toast(msg){ const t = document.getElementById("toast"); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 2600); }
+
+/* ---------- background updates: never redraw under a finger ---------- */
+let touching = false, lastTouch = 0, softTimer = null;
+const touchOn = () => { touching = true; lastTouch = Date.now(); }, touchOff = () => { touching = false; lastTouch = Date.now(); };
+document.addEventListener("pointerdown", touchOn, {capture:true, passive:true});
+document.addEventListener("pointerup", touchOff, {capture:true, passive:true});
+document.addEventListener("pointercancel", touchOff, {capture:true, passive:true});
+function softRender(){
+  clearTimeout(softTimer);
+  const wait = touching ? 250 : 600 - (Date.now() - lastTouch);
+  if (wait > 0){ softTimer = setTimeout(softRender, wait); return; }
+  render();
+}
+
+/* ---------- boot ---------- */
+render();
+(async () => {
+  for (let i = 0; i < 60 && !window.claude?.use; i++) await new Promise(r => setTimeout(r, 100));
+  let db = null; try { db = window.claude?.use ? await window.claude.use("db") : null; } catch(e){}
+  if (!db){ S.status = "nodb"; return render(); }
+  S.db = db;
+  // In the Lexington app: what this login may open (sent with the data).
+  const me = window.__rcMe;
+  if (me){ const has = x => (me.sections || []).includes(x);
+    S.inApp = true; S.can = {rollcall:has("rollcall"), payday:has("payday"), workers:has("workers")}; if (!tabAllowed(S.tab)) S.tab = firstTab(); }
+  // The app's home page opens a tab straight away: /todo/rollcall#week is Payday.
+  const asked = location.hash.slice(1);
+  if (["today", "week", "workers"].includes(asked) && tabAllowed(asked)) S.tab = asked;
+  window.claude.use("user").then(async u => { if (u && (await u.can("data.write")) === false){ S.readOnly = true; render(); } }, () => {});
+  window.claude.use("downloads").then(d => { S.downloads = d; render(); }, () => {});
+  window.claude.use("assets").then(a => { S.assets = a; render(); }, () => {});
+  const loaded = new Set(), done = k => { loaded.add(k);
+    if (S.status !== "loading") return softRender();
+    if (loaded.size >= 6){ S.status = "ready"; S.slot = autoSlot(); render(); } };
+  const onErr = e => toast("Connection problem: "+(e?.message||e?.code));
+  db.doc("config/settings").onSnapshot(s => {
+    const d = s.exists ? s.data() : {};
+    S.settings = {...DEF, ...d, rates:{...DEF.rates, ...(d.rates||{})}}; done("settings"); }, onErr);
+  db.collection("workers").onSnapshot(q => { S.workers = {}; q.docs.forEach(d => S.workers[d.id] = {id:d.id, ...d.data()}); if (!q.metadata?.hasPendingWrites) SRV.workers = Object.fromEntries(Object.entries(S.workers).map(([k, w]) => [k, {...w}])); withPending("workers", S.workers); done("workers"); }, onErr);
+  db.collection("days").onSnapshot(q => { S.days = {}; q.docs.forEach(d => S.days[d.id] = d.data()); if (!q.metadata?.hasPendingWrites) SRV.days = {...S.days}; withPending("days", S.days); done("days"); }, onErr);
+  db.collection("pours").onSnapshot(q => { S.pours = {}; q.docs.forEach(d => S.pours[d.id] = {id:d.id, ...d.data()}); if (!q.metadata?.hasPendingWrites) SRV.pours = Object.fromEntries(Object.entries(S.pours).map(([k, p]) => [k, {...p}])); withPending("pours", S.pours); done("pours"); }, onErr);
+  db.collection("checklists").onSnapshot(q => { S.checklists = {}; q.docs.forEach(d => S.checklists[d.id] = {id:d.id, ...d.data()}); if (!q.metadata?.hasPendingWrites) SRV.checklists = Object.fromEntries(Object.entries(S.checklists).map(([k, t]) => [k, {...t}])); withPending("checklists", S.checklists);
+    if (!q.docs.length) seedChecklists(); done("checklists"); }, onErr);
+  db.collection("payments").onSnapshot(q => { S.pays = {}; q.docs.forEach(d => S.pays[d.id] = d.data()); if (!q.metadata?.hasPendingWrites) SRV.pays = {...S.pays}; withPending("payments", S.pays); done("payments"); }, onErr);
+})();
+</script>
+
+</body></html>

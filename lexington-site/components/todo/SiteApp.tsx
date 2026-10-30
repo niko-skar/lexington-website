@@ -5,12 +5,13 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExter
 import type { AlertsData } from "@/lib/alerts/shared";
 import type { Expense } from "@/lib/expenses/shared";
 import { needsReorder, type StoreData, type StoreItem } from "@/lib/store/shared";
-import { sectionHref, SECTIONS, type Section, type TodoList, type TodoMe, type TodoTask } from "@/lib/todo/shared";
+import { PAGE_SECTIONS, sectionHref, type PageSection, type TodoList, type TodoMe, type TodoTask } from "@/lib/todo/shared";
 import { AlertsApp } from "./AlertsApp";
 import { send, startPolling } from "./api";
+import { Dashboard } from "./Dashboard";
 import { ExpensesApp } from "./ExpensesApp";
 import { usePhoneAlerts } from "./PhoneAlerts";
-import { appClass, SiteNav } from "./SiteChrome";
+import { appClass, SiteNav, type View } from "./SiteChrome";
 import { StoreApp } from "./StoreApp";
 import { TodoApp } from "./TodoApp";
 import styles from "./Todo.module.css";
@@ -24,18 +25,22 @@ export type { StoreData };
 export type ExpensesData = { expenses: Expense[]; items: StoreItem[] };
 export type SiteData = { todo?: TodoTask[]; store?: StoreData; expenses?: ExpensesData; alerts?: AlertsData };
 
-const sectionFrom = (path: string): Section | null =>
+// Since 30 Oct 2026 the app opens on its home page (/todo) and the to-do list is /todo/jobs.
+const sectionFrom = (path: string): View | null =>
   path.startsWith("/todo/store")
     ? "store"
     : path.startsWith("/todo/expenses")
       ? "expenses"
       : path.startsWith("/todo/alerts")
         ? "alerts"
-        : path.startsWith("/todo")
+        : path.startsWith("/todo/jobs")
           ? "todo"
-          : null;
+          : path === "/todo" || path === "/todo/"
+            ? "home"
+            : null;
+const hrefOf = (view: View) => (view === "home" ? "/todo" : sectionHref(view));
 
-async function load(section: Section): Promise<SiteData> {
+async function load(section: PageSection): Promise<SiteData> {
   const get = async (url: string) => {
     const response = await fetch(url, { cache: "no-store" });
     if (!response.ok) throw new Error(String(response.status));
@@ -145,7 +150,7 @@ export function SiteApp({
   startedOffline,
 }: {
   me: TodoMe;
-  section: Section;
+  section: View;
   initial: SiteData;
   initialList?: TodoList;
   /** Opened from a phone alert: the alert to show. */
@@ -158,13 +163,13 @@ export function SiteApp({
   seenAlert?: string;
   startedOffline: boolean;
 }) {
-  const [section, setSection] = useState<Section>(first);
-  const [opened, setOpened] = useState<Section[]>([first]);
+  const [section, setSection] = useState<View>(first);
+  const [opened, setOpened] = useState<View[]>([first]);
   const [data, setData] = useState<SiteData>(initial);
   const [reorders, setReorders] = useState(() => (initial.store ? initial.store.items.filter(needsReorder).length : 0));
   const [unread, setUnread] = useState(() => initial.alerts?.unread ?? 0);
   const current = useRef(first);
-  const scrollAt = useRef<Partial<Record<Section, number>>>({});
+  const scrollAt = useRef<Partial<Record<View, number>>>({});
   const hasAlerts = me.sections.includes("alerts");
   // This phone's alerts, for whoever is signed in (the office's, or the foreman's new jobs).
   const phone = usePhoneAlerts(me);
@@ -182,7 +187,7 @@ export function SiteApp({
   useEffect(() => {
     let live = true;
     const timer = setTimeout(async () => {
-      for (const s of SECTIONS) {
+      for (const s of PAGE_SECTIONS) {
         if (!live || s === first || !me.sections.includes(s)) continue;
         try {
           const loaded = await load(s);
@@ -204,8 +209,8 @@ export function SiteApp({
   }, []);
 
   const go = useCallback(
-    (next: Section, push = true) => {
-      if (!me.sections.includes(next)) return;
+    (next: View, push = true) => {
+      if (next !== "home" && !me.sections.includes(next)) return;
       if (next === current.current) {
         window.scrollTo({ top: 0, behavior: "smooth" });
         return;
@@ -214,7 +219,7 @@ export function SiteApp({
       current.current = next;
       setSection(next);
       setOpened((o) => (o.includes(next) ? o : [...o, next]));
-      if (push) window.history.pushState(null, "", sectionHref(next));
+      if (push) window.history.pushState(null, "", hrefOf(next));
     },
     [me.sections]
   );
@@ -258,11 +263,16 @@ export function SiteApp({
     (unread > 0 ? nav.setAppBadge?.(unread) : nav.clearAppBadge?.())?.catch(() => {});
   }, [hasAlerts, unread]);
 
-  const show = (s: Section) => opened.includes(s) && me.sections.includes(s);
+  const show = (s: View) => opened.includes(s) && (s === "home" || me.sections.includes(s));
 
   return (
     <div className={appClass(me)}>
       <InstallHint />
+      {show("home") && (
+        <div hidden={section !== "home"}>
+          <Dashboard me={me} active={section === "home"} onGo={go} unread={unread} />
+        </div>
+      )}
       {show("todo") && (
         <div hidden={section !== "todo"}>
           <TodoApp

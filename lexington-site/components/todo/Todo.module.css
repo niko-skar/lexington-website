@@ -977,6 +977,16 @@ select.input {
   width: 24px;
   height: 24px;
 }
+/* Six on the bar (the office: Home to Roll call): smaller words so "Expenses" still fits a phone. */
+.navMany {
+  gap: 2px;
+}
+.navMany .navItem,
+.navMany .navOn {
+  padding: 6px 1px 4px;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+}
 .navBadge {
   position: absolute;
   top: 2px;
