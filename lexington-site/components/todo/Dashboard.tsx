@@ -39,6 +39,7 @@ function rollcallTile(r: NonNullable<DashboardData["rollcall"]>): Tile {
 
 function tiles(d: DashboardData, unread: number): Tile[] {
   const out: Tile[] = [];
+  if (d.rollcallMoving) out.push({ section: "rollcall", name: "Roll call", big: "Moving in", small: "on Sunday morning; until then, the Site Roll Call page" });
   if (d.rollcall) out.push(rollcallTile(d.rollcall));
   if (d.payday) {
     const p = d.payday;

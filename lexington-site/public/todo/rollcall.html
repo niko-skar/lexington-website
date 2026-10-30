@@ -436,7 +436,8 @@ function render(){
   const f = document.activeElement, fid = f && f.id, sel = fid && f.selectionStart;
   document.querySelectorAll("#tabs button").forEach(b => { b.classList.toggle("on", b.dataset.v === S.tab); b.hidden = !tabAllowed(b.dataset.v); });
   if (S.status === "loading") app.innerHTML = `<p class="loading">Loading your site register…</p>`;
-  else if (S.status === "nodb") app.innerHTML = window.__rcShim ? `<p class="loading">No signal: the roll call needs data the first time it opens on this phone. <button class="linkbtn" onclick="location.reload()">Try again</button></p>`
+  else if (S.status === "nodb") app.innerHTML = window.__rcNote ? `<p class="loading">${esc(window.__rcNote)}</p>`
+    : window.__rcShim ? `<p class="loading">No signal: the roll call needs data the first time it opens on this phone. <button class="linkbtn" onclick="location.reload()">Try again</button></p>`
     : `<p class="loading">Saving isn't available in this view. Open this page from your Claude account, signed in, to record attendance.</p>`;
   else app.innerHTML = (S.readOnly ? `<div class="ro" role="alert"><b>View only: nothing you tap here is saved.</b> This account can see the register but can't mark attendance or record payments. Ask the owner to give you edit access, then reload the page.</div>` : "")
     + (S.saveError ? `<div class="ro warn" role="alert">${esc(S.saveError)} <button class="linkbtn" data-act="dismisserr">OK</button></div>` : "")

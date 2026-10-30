@@ -102,6 +102,11 @@
     let first = null;
     try {
       const who = await getJson("/api/rollcall?me=1");
+      // Not moved in yet: the page shows the note instead of an empty register.
+      if (who.note) {
+        window.__rcNote = who.note;
+        return settle.reject(new Error("not moved in yet"));
+      }
       me = who.me;
       window.__rcMe = me;
       window.__rcCdn = who.cdn;

@@ -1,4 +1,4 @@
-import { photoBase, readRollcall, requireRollcallUser, writeRollcall } from "@/lib/rollcall/server";
+import { photoBase, readRollcall, requireRollcallUser, rollcallMoved, writeRollcall } from "@/lib/rollcall/server";
 import { ROLLCALL_PARTS } from "@/lib/rollcall/shared";
 import { errorResponse, readJson } from "@/lib/todo/server";
 
@@ -17,7 +17,11 @@ export async function GET(request: Request): Promise<Response> {
     const headers = { "Cache-Control": "no-store" };
     if (params.get("me") === "1") {
       const sections = me.sections.filter((s) => (ROLLCALL_PARTS as readonly string[]).includes(s));
-      return Response.json({ me: { id: me.id, name: me.name, kind: me.kind, sections }, cdn: photoBase() }, { headers });
+      // Not moved in yet: a note instead of an empty register (the Claude page is still the real one).
+      const note = (await rollcallMoved())
+        ? null
+        : "The roll call is moving into this app on Sunday morning. Until then, keep marking and paying on the Site Roll Call page.";
+      return Response.json({ me: { id: me.id, name: me.name, kind: me.kind, sections }, cdn: photoBase(), note }, { headers });
     }
     const since = params.get("since");
     if (since && !ISO_RE.test(since)) return Response.json({ error: "Bad time." }, { status: 400 });

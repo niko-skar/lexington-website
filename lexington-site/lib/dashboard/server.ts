@@ -27,6 +27,8 @@ export interface DashboardData {
   rollcall?: { morning: SlotCount; afternoon: SlotCount; closing: SlotCount; onBooks: number; curing: number; checklists: number };
   payday?: { weekStart: string; paid: number; worked: number };
   workers?: { active: number };
+  /** The roll call isn't moved in from its Claude page yet (one tile says so instead of three empty ones). */
+  rollcallMoving?: boolean;
 }
 
 type Obj = Record<string, unknown>;
@@ -72,7 +74,7 @@ async function expensesPart(today: string) {
   ).then((r) => ({ monthOut: r.monthOut ?? 0, monthCount: r.monthCount }));
 }
 
-async function rollcallParts(me: TodoMe, today: string) {
+async function rollcallParts(me: TodoMe, today: string): Promise<Pick<DashboardData, "rollcall" | "payday" | "workers" | "rollcallMoving">> {
   const can = rollcallAccess(me.sections);
   const week = mondayOf(today);
   const days = [0, 1, 2, 3, 4, 5].map((i) => addDays(week, i));
@@ -82,7 +84,8 @@ async function rollcallParts(me: TodoMe, today: string) {
     { prefix: ROLLCALL_PREFIX, ids: [...days, today].map((d) => id("days", d)).concat(id("payments", week)) }
   );
   const docs = rows.map((r) => ({ ...r, data: JSON.parse(r.json) as Obj }));
-  const workers = docs.filter((d) => d.col === "workers").map((d) => ({ id: d.key, active: d.data.active, trade: d.data.trade }));
+  if (!docs.some((d) => d.col === "workers")) return { rollcallMoving: true };
+  const workers =docs.filter((d) => d.col === "workers").map((d) => ({ id: d.key, active: d.data.active, trade: d.data.trade }));
   const active = workers.filter((w) => w.active !== false);
   const steel = new Set(workers.filter((w) => w.trade === "steel").map((w) => w.id));
   const marksOn = (day: string) => {
@@ -111,7 +114,7 @@ async function rollcallParts(me: TodoMe, today: string) {
     return p.start <= today && today <= end;
   }).length;
 
-  const out: Pick<DashboardData, "rollcall" | "payday" | "workers"> = {};
+  const out: Pick<DashboardData, "rollcall" | "payday" | "workers" | "rollcallMoving"> = {};
   if (can.rollcall) {
     out.rollcall = {
       morning: slot("m"),

@@ -187,5 +187,14 @@ export async function writeRollcall(me: TodoMe, path: unknown, op: "set" | "upda
   return doc;
 }
 
+/**
+ * Has the roll call been moved in yet (scripts/import-rollcall.ts)? Until then the app shows a note instead
+ * of an empty register, so nobody marks in two places while the Claude page is still the real one.
+ */
+export async function rollcallMoved(): Promise<boolean> {
+  const n = await getBuyersClient().fetch<number>(`count(*[_type == "rollcallDoc" && string::startsWith(_id, $prefix)][0...1])`, { prefix: ROLLCALL_PREFIX });
+  return n > 0;
+}
+
 /** The images store's address for this dataset (the page builds a photo's address from its id). */
 export const photoBase = () => `https://cdn.sanity.io/images/${process.env.NEXT_PUBLIC_SANITY_PROJECT_ID}/${process.env.NEXT_PUBLIC_SANITY_BUYERS_DATASET}/`;
