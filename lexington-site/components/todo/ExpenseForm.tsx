@@ -32,6 +32,8 @@ import styles from "./Todo.module.css";
 // and the list below it.
 
 type Receipt = { id: string; url: string; type: string };
+/** A new expense started from the bank's debit text (lib/expenses/bankDebit.ts): what the text gives, and a line saying so. */
+export type ExpensePrefill = { debitId: string; date: string; amount: number; method: string | null; supplier: string; description: string; note: string };
 const RECEIPT_CAMERA = "exp-receipt-camera";
 const RECEIPT_FILE = "exp-receipt-file";
 
@@ -110,9 +112,12 @@ export function ExpenseForm({
   onBusy,
   onOpenReceipt,
   focusAmount,
+  prefill,
 }: {
   /** The entry being changed; null for a new one. */
   editing: Expense | null;
+  /** A new one made from a bank debit waiting in the app. */
+  prefill?: ExpensePrefill | null;
   expenses: Expense[];
   items: StoreItem[];
   onSaved: (expense: Expense, wasEdit: boolean) => void;
@@ -124,12 +129,13 @@ export function ExpenseForm({
   focusAmount?: boolean;
 }) {
   const x = editing;
+  const p = x ? null : (prefill ?? null);
   const [kind, setKind] = useState<"expense" | "inflow">(x?.kind ?? "expense");
   const [forWho, setForWho] = useState<ForWho>(x?.forWho ?? "Site");
-  const [date, setDate] = useState(() => x?.date ?? todayISO());
-  const [dateTouched, setDateTouched] = useState(!!x);
+  const [date, setDate] = useState(() => x?.date ?? p?.date ?? todayISO());
+  const [dateTouched, setDateTouched] = useState(!!x || !!p);
   const [dateOpen, setDateOpen] = useState(false);
-  const [amount, setAmount] = useState(x ? (x.amount || 0).toFixed(2) : "");
+  const [amount, setAmount] = useState(x ? (x.amount || 0).toFixed(2) : p ? p.amount.toFixed(2) : "");
   const [vat, setVat] = useState(x?.vat ?? false);
   const [vatRate, setVatRate] = useState(String(x?.vatRate ?? VAT_RATE));
   const [category, setCategory] = useState<string | null>(x?.category ?? null);
@@ -137,10 +143,10 @@ export function ExpenseForm({
   const [qty, setQty] = useState(x?.qty || 1);
   const [toStoreChoice, setToStoreChoice] = useState<boolean | null>(x?.category === "Material" ? x.toStore : null);
   const [unit, setUnit] = useState("pcs");
-  const [supplier, setSupplier] = useState(x?.supplier ?? "");
-  const [description, setDescription] = useState(x?.description ?? "");
+  const [supplier, setSupplier] = useState(x?.supplier ?? p?.supplier ?? "");
+  const [description, setDescription] = useState(x?.description ?? p?.description ?? "");
   const [floor, setFloor] = useState<string | null>(x?.floor ?? null);
-  const [method, setMethod] = useState<string | null>(x?.method ?? null);
+  const [method, setMethod] = useState<string | null>(x?.method ?? p?.method ?? null);
   const [kept, setKept] = useState<Receipt | null>(x?.receiptId && x.receiptUrl ? { id: x.receiptId, url: x.receiptUrl, type: x.receiptType ?? "image/jpeg" } : null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -358,6 +364,8 @@ export function ExpenseForm({
         toStore,
         unit: unit.trim() || "pcs",
         receiptId,
+        // Made from a bank debit: that debit is done once this is saved.
+        ...(p ? { bankDebitId: p.debitId } : {}),
       };
       const { expense } = x
         ? await send<{ expense: Expense }>(`/api/expenses/${x.id}`, "PATCH", body)
@@ -439,6 +447,11 @@ export function ExpenseForm({
           ))}
         </div>
 
+        {p && (
+          <p className={site.storeNote} role="status">
+            {p.note}
+          </p>
+        )}
         {!x && !receipt.slot && !kept && (
           <div className={site.receiptFirst}>
             <span>Have the receipt? Start with it: the app reads it and fills in the rest.</span>
@@ -746,6 +759,11 @@ export function ExpenseForm({
               {armed ? "Tap again to delete" : "Delete"}
             </button>
           </div>
+        )}
+        {p && (
+          <button type="button" className={styles.sheetCancel} onClick={onCancel} disabled={saving}>
+            Not now: keep it waiting
+          </button>
         )}
       </fieldset>
     </form>

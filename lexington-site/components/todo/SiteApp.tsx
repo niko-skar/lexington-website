@@ -4,7 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExter
 
 import type { AlertsData } from "@/lib/alerts/shared";
 import type { ConcreteData } from "@/lib/concrete/shared";
-import type { Expense } from "@/lib/expenses/shared";
+import type { BankDebit, Expense } from "@/lib/expenses/shared";
 import { needsReorder, type StoreData, type StoreItem } from "@/lib/store/shared";
 import { PAGE_SECTIONS, sectionHref, type PageSection, type TodoList, type TodoMe, type TodoTask } from "@/lib/todo/shared";
 import { AlertsApp } from "./AlertsApp";
@@ -24,7 +24,7 @@ import styles from "./Todo.module.css";
 // after the app opens, so the first tap on them is instant too. The address bar follows along.
 
 export type { StoreData };
-export type ExpensesData = { expenses: Expense[]; items: StoreItem[] };
+export type ExpensesData = { expenses: Expense[]; items: StoreItem[]; pending?: BankDebit[] };
 export type SiteData = { todo?: TodoTask[]; store?: StoreData; expenses?: ExpensesData; alerts?: AlertsData; concrete?: ConcreteData };
 
 // Since 30 Oct 2026 the app opens on its home page (/todo) and the to-do list is /todo/jobs.
@@ -55,7 +55,7 @@ async function load(section: PageSection): Promise<SiteData> {
   if (section === "alerts") return { alerts: await get("/api/alerts") };
   if (section === "concrete") return { concrete: await get("/api/concrete") };
   const [x, s] = await Promise.all([get("/api/expenses"), get("/api/store")]);
-  return { expenses: { expenses: x.expenses, items: s.items } };
+  return { expenses: { expenses: x.expenses, items: s.items, pending: x.pending } };
 }
 
 /* ---------- put it on the home screen ---------- */
@@ -152,6 +152,7 @@ export function SiteApp({
   openJob,
   openEntry,
   openTruck,
+  openDebit,
   seenAlert,
   startedOffline,
 }: {
@@ -167,6 +168,8 @@ export function SiteApp({
   openEntry?: string;
   /** Opened from a phone alert about a concrete truck: the truck to show. */
   openTruck?: string;
+  /** Opened from a bank debit's phone alert: the debit to complete. */
+  openDebit?: string;
   /** ...and (the office) the alert it came with, which has now been seen. */
   seenAlert?: string;
   startedOffline: boolean;
@@ -314,6 +317,7 @@ export function SiteApp({
             active={section === "expenses"}
             initial={data.expenses ?? null}
             openEntry={openEntry}
+            openDebit={openDebit}
             startedOffline={startedOffline && first === "expenses"}
             fresh={first === "expenses"}
           />

@@ -4,7 +4,8 @@ import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { notifyOwner } from "@/lib/alerts/notify";
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
 import { BANK_TEXT_PREFIX, BANK_TEXT_SETTINGS_ID, EXPENSE_PREFIX } from "@/lib/site/ids";
-import type { TodoMe } from "@/lib/todo/shared";
+import { receiveDebit } from "./bankDebit";
+import { accountEnd, BANK_ME, clip, readBankText, tidyAccount, whenText, type BankText } from "./bankParse";
 import { createExpense } from "./server";
 import { money, todayISO, type BankNote } from "./shared";
 
@@ -13,29 +14,17 @@ import { money, todayISO, type BankNote } from "./shared";
 // that weren't from Leo." Leo pays the site's money into Niko's own account (the company has no
 // bank account yet), and each transfer used to be typed by hand a few minutes after the bank's text.
 //
-// His iPhone passes on every text that says "Credit Alert" (a Shortcuts automation: Message
-// contains "Credit Alert" -> Get Contents of URL, a POST to the private link below). One reads:
-//   Credit Alert, Amount: GHS45000.0, Acct Num: 1060xxxxxxx13, Date: 28-10-2026 10:39:18,
-//   Narration: ACCOUNT TO ACCOUNT TRANSFER, Current bal:GHS131,723.21.
-// It never says who sent the money, so a credit on his account is booked as money in from Leo, a
+// His iPhone passes on every text from the bank (a Shortcuts automation: Message contains "Acct Num"
+// -> Get Contents of URL, a POST to the private link below; it said "Credit Alert" until the debits
+// came in, 30 Oct 2026). The texts read as in lib/expenses/bankParse.ts.
+// A credit never says who sent the money, so a credit on his account is booked as money in from Leo, a
 // Site entry (every bank credit so far was Leo's): the Google Sheet and QuickBooks take it like a
 // typed one, and his phone buzzes with a way to change it. Typed already (same day, same amount):
 // the text only marks that entry as confirmed. A text counts once however often it arrives, and a
-// credit on another account is never added, only an alert.
+// credit on another account is never added, only an alert. Money out (a "Debit Alert") waits in the
+// expenses for him to complete, and the bank's fees are filed by themselves (lib/expenses/bankDebit.ts).
 
-export type BankTextResult = "added" | "matched" | "already" | "other-account" | "not-credit" | "unreadable";
-
-export interface CreditText {
-  amount: number;
-  /** As the text shows it, lower case: "1060xxxxxxx13". */
-  account: string;
-  /** YYYY-MM-DD */
-  date: string;
-  /** HH:MM, or "" when the text gives no time. */
-  time: string;
-  narration: string;
-  balance: number | null;
-}
+export type BankTextResult = "added" | "matched" | "already" | "other-account" | "not-credit" | "unreadable" | "pending" | "fee";
 
 interface LastText {
   receivedAt: string;
@@ -56,44 +45,6 @@ export interface BankTextStatus {
   link: string;
   accounts: string[];
   last: LastText | null;
-}
-
-/** Who a text's entry is "entered by" (the sheet shows it). */
-const BANK_ME: TodoMe = { kind: "admin", id: "office", name: "Bank text", sections: ["expenses"] };
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
-const pad = (n: number | string) => String(n).padStart(2, "0");
-const clip = (s: string, max: number) => (s.length > max ? `${s.slice(0, max - 1)}…` : s);
-const tidyAccount = (s: string) => s.trim().toLowerCase().replace(/[*•]/g, "x");
-const accountEnd = (account: string) => account.replace(/^.*x/, "") || account.slice(-4);
-const whenText = (c: Pick<CreditText, "date" | "time">) =>
-  `${Number(c.date.slice(8))} ${MONTHS[Number(c.date.slice(5, 7)) - 1]}${c.time ? `, ${c.time}` : ""}`;
-const toNumber = (s: string) => Number(s.replace(/,/g, ""));
-
-/* ---------- reading a text ---------- */
-
-/** The credit in a bank text, or null when it isn't one or can't be read. */
-export function readCreditText(raw: string): CreditText | null {
-  const text = raw.replace(/\s+/g, " ").trim();
-  if (!/credit\s*alert/i.test(text)) return null;
-  const amount = /Amount\s*:\s*GH[S₵¢C]\s*([\d,]+(?:\.\d+)?)/i.exec(text);
-  const account = /Acc(?:oun)?t\.?\s*(?:Num(?:ber)?|No)\.?\s*:\s*([0-9xX*•]{6,24})/i.exec(text);
-  const when = /Date\s*:\s*(\d{1,2})-(\d{1,2})-(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::\d{2})?)?/i.exec(text);
-  if (!amount || !account || !when) return null;
-  const value = Math.round(toNumber(amount[1]) * 100) / 100;
-  const [d, m, y] = [Number(when[1]), Number(when[2]), Number(when[3])];
-  const day = new Date(Date.UTC(y, m - 1, d));
-  if (!(value > 0) || value > 100_000_000 || day.getUTCMonth() !== m - 1 || day.getUTCDate() !== d) return null;
-  const narration = /Narration\s*:\s*(.*?)\s*,\s*(?:Current|Avail)/i.exec(text)?.[1] ?? "";
-  const balance = /(?:Current|Avail\w*)\s*bal\w*\s*:?\s*GH[S₵¢C]\s*(-?[\d,]+(?:\.\d+)?)/i.exec(text);
-  return {
-    amount: value,
-    account: tidyAccount(account[1]),
-    date: `${y}-${pad(m)}-${pad(d)}`,
-    time: when[4] ? `${pad(when[4])}:${when[5]}` : "",
-    narration: clip(narration.trim(), 80),
-    balance: balance ? toNumber(balance[1]) : null,
-  };
 }
 
 /* ---------- the private link ---------- */
@@ -143,11 +94,11 @@ export interface BankTextOutcome {
   result: BankTextResult;
   ref: string | null;
   expenseId: string | null;
-  /** A new entry: the Google Sheet and QuickBooks still have to take it. */
-  added: boolean;
+  /** New entries (money in, a bank fee): the Google Sheet and QuickBooks still have to take them. */
+  filed: string[];
 }
 
-const outcome = (result: BankTextResult, ref: string | null = null, expenseId: string | null = null, added = false): BankTextOutcome => ({ result, ref, expenseId, added });
+const outcome = (result: BankTextResult, ref: string | null = null, expenseId: string | null = null, filed: string[] = []): BankTextOutcome => ({ result, ref, expenseId, filed });
 
 function inWindow(date: string): boolean {
   const from = new Date();
@@ -158,7 +109,7 @@ function inWindow(date: string): boolean {
 }
 
 /** A money in typed already for the same day and amount, not yet tied to a text (Leo's first). */
-async function typedTwin(c: CreditText): Promise<{ id: string; ref: string | null } | null> {
+async function typedTwin(c: BankText): Promise<{ id: string; ref: string | null } | null> {
   const rows = await getBuyersClient().fetch<Array<{ id: string; ref: string | null; supplier: string | null }>>(
     `*[_type == "siteExpense" && string::startsWith(_id, $prefix) && kind == "inflow" && date == $date && amount > $low && amount < $high && !defined(bank)] | order(createdAt asc){ "id": _id, ref, supplier }`,
     { prefix: EXPENSE_PREFIX, date: c.date, low: c.amount - 0.005, high: c.amount + 0.005 }
@@ -177,12 +128,12 @@ export async function receiveBankText(raw: string, { dryRun = false } = {}): Pro
     if (!dryRun) await saveSettings({ last: { receivedAt, ...last } }).catch(() => {});
   };
 
-  // Only credit texts are meant to come (the automation picks them); anything else is dropped unread.
-  if (!/credit\s*alert/i.test(text)) {
+  // Only the bank's credit and debit texts are meant to come (the automation picks them); anything else is dropped unread.
+  if (!/\b(credit|debit)\s*alert/i.test(text)) {
     await remember({ result: "not-credit", ref: null, amount: null });
     return outcome("not-credit");
   }
-  const c = readCreditText(text);
+  const c = readBankText(text);
   if (!c || !inWindow(c.date)) {
     if (!dryRun) {
       await remember({ result: "unreadable", ref: null, amount: c?.amount ?? null });
@@ -191,7 +142,7 @@ export async function receiveBankText(raw: string, { dryRun = false } = {}): Pro
         title: "A bank text couldn't be read",
         lines: [
           c ? `Its date (${whenText(c)} ${c.date.slice(0, 4)}) is too far off, so nothing was added.` : "Your iPhone passed on a bank text the app couldn't read, so nothing was added.",
-          "If it was money in, add it by hand:",
+          "If it was money in or out for the site, add it by hand:",
           `• ${clip(text.replace(/\s+/g, " ").trim(), 300)}`,
         ],
         links: [{ label: "Open the expenses", url: "/todo/expenses" }],
@@ -203,6 +154,25 @@ export async function receiveBankText(raw: string, { dryRun = false } = {}): Pro
 
   const settings = await loadSettings();
   const accounts = (settings.accounts ?? []).map(tidyAccount);
+
+  if (c.direction === "debit") {
+    try {
+      const d = await receiveDebit(c, text, { siteAccount: accounts.length === 0 || accounts.includes(c.account), dryRun });
+      if (d.result !== "already") await remember({ result: d.result, ref: d.ref, amount: c.amount });
+      return outcome(d.result, d.ref, d.expenseId, d.filed);
+    } catch (error) {
+      await remember({ result: "failed", ref: null, amount: c.amount });
+      await notifyOwner({
+        kind: "bank",
+        title: "A bank text couldn't be added",
+        lines: [`${money(c.amount)} out on ${whenText(c)}: something went wrong on our side, so it isn't in the expenses. Add it by hand.`],
+        links: [{ label: "Open the expenses", url: "/todo/expenses" }],
+        urgent: true,
+      });
+      throw error;
+    }
+  }
+
   // No account set yet: the first text's account becomes the one (the live site has Leo's set).
   const ours = accounts.length === 0 || accounts.includes(c.account);
   const textId = BANK_TEXT_PREFIX + createHash("sha256").update([c.account, c.date, c.time, c.amount, c.balance ?? ""].join("|")).digest("hex").slice(0, 12);
@@ -279,7 +249,7 @@ export async function receiveBankText(raw: string, { dryRun = false } = {}): Pro
       open,
       tag: `bank-${expense.id}`,
     });
-    return outcome("added", expense.ref, expense.id, true);
+    return outcome("added", expense.ref, expense.id, [expense.id]);
   } catch (error) {
     // Let it come again (a resend counts), and tell him it's not in.
     await client.delete(textId).catch(() => {});

@@ -67,7 +67,10 @@ const BADGE_WORDS: Partial<Record<NavItem, string>> = { store: "to reorder", ale
 /** Used now and then (Concrete, on pour days): on the bar when there's room, else from the home page's tile. */
 const NOW_AND_THEN: readonly NavItem[] = ["concrete"];
 const navItems = (me: TodoMe): NavItem[] => {
-  const all: NavItem[] = ["home", ...PAGE_SECTIONS.filter((s) => me.sections.includes(s)), ...(opensRollcall(me.sections) ? (["rollcall"] as const) : [])];
+  const parts: NavItem[] = [...PAGE_SECTIONS.filter((s) => me.sections.includes(s)), ...(opensRollcall(me.sections) ? (["rollcall"] as const) : [])];
+  // A login that opens one part only (a storekeeper) has no home page to go back to, so no bar at all.
+  if (parts.length < 2) return parts;
+  const all: NavItem[] = ["home", ...parts];
   return all.length > 6 ? all.filter((item) => !NOW_AND_THEN.includes(item)) : all;
 };
 const navName = (item: NavItem) => (item === "home" ? "Home" : item === "rollcall" ? "Roll call" : sectionName(item));

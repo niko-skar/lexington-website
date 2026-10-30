@@ -5,7 +5,7 @@ import { listConcrete } from "@/lib/concrete/server";
 import { daySummary, truckFlags, trucksOn } from "@/lib/concrete/shared";
 import { rollcallAccess } from "@/lib/rollcall/shared";
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
-import { EXPENSE_PREFIX, ROLLCALL_PREFIX } from "@/lib/site/ids";
+import { BANK_TEXT_PREFIX, EXPENSE_PREFIX, ROLLCALL_PREFIX } from "@/lib/site/ids";
 import { getStore } from "@/lib/store/server";
 import { ghanaDay, needsReorder, stillOut } from "@/lib/store/shared";
 import { listTasks } from "@/lib/todo/server";
@@ -24,7 +24,8 @@ export interface DashboardData {
   today: string;
   todo?: { open: number; urgent: number; doneToday: number };
   store?: { reorders: number; toolsOut: number; opened: string | null; closed: string | null };
-  expenses?: { monthOut: number; monthCount: number };
+  /** Spent on site this month, and the bank's debits waiting to be completed. */
+  expenses?: { monthOut: number; monthCount: number; fromBank: number };
   alerts?: { unread: number };
   rollcall?: { morning: SlotCount; afternoon: SlotCount; closing: SlotCount; onBooks: number; curing: number; checklists: number };
   payday?: { weekStart: string; paid: number; worked: number };
@@ -69,13 +70,14 @@ async function storePart(me: TodoMe, today: string) {
 
 async function expensesPart(today: string) {
   const from = `${today.slice(0, 7)}-01`;
-  return getBuyersClient().fetch<{ monthOut: number | null; monthCount: number }>(
+  return getBuyersClient().fetch<{ monthOut: number | null; monthCount: number; fromBank: number }>(
     `{
+      "fromBank": count(*[_type == "bankText" && string::startsWith(_id, $bank) && direction == "debit" && result == "pending"]),
       "monthOut": math::sum(*[_type == "siteExpense" && string::startsWith(_id, $prefix) && coalesce(kind, "expense") == "expense" && coalesce(forWho, "Site") == "Site" && date >= $from].amount),
       "monthCount": count(*[_type == "siteExpense" && string::startsWith(_id, $prefix) && coalesce(kind, "expense") == "expense" && coalesce(forWho, "Site") == "Site" && date >= $from])
     }`,
-    { prefix: EXPENSE_PREFIX, from }
-  ).then((r) => ({ monthOut: r.monthOut ?? 0, monthCount: r.monthCount }));
+    { prefix: EXPENSE_PREFIX, bank: BANK_TEXT_PREFIX, from }
+  ).then((r) => ({ monthOut: r.monthOut ?? 0, monthCount: r.monthCount, fromBank: r.fromBank }));
 }
 
 async function rollcallParts(me: TodoMe, today: string): Promise<Pick<DashboardData, "rollcall" | "payday" | "workers" | "rollcallMoving">> {

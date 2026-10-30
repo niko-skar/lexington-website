@@ -73,7 +73,16 @@ function tiles(d: DashboardData, unread: number): Tile[] {
         : { section: "concrete", name: "Concrete", big: "No trucks today", small: c.day ? `last pour ${shortDay(c.day)}: ${load}` : "photo each waybill on pour days" }
     );
   }
-  if (d.expenses) out.push({ section: "expenses", name: "Expenses", big: money(d.expenses.monthOut), small: `on site this month · ${d.expenses.monthCount} ${d.expenses.monthCount === 1 ? "entry" : "entries"}` });
+  if (d.expenses) {
+    const x = d.expenses;
+    out.push({
+      section: "expenses",
+      name: "Expenses",
+      big: money(x.monthOut),
+      small: `on site this month · ${x.monthCount} ${x.monthCount === 1 ? "entry" : "entries"}${x.fromBank ? ` · ${x.fromBank} from the bank to complete` : ""}`,
+      tone: x.fromBank ? "warn" : undefined,
+    });
+  }
   if (d.alerts) out.push({ section: "alerts", name: "Alerts", big: unread ? `${unread} new` : "All caught up", tone: unread ? "warn" : "ok" });
   return out;
 }

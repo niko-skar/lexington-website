@@ -1,0 +1,75 @@
+/* The bank's debits waiting at the top of the expenses (30 Oct 2026). Colours come from .app in Todo.module.css. */
+
+.box {
+  margin: 4px 0 16px;
+}
+.card {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--x-line);
+  border-radius: 10px;
+  background: var(--x-surface);
+  box-shadow: inset 4px 0 0 var(--x-amber);
+}
+.cardOn {
+  outline: 2px solid var(--x-accent);
+  outline-offset: 2px;
+}
+.top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+.amount {
+  font-family: var(--x-display);
+  font-size: 24px;
+  font-weight: 700;
+}
+.when {
+  font-size: 14px;
+  color: var(--x-muted);
+  white-space: nowrap;
+}
+.what {
+  margin: 0;
+  font-size: 16px;
+  overflow-wrap: anywhere;
+}
+.other,
+.fee,
+.now {
+  margin: 0;
+  font-size: 14px;
+  color: var(--x-muted);
+}
+.now {
+  color: var(--x-accent);
+  font-weight: 600;
+}
+.buttons {
+  display: grid;
+  grid-template-columns: 3fr 2fr;
+  gap: 8px;
+  margin-top: 6px;
+}
+.complete,
+.aside {
+  min-height: 48px;
+  padding: 0 12px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 16px;
+}
+.complete {
+  border: 0;
+  background: var(--x-accent);
+  color: var(--x-accent-ink);
+}
+.aside {
+  border: 1px solid var(--x-line);
+  background: var(--x-bg);
+  color: var(--x-ink);
+}

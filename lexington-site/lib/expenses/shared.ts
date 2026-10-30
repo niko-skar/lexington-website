@@ -68,14 +68,14 @@ export interface Expense {
   receiptType: string | null;
   /** The receipt's copy in Google Drive, once the sheet has it. */
   driveUrl: string | null;
-  /** Money in that the bank's own text added, or confirmed when it was typed already. */
+  /** The bank's own text behind it: money in it added or confirmed, a payment out it confirmed, or a fee it filed. */
   bank: BankNote | null;
   createdAt: string;
   createdBy: string;
   updatedAt: string;
 }
 
-/** What the bank's text said about a money in (lib/expenses/bankText.ts). */
+/** What the bank's text said about an entry (lib/expenses/bankText.ts, bankDebit.ts). */
 export interface BankNote {
   /** The bank's time for it, "YYYY-MM-DD HH:MM". */
   at: string;
@@ -88,6 +88,75 @@ export interface BankNote {
 }
 
 export const isInflow = (x: Pick<Expense, "kind">) => x.kind === "inflow";
+
+/**
+ * Money out from the bank's own "Debit Alert" text, waiting to be made an expense (lib/expenses/bankDebit.ts).
+ * Niko, 30 Oct 2026: "each fidelity alert I receive goes into the app as a pending expense that I can add
+ * additional information for and / or photos of receipts. then bank transfer or momo fees are automatically
+ * filed in quickbooks."
+ */
+export interface BankDebit {
+  id: string;
+  amount: number;
+  /** The bank's day and time, YYYY-MM-DD and HH:MM. */
+  date: string;
+  time: string;
+  /** As the text shows it: "1060xxxxxxx13". */
+  account: string;
+  /** The account Leo pays into (the site's); another of Niko's accounts otherwise. */
+  siteAccount: boolean;
+  /** "Account to Wallet, Cement" */
+  narration: string;
+  /** A card payment's shop and place, as the bank writes it. */
+  where: string;
+  balance: number | null;
+  receivedAt: string;
+  /** The bank's fees on it, filed by themselves as their own entries. */
+  fees: { amount: number; ref: string | null }[];
+}
+
+/** "YAZBECK PRO TRADERS LIMEast Legon 288" -> the shop "Yazbeck Pro Traders Ltd" and the place "East Legon 288". */
+export function shopOf(where: string): { shop: string; place: string } {
+  const first = where.split(",")[0].replace(/\s+/g, " ").trim();
+  // The card network's name field (capitals, cut at its length) runs straight into the place: "LIMEast Legon".
+  const m = /^([A-Z0-9&.'/\- ]+?)\s*([A-Z][a-z].*)?$/.exec(first);
+  const name = (m?.[1] ?? first).trim();
+  const titled = name
+    .split(" ")
+    .map((w) => (/^[A-Z0-9&.'/-]+$/.test(w) && w.length > 1 && !/^\d/.test(w) ? w[0] + w.slice(1).toLowerCase() : w))
+    .join(" ")
+    .replace(/\s+(?:Lim|Limi|Limit|Limite|Limited|Ltd)\.?$/i, " Ltd");
+  return { shop: titled, place: (m?.[2] ?? "").trim() };
+}
+
+const WALLET = /^\s*account\s+to\s+wallet\s*,?\s*(.*)$/i;
+
+/** What a debit says, to start the expense form with: how it was paid, who to, what for. */
+export function debitGuess(d: Pick<BankDebit, "narration" | "where">, knownSuppliers: readonly string[] = []) {
+  // A shop already in the expenses keeps the spelling used there.
+  const known = (name: string) => {
+    const k = name.toLowerCase().replace(/[^a-z0-9]/g, "");
+    const first = name.toLowerCase().split(" ")[0];
+    return (
+      knownSuppliers.find((s) => s.toLowerCase().replace(/[^a-z0-9]/g, "") === k) ??
+      knownSuppliers.find((s) => first.length >= 4 && s.toLowerCase().split(" ")[0] === first) ??
+      name
+    );
+  };
+  if (d.where) return { method: "Card" as const, supplier: known(shopOf(d.where).shop), description: "" };
+  const wallet = WALLET.exec(d.narration);
+  if (wallet) return { method: "MoMo" as const, supplier: "", description: wallet[1].trim() };
+  if (/transfer|\bgip\b|instant\s*pay|\bach\b/i.test(d.narration)) return { method: "Bank transfer" as const, supplier: "", description: "" };
+  return { method: null, supplier: "", description: d.narration.trim() };
+}
+
+/** A debit in a few words: "card at Yazbeck Pro Traders Ltd", "to a MoMo wallet (Cement)". */
+export function debitWords(d: Pick<BankDebit, "narration" | "where">): string {
+  if (d.where) return `card at ${shopOf(d.where).shop}`;
+  const wallet = WALLET.exec(d.narration);
+  if (wallet) return `to a MoMo wallet${wallet[1].trim() ? ` (${wallet[1].trim()})` : ""}`;
+  return d.narration.trim() || "paid out";
+}
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 /** The VAT inside an amount that includes it, and the amount before VAT. */

@@ -44,9 +44,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ key
     if (!(await bankLinkOk(key))) return new Response("Not found", { status: 404 });
     const { text, dryRun } = await messageText(request);
     const result = await receiveBankText(text, { dryRun });
-    const id = result.expenseId;
-    if (result.added && id) {
-      // Off to the Google Sheet and QuickBooks, as a typed one (the crons catch up any miss).
+    // New entries (money in, a bank fee) are off to the Google Sheet and QuickBooks, as typed ones (the crons catch up any miss).
+    for (const id of result.filed) {
       after(() => syncExpense(id));
       after(() => feedExpense(id));
     }

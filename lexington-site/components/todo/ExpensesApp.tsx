@@ -2,13 +2,14 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { isInflow, money, todayISO, type Expense } from "@/lib/expenses/shared";
+import { debitGuess, debitWords, isInflow, money, shopOf, todayISO, type BankDebit, type Expense } from "@/lib/expenses/shared";
 import type { StoreItem } from "@/lib/store/shared";
 import { photoAt, type TodoMe } from "@/lib/todo/shared";
 import { AccessSheet } from "./AccessSheet";
 import { send, startPolling, when } from "./api";
+import { BankDebits } from "./BankDebits";
 import { ExpenseBook, receiptDownload } from "./ExpenseBook";
-import { ExpenseForm } from "./ExpenseForm";
+import { ExpenseForm, niceDate, type ExpensePrefill } from "./ExpenseForm";
 import site from "./Site.module.css";
 import { SiteHeader, SiteMenu } from "./SiteChrome";
 import styles from "./Todo.module.css";
@@ -16,8 +17,8 @@ import styles from "./Todo.module.css";
 // The expense log (the office only): the entry form, then the totals and the list. The page holds
 // the entries; the form keeps its own state so typing stays quick on a phone.
 
-type ToastData = { text: string; tone?: "error" };
-type ExpensesData = { expenses: Expense[]; items: StoreItem[] };
+type ToastData = { text: string; tone?: "error"; action?: { label: string; run: () => void } };
+type ExpensesData = { expenses: Expense[]; items: StoreItem[]; pending?: BankDebit[] };
 type SheetState = { configured: boolean; waiting: number; failed: number; lastSyncedAt: string | null; sheetUrl: string | null };
 
 const sortExpenses = (list: Expense[]) =>
@@ -87,6 +88,8 @@ function bankLine(last: BankLast | null) {
   if (last.result === "added") return `last one ${at}: ${amount}added as ${last.ref ?? "money in"}.`;
   if (last.result === "matched") return `last one ${at}: ${amount}matched ${last.ref ?? "an entry"} you typed.`;
   if (last.result === "other-account") return `last one ${at}: ${amount}on another account, not added.`;
+  if (last.result === "pending") return `last one ${at}: ${amount}out, waiting under From the bank.`;
+  if (last.result === "fee") return `last one ${at}: a ${amount}bank fee, filed as ${last.ref ?? "an expense"}.`;
   if (last.result === "not-credit") return `your iPhone reached the app ${at} (not a credit text, so nothing was added).`;
   if (last.result === "unreadable") return `last one ${at} couldn't be read: see Alerts.`;
   return `last one ${at} couldn't be added: see Alerts.`;
@@ -148,8 +151,9 @@ function BankTexts() {
       {open && (
         <>
           <p className={site.sheetLine}>
-            Each &ldquo;Credit Alert&rdquo; text from the bank then goes in by itself as money in from Leo, and on to QuickBooks. Your phone buzzes so you can change one
-            that wasn&rsquo;t from Leo. Only those texts are passed on, nothing else.
+            Each text from the bank then goes in by itself: money in as from Leo (and on to QuickBooks), money out under &ldquo;From the bank&rdquo; for you to
+            complete, and the bank&rsquo;s fees filed by themselves. Only the bank&rsquo;s texts are passed on, nothing else. Set up already with &ldquo;Credit
+            Alert&rdquo;? Open that automation and change it to <b>Acct Num</b>, so the debit texts come too.
           </p>
           <ol className={site.bankSteps}>
             <li>
@@ -159,7 +163,7 @@ function BankTexts() {
               Open the <b>Shortcuts</b> app, tap <b>Automation</b>, then <b>+</b>.
             </li>
             <li>
-              Pick <b>Message</b>. In <b>Message Contains</b> type <b>Credit Alert</b>. Pick <b>Run Immediately</b>, then <b>Next</b>.
+              Pick <b>Message</b>. In <b>Message Contains</b> type <b>Acct Num</b> (it&rsquo;s in every credit and debit text). Pick <b>Run Immediately</b>, then <b>Next</b>.
             </li>
             <li>
               Tap <b>New Blank Automation</b>, <b>Add Action</b>, and pick <b>Get Contents of URL</b>.
@@ -196,6 +200,7 @@ export function ExpensesApp({
   active,
   initial,
   openEntry,
+  openDebit,
   startedOffline,
   fresh,
 }: {
@@ -206,12 +211,23 @@ export function ExpensesApp({
   initial: ExpensesData | null;
   /** Opened from a bank text's phone alert: that entry opens in the form. */
   openEntry?: string;
+  /** Opened from a bank debit's phone alert: the form starts from that debit. */
+  openDebit?: string;
   startedOffline: boolean;
   /** The page came with this part's data just now (it's the part the app opened on). */
   fresh: boolean;
 }) {
   const [expenses, setExpenses] = useState(initial?.expenses ?? []);
   const [items, setItems] = useState(initial?.items ?? []);
+  // The bank's debits waiting to be completed, and the one in the form now.
+  const [pending, setPending] = useState<BankDebit[]>(initial?.pending ?? []);
+  const [prefill, setPrefill] = useState<ExpensePrefill | null>(null);
+  const prefillRef = useRef<ExpensePrefill | null>(null);
+  const pendingCount = useRef(pending.length);
+  useEffect(() => {
+    prefillRef.current = prefill;
+    pendingCount.current = pending.length;
+  });
   const [loaded, setLoaded] = useState(initial !== null);
   const [offline, setOffline] = useState(startedOffline);
   const [signedOut, setSignedOut] = useState(false);
@@ -256,7 +272,9 @@ export function ExpensesApp({
       const sig = x + JSON.stringify(items);
       if (sig === lastServer.current || startedAt < localAt.current) return;
       lastServer.current = sig;
-      setExpenses((JSON.parse(x) as { expenses: Expense[] }).expenses);
+      const got = JSON.parse(x) as { expenses: Expense[]; pending?: BankDebit[] };
+      setExpenses(got.expenses);
+      setPending(got.pending ?? []);
       setItems(items);
     } catch {
       setOffline(true);
@@ -282,6 +300,7 @@ export function ExpensesApp({
 
   const onEdit = useCallback((x: Expense) => {
     if (saving.current) return; // the save on its way would clear the form again when it lands
+    setPrefill(null);
     setEditing(x);
     setJustSaved(false);
     setFormKey((k) => k + 1);
@@ -289,6 +308,7 @@ export function ExpensesApp({
   }, []);
 
   const onCancel = useCallback(() => {
+    setPrefill(null);
     setEditing(null);
     setJustSaved(false);
     setFormKey((k) => k + 1);
@@ -316,13 +336,17 @@ export function ExpensesApp({
     (expense: Expense, wasEdit: boolean) => {
       localAt.current = Date.now();
       setExpenses((list) => sortExpenses([expense, ...list.filter((x) => x.id !== expense.id)]));
+      // Made from a bank debit: it's done. (One typed for the same day and amount is matched on the server.)
+      const done = prefillRef.current?.debitId;
+      if (done) setPending((list) => list.filter((d) => d.id !== done));
+      setPrefill(null);
       setEditing(null);
       setJustSaved(true);
       setFormKey((k) => k + 1);
       const stockNote = expense.toStore && expense.qty ? ` · ${expense.qty} into the store` : "";
       showToast({ text: wasEdit ? `Changes saved · ${expense.ref ?? ""}` : `${isInflow(expense) ? "Money in saved" : "Expense saved"} · ${expense.ref ?? ""} · ${money(expense.amount)}${stockNote}` });
-      // The store's stock may have moved (a purchase into the store room, or one changed).
-      if (expense.toStore || wasEdit) void refresh();
+      // The store's stock may have moved (a purchase into the store room, or one changed), or a bank debit matched it.
+      if (expense.toStore || wasEdit || pendingCount.current > 0) void refresh();
     },
     [refresh, showToast]
   );
@@ -339,6 +363,75 @@ export function ExpensesApp({
     },
     [refresh, showToast]
   );
+
+  /* ---------- the bank's debits ---------- */
+
+  const onComplete = useCallback(
+    (d: BankDebit) => {
+      if (saving.current) return;
+      const guess = debitGuess(d, [...new Set(expenses.filter((e) => !isInflow(e)).map((e) => e.supplier.trim()).filter(Boolean))]);
+      const place = d.where ? shopOf(d.where).place : "";
+      setEditing(null);
+      setPrefill({
+        debitId: d.id,
+        date: d.date,
+        amount: d.amount,
+        method: guess.method,
+        supplier: guess.supplier,
+        description: guess.description,
+        note: `From the bank's text: ${money(d.amount)}, ${niceDate(d.date)}${d.time ? ` ${d.time}` : ""}, ${debitWords(d)}${place ? ` (${place})` : ""}. Say who it's for and what it was, add the receipt, and save.`,
+      });
+      setJustSaved(false);
+      setFormKey((k) => k + 1);
+      setTimeout(() => document.getElementById("exp-form")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+    },
+    [expenses]
+  );
+
+  const onDismiss = useCallback(
+    async (d: BankDebit) => {
+      try {
+        await send("/api/expenses/bank-debit", "POST", { id: d.id, action: "dismiss" });
+        localAt.current = Date.now();
+        setPending((list) => list.filter((x) => x.id !== d.id));
+        if (prefillRef.current?.debitId === d.id) onCancel();
+        showToast({
+          text: `${money(d.amount)} put aside: not an expense`,
+          action: {
+            label: "Undo",
+            run: () =>
+              void send("/api/expenses/bank-debit", "POST", { id: d.id, action: "restore" }).then(
+                () => {
+                  localAt.current = 0;
+                  void refresh();
+                },
+                (e) => showToast({ text: e instanceof Error ? e.message : "That didn't work.", tone: "error" })
+              ),
+          },
+        });
+      } catch (e) {
+        showToast({ text: e instanceof Error ? e.message : "That didn't work.", tone: "error" });
+      }
+    },
+    [onCancel, refresh, showToast]
+  );
+
+  // Opened from a bank debit's phone alert: the form starts from it, and the address drops the alert's part.
+  const openedDebit = useRef(false);
+  useEffect(() => {
+    if (!openDebit || openedDebit.current || !loaded) return;
+    const timer = setTimeout(() => {
+      openedDebit.current = true;
+      const url = new URL(window.location.href);
+      url.searchParams.delete("debit");
+      url.searchParams.delete("alert");
+      window.history.replaceState(null, "", url.pathname + url.search);
+      const d = pending.find((x) => x.id === openDebit);
+      if (d) onComplete(d);
+      else if (!offline) showToast({ text: "That bank text is done already." });
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [openDebit, loaded, pending, offline, onComplete, showToast]);
 
   // A photo opens big (with "Save the photo" under its traceable name); a PDF opens in the browser.
   const onOpenReceipt = useCallback((x: Expense) => {
@@ -381,9 +474,11 @@ export function ExpensesApp({
           <p className={styles.loading}>Loading the expenses…</p>
         ) : (
           <>
+            <BankDebits pending={pending} completing={prefill?.debitId ?? null} onComplete={onComplete} onDismiss={(d) => void onDismiss(d)} />
             <ExpenseForm
-              key={`${editing?.id ?? "new"}-${formKey}`}
+              key={`${editing?.id ?? prefill?.debitId ?? "new"}-${formKey}`}
               editing={editing}
+              prefill={prefill}
               expenses={expenses}
               items={items}
               onSaved={onSaved}
@@ -424,6 +519,18 @@ export function ExpensesApp({
       {toast && (
         <div className={`${styles.toast} ${toast.tone === "error" ? styles.toastError : ""}`} role="status">
           <span>{toast.text}</span>
+          {toast.action && (
+            <button
+              type="button"
+              onClick={() => {
+                const run = toast.action?.run;
+                setToast(null);
+                run?.();
+              }}
+            >
+              {toast.action.label}
+            </button>
+          )}
         </div>
       )}
     </>
