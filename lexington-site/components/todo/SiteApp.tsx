@@ -3,12 +3,15 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import type { AlertsData } from "@/lib/alerts/shared";
+import type { BuyersData } from "@/lib/buyers/shared";
 import type { ConcreteData } from "@/lib/concrete/shared";
 import type { BankDebit, Expense } from "@/lib/expenses/shared";
+import type { BookLists } from "@/lib/quickbooks/books";
 import { needsReorder, type StoreData, type StoreItem } from "@/lib/store/shared";
 import { PAGE_SECTIONS, sectionHref, type PageSection, type TodoList, type TodoMe, type TodoTask } from "@/lib/todo/shared";
 import { AlertsApp } from "./AlertsApp";
 import { send, startPolling } from "./api";
+import { BuyersApp } from "./BuyersApp";
 import { ConcreteApp } from "./ConcreteApp";
 import { Dashboard } from "./Dashboard";
 import { ExpensesApp } from "./ExpensesApp";
@@ -24,8 +27,8 @@ import styles from "./Todo.module.css";
 // after the app opens, so the first tap on them is instant too. The address bar follows along.
 
 export type { StoreData };
-export type ExpensesData = { expenses: Expense[]; items: StoreItem[]; pending?: BankDebit[] };
-export type SiteData = { todo?: TodoTask[]; store?: StoreData; expenses?: ExpensesData; alerts?: AlertsData; concrete?: ConcreteData };
+export type ExpensesData = { expenses: Expense[]; items: StoreItem[]; pending?: BankDebit[]; books?: BookLists; steelRate?: number };
+export type SiteData = { todo?: TodoTask[]; store?: StoreData; expenses?: ExpensesData; alerts?: AlertsData; concrete?: ConcreteData; buyers?: BuyersData };
 
 // Since 30 Oct 2026 the app opens on its home page (/todo) and the to-do list is /todo/jobs.
 const sectionFrom = (path: string): View | null =>
@@ -37,6 +40,8 @@ const sectionFrom = (path: string): View | null =>
         ? "alerts"
         : path.startsWith("/todo/concrete")
           ? "concrete"
+          : path.startsWith("/todo/buyers")
+            ? "buyers"
           : path.startsWith("/todo/jobs")
           ? "todo"
           : path === "/todo" || path === "/todo/"
@@ -54,8 +59,9 @@ async function load(section: PageSection): Promise<SiteData> {
   if (section === "store") return { store: await get("/api/store") };
   if (section === "alerts") return { alerts: await get("/api/alerts") };
   if (section === "concrete") return { concrete: await get("/api/concrete") };
+  if (section === "buyers") return { buyers: await get("/api/buyers") };
   const [x, s] = await Promise.all([get("/api/expenses"), get("/api/store")]);
-  return { expenses: { expenses: x.expenses, items: s.items, pending: x.pending } };
+  return { expenses: { expenses: x.expenses, items: s.items, pending: x.pending, books: x.books, steelRate: x.steelRate } };
 }
 
 /* ---------- put it on the home screen ---------- */
@@ -347,6 +353,11 @@ export function SiteApp({
             startedOffline={startedOffline && first === "concrete"}
             fresh={first === "concrete"}
           />
+        </div>
+      )}
+      {show("buyers") && (
+        <div hidden={section !== "buyers"}>
+          <BuyersApp me={me} active={section === "buyers"} initial={data.buyers ?? null} startedOffline={startedOffline && first === "buyers"} fresh={first === "buyers"} />
         </div>
       )}
       <SiteNav me={me} current={section} onGo={go} badges={{ store: reorders, alerts: unread }} />

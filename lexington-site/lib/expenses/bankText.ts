@@ -2,6 +2,7 @@ import "server-only";
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 
 import { notifyOwner } from "@/lib/alerts/notify";
+import { buyerPaymentFor } from "@/lib/buyers/payments";
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
 import { BANK_TEXT_PREFIX, BANK_TEXT_SETTINGS_ID, EXPENSE_PREFIX } from "@/lib/site/ids";
 import { receiveDebit } from "./bankDebit";
@@ -24,7 +25,7 @@ import { money, todayISO, type BankNote } from "./shared";
 // credit on another account is never added, only an alert. Money out (a "Debit Alert") waits in the
 // expenses for him to complete, and the bank's fees are filed by themselves (lib/expenses/bankDebit.ts).
 
-export type BankTextResult = "added" | "matched" | "already" | "other-account" | "not-credit" | "unreadable" | "pending" | "fee";
+export type BankTextResult = "added" | "matched" | "already" | "other-account" | "not-credit" | "unreadable" | "pending" | "fee" | "buyer";
 
 interface LastText {
   receivedAt: string;
@@ -209,6 +210,22 @@ export async function receiveBankText(raw: string, { dryRun = false } = {}): Pro
       return outcome("other-account");
     }
     if (accounts.length === 0) await saveSettings({ accounts: [c.account] });
+
+    // A buyer's payment in cedis logged for this day and amount (lib/buyers): the text is that payment, not Leo's money.
+    const fromBuyer = await buyerPaymentFor(c.date, c.amount);
+    if (fromBuyer) {
+      await client.patch(textId).set({ result: "buyer", buyerId: fromBuyer.buyerId, buyerPaymentKey: fromBuyer.key }).commit();
+      await remember({ result: "buyer", ref: fromBuyer.receipt, amount: c.amount });
+      await notifyOwner({
+        kind: "bank",
+        title: `${money(c.amount)} in: ${fromBuyer.name}'s payment`,
+        lines: [
+          `Your bank's text of ${whenText(c)} matches the payment you logged for ${fromBuyer.name}${fromBuyer.receipt ? ` (receipt ${fromBuyer.receipt})` : ""}, so it wasn't added as money from Leo.`,
+        ],
+        links: [{ label: "Open the buyers", url: "/todo/buyers" }],
+      });
+      return outcome("buyer", fromBuyer.receipt);
+    }
 
     const note: BankNote = { at: `${c.date}${c.time ? ` ${c.time}` : ""}`, account: c.account, balance: c.balance, matched: false };
     const twin = await typedTwin(c);

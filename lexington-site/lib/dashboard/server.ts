@@ -1,6 +1,7 @@
 import "server-only";
 
 import { unreadCount } from "@/lib/alerts/notify";
+import { listBuyers } from "@/lib/buyers/payments";
 import { listConcrete } from "@/lib/concrete/server";
 import { daySummary, truckFlags, trucksOn } from "@/lib/concrete/shared";
 import { rollcallAccess } from "@/lib/rollcall/shared";
@@ -30,6 +31,8 @@ export interface DashboardData {
   rollcall?: { morning: SlotCount; afternoon: SlotCount; closing: SlotCount; onBooks: number; curing: number; checklists: number };
   payday?: { weekStart: string; paid: number; worked: number };
   workers?: { active: number };
+  /** Buyers: what they've paid of their prices (US$), and the latest payment. */
+  buyers?: { count: number; paidUSD: number; priceUSD: number; last: { date: string | null; name: string; receipt: string | null } | null };
   /** Concrete trucks: today's (with how many don't add up), else the last pour day's. */
   concrete?: { day: string | null; trucks: number; volume: number; flagged: number };
   /** The roll call isn't moved in from its Claude page yet (one tile says so instead of three empty ones). */
@@ -151,17 +154,31 @@ async function concretePart(today: string): Promise<NonNullable<DashboardData["c
   return { day, trucks: sum.trucks, volume: sum.volume, flagged: list.filter((t) => truckFlags(t, trucks, pour).some((f) => f.tone === "bad")).length };
 }
 
+async function buyersPart(): Promise<NonNullable<DashboardData["buyers"]>> {
+  const { buyers } = await listBuyers();
+  const latest = buyers
+    .flatMap((x) => (x.payments[0] ? [{ date: x.payments[0].date, name: x.name, receipt: x.payments[0].receipt }] : []))
+    .sort((a, b) => (b.date ?? "").localeCompare(a.date ?? ""))[0];
+  return {
+    count: buyers.length,
+    paidUSD: Math.round(buyers.reduce((n, x) => n + x.paidUSD, 0)),
+    priceUSD: Math.round(buyers.reduce((n, x) => n + x.priceUSD, 0)),
+    last: latest ?? null,
+  };
+}
+
 /** The home page's figures for this login: only the parts it opens. */
 export async function getDashboard(me: TodoMe): Promise<DashboardData> {
   const today = ghanaDay();
   const has = (s: string) => me.sections.includes(s as never);
-  const [todo, store, expenses, unread, rollcall, concrete] = await Promise.all([
+  const [todo, store, expenses, unread, rollcall, concrete, buyers] = await Promise.all([
     has("todo") ? settle(todoPart(me, today)) : undefined,
     has("store") ? settle(storePart(me, today)) : undefined,
     has("expenses") ? settle(expensesPart(today)) : undefined,
     has("alerts") ? settle(unreadCount()) : undefined,
     has("rollcall") || has("payday") || has("workers") ? settle(rollcallParts(me, today)) : undefined,
     has("concrete") ? settle(concretePart(today)) : undefined,
+    has("buyers") ? settle(buyersPart()) : undefined,
   ]);
   return {
     today,
@@ -171,5 +188,6 @@ export async function getDashboard(me: TodoMe): Promise<DashboardData> {
     ...(unread !== undefined ? { alerts: { unread } } : {}),
     ...(rollcall ?? {}),
     ...(concrete ? { concrete } : {}),
+    ...(buyers ? { buyers } : {}),
   };
 }

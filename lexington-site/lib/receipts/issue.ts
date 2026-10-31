@@ -3,7 +3,9 @@ import "server-only";
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
 import type { Payment } from "@/lib/sanity/buyersTypes";
 
-const COUNTER_ID = "receipt-counter";
+// A preview build or a laptop numbers its test receipts on a counter of its own, so a test never takes a real
+// receipt number (the real ones run LEX-0001, LEX-0002... with no gaps).
+const COUNTER_ID = process.env.VERCEL_ENV === "production" ? "receipt-counter" : "receipt-counter-dev";
 const MAX_TRIES = 4;
 
 export const formatReceiptNumber = (n: number) => `LEX-${String(n).padStart(4, "0")}`;

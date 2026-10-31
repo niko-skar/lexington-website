@@ -83,6 +83,16 @@ function tiles(d: DashboardData, unread: number): Tile[] {
       tone: x.fromBank ? "warn" : undefined,
     });
   }
+  if (d.buyers) {
+    const x = d.buyers;
+    const usd = (n: number) => `US$ ${n.toLocaleString("en-US")}`;
+    out.push({
+      section: "buyers",
+      name: "Buyers",
+      big: `${usd(x.paidUSD)} paid`,
+      small: [`of ${usd(x.priceUSD)} · ${x.count} ${x.count === 1 ? "buyer" : "buyers"}`, x.last ? `last: ${x.last.name.split(" ")[0]}${x.last.date ? `, ${shortDay(x.last.date)}` : ""}` : ""].filter(Boolean).join(" · "),
+    });
+  }
   if (d.alerts) out.push({ section: "alerts", name: "Alerts", big: unread ? `${unread} new` : "All caught up", tone: unread ? "warn" : "ok" });
   return out;
 }

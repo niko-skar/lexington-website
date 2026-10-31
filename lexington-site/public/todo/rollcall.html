@@ -129,6 +129,8 @@ button.dcell.sel{background:var(--chip);color:var(--ink)}
 .paybar button{flex:1;min-width:80px;height:44px;border-radius:10px;border:1px solid var(--line);background:var(--bg);font-weight:600}
 .paid{margin-top:10px;display:flex;justify-content:space-between;align-items:center;gap:8px;background:var(--here-soft);color:var(--accent);border-radius:10px;padding:8px 10px;font-size:14px;font-weight:600}
 .paid button{border:0;background:none;color:inherit;text-decoration:underline;font-size:13px}
+.copyrow{display:flex;gap:8px;flex-wrap:wrap}.copyrow .btn{flex:1}
+.copybtn{margin-top:6px;align-self:flex-start;padding:6px 12px;font-size:14px}
 .payform{margin-top:10px;display:grid;gap:8px;background:var(--bg);border-radius:10px;padding:10px}
 .payform .row{display:flex;gap:8px;flex-wrap:wrap}
 .payform label{font-size:12px;color:var(--muted);display:grid;gap:3px;flex:1;min-width:120px}
@@ -918,6 +920,7 @@ function payControls(id, paid, amount, ws, steel){
       <div class="row"><label for="pf-amount">Amount (GH₵)<input class="field num" id="pf-amount" inputmode="decimal" value="${esc(S.draft["pf-amount"] ?? amount)}"></label>
       ${steel ? `<label for="pf-to">Paid to<input class="field" id="pf-to" value="${esc(S.draft["pf-to"] ?? "")}" placeholder="Name"></label>` : ""}</div>
       ${pf.method === "momo" && S.workers[id]?.momoName ? `<p class="calc">Send to ${esc(S.workers[id].momoName)}${S.workers[id].momo ? ", "+esc(S.workers[id].momo) : ""}</p>` : ""}
+      ${pf.method === "momo" && S.workers[id]?.momo ? `<div class="row copyrow"><button class="btn" data-act="copymomo" data-v="${esc(momoDigits(S.workers[id].momo))}">📋 Copy MoMo number</button><button class="btn" data-act="copyamount">📋 Copy amount</button></div>` : ""}
       ${pf.method !== "cash" ? `<div class="row"><label for="pf-ref">${pf.method==="momo"?"MoMo number or transaction ID":"Bank reference"} (optional)<input class="field" id="pf-ref" value="${esc(S.draft["pf-ref"] ?? "")}"></label></div>` : ""}
       <div class="row"><button class="btn primary" data-act="savepay" data-w="${id}">Record ${METHODS[pf.method]} payment</button><button class="btn" data-act="cancelpay">Cancel</button></div>
     </div>`;
@@ -956,7 +959,8 @@ function viewWorkers(){
         <button class="btn" data-act="canceledit">Cancel</button></div></div></div>`;
       const contact = [w.phone ? "☎ "+esc(w.phone) : "", w.momo ? "MoMo "+esc(w.momo)+(w.momoName ? " ("+esc(w.momoName)+")" : "") : ""].filter(Boolean).join(" · ");
       return `<div class="wrow"><div class="wname"><b>${nameHtml(w)}</b><span class="meta">${TRADES[w.trade].label}${w.trade!=="steel" && money()?" · "+ghs(rate(w)).replace(".00","")+"/day":""}${special(w) && money()?' <span class="pill late">Special rate</span>':""}${w.active===false?' <span class="pill">Not on site</span>':""}${w.idPhoto?' <span class="pill ok">ID</span>':""}</span>
-        ${contact ? `<span class="meta contact num">${contact}</span>` : ""}</div>
+        ${contact ? `<span class="meta contact num">${contact}</span>` : ""}
+        ${w.momo ? `<button class="btn copybtn" data-act="copymomo" data-v="${esc(momoDigits(w.momo))}">📋 Copy MoMo</button>` : ""}</div>
         <button class="btn" data-act="edit" data-w="${w.id}">Edit</button></div>`;
     }).join("");
     h += `</div></section>`;
@@ -993,6 +997,8 @@ function viewWorkers(){
 document.addEventListener("click", async e => {
   const b = e.target.closest("[data-act]"); if (!b || b.tagName === "INPUT") return;
   const a = b.dataset.act, v = b.dataset.v, wid = b.dataset.w;
+  if (a === "copymomo") return copyText(v);
+  if (a === "copyamount") return copyText((document.getElementById("pf-amount")?.value || "").trim());
   if (a === "home"){ location.href = "/todo"; return; }
   if (a === "tab"){ if (!tabAllowed(v)) return; S.tab = v; S.payForm = null; S.dayEdit = null; window.scrollTo(0,0); return render(); }
   if (!S.db) return;
@@ -1382,6 +1388,19 @@ function copyReport(){
 }
 
 let toastT;
+/** A MoMo number as the bank app wants it: digits only (and a leading +). */
+function momoDigits(n){ return String(n || "").replace(/[^\d+]/g, ""); }
+/** Puts text on the phone's clipboard: the browser's own way, else a hidden text box (inside a frame). */
+async function copyText(t){
+  if (!t) return toast("Nothing to copy.");
+  try { await navigator.clipboard.writeText(t); return toast("Copied " + t); } catch {}
+  const ta = document.createElement("textarea");
+  ta.value = t; ta.setAttribute("readonly", ""); ta.style.position = "fixed"; ta.style.top = "0"; ta.style.opacity = "0";
+  document.body.appendChild(ta); ta.focus(); ta.select(); ta.setSelectionRange(0, t.length);
+  let ok = false; try { ok = document.execCommand("copy"); } catch {}
+  ta.remove();
+  toast(ok ? "Copied " + t : "Couldn't copy: press and hold the number to copy it.");
+}
 function toast(msg){ const t = document.getElementById("toast"); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 2600); }
 
 /* ---------- background updates: never redraw under a finger ---------- */

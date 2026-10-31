@@ -4,6 +4,7 @@ import crm from "@/components/crm/Crm.module.css";
 import { requireAdminPage } from "@/lib/auth/requireAdmin";
 import { CATEGORIES, METHODS, money, todayISO } from "@/lib/expenses/shared";
 import { qboKeys } from "@/lib/quickbooks/config";
+import { saveBookLists } from "@/lib/quickbooks/booksCache";
 import { feedStatus, PAY_TYPES, qboLists, suggestSettings, type FeedRow, type FeedStatus, type QboLists } from "@/lib/quickbooks/feed";
 import { classField, payField, RULE_ROWS } from "@/lib/quickbooks/feedForm";
 import { loadConnection, recentLog, type QboConnection, type QboLogLine } from "@/lib/quickbooks/store";
@@ -173,6 +174,8 @@ async function FeedPanel({ conn }: { conn: QboConnection }) {
   let status: FeedStatus;
   try {
     lists = await qboLists();
+    // The expense form's classes and locations follow what the books have now.
+    await saveBookLists(lists).catch(() => {});
     status = await feedStatus(lists, conn);
   } catch (error) {
     return (
@@ -201,6 +204,8 @@ async function FeedPanel({ conn }: { conn: QboConnection }) {
         money in as a Deposit. House and Niko entries never go. A change in the app updates the entry in QuickBooks; nothing is ever
         deleted there.
         {status.lastSentAt && ` Last sent ${when(status.lastSentAt)}.`}{" "}
+        Each site expense carries its class (the cost type, chosen in the app) and its floor&rsquo;s location; wages paid in Payday go
+        in by themselves, a line per worker on the class of their trade.{" "}
         {status.sent > 0 && (status.sent === 1 ? "1 entry is in QuickBooks." : `${status.sent} entries are in QuickBooks.`)}
       </p>
 
@@ -320,7 +325,7 @@ async function FeedPanel({ conn }: { conn: QboConnection }) {
         {lists.classes.length > 0 &&
           CATEGORIES.map((c) => (
             <label key={c} className={crm.field}>
-              <span>Class for site {c.toLowerCase()}</span>
+              <span>Class for a site {c.toLowerCase()} entry that has none of its own</span>
               <select name={classField(c)} defaultValue={s.classFor[c] ?? ""}>
                 <option value="">No class</option>
                 {lists.classes.map((x) => (
@@ -334,7 +339,7 @@ async function FeedPanel({ conn }: { conn: QboConnection }) {
 
         {lists.locations.length > 0 && (
           <label className={crm.field}>
-            <span>Location for every site entry</span>
+            <span>Stage now: the location for wages, and for entries whose floor isn&rsquo;t a location</span>
             <select name="location" defaultValue={s.location ?? ""}>
               <option value="">No location</option>
               {lists.locations.map((x) => (

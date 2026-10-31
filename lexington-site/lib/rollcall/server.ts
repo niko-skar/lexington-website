@@ -1,10 +1,12 @@
 import "server-only";
+import { after } from "next/server";
 
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
 import { ROLLCALL_PREFIX } from "@/lib/site/ids";
 import { getTodoUser, TodoError } from "@/lib/todo/server";
 import type { TodoMe } from "@/lib/todo/shared";
 import { opensRollcall, ROLLCALL_COLLECTIONS, rollcallAccess, type RollcallAccess, type RollcallCollection, type RollcallDoc } from "./shared";
+import { syncWages } from "./wages";
 
 // The roll call's records in the PRIVATE buyers dataset: one document per page record, its data kept whole as
 // JSON (worker ids and dates are its keys, which Sanity won't take as field names). Saving merges the change
@@ -181,6 +183,8 @@ export async function writeRollcall(me: TodoMe, path: unknown, op: "set" | "upda
       throw error;
     }
   }
+  // A payment made (or taken back) in Payday: that week's wages in the expenses follow, and so QuickBooks.
+  if (col === "payments") after(() => syncWages(key));
   const row = await client.fetch<Row | null>(`*[_id == $id][0]{ col, key, json, "rev": _rev, "at": _updatedAt }`, { id });
   const doc = row && toDoc(can, row);
   if (!doc) throw new TodoError(502, "It was saved but couldn't be read back. Close the app and open it again.");

@@ -19,6 +19,8 @@ import {
   type ForWho,
 } from "@/lib/expenses/shared";
 import type { ReceiptReading } from "@/lib/expenses/readReceipt";
+import { areasWith, guessClass, type BookLists, type BookNamed } from "@/lib/quickbooks/books";
+import { WAGES_FROM_WEEK } from "@/lib/rollcall/payday";
 import { MAX_UNIT, qtyUnit, UNITS, type StoreItem } from "@/lib/store/shared";
 import { photoAt } from "@/lib/todo/shared";
 import { errorText, send } from "./api";
@@ -100,6 +102,39 @@ function useReceiptSlot() {
   return { slot, start, clear, settled };
 }
 
+/** The classes as QuickBooks groups them: "Materials" with its Blocks, Cement Bags... under it. */
+function ClassOptions({ classes, kept }: { classes: BookNamed[]; kept: BookNamed | null }) {
+  const tops = classes.filter((c) => !c.name.includes(":"));
+  const under = (top: BookNamed) => classes.filter((c) => c.name.startsWith(`${top.name}:`));
+  const orphans = classes.filter((c) => c.name.includes(":") && !tops.some((t) => c.name.startsWith(`${t.name}:`)));
+  return (
+    <>
+      {kept && !classes.some((c) => c.id === kept.id) && <option value={kept.id}>{kept.name}</option>}
+      {tops.map((top) =>
+        under(top).length ? (
+          <optgroup key={top.id} label={top.name}>
+            <option value={top.id}>{top.name} (general)</option>
+            {under(top).map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name.slice(top.name.length + 1)}
+              </option>
+            ))}
+          </optgroup>
+        ) : (
+          <option key={top.id} value={top.id}>
+            {top.name}
+          </option>
+        )
+      )}
+      {orphans.map((c) => (
+        <option key={c.id} value={c.id}>
+          {c.name}
+        </option>
+      ))}
+    </>
+  );
+}
+
 /* ---------- the form ---------- */
 
 export function ExpenseForm({
@@ -113,11 +148,14 @@ export function ExpenseForm({
   onOpenReceipt,
   focusAmount,
   prefill,
+  books,
 }: {
   /** The entry being changed; null for a new one. */
   editing: Expense | null;
   /** A new one made from a bank debit waiting in the app. */
   prefill?: ExpensePrefill | null;
+  /** The QuickBooks classes and locations (null until they've come). */
+  books?: BookLists | null;
   expenses: Expense[];
   items: StoreItem[];
   onSaved: (expense: Expense, wasEdit: boolean) => void;
@@ -147,6 +185,9 @@ export function ExpenseForm({
   const [description, setDescription] = useState(x?.description ?? p?.description ?? "");
   const [floor, setFloor] = useState<string | null>(x?.floor ?? null);
   const [method, setMethod] = useState<string | null>(x?.method ?? p?.method ?? null);
+  // The QuickBooks class: suggested from what it is until one is picked by hand.
+  const [classPick, setClassPick] = useState<string | null>(x?.costClass?.id ?? null);
+  const [classTouched, setClassTouched] = useState(!!x?.costClass);
   const [kept, setKept] = useState<Receipt | null>(x?.receiptId && x.receiptUrl ? { id: x.receiptId, url: x.receiptUrl, type: x.receiptType ?? "image/jpeg" } : null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -268,6 +309,26 @@ export function ExpenseForm({
   const match = useMemo(() => (material.trim() ? items.find((i) => key(i.name) === key(material)) : undefined), [items, material]);
   const toStore = isMaterial && (toStoreChoice ?? (forWho === "Site" && (match ? match.stocked : true)));
   const showFloors = !inflow && forWho === "Site";
+  // The floors, with the books' locations that aren't one ("Foundations", "Stormdrain").
+  const areas = useMemo(() => areasWith(FLOORS, books?.locations ?? []), [books]);
+  const classes = useMemo(() => books?.classes ?? [], [books]);
+  const showClass = showFloors && classes.length > 0;
+  const classHistory = useMemo(
+    () =>
+      [...expenses]
+        .filter((e) => e.costClass && !e.payday)
+        .sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? ""))
+        .map((e) => ({ category: e.category, material: e.material, description: e.description, supplier: e.supplier, costClass: e.costClass })),
+    [expenses]
+  );
+  const guessed = useMemo(
+    () => (showClass ? guessClass({ category, material: isMaterial ? material : null, description, supplier }, classes, classHistory) : null),
+    [showClass, category, isMaterial, material, description, supplier, classes, classHistory]
+  );
+  const keptClass: BookNamed | null = x?.costClass && x.costClass.id === classPick ? x.costClass : null;
+  const chosenClass: BookNamed | null = classTouched ? (classes.find((c) => c.id === classPick) ?? keptClass) : guessed;
+  // Typing the week's wages by hand, now that Payday puts them in by itself.
+  const looksLikeWages = !x && !inflow && forWho === "Site" && date >= WAGES_FROM_WEEK && /payroll|\bwages?\b|labou?r for the week|all labou?r/i.test(`${supplier} ${description}`);
 
   const parsedAmount = () => {
     const n = parseFloat(amount.replace(/[^0-9.,]/g, "").replace(/,/g, ""));
@@ -364,6 +425,8 @@ export function ExpenseForm({
         toStore,
         unit: unit.trim() || "pcs",
         receiptId,
+        // The QuickBooks class (site expenses); without the lists here, an entry keeps the one it had.
+        costClass: showFloors ? (showClass ? (chosenClass ? { id: chosenClass.id, name: chosenClass.name } : null) : (x?.costClass ?? null)) : null,
         // Made from a bank debit: that debit is done once this is saved.
         ...(p ? { bankDebitId: p.debitId } : {}),
       };
@@ -411,6 +474,32 @@ export function ExpenseForm({
     setKept(null);
     receipt.start(file);
   };
+
+  // Wages from Payday are kept by the roll call: shown here, changed there.
+  if (x?.payday) {
+    const paid = x.payday;
+    return (
+      <div id="exp-form" className={`${site.card} ${site.cardEditing}`}>
+        <h2 className={site.formTitle}>
+          {x.ref ?? ""} · {paid.kind === "machines" ? "steel machines" : "wages"} from Payday
+        </h2>
+        <p className={site.storeNote}>
+          {x.description} · {money(x.amount)} by {x.method}. It follows Payday: change or take back a payment there and this changes too (and QuickBooks with it).
+        </p>
+        <ul className={site.sheetEntries}>
+          {paid.lines.map((l) => (
+            <li key={l.id}>
+              {l.name}: {money(l.amount)}
+              {l.ref ? ` (${l.ref})` : ""}
+            </li>
+          ))}
+        </ul>
+        <button type="button" className={styles.sheetCancel} onClick={onCancel}>
+          Close
+        </button>
+      </div>
+    );
+  }
 
   return (
     <form id="exp-form" className={`${site.card} ${x ? site.cardEditing : inflow ? site.cardInflow : ""}`} onSubmit={save} noValidate autoComplete="off">
@@ -671,13 +760,38 @@ export function ExpenseForm({
           <>
             <span className={styles.label}>Floor / area</span>
             <div className={styles.chips} role="group" aria-label="Floor or area">
-              {FLOORS.map((f) => (
+              {areas.map((f) => (
                 <button key={f} type="button" className={floor === f ? styles.chipOn : styles.chip} aria-pressed={floor === f} onClick={() => setFloor(floor === f ? null : f)}>
                   {f}
                 </button>
               ))}
             </div>
           </>
+        )}
+        {showClass && (
+          <>
+            <label className={styles.label} htmlFor="exp-class">
+              Cost type (QuickBooks class)
+            </label>
+            <select
+              id="exp-class"
+              className={styles.input}
+              value={chosenClass?.id ?? ""}
+              onChange={(e) => {
+                setClassPick(e.target.value || null);
+                setClassTouched(true);
+              }}
+            >
+              <option value="">No class</option>
+              <ClassOptions classes={classes} kept={keptClass} />
+            </select>
+            {!classTouched && guessed && <p className={site.storeNote}>Suggested from what it is: change it if it&rsquo;s wrong.</p>}
+          </>
+        )}
+        {looksLikeWages && (
+          <p className={site.receiptNeeded} role="status">
+            Wages paid in Payday go into the expenses and QuickBooks by themselves: typing them here as well counts them twice.
+          </p>
         )}
 
         <span className={styles.label}>{inflow ? "Received by" : "Paid by"}</span>

@@ -1,0 +1,107 @@
+/* Steel bought against steel labour, on the expenses (31 Oct 2026). Colours come from .app in Todo.module.css. */
+
+.card {
+  display: grid;
+  gap: 4px;
+  margin: 16px 0;
+  padding: 14px;
+  border: 1px solid var(--x-line);
+  border-radius: 10px;
+  background: var(--x-surface);
+  box-shadow: inset 4px 0 0 var(--x-muted);
+}
+.big {
+  margin: 0;
+  font-family: var(--x-display);
+  font-size: 21px;
+  font-weight: 700;
+}
+.line {
+  margin: 0;
+  font-size: 15px;
+}
+.owe,
+.ahead,
+.warn {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+.owe {
+  color: var(--x-ink);
+}
+.ahead,
+.warn {
+  color: var(--x-amber);
+}
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+.buttons button,
+.edit button,
+.tons,
+.tonsMissing {
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--x-line);
+  border-radius: 8px;
+  background: var(--x-bg);
+  color: var(--x-ink);
+  font-weight: 600;
+  font-size: 14px;
+}
+.tonsMissing {
+  border-color: var(--x-amber);
+  color: var(--x-amber);
+}
+.edit {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px;
+}
+.edit label {
+  display: grid;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--x-muted);
+}
+.edit input {
+  max-width: 120px;
+}
+.edit .save {
+  border: 0;
+  background: var(--x-accent);
+  color: var(--x-accent-ink);
+}
+.sub {
+  margin: 12px 0 4px;
+  font-family: var(--x-body);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--x-muted);
+}
+.list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.list li {
+  display: grid;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--x-bg);
+  font-size: 14px;
+}
+.list li > button {
+  justify-self: start;
+}

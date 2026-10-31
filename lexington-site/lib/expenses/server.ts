@@ -1,11 +1,14 @@
 import "server-only";
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 
+import { areasWith } from "@/lib/quickbooks/books";
+import { cachedBookLists } from "@/lib/quickbooks/booksCache";
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
-import { EXPENSE_COUNTER_ID, EXPENSE_PREFIX, isId, newId, QBO_GONE_PREFIX, SHEET_DELETION_PREFIX } from "@/lib/site/ids";
+import { EXPENSE_COUNTER_ID, EXPENSE_PREFIX, EXPENSE_SETTINGS_ID, isId, newId, QBO_GONE_PREFIX, SHEET_DELETION_PREFIX } from "@/lib/site/ids";
 import { itemForPurchase } from "@/lib/store/server";
 import { cleanText, TodoError } from "@/lib/todo/server";
 import type { TodoMe } from "@/lib/todo/shared";
+import { STEEL_RATE } from "./steel";
 import {
   CATEGORIES,
   FLOORS,
@@ -45,6 +48,9 @@ export const FIELDS = `{
   "receiptType": receipt.asset->mimeType,
   "driveUrl": sheet.fileUrl,
   "bank": bank{ at, account, balance, "matched": coalesce(matched, false) },
+  "costClass": costClass{ id, name },
+  "payday": payday{ week, kind, lines[]{ id, name, group, amount, at, ref } },
+  "steelTons": steelTons,
   createdAt,
   "createdBy": coalesce(createdBy, ""),
   "updatedAt": coalesce(updatedAt, sourceUpdatedAt, createdAt)
@@ -141,7 +147,9 @@ async function fields(me: TodoMe, body: Record<string, unknown>, receiptId: stri
   const amount = Math.round(cleanNumber(body.amount, inflow ? "Enter the amount received." : "Enter the amount paid.") * 100) / 100;
   const method = pick(body.method, METHODS, inflow ? "Pick how the money came in." : "Pick how it was paid.");
   const category = inflow ? null : pick(body.category, CATEGORIES, "Pick Material, Service or Other.");
-  const floor = inflow || forWho !== "Site" ? null : pick(body.floor, FLOORS, "Pick the floor or area.");
+  // The floors, and the QuickBooks locations that aren't one ("Foundations", "Stormdrain").
+  const areas = inflow || forWho !== "Site" ? [] : areasWith(FLOORS, (await cachedBookLists().catch(() => ({ locations: [] }))).locations);
+  const floor = inflow || forWho !== "Site" ? null : pick(body.floor, areas, "Pick the floor or area.");
   // VAT is in the amount; Niko, 23 Oct 2026: "if VAT is ticked then a photo is required".
   const vat = body.vat === true;
   let vatRate: number | null = null;
@@ -182,8 +190,22 @@ async function fields(me: TodoMe, body: Record<string, unknown>, receiptId: stri
     qty,
     itemId,
     toStore,
+    // The QuickBooks class (cost type): site expenses only.
+    costClass: inflow || forWho !== "Site" ? null : cleanClass(body.costClass),
   };
 }
+
+function cleanClass(value: unknown): { id: string; name: string } | null {
+  if (value === null || value === undefined || value === "") return null;
+  const v = value as { id?: unknown; name?: unknown };
+  if (typeof v !== "object" || typeof v.id !== "string" || typeof v.name !== "string" || !/^[A-Za-z0-9_-]{1,40}$/.test(v.id) || !v.name.trim() || v.name.length > 150) {
+    throw new TodoError(400, "Pick the cost type again.");
+  }
+  return { id: v.id, name: v.name.trim() };
+}
+
+/** Wages paid in Payday are kept by the roll call: changed or removed there, never here. */
+const FROM_PAYDAY = "This comes from Payday: change the payments there and it follows.";
 
 const receiptRef = (assetId: string) => ({
   _type: assetId.startsWith("file-") ? "file" : "image",
@@ -217,11 +239,12 @@ export async function createExpense(me: TodoMe, body: Record<string, unknown>, e
 export async function updateExpense(me: TodoMe, id: string, body: Record<string, unknown>): Promise<Expense> {
   if (!isId(EXPENSE_PREFIX, id)) throw new TodoError(404, "That entry isn't there any more.");
   const client = getBuyersClient();
-  const before = await client.fetch<{ receipt?: string; ref?: string; kind?: string } | null>(
-    `*[_id == $id && _type == "siteExpense"][0]{ "receipt": receipt.asset._ref, ref, "kind": coalesce(kind, "expense") }`,
+  const before = await client.fetch<{ receipt?: string; ref?: string; kind?: string; payday: boolean } | null>(
+    `*[_id == $id && _type == "siteExpense"][0]{ "receipt": receipt.asset._ref, ref, "kind": coalesce(kind, "expense"), "payday": defined(payday) }`,
     { id }
   );
   if (!before) throw new TodoError(404, "That entry isn't there any more.");
+  if (before.payday) throw new TodoError(409, FROM_PAYDAY);
   const receiptId = cleanReceiptId(body.receiptId);
   const data = await fields(me, body, receiptId);
   // Switched between expense and money in: it takes a number from the other series.
@@ -240,8 +263,9 @@ export async function updateExpense(me: TodoMe, id: string, body: Record<string,
  * One that already went to QuickBooks is listed on the QuickBooks page to remove there by hand
  * (the app never deletes anything in the books).
  */
-export async function deleteExpense(id: string): Promise<void> {
+export async function deleteExpense(id: string, { payday = false } = {}): Promise<void> {
   if (!isId(EXPENSE_PREFIX, id)) throw new TodoError(404, "That entry isn't there any more.");
+  if (!payday && (await getBuyersClient().fetch<boolean>(`defined(*[_id == $id][0].payday)`, { id }))) throw new TodoError(409, FROM_PAYDAY);
   const client = getBuyersClient();
   const before = await client.fetch<{
     receipt?: string;
@@ -309,4 +333,95 @@ export async function dropReceipt(assetId: string): Promise<void> {
   } catch (error) {
     console.error("[expenses] receipt clean-up failed:", error instanceof Error ? error.message : error);
   }
+}
+
+/* ---------- wages from Payday ---------- */
+
+export interface PaydayEntryData {
+  date: string;
+  amount: number;
+  method: string;
+  supplier: string;
+  description: string;
+  costClass: { id: string; name: string } | null;
+  payday: { week: string; kind: "workers" | "machines"; lines: Array<{ id: string; name: string; group: string; amount: number; at: string; ref: string | null }> };
+}
+
+/**
+ * A pay week's wage entry made, brought up to date, or removed (null) by the roll call (lib/rollcall/wages.ts).
+ * It keeps its number; an unchanged week changes nothing. Returns the content's fingerprint when it changed.
+ */
+export async function savePaydayEntry(id: string, data: PaydayEntryData | null): Promise<string | null> {
+  const client = getBuyersClient();
+  const before = await client.fetch<{ hash?: string } | null>(`*[_id == $id && _type == "siteExpense"][0]{ "hash": payday.hash }`, { id });
+  if (!data) {
+    if (before) await deleteExpense(id, { payday: true });
+    return before ? "removed" : null;
+  }
+  const hash = createHash("sha1").update(JSON.stringify(data)).digest("hex");
+  if (before?.hash === hash) return null;
+  const now = new Date().toISOString();
+  const set = {
+    date: data.date,
+    kind: "expense",
+    forWho: "Site",
+    amount: data.amount,
+    vat: false,
+    vatRate: null,
+    supplier: data.supplier,
+    description: data.description,
+    floor: "Whole building",
+    method: data.method,
+    category: "Service",
+    material: null,
+    qty: null,
+    itemId: null,
+    toStore: false,
+    costClass: data.costClass,
+    payday: { ...data.payday, lines: data.payday.lines.map((l) => ({ _key: l.id, ...l })), hash },
+    updatedAt: now,
+    updatedBy: "Payday",
+  };
+  if (before) {
+    await client.patch(id).set(set).commit();
+    return hash;
+  }
+  try {
+    await client.create({ _id: id, _type: "siteExpense", ref: await nextRef("expense"), ...set, createdAt: now, createdBy: "Payday" });
+  } catch (error) {
+    // Two payments saved at once both made it: bring the one there up to date instead.
+    if ((error as { statusCode?: number }).statusCode !== 409) throw error;
+    await client.patch(id).set(set).commit();
+  }
+  return hash;
+}
+
+/* ---------- steel bought against steel labour (lib/expenses/steel.ts) ---------- */
+
+/** The steel benders' rate a ton bent and installed (GH₵ 2,000 unless changed on the steel card). */
+export async function steelRate(): Promise<number> {
+  const rate = await getBuyersClient().fetch<number | null>(`*[_id == $id][0].steelRate`, { id: EXPENSE_SETTINGS_ID });
+  return typeof rate === "number" && rate > 0 ? rate : STEEL_RATE;
+}
+
+/** The steel card's changes: an entry's tons (null: worked out again), or the rate a ton. */
+export async function setSteel(body: Record<string, unknown>): Promise<{ rate: number; expense: Expense | null }> {
+  const client = getBuyersClient();
+  if ("rate" in body) {
+    const rate = Number(body.rate);
+    if (!(rate > 0 && rate < 1_000_000)) throw new TodoError(400, "Type the rate a ton in cedis, e.g. 2000.");
+    await client.createIfNotExists({ _id: EXPENSE_SETTINGS_ID, _type: "expenseSettings" });
+    await client.patch(EXPENSE_SETTINGS_ID).set({ steelRate: Math.round(rate * 100) / 100 }).commit();
+  }
+  let expense: Expense | null = null;
+  if ("id" in body) {
+    const id = body.id;
+    if (!isId(EXPENSE_PREFIX, id)) throw new TodoError(404, "That entry isn't there any more.");
+    const tons = body.tons === null || body.tons === "" ? null : Number(body.tons);
+    if (tons !== null && !(tons >= 0 && tons < 10_000)) throw new TodoError(400, "Type the tons, e.g. 26 (0 for a part payment).");
+    const patch = client.patch(id);
+    await (tons === null ? patch.unset(["steelTons"]) : patch.set({ steelTons: Math.round(tons * 1000) / 1000 })).commit();
+    expense = await getExpense(id);
+  }
+  return { rate: await steelRate(), expense };
 }

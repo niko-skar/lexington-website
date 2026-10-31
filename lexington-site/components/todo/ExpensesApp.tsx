@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { debitGuess, debitWords, isInflow, money, shopOf, todayISO, type BankDebit, type Expense } from "@/lib/expenses/shared";
+import type { BookLists } from "@/lib/quickbooks/books";
 import type { StoreItem } from "@/lib/store/shared";
 import { photoAt, type TodoMe } from "@/lib/todo/shared";
 import { AccessSheet } from "./AccessSheet";
@@ -12,13 +13,15 @@ import { ExpenseBook, receiptDownload } from "./ExpenseBook";
 import { ExpenseForm, niceDate, type ExpensePrefill } from "./ExpenseForm";
 import site from "./Site.module.css";
 import { SiteHeader, SiteMenu } from "./SiteChrome";
+import { SteelCard } from "./SteelCard";
+import { STEEL_RATE } from "@/lib/expenses/steel";
 import styles from "./Todo.module.css";
 
 // The expense log (the office only): the entry form, then the totals and the list. The page holds
 // the entries; the form keeps its own state so typing stays quick on a phone.
 
 type ToastData = { text: string; tone?: "error"; action?: { label: string; run: () => void } };
-type ExpensesData = { expenses: Expense[]; items: StoreItem[]; pending?: BankDebit[] };
+type ExpensesData = { expenses: Expense[]; items: StoreItem[]; pending?: BankDebit[]; books?: BookLists; steelRate?: number };
 type SheetState = { configured: boolean; waiting: number; failed: number; lastSyncedAt: string | null; sheetUrl: string | null };
 
 const sortExpenses = (list: Expense[]) =>
@@ -88,6 +91,7 @@ function bankLine(last: BankLast | null) {
   if (last.result === "added") return `last one ${at}: ${amount}added as ${last.ref ?? "money in"}.`;
   if (last.result === "matched") return `last one ${at}: ${amount}matched ${last.ref ?? "an entry"} you typed.`;
   if (last.result === "other-account") return `last one ${at}: ${amount}on another account, not added.`;
+  if (last.result === "buyer") return `last one ${at}: ${amount}a buyer's payment (${last.ref ?? "receipt"}), not added as Leo's.`;
   if (last.result === "pending") return `last one ${at}: ${amount}out, waiting under From the bank.`;
   if (last.result === "fee") return `last one ${at}: a ${amount}bank fee, filed as ${last.ref ?? "an expense"}.`;
   if (last.result === "not-credit") return `your iPhone reached the app ${at} (not a credit text, so nothing was added).`;
@@ -221,6 +225,10 @@ export function ExpensesApp({
   const [items, setItems] = useState(initial?.items ?? []);
   // The bank's debits waiting to be completed, and the one in the form now.
   const [pending, setPending] = useState<BankDebit[]>(initial?.pending ?? []);
+  // The QuickBooks classes and locations for the form (kept in the website, read again now and then).
+  const [books, setBooks] = useState<BookLists | null>(initial?.books ?? null);
+  // The steel benders' rate a ton (the steel card).
+  const [steelRate, setSteelRate] = useState(initial?.steelRate ?? STEEL_RATE);
   const [prefill, setPrefill] = useState<ExpensePrefill | null>(null);
   const prefillRef = useRef<ExpensePrefill | null>(null);
   const pendingCount = useRef(pending.length);
@@ -272,9 +280,11 @@ export function ExpensesApp({
       const sig = x + JSON.stringify(items);
       if (sig === lastServer.current || startedAt < localAt.current) return;
       lastServer.current = sig;
-      const got = JSON.parse(x) as { expenses: Expense[]; pending?: BankDebit[] };
+      const got = JSON.parse(x) as { expenses: Expense[]; pending?: BankDebit[]; books?: BookLists; steelRate?: number };
       setExpenses(got.expenses);
       setPending(got.pending ?? []);
+      if (got.books) setBooks(got.books);
+      if (got.steelRate) setSteelRate(got.steelRate);
       setItems(items);
     } catch {
       setOffline(true);
@@ -479,6 +489,7 @@ export function ExpensesApp({
               key={`${editing?.id ?? prefill?.debitId ?? "new"}-${formKey}`}
               editing={editing}
               prefill={prefill}
+              books={books}
               expenses={expenses}
               items={items}
               onSaved={onSaved}
@@ -487,6 +498,16 @@ export function ExpensesApp({
               onBusy={onBusy}
               onOpenReceipt={onOpenReceipt}
               focusAmount={justSaved}
+            />
+            <SteelCard
+              expenses={expenses}
+              items={items}
+              rate={steelRate}
+              onChanged={(x, rate) => {
+                localAt.current = Date.now();
+                setSteelRate(rate);
+                if (x) setExpenses((list) => list.map((e) => (e.id === x.id ? x : e)));
+              }}
             />
             <ExpenseBook expenses={expenses} editingId={editing?.id ?? null} onEdit={onEdit} onOpenReceipt={onOpenReceipt} />
           </>

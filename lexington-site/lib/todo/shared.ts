@@ -46,13 +46,16 @@ export interface TodoTask {
  * messages). To-do, Store, Expenses and Alerts are drawn in the one page; the roll call's three parts
  * (Today, Payday, Workers) are its own page, /todo/rollcall (lib/rollcall).
  */
-export const SECTIONS = ["todo", "store", "expenses", "alerts", "rollcall", "payday", "workers", "concrete"] as const;
+export const SECTIONS = ["todo", "store", "expenses", "alerts", "rollcall", "payday", "workers", "concrete", "buyers"] as const;
 export type Section = (typeof SECTIONS)[number];
-/** Concrete (the trucks on pour days, lib/concrete, 30 Oct 2026) is drawn in the one page too. */
-export const PAGE_SECTIONS = ["todo", "store", "expenses", "alerts", "concrete"] as const;
+/**
+ * Concrete (the trucks on pour days, lib/concrete, 30 Oct 2026) and Buyers (their payments and receipts,
+ * lib/buyers, the office only, 31 Oct 2026) are drawn in the one page too.
+ */
+export const PAGE_SECTIONS = ["todo", "store", "expenses", "alerts", "concrete", "buyers"] as const;
 export type PageSection = (typeof PAGE_SECTIONS)[number];
 export const isPageSection = (section: string): section is PageSection => (PAGE_SECTIONS as readonly string[]).includes(section);
-export type SiteSection = Exclude<Section, "expenses" | "alerts">;
+export type SiteSection = Exclude<Section, "expenses" | "alerts" | "buyers">;
 export const SITE_SECTIONS: readonly SiteSection[] = ["todo", "store", "rollcall", "payday", "workers", "concrete"];
 const HREF: Record<Section, string> = {
   todo: "/todo/jobs",
@@ -63,6 +66,7 @@ const HREF: Record<Section, string> = {
   payday: "/todo/rollcall#week",
   workers: "/todo/rollcall#workers",
   concrete: "/todo/concrete",
+  buyers: "/todo/buyers",
 };
 export const sectionHref = (section: Section) => HREF[section];
 const SECTION_NAMES: Record<Section, string> = {
@@ -74,10 +78,11 @@ const SECTION_NAMES: Record<Section, string> = {
   payday: "Payday",
   workers: "Workers",
   concrete: "Concrete",
+  buyers: "Buyers",
 };
 export const sectionName = (section: Section) => SECTION_NAMES[section];
 /** Where a sign-in from the app may send someone back to. */
-export const APP_PAGES: readonly string[] = ["/todo", "/todo/jobs", "/todo/store", "/todo/expenses", "/todo/alerts", "/todo/rollcall", "/todo/concrete"];
+export const APP_PAGES: readonly string[] = ["/todo", "/todo/jobs", "/todo/store", "/todo/expenses", "/todo/alerts", "/todo/rollcall", "/todo/concrete", "/todo/buyers"];
 
 /** Who is using the page: Niko and other admins add and delete; a "site" login (the foreman) ticks. */
 export interface TodoMe {

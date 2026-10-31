@@ -1,0 +1,101 @@
+/* The buyers and their payments (/todo/buyers, 31 Oct 2026). Colours come from .app in Todo.module.css. */
+
+.card {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 12px;
+  padding: 14px;
+  border: 1px solid var(--x-line);
+  border-radius: 10px;
+  background: var(--x-surface);
+}
+.top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+.name {
+  font-family: var(--x-display);
+  font-size: 21px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.unit {
+  flex: none;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--x-accent-soft);
+  color: var(--x-accent);
+  font-family: var(--x-num);
+  font-size: 14px;
+  font-weight: 600;
+}
+.bar {
+  height: 8px;
+  border-radius: 99px;
+  background: var(--x-bg);
+  overflow: hidden;
+}
+.bar span {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  background: var(--x-ok);
+}
+.line {
+  margin: 0;
+  font-size: 15px;
+}
+.warn {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--x-amber);
+}
+.buttons {
+  display: grid;
+  grid-template-columns: 3fr 2fr;
+  gap: 8px;
+  margin-top: 4px;
+}
+.pay,
+.more {
+  min-height: 48px;
+  padding: 0 12px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 16px;
+}
+.pay {
+  border: 0;
+  background: var(--x-accent);
+  color: var(--x-accent-ink);
+}
+.more {
+  border: 1px solid var(--x-line);
+  background: var(--x-bg);
+  color: var(--x-ink);
+}
+.payments {
+  display: grid;
+  gap: 8px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.payments li {
+  display: grid;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--x-bg);
+  font-size: 14px;
+}
+.receipt {
+  color: var(--x-muted);
+}
+.receipt a {
+  color: var(--x-accent);
+  font-weight: 600;
+}

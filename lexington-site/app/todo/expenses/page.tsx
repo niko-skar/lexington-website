@@ -4,7 +4,9 @@ import { redirect } from "next/navigation";
 import { SiteApp } from "@/components/todo/SiteApp";
 import { TodoSignIn } from "@/components/todo/TodoSignIn";
 import { listPendingDebits } from "@/lib/expenses/bankDebit";
-import { listExpenses } from "@/lib/expenses/server";
+import { listExpenses, steelRate } from "@/lib/expenses/server";
+import type { BookLists } from "@/lib/quickbooks/books";
+import { cachedBookLists } from "@/lib/quickbooks/booksCache";
 import type { BankDebit, Expense } from "@/lib/expenses/shared";
 import { getStore } from "@/lib/store/server";
 import type { StoreItem } from "@/lib/store/shared";
@@ -28,12 +30,14 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
   let expenses: Expense[] = [];
   let items: StoreItem[] = [];
   let pending: BankDebit[] = [];
+  let books: BookLists | undefined;
+  let rate: number | undefined;
   let failed = false;
   try {
-    [expenses, { items }, pending] = await Promise.all([listExpenses(), getStore(me), listPendingDebits()]);
+    [expenses, { items }, pending, books, rate] = await Promise.all([listExpenses(), getStore(me), listPendingDebits(), cachedBookLists(), steelRate()]);
   } catch (error) {
     console.error("[expenses] load failed:", error instanceof Error ? error.message : error);
     failed = true;
   }
-  return <SiteApp me={me} section="expenses" initial={{ expenses: { expenses, items, pending } }} openEntry={openEntry} openDebit={openDebit} seenAlert={seenAlert} startedOffline={failed} />;
+  return <SiteApp me={me} section="expenses" initial={{ expenses: { expenses, items, pending, books, steelRate: rate } }} openEntry={openEntry} openDebit={openDebit} seenAlert={seenAlert} startedOffline={failed} />;
 }

@@ -1,3 +1,5 @@
+import type { CostClass } from "@/lib/quickbooks/books";
+
 // Site expenses (/todo/expenses), the office only. Moved here from the Claude page "Site Expense
 // Log" (Niko's since 29 Sep 2026) so it sits beside the to-do list and the store room: a paid
 // Material purchase for the Site goes straight into the store room's stock. Niko, 22 Oct 2026:
@@ -70,9 +72,36 @@ export interface Expense {
   driveUrl: string | null;
   /** The bank's own text behind it: money in it added or confirmed, a payment out it confirmed, or a fee it filed. */
   bank: BankNote | null;
+  /** The QuickBooks class (cost type) chosen for it; the floor gives its QuickBooks location (lib/quickbooks/books.ts). */
+  costClass: CostClass | null;
+  /** Wages (or the steel machines) paid in Payday that week: the entry is kept by the roll call, one line per payment. */
+  payday: PaydayInfo | null;
+  /** Tons of steel this entry brought, when typed on the steel card (lib/expenses/steel.ts); otherwise worked out. */
+  steelTons: number | null;
   createdAt: string;
   createdBy: string;
   updatedAt: string;
+}
+
+/** One payment made in Payday, as a line of that week's wage entry. */
+export interface PaydayLine {
+  /** The worker's id in the roll call ("machines" for the steel machines). */
+  id: string;
+  name: string;
+  /** The roll call's trade group ("masonry", "carpentry", "steel"), or "machines": it decides the QuickBooks class. */
+  group: string;
+  amount: number;
+  /** When it was paid. */
+  at: string;
+  /** The MoMo number or reference it went to, when given. */
+  ref: string | null;
+}
+
+export interface PaydayInfo {
+  /** The pay week's Monday, YYYY-MM-DD. */
+  week: string;
+  kind: "workers" | "machines";
+  lines: PaydayLine[];
 }
 
 /** What the bank's text said about an entry (lib/expenses/bankText.ts, bankDebit.ts). */

@@ -95,7 +95,8 @@ export async function emailPendingReceipts(): Promise<{ newReceipts: number; sen
   const minutesAgo = (iso?: string) => (iso ? (now - new Date(iso).getTime()) / 60000 : Infinity);
 
   const [buyers, receipts] = await Promise.all([
-    db.fetch<BuyerAccount[]>(`*[_type == "buyerAccount" && role != "admin" && count(payments) > 0]`),
+    // Never a test buyer (an @example.com account a test made a moment ago): its receipts are no one's.
+    db.fetch<BuyerAccount[]>(`*[_type == "buyerAccount" && role != "admin" && count(payments) > 0 && !(email match "*@example.com")]`),
     db.fetch<ReceiptRow[]>(
       `*[_type == "receipt"]{ _id, _rev, buyerId, paymentKey, issuedAt, emailedAt, skipEmail, emailClaimedAt, emailAttempts }`
     ),

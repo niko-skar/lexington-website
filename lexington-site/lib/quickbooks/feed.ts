@@ -6,6 +6,8 @@ import { CATEGORIES, METHODS, receiptFileName, todayISO, vatParts, type Expense 
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
 import { EXPENSE_PREFIX, QBO_FEED_ID, QBO_GONE_PREFIX } from "@/lib/site/ids";
 
+import { classNamed, locationForArea, TRADE_CLASS } from "./books";
+import { BOOK_LISTS_STALE_MS, cachedBookLists, saveBookLists } from "./booksCache";
 import { fetchCompany, qboApi, QboError } from "./client";
 import { loadConnection, writeLog, type QboConnection } from "./store";
 
@@ -139,6 +141,24 @@ export async function qboLists(): Promise<QboLists> {
   };
 }
 
+/**
+ * The classes and locations kept in the website for the expense form (lib/quickbooks/booksCache.ts), read again
+ * from QuickBooks when they're a few hours old (or now, when `force`). Never throws.
+ */
+export async function refreshBookLists(force = false): Promise<void> {
+  try {
+    if (!force) {
+      const cached = await cachedBookLists();
+      if (cached.fetchedAt && Date.now() - Date.parse(cached.fetchedAt) < BOOK_LISTS_STALE_MS) return;
+    }
+    const conn = await loadConnection();
+    if (!conn || conn.status !== "connected") return;
+    await saveBookLists(await qboLists());
+  } catch (error) {
+    console.error("[quickbooks lists]", error instanceof Error ? error.message : error);
+  }
+}
+
 /** First guesses for an empty form, from the names in The Lexington's books (nothing is saved). */
 export function suggestSettings(lists: QboLists): Pick<FeedSettings, "payFrom" | "expenseAccount" | "eventAccount" | "inflowRules"> {
   const find = (test: (name: string) => boolean, types?: string[]) =>
@@ -186,7 +206,25 @@ const amountText = (n: number) => (Number(n) || 0).toLocaleString("en-GB", { min
 function contentHash(x: FeedDoc): string {
   return createHash("sha1")
     .update(
-      JSON.stringify([x.kind, x.forWho, x.date, x.amount, x.vat, x.vatRate, x.supplier, x.description, x.floor, x.method, x.category, x.material, x.qty, x.ref, x.receiptId ?? null])
+      JSON.stringify([
+        x.kind,
+        x.forWho,
+        x.date,
+        x.amount,
+        x.vat,
+        x.vatRate,
+        x.supplier,
+        x.description,
+        x.floor,
+        x.method,
+        x.category,
+        x.material,
+        x.qty,
+        x.ref,
+        x.receiptId ?? null,
+        x.costClass?.id ?? null,
+        x.payday?.lines?.map((l) => [l.id, l.amount, l.group]) ?? null,
+      ])
     )
     .digest("hex");
 }
@@ -195,7 +233,7 @@ function alreadySent(x: FeedDoc, conn: QboConnection): boolean {
   return !!x.qbo?.txnId && x.qbo.realmId === conn.realmId;
 }
 
-export function planFor(x: FeedDoc, s: FeedSettings, lists: Pick<QboLists, "accounts">, conn: QboConnection): Plan {
+export function planFor(x: FeedDoc, s: FeedSettings, lists: Pick<QboLists, "accounts" | "classes" | "locations">, conn: QboConnection): Plan {
   if (!forCompany(x)) return { send: false, reason: `For ${x.forWho}, not the company`, needsYou: false };
   // The start date only decides what goes the first time; something already sent keeps following its changes.
   if (!alreadySent(x, conn) && (!s.startDate || x.date < s.startDate)) return { send: false, reason: "Dated before the start date", needsYou: false };
@@ -209,8 +247,11 @@ export function planFor(x: FeedDoc, s: FeedSettings, lists: Pick<QboLists, "acco
   const name = (id: string | null) => lists.accounts.find((a) => a.id === id)?.name ?? "?";
   const noTax = conn.country && conn.country !== "US" ? { GlobalTaxCalculation: "NotApplicable" } : {};
   const event = x.forWho === "Event";
-  // The location is the building's stage: it isn't one for a marketing event.
-  const location = s.location && !event ? { DepartmentRef: { value: s.location } } : {};
+  // The location is the building's stage or floor: the entry's floor when the books have it as a location
+  // ("Ground floor" -> "Ground Floor", "Foundations"), else the stage set on the QuickBooks page (wages, and
+  // entries for the whole building). It isn't one for a marketing event.
+  const locationId = event ? null : (locationForArea(x.floor, lists.locations)?.id ?? s.location ?? null);
+  const location = locationId ? { DepartmentRef: { value: locationId } } : {};
   const hash = contentHash(x);
   const ref = x.ref ?? x.id;
 
@@ -252,8 +293,13 @@ export function planFor(x: FeedDoc, s: FeedSettings, lists: Pick<QboLists, "acco
     return { send: false, reason: event ? "Choose the account for marketing events" : "Choose the cost account for site expenses", needsYou: true };
   }
   const category = (x.category ?? "Other") as Category;
-  // The classes split the building's costs (material / service / other): marketing has none.
-  const classId = event ? null : (s.classFor[category] ?? null);
+  // The class is the cost type: the one chosen on the entry (found again by its name if it was renamed), else
+  // the one set for its kind on the QuickBooks page. Marketing has none.
+  const chosen = x.costClass ? (lists.classes.find((c) => c.id === x.costClass?.id) ?? classNamed(x.costClass.name, lists.classes)) : null;
+  const classId = event ? null : (chosen?.id ?? s.classFor[category] ?? null);
+  // Wages from Payday: a line per payment, each on the class of the worker's trade.
+  const lineClass = (group: string) => classNamed(TRADE_CLASS[group] ?? "", lists.classes)?.id ?? classId;
+  const paid = x.payday?.lines?.length ? x.payday : null;
   const what = [x.material ? `${x.material}${x.qty ? ` x ${x.qty}` : ""}` : "", x.description].filter(Boolean).join(" · ");
   const vat = x.vat ? vatParts(x.amount, x.vatRate) : null;
   const note = [
@@ -282,17 +328,27 @@ export function planFor(x: FeedDoc, s: FeedSettings, lists: Pick<QboLists, "acco
       ...(vendorId ? { EntityRef: { value: vendorId, type: "Vendor" } } : {}),
       ...location,
       ...noTax,
-      Line: [
-        {
-          Amount: x.amount,
-          DetailType: "AccountBasedExpenseLineDetail",
-          Description: clip(what || x.supplier || ref, 4000),
-          AccountBasedExpenseLineDetail: {
-            AccountRef: { value: costAccount },
-            ...(classId ? { ClassRef: { value: classId } } : {}),
-          },
-        },
-      ],
+      Line: paid
+        ? paid.lines.map((l) => {
+            const lc = lineClass(l.group);
+            return {
+              Amount: l.amount,
+              DetailType: "AccountBasedExpenseLineDetail",
+              Description: clip(`${l.name}: ${paid.kind === "machines" ? "steel machines" : "wages"}, week from ${paid.week}${l.ref ? ` (${l.ref})` : ""}`, 4000),
+              AccountBasedExpenseLineDetail: { AccountRef: { value: costAccount }, ...(lc ? { ClassRef: { value: lc } } : {}) },
+            };
+          })
+        : [
+            {
+              Amount: x.amount,
+              DetailType: "AccountBasedExpenseLineDetail",
+              Description: clip(what || x.supplier || ref, 4000),
+              AccountBasedExpenseLineDetail: {
+                AccountRef: { value: costAccount },
+                ...(classId ? { ClassRef: { value: classId } } : {}),
+              },
+            },
+          ],
     }),
   };
 }

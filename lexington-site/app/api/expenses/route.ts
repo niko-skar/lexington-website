@@ -1,9 +1,10 @@
 import { after } from "next/server";
 
 import { debitFor, listPendingDebits, pendingDebit, settleDebit } from "@/lib/expenses/bankDebit";
-import { createExpense, listExpenses } from "@/lib/expenses/server";
+import { createExpense, listExpenses, steelRate } from "@/lib/expenses/server";
 import { syncExpense } from "@/lib/expenses/sheet";
-import { feedExpense } from "@/lib/quickbooks/feed";
+import { cachedBookLists } from "@/lib/quickbooks/booksCache";
+import { feedExpense, refreshBookLists } from "@/lib/quickbooks/feed";
 import { errorResponse, readJson, requireTodoUser } from "@/lib/todo/server";
 
 export const dynamic = "force-dynamic";
@@ -13,8 +14,10 @@ export const maxDuration = 60;
 export async function GET(): Promise<Response> {
   try {
     await requireTodoUser(true, "expenses");
-    const [expenses, pending] = await Promise.all([listExpenses(), listPendingDebits()]);
-    return Response.json({ expenses, pending }, { headers: { "Cache-Control": "no-store" } });
+    const [expenses, pending, books, rate] = await Promise.all([listExpenses(), listPendingDebits(), cachedBookLists(), steelRate()]);
+    // The QuickBooks classes and locations, read again when they're a few hours old (for next time).
+    after(() => refreshBookLists());
+    return Response.json({ expenses, pending, books, steelRate: rate }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     return errorResponse(error);
   }

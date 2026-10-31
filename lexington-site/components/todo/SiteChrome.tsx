@@ -52,6 +52,13 @@ const ICONS: Record<NavItem, React.ReactNode> = {
       <circle cx="17" cy="18.5" r="1.7" />
     </svg>
   ),
+  buyers: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="9" cy="8" r="3.2" />
+      <path d="M3.5 20c.6-3.6 2.8-5.6 5.5-5.6s4.9 2 5.5 5.6" />
+      <path d="M15.5 4.8a3.2 3.2 0 0 1 0 6.4M17.5 14.6c1.6.7 2.6 2.5 3 5.4" />
+    </svg>
+  ),
   rollcall: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M8 4h8v3H8z" />
@@ -64,8 +71,8 @@ const ICONS: Record<NavItem, React.ReactNode> = {
 // What a badge on the bar counts, for a screen reader.
 const BADGE_WORDS: Partial<Record<NavItem, string>> = { store: "to reorder", alerts: "new" };
 
-/** Used now and then (Concrete, on pour days): on the bar when there's room, else from the home page's tile. */
-const NOW_AND_THEN: readonly NavItem[] = ["concrete"];
+/** Used now and then (Concrete on pour days, Buyers on a payment): on the bar when there's room, else from the home page's tile. */
+const NOW_AND_THEN: readonly NavItem[] = ["concrete", "buyers"];
 const navItems = (me: TodoMe): NavItem[] => {
   const parts: NavItem[] = [...PAGE_SECTIONS.filter((s) => me.sections.includes(s)), ...(opensRollcall(me.sections) ? (["rollcall"] as const) : [])];
   // A login that opens one part only (a storekeeper) has no home page to go back to, so no bar at all.
