@@ -8,7 +8,8 @@ import { PAGE_SECTIONS, sectionHref, sectionName, type PageSection, type TodoMe 
 import styles from "./Todo.module.css";
 
 // What every part of the site app shares: its header, the bar at the bottom (Home, then the parts this
-// login opens: To-do · Store · Expenses · Alerts · Concrete · Buyers · Steel · Roll call) and the ☰ menu.
+// login opens: To-do · Store · Expenses · Alerts · Concrete · Buyers · Steel · Roll call; on a laptop a rail down
+// the left with every part) and the ☰ menu.
 
 /** Where the bar can go: the home page, a part drawn in this page, or the roll call (its own page). */
 export type View = PageSection | "home";
@@ -77,14 +78,19 @@ const ICONS: Record<NavItem, React.ReactNode> = {
 // What a badge on the bar counts, for a screen reader.
 const BADGE_WORDS: Partial<Record<NavItem, string>> = { store: "to reorder", alerts: "new" };
 
-/** Used now and then (Concrete on pour days, Buyers on a payment, Steel as it goes in): on the bar when there's room, else from the home page's tile. */
+/**
+ * Used now and then (Concrete on pour days, Buyers on a payment, Steel as it goes in): on a phone's bar when there's
+ * room, else from the home page's tile. A laptop's rail has room for every part (2 Nov 2026).
+ */
 const NOW_AND_THEN: readonly NavItem[] = ["concrete", "buyers", "steel"];
-const navItems = (me: TodoMe): NavItem[] => {
+type NavEntry = { item: NavItem; laptopOnly: boolean };
+const navItems = (me: TodoMe): NavEntry[] => {
   const parts: NavItem[] = [...PAGE_SECTIONS.filter((s) => me.sections.includes(s)), ...(opensRollcall(me.sections) ? (["rollcall"] as const) : [])];
   // A login that opens one part only (a storekeeper) has no home page to go back to, so no bar at all.
-  if (parts.length < 2) return parts;
+  if (parts.length < 2) return parts.map((item) => ({ item, laptopOnly: false }));
   const all: NavItem[] = ["home", ...parts];
-  return all.length > 6 ? all.filter((item) => !NOW_AND_THEN.includes(item)) : all;
+  const crowded = all.length > 6;
+  return all.map((item) => ({ item, laptopOnly: crowded && NOW_AND_THEN.includes(item) }));
 };
 const navName = (item: NavItem) => (item === "home" ? "Home" : item === "rollcall" ? "Roll call" : sectionName(item));
 const navHref = (item: NavItem) => (item === "home" ? "/todo" : item === "rollcall" ? "/todo/rollcall" : sectionHref(item));
@@ -140,15 +146,19 @@ export function SiteNav({
 }) {
   const items = navItems(me);
   if (items.length < 2) return null;
+  const onPhone = items.filter((x) => !x.laptopOnly).length;
   return (
-    <nav className={`${styles.nav} ${items.length > 5 ? styles.navMany : ""}`} aria-label="Parts of the app">
-      {items.map((item) => {
+    <nav className={`${styles.nav} ${onPhone > 5 ? styles.navMany : ""}`} aria-label="Parts of the app">
+      <p className={styles.navBrand}>
+        The Lexington<small>Site app</small>
+      </p>
+      {items.map(({ item, laptopOnly }) => {
         const badge = badges?.[item] ?? 0;
         return (
           <a
             key={item}
             href={navHref(item)}
-            className={item === current ? styles.navOn : styles.navItem}
+            className={`${item === current ? styles.navOn : styles.navItem}${laptopOnly ? ` ${styles.navExtra}` : ""}`}
             aria-current={item === current ? "page" : undefined}
             onClick={(e) => {
               if (item === "rollcall" || e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;

@@ -5,6 +5,7 @@ import { refreshBookLists } from "@/lib/quickbooks/feed";
 import { photoBase, readRollcall, requireRollcallUser, rollcallMoved, writeRollcall } from "@/lib/rollcall/server";
 import { ROLLCALL_PARTS, rollcallAccess } from "@/lib/rollcall/shared";
 import { errorResponse, readJson } from "@/lib/todo/server";
+import { PAGE_SECTIONS, sectionHref, sectionName } from "@/lib/todo/shared";
 
 export const dynamic = "force-dynamic";
 
@@ -30,7 +31,9 @@ export async function GET(request: Request): Promise<Response> {
       const locations = payday ? (await cachedBookLists().catch(() => ({ locations: [] }))).locations.map((l) => l.name) : [];
       // Missing or a few hours old: read again from QuickBooks for next time.
       if (payday) after(() => refreshBookLists());
-      return Response.json({ me: { id: me.id, name: me.name, kind: me.kind, sections }, cdn: photoBase(), note, locations }, { headers });
+      // A laptop's rail: the app's other parts this login opens (2 Nov 2026).
+      const links = PAGE_SECTIONS.filter((s) => me.sections.includes(s)).map((s) => ({ name: sectionName(s), href: sectionHref(s) }));
+      return Response.json({ me: { id: me.id, name: me.name, kind: me.kind, sections }, cdn: photoBase(), note, locations, links }, { headers });
     }
     const since = params.get("since");
     if (since && !ISO_RE.test(since)) return Response.json({ error: "Bad time." }, { status: 400 });

@@ -21,6 +21,9 @@
   --x-amber-soft: #f6ecd8;
   --x-on-color: #ffffff;
   --x-shade: rgba(16, 22, 24, 0.5);
+  /* How wide the page's column is (wider on a laptop), and the rail on a laptop's left. */
+  --x-page: 560px;
+  --x-rail: 0px;
   --x-display: var(--x-font-display, "Barlow Condensed"), "Arial Narrow", system-ui, sans-serif;
   --x-body: var(--x-font-body, "Barlow"), system-ui, -apple-system, "Segoe UI", sans-serif;
   --x-num: var(--x-font-num, "IBM Plex Mono"), ui-monospace, "SF Mono", Menlo, monospace;
@@ -103,7 +106,7 @@
   align-items: flex-end;
   justify-content: space-between;
   gap: 12px;
-  max-width: 560px;
+  max-width: var(--x-page);
   margin: 0 auto;
 }
 .topText {
@@ -225,7 +228,7 @@
 /* ---------- notes under the header ---------- */
 .banner,
 .hint {
-  max-width: 560px;
+  max-width: var(--x-page);
   margin: 12px auto 0;
   padding: 10px 12px;
   border-radius: 8px;
@@ -275,7 +278,7 @@
 
 /* ---------- list ---------- */
 .main {
-  max-width: 560px;
+  max-width: var(--x-page);
   margin: 0 auto;
   padding: 16px max(16px, env(safe-area-inset-right, 0px)) calc(120px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
 }
@@ -987,6 +990,11 @@ select.input {
   font-size: 12px;
   letter-spacing: 0.02em;
 }
+/* On a laptop only: the app's name on the rail, and the parts a phone's bar has no room for. */
+.navBrand,
+.navExtra {
+  display: none;
+}
 .navBadge {
   position: absolute;
   top: 2px;
@@ -1008,6 +1016,156 @@ select.input {
 }
 .withNav .toast {
   bottom: calc(82px + env(safe-area-inset-bottom, 0px));
+}
+
+/* ---------- a laptop (Niko, 2 Nov 2026: "make this app also work well on the desktop so i can use my laptop on it") ----------
+   From 1024 px wide the bar is a rail down the left with every part on it, the page is wider, sheets open as
+   windows in the middle; from 1280 px it widens again and the parts lay their lists out in columns (their own
+   files). A phone never reaches these widths, so nothing changes there. */
+@media (min-width: 1024px) {
+  .app {
+    --x-page: 880px;
+  }
+  .withNav {
+    --x-rail: 236px;
+    padding-left: var(--x-rail);
+  }
+  .top {
+    padding: calc(18px + env(safe-area-inset-top, 0px)) 32px 12px;
+  }
+  .title {
+    font-size: 34px;
+  }
+  /* The tabs sit under the title, as wide as they need. */
+  .tabs {
+    width: fit-content;
+    min-width: min(100%, 440px);
+    max-width: var(--x-page);
+    margin-left: max(0px, calc((100% - var(--x-page)) / 2));
+    grid-auto-columns: minmax(120px, auto);
+  }
+  .tabs .tab,
+  .tabs .tabOn {
+    padding: 0 18px;
+  }
+  .hint {
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .main {
+    padding: 24px 32px 64px;
+  }
+  .withNav .main {
+    padding-bottom: 64px;
+  }
+  /* The rail. */
+  .nav {
+    top: 0;
+    right: auto;
+    width: var(--x-rail);
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 2px;
+    padding: calc(22px + env(safe-area-inset-top, 0px)) 12px 20px;
+    overflow-y: auto;
+    border-top: 0;
+    border-right: 1px solid var(--x-line);
+  }
+  .navBrand {
+    display: block;
+    margin: 0 12px 18px;
+    font-family: var(--x-display);
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0.02em;
+    color: var(--x-ink);
+  }
+  .navBrand small {
+    display: block;
+    margin-top: 4px;
+    font-family: var(--x-body);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--x-muted);
+  }
+  .navItem,
+  .navOn,
+  .navMany .navItem,
+  .navMany .navOn {
+    flex: none;
+    max-width: none;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 46px;
+    padding: 8px 12px;
+    font-size: 17px;
+    letter-spacing: 0.04em;
+  }
+  .navBadge {
+    position: static;
+    margin-left: auto;
+  }
+  /* Sheets: a window in the middle of the screen. */
+  .sheetBackdrop {
+    align-items: center;
+    padding: 24px;
+  }
+  .sheet {
+    max-width: 600px;
+    max-height: calc(100dvh - 48px);
+    padding: 24px 28px;
+    border-radius: 14px;
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.3);
+  }
+  .toast,
+  .withNav .toast {
+    left: calc(var(--x-rail) + 24px);
+    right: 24px;
+    bottom: 24px;
+  }
+}
+@media (min-width: 1280px) {
+  .app {
+    --x-page: 1120px;
+  }
+  /* The jobs: cards side by side under their floor's heading. */
+  .cardGroup {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 14px;
+    align-items: start;
+  }
+  .cardGroup > .groupTitle {
+    grid-column: 1 / -1;
+    margin-bottom: 0;
+  }
+  .cardGroup > .card {
+    margin-bottom: 0;
+  }
+}
+/* A mouse: what can be clicked shows it. */
+@media (hover: hover) and (pointer: fine) {
+  .navItem:hover {
+    background: var(--x-bg);
+    color: var(--x-ink);
+  }
+  .chip:hover,
+  .addWrite:hover,
+  .menuButton:hover,
+  .sheetCancel:hover {
+    border-color: var(--x-muted);
+  }
+  .addPhoto:hover,
+  .sheetSave:hover:not(:disabled) {
+    filter: brightness(1.08);
+  }
+  .card:hover {
+    border-color: var(--x-muted);
+  }
 }
 
 @media (prefers-reduced-motion: no-preference) {

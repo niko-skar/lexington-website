@@ -209,11 +209,37 @@ nav.tabs button.home{color:var(--accent)}
 /* Typing in a box at 16px: iPhones zoom in on anything smaller */
 .field{font-size:16px}
 @media (prefers-reduced-motion:no-preference){ .yes,.no,.seg button{transition:background .12s,color .12s,border-color .12s} }
+/* A laptop (2 Nov 2026): the tabs are a rail down the left with the app's other parts on it; the page is wider. */
+nav.tabs .applinks{display:none}
+@media (min-width:1024px){
+  body{padding-left:236px}
+  nav.tabs{top:0;right:auto;width:236px;display:flex;flex-direction:column;gap:2px;padding:22px 12px 20px;border-top:0;border-right:1px solid var(--line);overflow-y:auto}
+  nav.tabs::before{content:"The Lexington";display:block;margin:0 12px 18px;font:700 22px/1 var(--display);letter-spacing:.02em;color:var(--ink)}
+  nav.tabs button{flex:none;height:46px;padding:0 12px;text-align:left}
+  nav.tabs .applinks{display:flex;flex-direction:column;gap:2px}
+  nav.tabs .applinks:empty{display:none}
+  nav.tabs .applinks a{display:flex;align-items:center;height:46px;padding:0 12px;border-radius:10px;font:600 17px/1 var(--display);text-transform:uppercase;letter-spacing:.05em;color:var(--muted);text-decoration:none}
+  nav.tabs .applinks::after{content:"Roll call";display:block;margin:16px 12px 4px;padding-top:14px;border-top:1px solid var(--line);font:600 12px/1 var(--body);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+  .wrap{max-width:960px;padding:0 32px 64px}
+  .toast{left:calc(50% + 118px);bottom:24px}
+}
+@media (min-width:1280px){
+  .wrap{max-width:1120px}
+  /* Today's marking: the workers in two columns under their group's heading (a line down the middle). */
+  .group[data-g] .rows{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));background:linear-gradient(var(--line),var(--line)) center/1px 100% no-repeat,var(--surface)}
+  .group[data-g] .rows>:not(.wrow){grid-column:1/-1}
+  .group[data-g] .rows>p{background:var(--surface)}
+  .group[data-g] .rows>.wrow:nth-child(2){border-top:0}
+}
+@media (min-width:1024px) and (hover:hover) and (pointer:fine){
+  nav.tabs .applinks a:hover,nav.tabs button:not(.on):hover{background:var(--chip);color:var(--ink)}
+}
 </style>
 
 <div class="wrap" id="app"><p class="loading">Loading your site register…</p></div>
 <nav class="tabs" id="tabs">
   <button data-act="home" data-v="home" class="home" hidden>Home</button>
+  <div class="applinks"></div>
   <button data-act="tab" data-v="today">Today</button>
   <button data-act="tab" data-v="week">Payday</button>
   <button data-act="tab" data-v="workers">Workers</button>
@@ -1437,6 +1463,12 @@ function softRender(){
   render();
 }
 
+/** A laptop's rail: the app's other parts this login opens, above the roll call's own tabs (hidden on a phone). */
+function appLinks(list){
+  const box = document.querySelector("#tabs .applinks");
+  if (box) box.innerHTML = list.map(l => `<a href="${esc(l.href)}">${esc(l.name)}</a>`).join("");
+}
+
 /* ---------- boot ---------- */
 render();
 (async () => {
@@ -1447,7 +1479,8 @@ render();
   // In the Lexington app: what this login may open (sent with the data).
   const me = window.__rcMe;
   if (me){ const has = x => (me.sections || []).includes(x);
-    S.inApp = true; S.can = {rollcall:has("rollcall"), payday:has("payday"), workers:has("workers")}; if (!tabAllowed(S.tab)) S.tab = firstTab(); }
+    S.inApp = true; S.can = {rollcall:has("rollcall"), payday:has("payday"), workers:has("workers")}; if (!tabAllowed(S.tab)) S.tab = firstTab();
+    appLinks(window.__rcLinks || []); }
   // The app's home page opens a tab straight away: /todo/rollcall#week is Payday.
   const asked = location.hash.slice(1);
   if (["today", "week", "workers"].includes(asked) && tabAllowed(asked)) S.tab = asked;

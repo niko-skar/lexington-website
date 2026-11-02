@@ -97,7 +97,8 @@ export function BuyersApp({ me, active, initial, startedOffline, fresh }: { me: 
         ) : data.buyers.length === 0 ? (
           <p className={styles.empty}>No buyer accounts yet. A buyer&rsquo;s account is made in Studio; they then show here.</p>
         ) : (
-          data.buyers.map((x) => {
+          <div className={b.list}>
+          {data.buyers.map((x) => {
             const share = x.priceUSD > 0 ? Math.min(100, Math.round((x.paidUSD / x.priceUSD) * 100)) : 0;
             const last = x.payments[0];
             return (
@@ -162,7 +163,8 @@ export function BuyersApp({ me, active, initial, startedOffline, fresh }: { me: 
                 )}
               </article>
             );
-          })
+          })}
+          </div>
         )}
       </main>
 

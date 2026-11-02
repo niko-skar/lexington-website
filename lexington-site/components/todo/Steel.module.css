@@ -136,6 +136,20 @@
   font-size: 13px;
   color: var(--x-muted);
 }
+/* A laptop (2 Nov 2026): what's owed and the tons installed on the left, the steel bought and paid on the right. */
+@media (min-width: 1280px) {
+  .split {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 32px;
+    align-items: start;
+  }
+}
+@media (hover: hover) and (pointer: fine) {
+  .row:hover b {
+    color: var(--x-accent);
+  }
+}
 .deleteBtn {
   width: 100%;
   min-height: 48px;

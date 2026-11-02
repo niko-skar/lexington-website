@@ -491,6 +491,42 @@
   font-size: 17px;
 }
 
+/* ---------- a laptop (2 Nov 2026): the expense form beside the book, the stock list in two columns ---------- */
+@media (min-width: 1280px) {
+  .deskSplit {
+    display: grid;
+    grid-template-columns: minmax(400px, 460px) minmax(0, 1fr);
+    gap: 32px;
+    align-items: start;
+  }
+  .deskSplit > div > :first-child {
+    margin-top: 0;
+  }
+  /* The form stays in view while the book scrolls past; a long form scrolls inside its column. */
+  .deskSide {
+    position: sticky;
+    top: var(--x-head, 120px);
+    max-height: calc(100dvh - var(--x-head, 120px) - 12px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 0 8px 16px 0;
+  }
+  .itemList {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .itemRow:nth-child(2) {
+    border-top: 0;
+  }
+  .itemRow:nth-child(odd) {
+    border-right: 1px solid var(--x-line);
+  }
+}
+@media (hover: hover) and (pointer: fine) {
+  .itemRow:hover {
+    background: var(--x-bg);
+  }
+}
+
 /* ---------- expenses: the form ---------- */
 .card {
   display: grid;

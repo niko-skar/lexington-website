@@ -112,6 +112,8 @@
       window.__rcCdn = who.cdn;
       // Where Payday can put the week's wages in QuickBooks.
       window.__rcLocations = who.locations || [];
+      // A laptop's rail: the app's other parts this login opens.
+      window.__rcLinks = who.links || [];
       forget(keyFor(me));
       first = readCopy(keyFor(me));
     } catch (e) {

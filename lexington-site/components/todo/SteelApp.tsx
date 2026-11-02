@@ -126,7 +126,8 @@ export function SteelApp({ me, active, initial, startedOffline, fresh }: { me: T
         {!tr ? (
           <p className={styles.loading}>Loading the steel…</p>
         ) : (
-          <>
+          <div className={s.split}>
+            <div>
             <div className={styles.addBar} style={{ gridTemplateColumns: "1fr" }}>
               <button type="button" className={styles.addPhoto} onClick={() => setSheet({ install: null })}>
                 Log steel installed
@@ -207,7 +208,9 @@ export function SteelApp({ me, active, initial, startedOffline, fresh }: { me: T
                 ))}
               </ul>
             )}
+            </div>
 
+            <div>
             <h2 className={styles.groupTitle}>
               Bought <span>{tons(tr.tons)}</span>
             </h2>
@@ -268,7 +271,8 @@ export function SteelApp({ me, active, initial, startedOffline, fresh }: { me: T
             <p className={s.small}>
               The steel bought and the payments come from the expenses: steel under Materials, and Wonder or steel bending labour (never the bending machines&rsquo; hire).
             </p>
-          </>
+            </div>
+          </div>
         )}
       </main>
 

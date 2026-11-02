@@ -1,5 +1,17 @@
 /* The buyers and their payments (/todo/buyers, 31 Oct 2026). Colours come from .app in Todo.module.css. */
 
+/* A laptop (2 Nov 2026): the buyers side by side. */
+@media (min-width: 1280px) {
+  .list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    align-items: start;
+  }
+  .list > .card {
+    margin-bottom: 0;
+  }
+}
 .card {
   display: grid;
   gap: 6px;

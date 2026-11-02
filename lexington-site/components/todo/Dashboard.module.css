@@ -54,3 +54,22 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
+/* A laptop (2 Nov 2026). */
+@media (min-width: 1280px) {
+  .tiles {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+  }
+  .tile {
+    min-height: 140px;
+    padding: 18px 18px 16px;
+  }
+  .big {
+    font-size: 30px;
+  }
+}
+@media (hover: hover) and (pointer: fine) {
+  .tile:hover {
+    border-color: var(--x-accent);
+  }
+}

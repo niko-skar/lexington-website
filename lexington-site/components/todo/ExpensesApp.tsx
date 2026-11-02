@@ -20,6 +20,13 @@ import styles from "./Todo.module.css";
 // the entries; the form keeps its own state so typing stays quick on a phone.
 
 type ToastData = { text: string; tone?: "error"; action?: { label: string; run: () => void } };
+
+/** The form into view: on a phone it's above the list; on a laptop it sits beside it, so only its column goes back to the top. */
+function showForm() {
+  const side = document.getElementById("exp-side");
+  if (side && getComputedStyle(side).position === "sticky") side.scrollTo({ top: 0, behavior: "smooth" });
+  else document.getElementById("exp-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
 type ExpensesData = { expenses: Expense[]; items: StoreItem[]; pending?: BankDebit[]; books?: BookLists };
 type SheetState = { configured: boolean; waiting: number; failed: number; lastSyncedAt: string | null; sheetUrl: string | null };
 
@@ -313,7 +320,7 @@ export function ExpensesApp({
     setEditing(x);
     setJustSaved(false);
     setFormKey((k) => k + 1);
-    document.getElementById("exp-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    showForm();
   }, []);
 
   const onCancel = useCallback(() => {
@@ -392,7 +399,7 @@ export function ExpensesApp({
       });
       setJustSaved(false);
       setFormKey((k) => k + 1);
-      setTimeout(() => document.getElementById("exp-form")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+      setTimeout(showForm, 50);
     },
     [expenses]
   );
@@ -483,6 +490,8 @@ export function ExpensesApp({
           <p className={styles.loading}>Loading the expenses…</p>
         ) : (
           <>
+            <div className={site.deskSplit}>
+            <div id="exp-side" className={site.deskSide}>
             <BankDebits pending={pending} completing={prefill?.debitId ?? null} onComplete={onComplete} onDismiss={(d) => void onDismiss(d)} />
             <ExpenseForm
               key={`${editing?.id ?? prefill?.debitId ?? "new"}-${formKey}`}
@@ -498,8 +507,12 @@ export function ExpensesApp({
               onOpenReceipt={onOpenReceipt}
               focusAmount={justSaved}
             />
+            </div>
+            <div>
             <SteelCard expenses={expenses} items={items} onOpen={onSteel} />
             <ExpenseBook expenses={expenses} editingId={editing?.id ?? null} onEdit={onEdit} onOpenReceipt={onOpenReceipt} />
+            </div>
+            </div>
           </>
         )}
       </main>

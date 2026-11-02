@@ -372,7 +372,7 @@ export function TodoApp({
             </p>
           ) : (
             openGroups.map((group) => (
-              <section key={group.key} className={styles.group}>
+              <section key={group.key} className={`${styles.group} ${styles.cardGroup}`}>
                 <h2 className={styles.groupTitle}>
                   {group.title} <span>{group.items.length}</span>
                 </h2>
@@ -445,7 +445,7 @@ export function TodoApp({
             <p className={styles.empty}>Ticked-off jobs show here, newest first.</p>
           ) : (
             doneGroups.map((group) => (
-              <section key={group.day} className={styles.group}>
+              <section key={group.day} className={`${styles.group} ${styles.cardGroup}`}>
                 <h2 className={styles.groupTitle} suppressHydrationWarning>
                   {group.day} <span>{group.items.length}</span>
                 </h2>

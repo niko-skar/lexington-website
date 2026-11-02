@@ -80,6 +80,8 @@ const useStandalone = () =>
     () => true
   );
 const useIphone = () => useSyncExternalStore(never, () => /iphone|ipad|ipod/i.test(navigator.userAgent), () => false);
+// A laptop or desktop (a mouse, not a phone): the app installs as a window of its own there, not on a home screen.
+const useComputer = () => useSyncExternalStore(never, () => window.matchMedia("(pointer: fine)").matches && !/android|iphone|ipad|ipod/i.test(navigator.userAgent), () => false);
 const useHintClosedBefore = () =>
   useSyncExternalStore(
     never,
@@ -96,6 +98,7 @@ const useHintClosedBefore = () =>
 function InstallHint() {
   const standalone = useStandalone();
   const isIphone = useIphone();
+  const computer = useComputer();
   const closedBefore = useHintClosedBefore();
   const [closedNow, setClosedNow] = useState(false);
   const [prompt, setPrompt] = useState<InstallPrompt | null>(null);
@@ -111,7 +114,8 @@ function InstallHint() {
     return () => window.removeEventListener("beforeinstallprompt", onPrompt);
   }, []);
 
-  if (standalone || closedBefore || closedNow) return null;
+  // A computer's browser that can't install it (no install offer): no tip at all.
+  if (standalone || closedBefore || closedNow || (computer && !prompt)) return null;
   const close = () => {
     setClosedNow(true);
     try {
@@ -124,7 +128,7 @@ function InstallHint() {
     <div className={styles.hint}>
       {prompt ? (
         <>
-          <span>Put the app on your home screen so it opens like an app.</span>
+          <span>{computer ? "Install the app on this computer: it opens in its own window, with its own icon." : "Put the app on your home screen so it opens like an app."}</span>
           <button
             type="button"
             className={styles.hintButton}
@@ -284,6 +288,25 @@ export function SiteApp({
     const nav = navigator as Navigator & { setAppBadge?: (n?: number) => Promise<void>; clearAppBadge?: () => Promise<void> };
     (unread > 0 ? nav.setAppBadge?.(unread) : nav.clearAppBadge?.())?.catch(() => {});
   }, [hasAlerts, unread]);
+
+  // A laptop: Esc closes the window on top, as its Cancel or Close button would.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape" || e.defaultPrevented) return;
+      const open = [...document.querySelectorAll<HTMLElement>('[role="dialog"]')].filter((d) => d.getClientRects().length > 0);
+      const top = open[open.length - 1];
+      if (!top) return;
+      const close = [...top.querySelectorAll<HTMLButtonElement>("button")].filter(
+        (b) => b.getClientRects().length > 0 && (b.classList.contains(styles.sheetCancel) || /^(close|cancel|done)$/i.test(b.textContent?.trim() ?? ""))
+      );
+      const button = close[close.length - 1];
+      if (!button || button.disabled) return;
+      e.preventDefault();
+      button.click();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   const show = (s: View) => opened.includes(s) && (s === "home" || me.sections.includes(s));
 
