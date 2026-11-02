@@ -98,3 +98,60 @@ export function steelSummary(expenses: readonly Expense[], rate: number, unitOf:
   const labourValue = Math.round(tons * rate * 100) / 100;
   return { rate, tons, unknown: bought.filter((b) => b.tons === null).length, labourValue, paid, balance: Math.round((labourValue - paid) * 100) / 100, bought, labour };
 }
+
+/* ---------- tons installed (the steel tracker, /todo/steel) ---------- */
+// Niko, 2 Nov 2026: "now build the steel tracker properly with tons installed". Wonder is paid by the ton bent and
+// installed, so what is owed comes from the tons installed (logged on the steel page), not the tons bought: the
+// labour earned is the tons installed at the rate a ton, less what the steel benders were paid. The steel bought
+// and not yet installed is what's in stock (and its labour still to come).
+
+export const STEEL_PARTS = ["Footings", "Columns", "Beams", "Slab", "Stairs", "Walls", "Other"] as const;
+
+export interface SteelInstall {
+  id: string;
+  /** YYYY-MM-DD */
+  date: string;
+  /** The floor or location ("First Floor", "Foundations"). */
+  area: string;
+  /** What was bent and installed: columns, a slab... */
+  part: string;
+  tons: number;
+  note: string;
+  createdBy: string;
+  createdAt: string;
+}
+
+export interface SteelTracker extends SteelSummary {
+  installed: number;
+  /** Bought less installed (below 0: more installed than the buys say). */
+  stock: number;
+  /** The tons installed at the rate a ton. */
+  earned: number;
+  /** Earned less paid: owed to the steel benders (below 0: paid ahead). */
+  owed: number;
+  /** The labour on the steel in stock, still to come. */
+  toCome: number;
+  installs: SteelInstall[];
+}
+
+export function steelTracker(summary: SteelSummary, installs: readonly SteelInstall[]): SteelTracker {
+  const round = (n: number, d = 100) => Math.round(n * d) / d;
+  const installed = round(installs.reduce((n, i) => n + i.tons, 0), 1000);
+  const stock = round(summary.tons - installed, 1000);
+  const earned = round(installed * summary.rate);
+  return {
+    ...summary,
+    installed,
+    stock,
+    earned,
+    owed: round(earned - summary.paid),
+    toCome: round(Math.max(stock, 0) * summary.rate),
+    installs: [...installs].sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt)),
+  };
+}
+
+/** The steel page's data (lib/steel/server.ts): the tracker, and where steel goes (the books' locations and the floors). */
+export interface SteelData {
+  tracker: SteelTracker;
+  areas: string[];
+}

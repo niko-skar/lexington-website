@@ -43,16 +43,16 @@ export function TodoSignIn({ next = "/todo" }: { next?: string }) {
             {officeState.status === "error" && <p className={styles.sheetError}>{officeState.message}</p>}
             <Submit />
             <button type="button" className={styles.linkButton} onClick={() => setOffice(false)}>
-              Sign in with an email instead
+              Sign in with an email or username instead
             </button>
           </form>
         ) : (
           <form action={signIn} className={styles.signInForm}>
             <input type="hidden" name="next" value={next} />
             <label className={styles.smallLabel} htmlFor="todo-email">
-              Email
+              Email or username
             </label>
-            <input id="todo-email" className={styles.input} type="email" name="email" required autoComplete="email" inputMode="email" />
+            <input id="todo-email" className={styles.input} type="text" name="email" required autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck={false} />
             <label className={styles.smallLabel} htmlFor="todo-password">
               Password
             </label>

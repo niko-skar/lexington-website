@@ -76,7 +76,7 @@ export interface Expense {
   costClass: CostClass | null;
   /** Wages (or the steel machines) paid in Payday that week: the entry is kept by the roll call, one line per payment. */
   payday: PaydayInfo | null;
-  /** Tons of steel this entry brought, when typed on the steel card (lib/expenses/steel.ts); otherwise worked out. */
+  /** Tons of steel this entry brought, when typed on the steel page (lib/expenses/steel.ts); otherwise worked out. */
   steelTons: number | null;
   createdAt: string;
   createdBy: string;

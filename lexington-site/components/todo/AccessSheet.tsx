@@ -23,7 +23,7 @@ function message(name: string, email: string, password: string, sections: SiteSe
   return [
     `Hi ${name.split(" ")[0]}, this is the Lexington site app (${what}).`,
     `Open: ${APP_ADDRESS}`,
-    `Email: ${email}`,
+    `${email.includes("@") ? "Email" : "Username"}: ${email}`,
     `Password: ${password}`,
     "Then in Chrome tap ⋮ and Add to Home screen (or Install app) so it opens like an app.",
     ...SITE_SECTIONS.filter((s) => sections.includes(s)).map((s) => HOW[s]),
@@ -189,7 +189,7 @@ export function AccessSheet({ onClose }: { onClose: () => void }) {
               <li key={a.id}>
                 <div>
                   <b>{a.name || "No name"}</b>
-                  <span>{a.email}</span>
+                  <span>{a.email.includes("@") ? a.email : `username: ${a.email}`}</span>
                 </div>
                 <Parts value={a.sections} onChange={(next) => void changeParts(a, next)} disabled={busy} />
                 <div className={styles.accountButtons}>
@@ -216,17 +216,19 @@ export function AccessSheet({ onClose }: { onClose: () => void }) {
         </label>
         <input id="todo-access-name" className={styles.input} value={name} onChange={(e) => setName(e.target.value)} autoComplete="off" placeholder="e.g. Kwame Mensah" />
         <label className={styles.smallLabel} htmlFor="todo-access-email">
-          Their email (they sign in with it)
+          Their email, or a username if they have none (they sign in with it)
         </label>
         <input
           id="todo-access-email"
           className={styles.input}
-          type="email"
-          inputMode="email"
+          type="text"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           autoComplete="off"
-          placeholder="e.g. kwame@gmail.com"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+          placeholder="e.g. kwame@gmail.com or storekeeper"
         />
         <span className={styles.smallLabel}>What it opens</span>
         <Parts value={sections} onChange={setSections} disabled={busy} />

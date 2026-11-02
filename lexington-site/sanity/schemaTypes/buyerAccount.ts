@@ -84,8 +84,13 @@ export const buyerAccount = defineType({
       name: "email",
       title: "Email",
       type: "string",
-      description: "Login email. Stored and compared lowercase.",
-      validation: (Rule) => Rule.required().email(),
+      description: "Login email (a site login may have a username instead, e.g. storekeeper). Stored and compared lowercase.",
+      validation: (Rule) =>
+        Rule.required().custom((value, context) => {
+          if (typeof value !== "string") return true;
+          if ((context.document as { role?: string } | undefined)?.role === "site" && /^[a-z0-9][a-z0-9._-]{2,29}$/.test(value)) return true;
+          return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) || "Must be a valid email address";
+        }),
     }),
     defineField({
       name: "passwordHash",

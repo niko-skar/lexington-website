@@ -6,6 +6,7 @@ import type { AlertsData } from "@/lib/alerts/shared";
 import type { BuyersData } from "@/lib/buyers/shared";
 import type { ConcreteData } from "@/lib/concrete/shared";
 import type { BankDebit, Expense } from "@/lib/expenses/shared";
+import type { SteelData } from "@/lib/expenses/steel";
 import type { BookLists } from "@/lib/quickbooks/books";
 import { needsReorder, type StoreData, type StoreItem } from "@/lib/store/shared";
 import { PAGE_SECTIONS, sectionHref, type PageSection, type TodoList, type TodoMe, type TodoTask } from "@/lib/todo/shared";
@@ -17,6 +18,7 @@ import { Dashboard } from "./Dashboard";
 import { ExpensesApp } from "./ExpensesApp";
 import { usePhoneAlerts } from "./PhoneAlerts";
 import { appClass, SiteNav, type View } from "./SiteChrome";
+import { SteelApp } from "./SteelApp";
 import { StoreApp } from "./StoreApp";
 import { TodoApp } from "./TodoApp";
 import styles from "./Todo.module.css";
@@ -27,8 +29,8 @@ import styles from "./Todo.module.css";
 // after the app opens, so the first tap on them is instant too. The address bar follows along.
 
 export type { StoreData };
-export type ExpensesData = { expenses: Expense[]; items: StoreItem[]; pending?: BankDebit[]; books?: BookLists; steelRate?: number };
-export type SiteData = { todo?: TodoTask[]; store?: StoreData; expenses?: ExpensesData; alerts?: AlertsData; concrete?: ConcreteData; buyers?: BuyersData };
+export type ExpensesData = { expenses: Expense[]; items: StoreItem[]; pending?: BankDebit[]; books?: BookLists };
+export type SiteData = { todo?: TodoTask[]; store?: StoreData; expenses?: ExpensesData; alerts?: AlertsData; concrete?: ConcreteData; buyers?: BuyersData; steel?: SteelData };
 
 // Since 30 Oct 2026 the app opens on its home page (/todo) and the to-do list is /todo/jobs.
 const sectionFrom = (path: string): View | null =>
@@ -42,6 +44,8 @@ const sectionFrom = (path: string): View | null =>
           ? "concrete"
           : path.startsWith("/todo/buyers")
             ? "buyers"
+          : path.startsWith("/todo/steel")
+            ? "steel"
           : path.startsWith("/todo/jobs")
           ? "todo"
           : path === "/todo" || path === "/todo/"
@@ -60,8 +64,9 @@ async function load(section: PageSection): Promise<SiteData> {
   if (section === "alerts") return { alerts: await get("/api/alerts") };
   if (section === "concrete") return { concrete: await get("/api/concrete") };
   if (section === "buyers") return { buyers: await get("/api/buyers") };
+  if (section === "steel") return { steel: await get("/api/steel") };
   const [x, s] = await Promise.all([get("/api/expenses"), get("/api/store")]);
-  return { expenses: { expenses: x.expenses, items: s.items, pending: x.pending, books: x.books, steelRate: x.steelRate } };
+  return { expenses: { expenses: x.expenses, items: s.items, pending: x.pending, books: x.books } };
 }
 
 /* ---------- put it on the home screen ---------- */
@@ -324,6 +329,7 @@ export function SiteApp({
             initial={data.expenses ?? null}
             openEntry={openEntry}
             openDebit={openDebit}
+            onSteel={() => go("steel")}
             startedOffline={startedOffline && first === "expenses"}
             fresh={first === "expenses"}
           />
@@ -358,6 +364,11 @@ export function SiteApp({
       {show("buyers") && (
         <div hidden={section !== "buyers"}>
           <BuyersApp me={me} active={section === "buyers"} initial={data.buyers ?? null} startedOffline={startedOffline && first === "buyers"} fresh={first === "buyers"} />
+        </div>
+      )}
+      {show("steel") && (
+        <div hidden={section !== "steel"}>
+          <SteelApp me={me} active={section === "steel"} initial={data.steel ?? null} startedOffline={startedOffline && first === "steel"} fresh={first === "steel"} />
         </div>
       )}
       <SiteNav me={me} current={section} onGo={go} badges={{ store: reorders, alerts: unread }} />

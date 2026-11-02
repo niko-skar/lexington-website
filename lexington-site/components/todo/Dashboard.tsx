@@ -83,6 +83,22 @@ function tiles(d: DashboardData, unread: number): Tile[] {
       tone: x.fromBank ? "warn" : undefined,
     });
   }
+  if (d.steel) {
+    const x = d.steel;
+    const t = (n: number) => `${Math.round(n * 10) / 10} t`;
+    const toType = x.unknown ? `${x.unknown} ${x.unknown === 1 ? "buy" : "buys"} with no tons` : "";
+    out.push(
+      x.installed > 0
+        ? {
+            section: "steel",
+            name: "Steel",
+            big: x.owed >= 0 ? `${money(x.owed)} owed` : `${money(-x.owed)} paid ahead`,
+            small: [`${t(x.installed)} installed · ${t(Math.max(x.stock, 0))} in stock`, toType].filter(Boolean).join(" · "),
+            tone: x.unknown || x.stock < 0 ? "warn" : undefined,
+          }
+        : { section: "steel", name: "Steel", big: "Log the tons installed", small: [`${t(x.bought)} bought · ${money(x.paid)} paid`, toType].filter(Boolean).join(" · "), tone: "warn" }
+    );
+  }
   if (d.buyers) {
     const x = d.buyers;
     const usd = (n: number) => `US$ ${n.toLocaleString("en-US")}`;

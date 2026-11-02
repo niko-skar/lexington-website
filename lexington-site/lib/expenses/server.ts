@@ -400,13 +400,13 @@ export async function savePaydayEntry(id: string, data: PaydayEntryData | null):
 
 /* ---------- steel bought against steel labour (lib/expenses/steel.ts) ---------- */
 
-/** The steel benders' rate a ton bent and installed (GH₵ 2,000 unless changed on the steel card). */
+/** The steel benders' rate a ton bent and installed (GH₵ 2,000 unless changed on the steel page, /todo/steel). */
 export async function steelRate(): Promise<number> {
   const rate = await getBuyersClient().fetch<number | null>(`*[_id == $id][0].steelRate`, { id: EXPENSE_SETTINGS_ID });
   return typeof rate === "number" && rate > 0 ? rate : STEEL_RATE;
 }
 
-/** The steel card's changes: an entry's tons (null: worked out again), or the rate a ton. */
+/** The steel page's changes to the steel bought: an entry's tons (null: worked out again), or the rate a ton. */
 export async function setSteel(body: Record<string, unknown>): Promise<{ rate: number; expense: Expense | null }> {
   const client = getBuyersClient();
   if ("rate" in body) {

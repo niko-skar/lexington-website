@@ -14,14 +14,13 @@ import { ExpenseForm, niceDate, type ExpensePrefill } from "./ExpenseForm";
 import site from "./Site.module.css";
 import { SiteHeader, SiteMenu } from "./SiteChrome";
 import { SteelCard } from "./SteelCard";
-import { STEEL_RATE } from "@/lib/expenses/steel";
 import styles from "./Todo.module.css";
 
 // The expense log (the office only): the entry form, then the totals and the list. The page holds
 // the entries; the form keeps its own state so typing stays quick on a phone.
 
 type ToastData = { text: string; tone?: "error"; action?: { label: string; run: () => void } };
-type ExpensesData = { expenses: Expense[]; items: StoreItem[]; pending?: BankDebit[]; books?: BookLists; steelRate?: number };
+type ExpensesData = { expenses: Expense[]; items: StoreItem[]; pending?: BankDebit[]; books?: BookLists };
 type SheetState = { configured: boolean; waiting: number; failed: number; lastSyncedAt: string | null; sheetUrl: string | null };
 
 const sortExpenses = (list: Expense[]) =>
@@ -205,6 +204,7 @@ export function ExpensesApp({
   initial,
   openEntry,
   openDebit,
+  onSteel,
   startedOffline,
   fresh,
 }: {
@@ -217,6 +217,8 @@ export function ExpensesApp({
   openEntry?: string;
   /** Opened from a bank debit's phone alert: the form starts from that debit. */
   openDebit?: string;
+  /** Opens the steel page (the steel card's button). */
+  onSteel: () => void;
   startedOffline: boolean;
   /** The page came with this part's data just now (it's the part the app opened on). */
   fresh: boolean;
@@ -227,8 +229,6 @@ export function ExpensesApp({
   const [pending, setPending] = useState<BankDebit[]>(initial?.pending ?? []);
   // The QuickBooks classes and locations for the form (kept in the website, read again now and then).
   const [books, setBooks] = useState<BookLists | null>(initial?.books ?? null);
-  // The steel benders' rate a ton (the steel card).
-  const [steelRate, setSteelRate] = useState(initial?.steelRate ?? STEEL_RATE);
   const [prefill, setPrefill] = useState<ExpensePrefill | null>(null);
   const prefillRef = useRef<ExpensePrefill | null>(null);
   const pendingCount = useRef(pending.length);
@@ -280,11 +280,10 @@ export function ExpensesApp({
       const sig = x + JSON.stringify(items);
       if (sig === lastServer.current || startedAt < localAt.current) return;
       lastServer.current = sig;
-      const got = JSON.parse(x) as { expenses: Expense[]; pending?: BankDebit[]; books?: BookLists; steelRate?: number };
+      const got = JSON.parse(x) as { expenses: Expense[]; pending?: BankDebit[]; books?: BookLists };
       setExpenses(got.expenses);
       setPending(got.pending ?? []);
       if (got.books) setBooks(got.books);
-      if (got.steelRate) setSteelRate(got.steelRate);
       setItems(items);
     } catch {
       setOffline(true);
@@ -499,16 +498,7 @@ export function ExpensesApp({
               onOpenReceipt={onOpenReceipt}
               focusAmount={justSaved}
             />
-            <SteelCard
-              expenses={expenses}
-              items={items}
-              rate={steelRate}
-              onChanged={(x, rate) => {
-                localAt.current = Date.now();
-                setSteelRate(rate);
-                if (x) setExpenses((list) => list.map((e) => (e.id === x.id ? x : e)));
-              }}
-            />
+            <SteelCard expenses={expenses} items={items} onOpen={onSteel} />
             <ExpenseBook expenses={expenses} editingId={editing?.id ?? null} onEdit={onEdit} onOpenReceipt={onOpenReceipt} />
           </>
         )}

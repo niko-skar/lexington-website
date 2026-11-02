@@ -21,14 +21,17 @@ export async function loginAction(
 ): Promise<LoginState> {
   const email = String(formData.get("email") || "").trim().toLowerCase();
   const password = String(formData.get("password") || "").trim();
+  // The site app's sign-in also takes a username (a site login with no email, lib/todo/server.ts).
+  const next = String(formData.get("next") || "");
+  const appPage = APP_PAGES.includes(next) ? next : null;
 
   if (!email || !password) {
-    return { status: "error", message: "Please enter your email and password." };
+    return { status: "error", message: appPage ? "Please enter your email or username, and your password." : "Please enter your email and password." };
   }
 
   // One generic message either way -- never reveal whether the account
   // exists, only that the combination didn't work.
-  const invalid: LoginState = { status: "error", message: "Invalid email or password." };
+  const invalid: LoginState = { status: "error", message: appPage ? "Invalid email, username or password." : "Invalid email or password." };
 
   // Wrong tries are counted per connection and per account (security check, 27 Oct 2026).
   const rules = await loginRules("account", email);
@@ -59,8 +62,6 @@ export async function loginAction(
   const isSite = buyer.role === "site";
   // The site app (to-do, store, expenses) signs in through this same action (hidden next=/todo...);
   // a buyer still goes to their own portal whichever form they used.
-  const next = String(formData.get("next") || "");
-  const appPage = APP_PAGES.includes(next) ? next : null;
   await createBuyerSession(buyer.email, isAdmin, isSite);
   redirect(isSite ? (appPage ?? "/todo") : isAdmin && appPage ? appPage : isAdmin ? "/admin/crm" : "/account");
 }

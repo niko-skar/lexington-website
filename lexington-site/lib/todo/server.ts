@@ -375,15 +375,21 @@ function friendlyPassword() {
   return `${pick()}-${pick()}-${pick()}`;
 }
 
+// Someone with no email (the storekeeper) signs in with a username instead: kept in the email field, so the sign-in
+// works as it is. Niko, 2 Nov 2026: "my storekeeper doesn't have an email, let's make a 'storekeeper' user name".
+const USERNAME_RE = /^[a-z0-9][a-z0-9._-]{2,29}$/;
+
 export async function createSiteAccount(body: Record<string, unknown>): Promise<{ account: SiteAccount; password: string }> {
   const name = cleanText(body.name, 80, "name");
   const email = cleanText(body.email, 120, "email").toLowerCase();
   if (!name) throw new TodoError(400, "Type the person's name.");
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new TodoError(400, "That email address doesn't look right.");
+  if (email.includes("@") ? !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) : !USERNAME_RE.test(email)) {
+    throw new TodoError(400, email.includes("@") ? "That email address doesn't look right." : "A username is 3 to 30 letters or numbers in one word (a dot, dash or underscore is fine), e.g. storekeeper.");
+  }
   const sections = cleanSections(body.sections ?? ["todo", "store"]);
   const client = getBuyersClient();
   const existing = await client.fetch<{ role?: string } | null>(`*[_type == "buyerAccount" && lower(email) == $email][0]{ role }`, { email });
-  if (existing) throw new TodoError(409, "There's already a login with that email. Use a different email for this person.");
+  if (existing) throw new TodoError(409, `There's already a login with that ${email.includes("@") ? "email" : "username"}. Use a different one for this person.`);
   const password = friendlyPassword();
   const doc = await client.create({
     _type: "buyerAccount",

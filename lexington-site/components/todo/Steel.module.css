@@ -1,4 +1,4 @@
-/* Steel bought against steel labour, on the expenses (31 Oct 2026). Colours come from .app in Todo.module.css. */
+/* The steel: its card on the expenses (31 Oct 2026) and its own page, /todo/steel (2 Nov 2026). Colours come from .app in Todo.module.css. */
 
 .card {
   display: grid;
@@ -16,23 +16,31 @@
   font-size: 21px;
   font-weight: 700;
 }
+.bigAhead {
+  color: var(--x-amber);
+}
 .line {
   margin: 0;
   font-size: 15px;
 }
-.owe,
-.ahead,
 .warn {
   margin: 0;
   font-size: 15px;
   font-weight: 600;
-}
-.owe {
-  color: var(--x-ink);
-}
-.ahead,
-.warn {
   color: var(--x-amber);
+}
+.bar {
+  height: 8px;
+  margin: 6px 0 2px;
+  border-radius: 99px;
+  background: var(--x-bg);
+  overflow: hidden;
+}
+.bar span {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  background: var(--x-ok);
 }
 .buttons {
   display: flex;
@@ -41,9 +49,12 @@
   margin-top: 6px;
 }
 .buttons button,
+.buttons a,
 .edit button,
 .tons,
 .tonsMissing {
+  display: inline-flex;
+  align-items: center;
   min-height: 40px;
   padding: 0 12px;
   border: 1px solid var(--x-line);
@@ -52,6 +63,7 @@
   color: var(--x-ink);
   font-weight: 600;
   font-size: 14px;
+  text-decoration: none;
 }
 .tonsMissing {
   border-color: var(--x-amber);
@@ -78,19 +90,10 @@
   background: var(--x-accent);
   color: var(--x-accent-ink);
 }
-.sub {
-  margin: 12px 0 4px;
-  font-family: var(--x-body);
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--x-muted);
-}
 .list {
   display: grid;
   gap: 6px;
-  margin: 0;
+  margin: 0 0 8px;
   padding: 0;
   list-style: none;
 }
@@ -104,4 +107,42 @@
 }
 .list li > button {
   justify-self: start;
+}
+/* An entry of tons installed: the whole row opens it. */
+.list li > .row {
+  justify-self: stretch;
+}
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  min-height: 40px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.tonsBig {
+  font-size: 16px;
+  white-space: nowrap;
+}
+.small {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: var(--x-muted);
+}
+.deleteBtn {
+  width: 100%;
+  min-height: 48px;
+  margin-top: 14px;
+  border: 1px solid var(--x-warn);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--x-warn);
+  font-weight: 600;
 }

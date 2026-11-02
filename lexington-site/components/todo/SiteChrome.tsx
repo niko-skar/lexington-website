@@ -8,7 +8,7 @@ import { PAGE_SECTIONS, sectionHref, sectionName, type PageSection, type TodoMe 
 import styles from "./Todo.module.css";
 
 // What every part of the site app shares: its header, the bar at the bottom (Home, then the parts this
-// login opens: To-do · Store · Expenses · Alerts · Concrete · Roll call) and the ☰ menu.
+// login opens: To-do · Store · Expenses · Alerts · Concrete · Buyers · Steel · Roll call) and the ☰ menu.
 
 /** Where the bar can go: the home page, a part drawn in this page, or the roll call (its own page). */
 export type View = PageSection | "home";
@@ -59,6 +59,12 @@ const ICONS: Record<NavItem, React.ReactNode> = {
       <path d="M15.5 4.8a3.2 3.2 0 0 1 0 6.4M17.5 14.6c1.6.7 2.6 2.5 3 5.4" />
     </svg>
   ),
+  steel: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M3.5 16.5L16.5 3.5M7.5 20.5L20.5 7.5" />
+      <path d="M5 13l6 6M9 9l6 6M13 5l6 6" />
+    </svg>
+  ),
   rollcall: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M8 4h8v3H8z" />
@@ -71,8 +77,8 @@ const ICONS: Record<NavItem, React.ReactNode> = {
 // What a badge on the bar counts, for a screen reader.
 const BADGE_WORDS: Partial<Record<NavItem, string>> = { store: "to reorder", alerts: "new" };
 
-/** Used now and then (Concrete on pour days, Buyers on a payment): on the bar when there's room, else from the home page's tile. */
-const NOW_AND_THEN: readonly NavItem[] = ["concrete", "buyers"];
+/** Used now and then (Concrete on pour days, Buyers on a payment, Steel as it goes in): on the bar when there's room, else from the home page's tile. */
+const NOW_AND_THEN: readonly NavItem[] = ["concrete", "buyers", "steel"];
 const navItems = (me: TodoMe): NavItem[] => {
   const parts: NavItem[] = [...PAGE_SECTIONS.filter((s) => me.sections.includes(s)), ...(opensRollcall(me.sections) ? (["rollcall"] as const) : [])];
   // A login that opens one part only (a storekeeper) has no home page to go back to, so no bar at all.
