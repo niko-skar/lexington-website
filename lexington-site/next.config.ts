@@ -10,11 +10,6 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  // The site roll call (30 Oct 2026) is one page of its own, public/todo/rollcall.html: just the app, no
-  // records (it asks /api/rollcall for those, signed in). The address the phone shows stays /todo/rollcall.
-  async rewrites() {
-    return [{ source: "/todo/rollcall", destination: "/todo/rollcall.html" }];
-  },
   async headers() {
     return [
       {
@@ -48,6 +43,16 @@ const nextConfig: NextConfig = {
       {
         source: "/todo/:path*",
         headers: [{ key: "Permissions-Policy", value: "camera=(self), microphone=(), geolocation=()" }],
+      },
+      {
+        // The site roll call's own page (public/todo/rollcall.html: just the app, no records; it asks
+        // /api/rollcall for those, signed in) shows inside the app's frame at /todo/rollcall (2 Nov 2026,
+        // components/todo/RollcallPart.tsx): this site may frame it, nobody else. Later entries win.
+        source: "/todo/rollcall.html",
+        headers: [
+          { key: "Content-Security-Policy", value: "frame-ancestors 'self'; object-src 'none'; base-uri 'self';" },
+          { key: "X-Frame-Options", value: "SAMEORIGIN" },
+        ],
       },
     ];
   },

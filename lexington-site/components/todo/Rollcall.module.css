@@ -1,0 +1,9 @@
+/* The roll call inside the app (2 Nov 2026): its page in a frame that fills the screen under the header. */
+
+.frame {
+  position: fixed;
+  z-index: 1;
+  display: block;
+  border: 0;
+  background: var(--x-bg);
+}

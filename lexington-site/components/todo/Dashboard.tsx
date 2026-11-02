@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { DashboardData, SlotCount } from "@/lib/dashboard/server";
 import { isPageSection, sectionHref, type Section, type TodoMe } from "@/lib/todo/shared";
 import { AccessSheet } from "./AccessSheet";
+import type { RollcallTab } from "./RollcallPart";
 import { startPolling } from "./api";
 import home from "./Dashboard.module.css";
 import { SiteHeader, SiteMenu, type View } from "./SiteChrome";
@@ -113,7 +114,20 @@ function tiles(d: DashboardData, unread: number): Tile[] {
   return out;
 }
 
-export function Dashboard({ me, active, onGo, unread }: { me: TodoMe; active: boolean; onGo: (view: View) => void; unread: number }) {
+export function Dashboard({
+  me,
+  active,
+  onGo,
+  onRollcall,
+  unread,
+}: {
+  me: TodoMe;
+  active: boolean;
+  onGo: (view: View) => void;
+  /** The roll call's tiles open it in the app, on their tab. */
+  onRollcall: (tab: RollcallTab) => void;
+  unread: number;
+}) {
   const [data, setData] = useState<DashboardData | null>(null);
   const [offline, setOffline] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -159,14 +173,21 @@ export function Dashboard({ me, active, onGo, unread }: { me: TodoMe; active: bo
           <p className={styles.loading}>Loading…</p>
         ) : (
           <div className={home.tiles}>
-            {/* The roll call is its own page (a plain link); the other parts open here at once. */}
+            {/* Every part opens here at once; the roll call's tiles on their tab. */}
             {list.map((t) => (
               <a
                 key={t.section}
                 href={sectionHref(t.section)}
                 className={`${home.tile} ${t.tone === "warn" ? home.warn : t.tone === "ok" ? home.ok : ""}`}
                 onClick={(e) => {
-                  if (!isPageSection(t.section) || e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+                  if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+                  const rcTab = t.section === "rollcall" ? "today" : t.section === "payday" ? "week" : t.section === "workers" ? "workers" : null;
+                  if (rcTab) {
+                    e.preventDefault();
+                    onRollcall(rcTab);
+                    return;
+                  }
+                  if (!isPageSection(t.section)) return;
                   e.preventDefault();
                   onGo(t.section);
                 }}

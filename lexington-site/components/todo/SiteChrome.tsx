@@ -11,9 +11,9 @@ import styles from "./Todo.module.css";
 // login opens: To-do · Store · Expenses · Alerts · Concrete · Buyers · Steel · Roll call; on a laptop a rail down
 // the left with every part) and the ☰ menu.
 
-/** Where the bar can go: the home page, a part drawn in this page, or the roll call (its own page). */
-export type View = PageSection | "home";
-type NavItem = View | "rollcall";
+/** Where the bar can go: the home page, a part drawn in this page, or the roll call (its page in the app's frame). */
+export type View = PageSection | "home" | "rollcall";
+type NavItem = View;
 
 const ICONS: Record<NavItem, React.ReactNode> = {
   home: (
@@ -161,7 +161,7 @@ export function SiteNav({
             className={`${item === current ? styles.navOn : styles.navItem}${laptopOnly ? ` ${styles.navExtra}` : ""}`}
             aria-current={item === current ? "page" : undefined}
             onClick={(e) => {
-              if (item === "rollcall" || e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+              if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
               e.preventDefault();
               onGo(item);
             }}

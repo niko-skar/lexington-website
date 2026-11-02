@@ -148,12 +148,13 @@
     }
   }
 
-  // Every 5 seconds while someone is using it, every 30 when it just sits open, at once when it comes back.
+  // Every 5 seconds while someone is using it, every 30 when it just sits open (or the app shows another part:
+  // window.__rcActive, 2 Nov 2026), at once when it comes back.
   let timer;
   let lastUse = Date.now();
   const schedule = () => {
     clearTimeout(timer);
-    timer = setTimeout(poll, Date.now() - lastUse < 180000 ? 5000 : 30000);
+    timer = setTimeout(poll, window.__rcActive !== false && Date.now() - lastUse < 180000 ? 5000 : 30000);
   };
   async function poll() {
     if (document.visibilityState === "visible" && me) {

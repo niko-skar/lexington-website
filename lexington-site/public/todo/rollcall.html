@@ -234,6 +234,24 @@ nav.tabs .applinks{display:none}
 @media (min-width:1024px) and (hover:hover) and (pointer:fine){
   nav.tabs .applinks a:hover,nav.tabs button:not(.on):hover{background:var(--chip);color:var(--ink)}
 }
+/* Inside the app (2 Nov 2026): the app's header, bar and rail; its green for here and paid. */
+html.embed nav.tabs{display:none!important}
+html.embed body{padding-left:0!important}
+html.embed .wrap{max-width:none;padding:0 16px 32px}
+html.embed .toast{left:50%;bottom:16px}
+html.embed .yes.on{background:var(--ok);border-color:var(--ok);color:var(--ok-ink)}
+html.embed .dots i.in,html.embed .bars i.in{background:var(--ok);border-color:var(--ok)}
+html.embed .pill.ok,html.embed .paid{background:var(--ok-soft);color:var(--ok)}
+html.embed .check.on{background:var(--ok-soft);border-color:var(--ok)}
+html.embed .check.on .box{background:var(--ok);border-color:var(--ok);color:var(--ok-ink)}
+html.embed .seg button.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+@media (min-width:900px){
+  html.embed .wrap{max-width:1120px;margin:0 auto;padding:0 24px 40px}
+  html.embed .group[data-g] .rows{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));background:linear-gradient(var(--line),var(--line)) center/1px 100% no-repeat,var(--surface)}
+  html.embed .group[data-g] .rows>:not(.wrow){grid-column:1/-1}
+  html.embed .group[data-g] .rows>p{background:var(--surface)}
+  html.embed .group[data-g] .rows>.wrow:nth-child(2){border-top:0}
+}
 </style>
 
 <div class="wrap" id="app"><p class="loading">Loading your site register…</p></div>
@@ -464,6 +482,7 @@ const app = document.getElementById("app");
 function render(){
   const f = document.activeElement, fid = f && f.id, sel = fid && f.selectionStart;
   document.querySelectorAll("#tabs button").forEach(b => { b.classList.toggle("on", b.dataset.v === S.tab); b.hidden = !tabAllowed(b.dataset.v); });
+  tellApp();
   if (S.status === "loading") app.innerHTML = `<p class="loading">Loading your site register…</p>`;
   else if (S.status === "nodb") app.innerHTML = window.__rcNote ? `<p class="loading">${esc(window.__rcNote)}</p>`
     : window.__rcShim ? `<p class="loading">No signal: the roll call needs data the first time it opens on this phone. <button class="linkbtn" onclick="location.reload()">Try again</button></p>`
@@ -1468,6 +1487,45 @@ function softRender(){
 function appLinks(list){
   const box = document.querySelector("#tabs .applinks");
   if (box) box.innerHTML = list.map(l => `<a href="${esc(l.href)}">${esc(l.name)}</a>`).join("");
+}
+
+/* ---------- inside the app (2 Nov 2026) ---------- */
+const EMBED = /[?&]embed=1(&|$)/.test(location.search) && window.parent !== window;
+if (EMBED) document.documentElement.classList.add("embed");
+/** The app's fonts and colours, from the app around this page (same site): its @font-face rules and --x-* colours. */
+function borrowAppLook(){
+  try {
+    const pd = window.parent.document, app = pd.querySelector('[data-app="site"]') || pd.body;
+    const faces = [];
+    for (const sheet of pd.styleSheets){ let rules; try { rules = sheet.cssRules; } catch(e){ continue; }
+      for (const r of rules) if (r.type === 5) faces.push(r.cssText); }
+    const cs = window.parent.getComputedStyle(app), v = n => cs.getPropertyValue(n).trim();
+    if (!v("--x-bg")) return;
+    const map = {"--bg":"--x-bg", "--surface":"--x-surface", "--ink":"--x-ink", "--muted":"--x-muted", "--line":"--x-line", "--chip":"--x-line",
+      "--accent":"--x-accent", "--accent-ink":"--x-accent-ink", "--here-soft":"--x-ok-soft", "--absent":"--x-warn", "--absent-soft":"--x-warn-soft",
+      "--late":"--x-amber", "--late-soft":"--x-amber-soft", "--ok":"--x-ok", "--ok-soft":"--x-ok-soft", "--ok-ink":"--x-on-color", "--display":"--x-display", "--body":"--x-body"};
+    const vars = Object.entries(map).map(([k, from]) => v(from) ? k+":"+v(from)+" !important" : "").filter(Boolean).join(";");
+    let st = document.getElementById("applook");
+    if (!st){ st = document.createElement("style"); st.id = "applook"; document.head.appendChild(st); }
+    st.textContent = faces.join("\n") + "\nhtml.embed:root{"+vars+";color-scheme:"+(cs.colorScheme || "light")+"}";
+  } catch(e){}
+}
+if (EMBED){
+  borrowAppLook();
+  // The phone switched to dark (or back): the app's colours follow, and so do these.
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => setTimeout(borrowAppLook, 50));
+  window.addEventListener("message", e => {
+    if (e.origin !== location.origin || e.source !== window.parent || !e.data) return;
+    if (e.data.type === "rc-tab" && tabAllowed(e.data.tab) && S.tab !== e.data.tab){ S.tab = e.data.tab; render(); window.scrollTo(0, 0); }
+    if (e.data.type === "rc-active") window.__rcActive = !!e.data.active;
+  });
+}
+let toldTab = null;
+/** The app shows this page's tab in its header: tell it when it changes (a tab can change from inside, e.g. to the checklists). */
+function tellApp(){
+  if (!EMBED || S.tab === toldTab || S.tab === "home") return;
+  toldTab = S.tab;
+  try { window.parent.postMessage({type:"rc-state", tab:S.tab}, location.origin); } catch(e){}
 }
 
 /* ---------- boot ---------- */

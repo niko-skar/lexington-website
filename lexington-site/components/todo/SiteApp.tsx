@@ -8,6 +8,7 @@ import type { ConcreteData } from "@/lib/concrete/shared";
 import type { BankDebit, Expense } from "@/lib/expenses/shared";
 import type { SteelData } from "@/lib/expenses/steel";
 import type { BookLists } from "@/lib/quickbooks/books";
+import { opensRollcall } from "@/lib/rollcall/shared";
 import { needsReorder, type StoreData, type StoreItem } from "@/lib/store/shared";
 import { PAGE_SECTIONS, sectionHref, type PageSection, type TodoList, type TodoMe, type TodoTask } from "@/lib/todo/shared";
 import { AlertsApp } from "./AlertsApp";
@@ -17,6 +18,7 @@ import { ConcreteApp } from "./ConcreteApp";
 import { Dashboard } from "./Dashboard";
 import { ExpensesApp } from "./ExpensesApp";
 import { usePhoneAlerts } from "./PhoneAlerts";
+import { RollcallPart, rollcallTabOf, type RollcallTab } from "./RollcallPart";
 import { appClass, SiteNav, type View } from "./SiteChrome";
 import { SteelApp } from "./SteelApp";
 import { StoreApp } from "./StoreApp";
@@ -46,12 +48,14 @@ const sectionFrom = (path: string): View | null =>
             ? "buyers"
           : path.startsWith("/todo/steel")
             ? "steel"
+          : path.startsWith("/todo/rollcall")
+            ? "rollcall"
           : path.startsWith("/todo/jobs")
           ? "todo"
           : path === "/todo" || path === "/todo/"
             ? "home"
             : null;
-const hrefOf = (view: View) => (view === "home" ? "/todo" : sectionHref(view));
+const hrefOf = (view: View) => (view === "home" ? "/todo" : view === "rollcall" ? "/todo/rollcall" : sectionHref(view));
 
 async function load(section: PageSection): Promise<SiteData> {
   const get = async (url: string) => {
@@ -197,6 +201,18 @@ export function SiteApp({
   const current = useRef(first);
   const scrollAt = useRef<Partial<Record<View, number>>>({});
   const hasAlerts = me.sections.includes("alerts");
+  // The roll call's tab asked for (the address's #week, the home page's Payday tile).
+  const [rcAsk, setRcAsk] = useState<{ tab: RollcallTab; at: number } | null>(null);
+  useEffect(() => {
+    const tab = first === "rollcall" ? rollcallTabOf(window.location.hash) : null;
+    if (!tab) return;
+    const timer = setTimeout(() => setRcAsk({ tab, at: Date.now() }), 0);
+    return () => clearTimeout(timer);
+  }, [first]);
+  // The address follows the roll call's tab while it's on screen.
+  const onRcTab = useCallback((tab: RollcallTab) => {
+    if (current.current === "rollcall") window.history.replaceState(null, "", `/todo/rollcall#${tab}`);
+  }, []);
   // This phone's alerts, for whoever is signed in (the office's, or the foreman's new jobs).
   const phone = usePhoneAlerts(me);
 
@@ -213,6 +229,8 @@ export function SiteApp({
   useEffect(() => {
     let live = true;
     const timer = setTimeout(async () => {
+      // The roll call's page loads in its frame meanwhile, so the first tap on it is instant too.
+      if (opensRollcall(me.sections)) setOpened((o) => (o.includes("rollcall") ? o : [...o, "rollcall"]));
       for (const s of PAGE_SECTIONS) {
         if (!live || s === first || !me.sections.includes(s)) continue;
         try {
@@ -236,7 +254,7 @@ export function SiteApp({
 
   const go = useCallback(
     (next: View, push = true) => {
-      if (next !== "home" && !me.sections.includes(next)) return;
+      if (next !== "home" && !(next === "rollcall" ? opensRollcall(me.sections) : me.sections.includes(next))) return;
       if (next === current.current) {
         window.scrollTo({ top: 0, behavior: "smooth" });
         return;
@@ -260,6 +278,8 @@ export function SiteApp({
     const onPop = () => {
       const s = sectionFrom(window.location.pathname);
       if (s) go(s, false);
+      const tab = s === "rollcall" ? rollcallTabOf(window.location.hash) : null;
+      if (tab) setRcAsk({ tab, at: Date.now() });
     };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
@@ -308,14 +328,23 @@ export function SiteApp({
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  const show = (s: View) => opened.includes(s) && (s === "home" || me.sections.includes(s));
+  const show = (s: View) => opened.includes(s) && (s === "home" || (s === "rollcall" ? opensRollcall(me.sections) : me.sections.includes(s)));
 
   return (
-    <div className={appClass(me)}>
+    <div className={appClass(me)} data-app="site">
       <InstallHint />
       {show("home") && (
         <div hidden={section !== "home"}>
-          <Dashboard me={me} active={section === "home"} onGo={go} unread={unread} />
+          <Dashboard
+            me={me}
+            active={section === "home"}
+            onGo={go}
+            onRollcall={(tab) => {
+              setRcAsk({ tab, at: Date.now() });
+              go("rollcall");
+            }}
+            unread={unread}
+          />
         </div>
       )}
       {show("todo") && (
@@ -392,6 +421,11 @@ export function SiteApp({
       {show("steel") && (
         <div hidden={section !== "steel"}>
           <SteelApp me={me} active={section === "steel"} initial={data.steel ?? null} startedOffline={startedOffline && first === "steel"} fresh={first === "steel"} />
+        </div>
+      )}
+      {show("rollcall") && (
+        <div hidden={section !== "rollcall"}>
+          <RollcallPart me={me} active={section === "rollcall"} ask={rcAsk} onTab={onRcTab} />
         </div>
       )}
       <SiteNav me={me} current={section} onGo={go} badges={{ store: reorders, alerts: unread }} />
