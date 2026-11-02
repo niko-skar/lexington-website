@@ -641,6 +641,8 @@ export async function feedPending(limit = 25): Promise<{ sent: number; failed: n
  * QuickBooks login (which lapses after 100 days unused) never runs out while the feed is off.
  */
 export async function feedCron(): Promise<Record<string, unknown>> {
+  // The classes and locations the expense form and Payday offer (read again when a few hours old).
+  await refreshBookLists();
   const result: Record<string, unknown> = await feedPending(25);
   const conn = await loadConnection();
   if (conn && conn.status === "connected") {

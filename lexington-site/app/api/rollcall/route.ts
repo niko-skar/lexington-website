@@ -1,4 +1,7 @@
+import { after } from "next/server";
+
 import { cachedBookLists } from "@/lib/quickbooks/booksCache";
+import { refreshBookLists } from "@/lib/quickbooks/feed";
 import { photoBase, readRollcall, requireRollcallUser, rollcallMoved, writeRollcall } from "@/lib/rollcall/server";
 import { ROLLCALL_PARTS, rollcallAccess } from "@/lib/rollcall/shared";
 import { errorResponse, readJson } from "@/lib/todo/server";
@@ -23,7 +26,10 @@ export async function GET(request: Request): Promise<Response> {
         ? null
         : "The roll call is moving into this app on Sunday morning. Until then, keep marking and paying on the Site Roll Call page.";
       // Payday chooses where the week's wages go in QuickBooks: the books' locations (2 Nov 2026).
-      const locations = rollcallAccess(me.sections).payday ? (await cachedBookLists().catch(() => ({ locations: [] }))).locations.map((l) => l.name) : [];
+      const payday = rollcallAccess(me.sections).payday;
+      const locations = payday ? (await cachedBookLists().catch(() => ({ locations: [] }))).locations.map((l) => l.name) : [];
+      // Missing or a few hours old: read again from QuickBooks for next time.
+      if (payday) after(() => refreshBookLists());
       return Response.json({ me: { id: me.id, name: me.name, kind: me.kind, sections }, cdn: photoBase(), note, locations }, { headers });
     }
     const since = params.get("since");
