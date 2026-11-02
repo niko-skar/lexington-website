@@ -1109,6 +1109,10 @@ select.input {
     position: static;
     margin-left: auto;
   }
+  /* Alerts at the very bottom of the rail. */
+  .navLast {
+    margin-top: auto;
+  }
   /* Sheets: a window in the middle of the screen. */
   .sheetBackdrop {
     align-items: center;

@@ -8,8 +8,8 @@ import { PAGE_SECTIONS, sectionHref, sectionName, type PageSection, type TodoMe 
 import styles from "./Todo.module.css";
 
 // What every part of the site app shares: its header, the bar at the bottom (Home, then the parts this
-// login opens: To-do · Store · Expenses · Alerts · Concrete · Buyers · Steel · Roll call; on a laptop a rail down
-// the left with every part) and the ☰ menu.
+// login opens: To-do · Store · Expenses · Concrete · Buyers · Steel · Roll call, Alerts last; on a laptop a rail
+// down the left with every part, Alerts at its bottom) and the ☰ menu.
 
 /** Where the bar can go: the home page, a part drawn in this page, or the roll call (its page in the app's frame). */
 export type View = PageSection | "home" | "rollcall";
@@ -85,7 +85,12 @@ const BADGE_WORDS: Partial<Record<NavItem, string>> = { store: "to reorder", ale
 const NOW_AND_THEN: readonly NavItem[] = ["concrete", "buyers", "steel"];
 type NavEntry = { item: NavItem; laptopOnly: boolean };
 const navItems = (me: TodoMe): NavEntry[] => {
-  const parts: NavItem[] = [...PAGE_SECTIONS.filter((s) => me.sections.includes(s)), ...(opensRollcall(me.sections) ? (["rollcall"] as const) : [])];
+  // Alerts last: the end of a phone's bar, the very bottom of a laptop's rail (Niko, 2 Nov 2026).
+  const parts: NavItem[] = [
+    ...PAGE_SECTIONS.filter((s) => s !== "alerts" && me.sections.includes(s)),
+    ...(opensRollcall(me.sections) ? (["rollcall"] as const) : []),
+    ...(me.sections.includes("alerts") ? (["alerts"] as const) : []),
+  ];
   // A login that opens one part only (a storekeeper) has no home page to go back to, so no bar at all.
   if (parts.length < 2) return parts.map((item) => ({ item, laptopOnly: false }));
   const all: NavItem[] = ["home", ...parts];
@@ -158,7 +163,7 @@ export function SiteNav({
           <a
             key={item}
             href={navHref(item)}
-            className={`${item === current ? styles.navOn : styles.navItem}${laptopOnly ? ` ${styles.navExtra}` : ""}`}
+            className={`${item === current ? styles.navOn : styles.navItem}${laptopOnly ? ` ${styles.navExtra}` : ""}${item === "alerts" ? ` ${styles.navLast}` : ""}`}
             aria-current={item === current ? "page" : undefined}
             onClick={(e) => {
               if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
