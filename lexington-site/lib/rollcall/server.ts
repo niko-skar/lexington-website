@@ -85,7 +85,8 @@ const WRITE_KEYS: Record<RollcallCollection, readonly string[]> = {
   days: ["date", "marks", "ot", "machines", "pay"],
   payments: ["weekStart", "paid", "waived", "location"],
   workers: ["name", "nick", "trade", "active", "created", "phone", "momo", "momoName", "rate", "idPhoto"],
-  pours: ["what", "start", "days", "rate", "dryFine", "worker", "dry", "stopped", "deleted", "created", "phase", "planned", "check", "poured"],
+  // mix and volume: what a pour booked on the concrete page ordered (lib/concrete/pours.ts).
+  pours: ["what", "start", "days", "rate", "dryFine", "worker", "dry", "stopped", "deleted", "created", "phase", "planned", "check", "poured", "mix", "volume"],
   checklists: ["name", "n", "items", "created", "deleted"],
   config: ["start", "lunchStart", "afternoon", "close", "satClose", "grace", "otRate", "curingDays", "rates"],
 };
@@ -152,6 +153,31 @@ export async function readRollcall(me: TodoMe, since?: string | null): Promise<R
   return rows.map((row) => toDoc(can, row)).filter((d): d is RollcallDoc => !!d);
 }
 
+/** The merge itself: the record read, the change merged on top, saved only if nobody saved in between (else again). */
+async function mergeRecord(by: string, col: RollcallCollection, key: string, op: "set" | "update", change: Data): Promise<void> {
+  const client = getBuyersClient();
+  const id = docId(col, key);
+  for (let attempt = 0; ; attempt++) {
+    const current = await client.fetch<{ _rev: string; json: string } | null>(`*[_id == $id][0]{ _rev, json }`, { id });
+    if (!current && op === "update") throw new TodoError(404, "That record isn't there any more. Close the app and open it again.");
+    const next = deepMerge(current ? (JSON.parse(current.json) as Data) : {}, structuredClone(change));
+    const json = JSON.stringify(next);
+    if (json.length > MAX_DOC) throw new TodoError(413, "That's too much to save in one go.");
+    try {
+      if (current) await client.patch(id).ifRevisionId(current._rev).set({ json, by }).commit();
+      else await client.create({ _id: id, _type: "rollcallDoc", col, key, json, by });
+      return;
+    } catch (error) {
+      // Another phone saved this record in between: read it again and merge on top.
+      if ((error as { statusCode?: number }).statusCode === 409 && attempt < 6) {
+        await sleep(80 + Math.random() * 220);
+        continue;
+      }
+      throw error;
+    }
+  }
+}
+
 /**
  * Saves a change to one record. "update" merges it into a record that must exist; "set" makes the record, or
  * merges into it when another phone made it a moment before (so a new day marked on two phones keeps both).
@@ -162,33 +188,35 @@ export async function writeRollcall(me: TodoMe, path: unknown, op: "set" | "upda
   checkKeys(change);
   const can = rollcallAccess(me.sections);
   const allowed = allowWrite(can, col, key, change);
-  const client = getBuyersClient();
-  const id = docId(col, key);
-  for (let attempt = 0; ; attempt++) {
-    const current = await client.fetch<{ _rev: string; json: string } | null>(`*[_id == $id][0]{ _rev, json }`, { id });
-    if (!current && op === "update") throw new TodoError(404, "That record isn't there any more. Close the app and open it again.");
-    const next = deepMerge(current ? (JSON.parse(current.json) as Data) : {}, structuredClone(allowed));
-    const json = JSON.stringify(next);
-    if (json.length > MAX_DOC) throw new TodoError(413, "That's too much to save in one go.");
-    try {
-      if (current) await client.patch(id).ifRevisionId(current._rev).set({ json, by: me.name }).commit();
-      else await client.create({ _id: id, _type: "rollcallDoc", col, key, json, by: me.name });
-      break;
-    } catch (error) {
-      // Another phone saved this record in between: read it again and merge on top.
-      if ((error as { statusCode?: number }).statusCode === 409 && attempt < 6) {
-        await sleep(80 + Math.random() * 220);
-        continue;
-      }
-      throw error;
-    }
-  }
+  await mergeRecord(me.name, col, key, op, allowed);
   // A payment made (or taken back) in Payday: that week's wages in the expenses follow, and so QuickBooks.
   if (col === "payments") after(() => syncWages(key));
+  const client = getBuyersClient();
+  const id = docId(col, key);
   const row = await client.fetch<Row | null>(`*[_id == $id][0]{ col, key, json, "rev": _rev, "at": _updatedAt }`, { id });
   const doc = row && toDoc(can, row);
   if (!doc) throw new TodoError(502, "It was saved but couldn't be read back. Close the app and open it again.");
   return doc;
+}
+
+/* ---------- the website's own side (2 Nov 2026: pours booked on the concrete page, lib/concrete/pours.ts) ---------- */
+
+/** Records as they are, whole (for the website's own use: never sent to a phone as they are). */
+export async function readRollcallRecords(cols: readonly RollcallCollection[]): Promise<Array<{ col: RollcallCollection; key: string; data: Data }>> {
+  const rows = await getBuyersClient().fetch<Array<{ col: RollcallCollection; key: string; json: string }>>(
+    `*[_type == "rollcallDoc" && string::startsWith(_id, $prefix) && col in $cols]{ col, key, json }`,
+    { prefix: ROLLCALL_PREFIX, cols }
+  );
+  return rows.map((r) => ({ col: r.col, key: r.key, data: JSON.parse(r.json) as Data }));
+}
+
+/** A change the website itself makes (by someone the concrete page lets book pours): the same merge and checks as a phone's, without a roll call login's limits. */
+export async function saveRollcallRecord(by: string, col: RollcallCollection, key: string, op: "set" | "update", change: Data): Promise<void> {
+  if (!KEY_RE.test(key)) throw new TodoError(400, "That record doesn't exist.");
+  checkKeys(change);
+  const unknown = Object.keys(change).filter((k) => !WRITE_KEYS[col].includes(k));
+  if (unknown.length) throw new TodoError(400, `That can't be saved here (${unknown.join(", ")}).`);
+  await mergeRecord(by, col, key, op, change);
 }
 
 /**

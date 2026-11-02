@@ -19,7 +19,9 @@ import {
   type ArrivedFrom,
   type ConcreteData,
   type Flag,
+  type PourBooking,
   type PourDay,
+  type PourInfo,
   type Truck,
 } from "@/lib/concrete/shared";
 import { ghanaDay } from "@/lib/store/shared";
@@ -27,8 +29,10 @@ import { photoAt, type TodoMe } from "@/lib/todo/shared";
 import { AccessSheet } from "./AccessSheet";
 import { errorText, send, startPolling } from "./api";
 import cx from "./Concrete.module.css";
+import { BookedPours, pourStatus, TruckPour } from "./ConcretePours";
 import { forgetPhoto, uploadPhoto } from "./photo";
 import { arrivalOf } from "./photoTime";
+import ps from "./Pours.module.css";
 import { SiteHeader, SiteMenu } from "./SiteChrome";
 import styles from "./Todo.module.css";
 
@@ -182,6 +186,16 @@ export function ConcreteApp({
     localAt.current = Date.now();
     setData((d) => ({ ...d, trucks: sortTrucks([truck, ...d.trucks.filter((t) => t.id !== truck.id)]) }));
   }, []);
+  // A pour booked, ticked or poured: the page as the website has it now.
+  const putData = useCallback((next: ConcreteData) => {
+    localAt.current = Date.now();
+    setData(next);
+  }, []);
+  const putPours = useCallback((pours: PourInfo | undefined) => {
+    if (!pours) return;
+    localAt.current = Date.now();
+    setData((d) => ({ ...d, pours }));
+  }, []);
 
   /* ---------- a waybill photo comes in ---------- */
 
@@ -194,16 +208,18 @@ export function ConcreteApp({
           photoId = (await uploadPhoto(p.file, "/api/concrete/photo")).id;
           setPending((list) => list.map((x) => (x.key === p.key ? { ...x, photoId } : x)));
         }
-        const { truck } = await send<{ truck: Truck }>("/api/concrete", "POST", { photoId, arrivedAt: p.at, arrivedFrom: p.from });
+        const { truck, pours } = await send<{ truck: Truck; pours?: PourInfo }>("/api/concrete", "POST", { photoId, arrivedAt: p.at, arrivedFrom: p.from });
         URL.revokeObjectURL(p.preview);
         setPending((list) => list.filter((x) => x.key !== p.key));
         putTruck(truck);
+        // Its day's booked pour is poured now: the page shows it.
+        putPours(pours);
         setOpenId(truck.id);
       } catch (e) {
         setPending((list) => list.map((x) => (x.key === p.key ? { ...x, state: "error", error: errorText(e) } : x)));
       }
     },
-    [putTruck]
+    [putTruck, putPours]
   );
 
   const pick = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -231,6 +247,13 @@ export function ConcreteApp({
     return [...set].sort((a, b) => b.localeCompare(a));
   }, [data.trucks]);
   const pourOf = (day: string) => data.days.find((d) => d.day === day) ?? null;
+  const bookingsOn = (day: string): PourBooking[] => data.pours?.pours.filter((b) => b.day === day) ?? [];
+  const statusLines = (day: string) =>
+    bookingsOn(day).map((b) => (
+      <p key={b.id} className={b.phase === "poured" ? ps.status : `${ps.status} ${ps.statusWait}`}>
+        {pourStatus(b)}
+      </p>
+    ));
   const todays = trucksOn(data.trucks, today);
   const todaySum = daySummary(todays);
   const open = openId ? data.trucks.find((t) => t.id === openId) ?? null : null;
@@ -296,10 +319,13 @@ export function ConcreteApp({
               </div>
             ))}
 
+            {data.pours && <BookedPours info={data.pours} onData={putData} onToast={(text, error) => showToast({ text, tone: error ? "error" : undefined })} />}
+
             {!days.includes(today) && (
               <section className={styles.group}>
                 <h2 className={styles.groupTitle}>{dayTitle(today)}</h2>
                 <PourLine pour={pourOf(today)} delivered={0} onEdit={() => setDayOpen(today)} />
+                {statusLines(today)}
                 {!pending.length && <p className={styles.empty}>No trucks yet today. When a concrete truck arrives, tap Truck arrived and photo its waybill.</p>}
               </section>
             )}
@@ -318,6 +344,7 @@ export function ConcreteApp({
                     </span>
                   </h2>
                   <PourLine pour={pour} delivered={sum.volume} onEdit={() => setDayOpen(day)} />
+                  {statusLines(day)}
                   {(sum.averageRoad !== null || late > 0) && (
                     <p className={cx.dayStats}>
                       {sum.averageRoad !== null ? `Average ${sum.averageRoad} min from the yard` : ""}
@@ -346,14 +373,16 @@ export function ConcreteApp({
           truck={open}
           all={data.trucks}
           pour={pourOf(open.day)}
+          bookings={bookingsOn(open.day)}
+          onPours={putPours}
           onClose={() => setOpenId(null)}
           onSaved={(truck, note) => {
             putTruck(truck);
             if (note) showToast({ text: note });
           }}
-          onDeleted={(id) => {
+          onDeleted={(id, pours) => {
             localAt.current = Date.now();
-            setData((d) => ({ ...d, trucks: d.trucks.filter((t) => t.id !== id) }));
+            setData((d) => ({ ...d, trucks: d.trucks.filter((t) => t.id !== id), ...(pours ? { pours } : {}) }));
             setOpenId(null);
             showToast({ text: "Truck deleted" });
           }}
@@ -507,6 +536,8 @@ function TruckSheet({
   truck,
   all,
   pour,
+  bookings,
+  onPours,
   onClose,
   onSaved,
   onDeleted,
@@ -516,9 +547,12 @@ function TruckSheet({
   truck: Truck;
   all: Truck[];
   pour: PourDay | null;
+  /** The pours booked on the truck's day. */
+  bookings: PourBooking[];
+  onPours: (pours: PourInfo | undefined) => void;
   onClose: () => void;
   onSaved: (truck: Truck, note?: string) => void;
-  onDeleted: (id: string) => void;
+  onDeleted: (id: string, pours?: PourInfo) => void;
   onPhoto: (url: string) => void;
 }) {
   // Only what's been typed is kept here: the rest follows the truck, so a reading that lands while the sheet
@@ -565,6 +599,21 @@ function TruckSheet({
     }
   };
 
+  // Two pours booked that day: which one this truck brought (that one is poured, its curing starts).
+  const pickPour = async (pourId: string) => {
+    setSaving(true);
+    setError("");
+    try {
+      const { truck: saved, pours } = await send<{ truck: Truck; pours?: PourInfo }>(`/api/concrete/${truck.id}`, "PATCH", { pourId });
+      onPours(pours);
+      onSaved(saved, "Poured: its curing starts");
+    } catch (e) {
+      setError(errorText(e));
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const readAgain = async () => {
     setError("");
     try {
@@ -582,8 +631,8 @@ function TruckSheet({
     }
     setSaving(true);
     try {
-      await send(`/api/concrete/${truck.id}`, "DELETE");
-      onDeleted(truck.id);
+      const { pours } = await send<{ ok: boolean; pours?: PourInfo }>(`/api/concrete/${truck.id}`, "DELETE");
+      onDeleted(truck.id, pours);
     } catch (e) {
       setError(errorText(e));
       setSaving(false);
@@ -610,6 +659,7 @@ function TruckSheet({
             <img src={photoAt(truck.photoUrl, 900)} alt="" />
           </button>
         )}
+        <TruckPour truck={truck} bookings={bookings} onPick={(id) => void pickPour(id)} busy={saving} />
         {working ? (
           <p className={cx.reading}>Reading the waybill… its details fill in by themselves in a few seconds.</p>
         ) : (

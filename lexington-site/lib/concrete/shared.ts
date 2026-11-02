@@ -60,6 +60,8 @@ export interface Truck {
   createdAt: string;
   createdBy: string;
   createdById: string | null;
+  /** The booked pour it brought concrete for (lib/concrete/pours.ts), or null. */
+  pourId: string | null;
   updatedAt: string;
 }
 
@@ -72,9 +74,50 @@ export interface PourDay {
   volume: number | null;
 }
 
+/* ---------- pours booked on the concrete page (2 Nov 2026, lib/concrete/pours.ts) ---------- */
+
+export interface PourCheck {
+  key: string;
+  text: string;
+  ok: boolean;
+  /** When it was ticked. */
+  at: string | null;
+}
+
+/** A pour booked for a day (the roll call's pour record): its checklist before the pour; poured, it cures. */
+export interface PourBooking {
+  id: string;
+  what: string;
+  /** The day it's booked for (YYYY-MM-DD). */
+  day: string;
+  mix: string;
+  /** m³ ordered, or null. */
+  volume: number | null;
+  phase: "check" | "poured";
+  /** The day it was poured (its curing starts then), or null before. */
+  poured: string | null;
+  curingDays: number | null;
+  curer: { id: string; name: string } | null;
+  /** The checklist it started from, or null. */
+  checklist: string | null;
+  checks: PourCheck[];
+}
+
+export interface PourInfo {
+  pours: PourBooking[];
+  /** The roll call's checklists, to start a pour from. */
+  checklists: Array<{ id: string; name: string }>;
+  /** Who can cure: the roll call's active workers (not the steel benders), foremen first. */
+  curers: Array<{ id: string; name: string }>;
+  /** Days of curing a pour gets now (the roll call's settings). */
+  curingDays: number;
+}
+
 export interface ConcreteData {
   trucks: Truck[];
   days: PourDay[];
+  /** The pours booked (the concrete page; the dashboard and the flags do without). */
+  pours?: PourInfo;
 }
 
 export type FlagKind = "late" | "quick" | "before" | "date" | "twice" | "mix" | "notime";

@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 
 import { SiteApp } from "@/components/todo/SiteApp";
 import { TodoSignIn } from "@/components/todo/TodoSignIn";
-import { listConcrete } from "@/lib/concrete/server";
+import { concreteData } from "@/lib/concrete/server";
 import type { ConcreteData } from "@/lib/concrete/shared";
 import { getTodoUser } from "@/lib/todo/server";
 
@@ -23,7 +23,7 @@ export default async function ConcretePage({ searchParams }: { searchParams: Pro
   let concrete: ConcreteData = { trucks: [], days: [] };
   let failed = false;
   try {
-    concrete = await listConcrete();
+    concrete = await concreteData();
   } catch (error) {
     console.error("[concrete] load failed:", error instanceof Error ? error.message : error);
     failed = true;

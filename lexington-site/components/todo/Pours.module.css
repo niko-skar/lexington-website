@@ -1,0 +1,173 @@
+/* Pours booked on the concrete page (2 Nov 2026). Colours come from .app in Todo.module.css. */
+
+.card {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 12px;
+  padding: 14px;
+  border: 1px solid var(--x-line);
+  border-radius: 10px;
+  background: var(--x-surface);
+  box-shadow: inset 4px 0 0 var(--x-amber);
+}
+.top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.day {
+  font-family: var(--x-display);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--x-amber);
+}
+.link {
+  min-height: 36px;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  color: var(--x-accent);
+  font-weight: 600;
+}
+.what {
+  margin: 0;
+  font-family: var(--x-display);
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+.line,
+.progress {
+  margin: 0;
+  font-size: 14px;
+  color: var(--x-muted);
+}
+.progress {
+  margin-top: 4px;
+  font-weight: 600;
+  color: var(--x-ink);
+}
+.checks {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.check,
+.checkOn {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 1px solid var(--x-line);
+  border-radius: 8px;
+  background: var(--x-bg);
+  color: var(--x-ink);
+  text-align: left;
+  font-size: 15px;
+}
+.checkOn {
+  border-color: var(--x-ok);
+  background: var(--x-ok-soft);
+}
+.box {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--x-line);
+  border-radius: 6px;
+  color: transparent;
+  font-weight: 700;
+}
+.checkOn .box {
+  border-color: var(--x-ok);
+  background: var(--x-ok);
+  color: var(--x-on-color);
+}
+.poured,
+.pouredLeft {
+  min-height: 48px;
+  margin-top: 6px;
+  border-radius: 8px;
+  font-weight: 600;
+}
+.poured {
+  border: 0;
+  background: var(--x-accent);
+  color: var(--x-accent-ink);
+}
+.pouredLeft {
+  border: 1px solid var(--x-line);
+  background: var(--x-bg);
+  color: var(--x-ink);
+}
+.book {
+  width: 100%;
+  min-height: 52px;
+  border: 1px dashed var(--x-accent);
+  border-radius: 10px;
+  background: var(--x-surface);
+  color: var(--x-accent);
+  font-weight: 700;
+  font-size: 16px;
+}
+.hint {
+  margin: 8px 2px 0;
+  font-size: 13px;
+  color: var(--x-muted);
+}
+.grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.grid2 label {
+  display: grid;
+  gap: 6px;
+}
+.delete {
+  width: 100%;
+  min-height: 48px;
+  border: 1px solid var(--x-warn);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--x-warn);
+  font-weight: 600;
+}
+.truckFor {
+  margin: 0;
+  font-size: 15px;
+}
+.truckPick {
+  display: grid;
+  gap: 6px;
+}
+/* What the day's bookings came to, under the day's heading. */
+.status {
+  margin: 0 2px 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--x-ok);
+}
+.statusWait {
+  color: var(--x-amber);
+}
+/* A laptop (2 Nov 2026): the booked pours side by side. */
+@media (min-width: 1280px) {
+  .checks {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (hover: hover) and (pointer: fine) {
+  .check:hover {
+    border-color: var(--x-muted);
+  }
+}

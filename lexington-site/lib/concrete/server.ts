@@ -8,6 +8,7 @@ import { POUR_DAY_PREFIX, TRUCK_PREFIX } from "@/lib/site/ids";
 import { ghanaDay } from "@/lib/store/shared";
 import { cleanPhotoRef, cleanText, dropPhoto, photoRef, TodoError } from "@/lib/todo/server";
 import { photoAt, type TodoMe } from "@/lib/todo/shared";
+import { listPours, setTruckPour, truckArrived, truckGone } from "./pours";
 import { readWaybill, type WaybillReading } from "./readWaybill";
 import {
   alertFlags,
@@ -67,6 +68,7 @@ const FIELDS = `{
   createdAt,
   "createdBy": coalesce(createdBy, ""),
   createdById,
+  "pourId": coalesce(pourId, null),
   "updatedAt": _updatedAt
 }`;
 
@@ -79,6 +81,12 @@ export async function listConcrete(): Promise<ConcreteData> {
     }`,
     { truck: TRUCK_PREFIX, pourDay: POUR_DAY_PREFIX, from }
   );
+}
+
+/** The concrete page's data: the trucks and pour days, and the pours booked (lib/concrete/pours.ts). */
+export async function concreteData(): Promise<ConcreteData> {
+  const [all, pours] = await Promise.all([listConcrete(), listPours()]);
+  return { ...all, pours };
 }
 
 export async function getTruck(id: string): Promise<Truck | null> {
@@ -119,6 +127,8 @@ export async function createTruck(me: TodoMe, body: Record<string, unknown>): Pr
     });
     // Once the phone has its answer: Claude reads the waybill, and the office hears if something is off.
     after(() => readAndFill(me, id));
+    // The day's booked pour is poured: its curing starts today (a failure there never loses the truck).
+    await truckArrived(me, { id, day: ghanaDay(at), pourId: null }).catch((e) => console.error("[concrete] pour:", e instanceof Error ? e.message : e));
   } catch (error) {
     if ((error as { statusCode?: number }).statusCode !== 409) throw error;
   }
@@ -220,6 +230,12 @@ export async function changeTruck(me: TodoMe, id: string, body: Record<string, u
   const before = await getTruck(id);
   if (!before) throw new TodoError(404, "That truck isn't on the list any more.");
 
+  // Which of the day's booked pours it brought (two booked that day): that one is poured.
+  if ("pourId" in body) {
+    await setTruckPour(me, before, body.pourId);
+    return (await getTruck(id)) ?? before;
+  }
+
   if (body.action === "read") {
     if (before.reading === "working") return before;
     await client.patch(id).set({ reading: "working", readNotes: [] }).commit();
@@ -269,10 +285,15 @@ export async function changeTruck(me: TodoMe, id: string, body: Record<string, u
 export async function deleteTruck(me: TodoMe, id: string): Promise<void> {
   checkId(id);
   const client = getBuyersClient();
-  const doc = await client.fetch<{ photo?: string; createdById?: string } | null>(`*[_id == $id && _type == "concreteTruck"][0]{ "photo": photo.asset._ref, createdById }`, { id });
+  const doc = await client.fetch<{ photo?: string; createdById?: string; day: string; pourId?: string | null } | null>(
+    `*[_id == $id && _type == "concreteTruck"][0]{ "photo": photo.asset._ref, createdById, day, pourId }`,
+    { id }
+  );
   if (!doc) return;
   if (me.kind !== "admin" && doc.createdById !== me.id) throw new TodoError(403, "Only the office can delete a truck someone else logged.");
   await client.delete(id);
+  // Logged by mistake: if it was the only truck of its pour, the pour is back before its pour.
+  await truckGone(me, { id, day: doc.day, pourId: doc.pourId ?? null }).catch((e) => console.error("[concrete] pour:", e instanceof Error ? e.message : e));
   if (doc.photo) await dropPhoto(doc.photo, "concrete");
 }
 
