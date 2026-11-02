@@ -83,7 +83,7 @@ function viewOf(can: RollcallAccess, col: RollcallCollection, data: Data): Data 
 
 const WRITE_KEYS: Record<RollcallCollection, readonly string[]> = {
   days: ["date", "marks", "ot", "machines", "pay"],
-  payments: ["weekStart", "paid", "waived"],
+  payments: ["weekStart", "paid", "waived", "location"],
   workers: ["name", "nick", "trade", "active", "created", "phone", "momo", "momoName", "rate", "idPhoto"],
   pours: ["what", "start", "days", "rate", "dryFine", "worker", "dry", "stopped", "deleted", "created", "phase", "planned", "check", "poured"],
   checklists: ["name", "n", "items", "created", "deleted"],

@@ -110,6 +110,8 @@
       me = who.me;
       window.__rcMe = me;
       window.__rcCdn = who.cdn;
+      // Where Payday can put the week's wages in QuickBooks.
+      window.__rcLocations = who.locations || [];
       forget(keyFor(me));
       first = readCopy(keyFor(me));
     } catch (e) {

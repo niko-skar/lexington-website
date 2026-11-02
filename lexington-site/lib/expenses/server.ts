@@ -344,6 +344,8 @@ export interface PaydayEntryData {
   supplier: string;
   description: string;
   costClass: { id: string; name: string } | null;
+  /** The QuickBooks location chosen in Payday (its name), or "Whole building" when none was. */
+  floor: string;
   payday: { week: string; kind: "workers" | "machines"; lines: Array<{ id: string; name: string; group: string; amount: number; at: string; ref: string | null }> };
 }
 
@@ -370,7 +372,7 @@ export async function savePaydayEntry(id: string, data: PaydayEntryData | null):
     vatRate: null,
     supplier: data.supplier,
     description: data.description,
-    floor: "Whole building",
+    floor: data.floor,
     method: data.method,
     category: "Service",
     material: null,

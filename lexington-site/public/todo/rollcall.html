@@ -201,6 +201,7 @@ nav.tabs button.on{color:var(--ink);background:var(--chip)}
 .clrow .iconbtn:disabled{opacity:.35}
 .cltext{font:inherit;height:auto;min-height:44px;padding:8px 10px;line-height:1.3;resize:vertical}
 .chips button.none{border-style:dashed}
+.wageloc{display:grid;gap:6px;margin-top:10px}.wageloc small{font-weight:600}.wageloc .calc{color:var(--late, #a15c00)}
 /* The Lexington app (Nov 2026): the ones already marked or paid sit below the rest */
 .donehead{margin:0;padding:8px 12px;border-top:1px solid var(--line);background:var(--bg);color:var(--muted);font:600 13px/1.2 var(--body);letter-spacing:.04em;text-transform:uppercase}
 nav.tabs button.home{color:var(--accent)}
@@ -830,6 +831,22 @@ function rowHtml(w, date, away){
     <button class="no ${m?.s==="out"?"on":""}" data-act="mark" data-w="${w.id}" data-v="out" aria-pressed="${m?.s==="out"}">Absent</button></div></div>`;
 }
 
+/** The QuickBooks location this week's wages go under: the week's own choice, else the last week's before it. */
+function wagesLocation(ws){
+  const own = S.pays[ws]?.location;
+  if (own) return { name: own, carried: false };
+  const before = Object.keys(S.pays).filter(k => k < ws && S.pays[k]?.location).sort().pop();
+  return before ? { name: S.pays[before].location, carried: true } : null;
+}
+function locationsHtml(ws){
+  const list = window.__rcLocations || [];
+  if (!list.length) return "";
+  const cur = wagesLocation(ws);
+  return `<div class="wageloc"><small>Wages go into QuickBooks under${cur?.carried ? " (as the week before)" : ""}:</small>
+    <div class="chips">${list.map(n => `<button data-act="wagesloc" data-v="${esc(n)}" class="${cur?.name === n ? "on" : ""}" aria-pressed="${cur?.name === n}">${esc(n)}</button>`).join("")}</div>
+    ${cur ? "" : `<span class="calc">Pick where this week's wages go.</span>`}</div>`;
+}
+
 function viewWeek(){
   const ws = S.week, W = weekData(ws), isCur = ws === weekStart(todayStr());
   const remaining = r2(W.due - W.paidTotal);
@@ -842,6 +859,7 @@ function viewWeek(){
       <div><small>Left</small><b class="num">${ghs(Math.max(0, remaining))}</b></div></div>
     <p class="bymethod">${Object.keys(W.byMethod).length ? "Paid so far: "+Object.entries(W.byMethod).map(([k,v]) => METHODS[k]+" "+ghs(v)).join(" · ") : "Nothing paid yet this week."}
       ${isCur ? " Figures update as you mark attendance." : ""} Tap a day under a name to pay it as a half or full day.</p>
+    ${locationsHtml(ws)}
     <div class="actions"><button class="btn" data-act="copy">Copy report for WhatsApp</button>
       ${S.downloads ? `<button class="btn" data-act="exportmenu" aria-expanded="${!!S.exportOpen}">Export to Excel</button>` : ""}</div>
     ${S.downloads && S.exportOpen ? `<div class="exportbox"><span class="calc">${S.exporting ? "Building the spreadsheet…" : "Save a backup of attendance, overtime, deductions, steel machines, curing, pour checks, payments and workers:"}</span>
@@ -1003,7 +1021,7 @@ document.addEventListener("click", async e => {
   if (a === "tab"){ if (!tabAllowed(v)) return; S.tab = v; S.payForm = null; S.dayEdit = null; window.scrollTo(0,0); return render(); }
   if (!S.db) return;
   if (a === "dismisserr"){ S.saveError = null; return render(); }
-  const WRITES = ["mark","rest","ot","otnow","waive","pay","savepay","unpay","savenewworker","saveworker","toggleactive","savesettings","delphoto","setpay","machine","savepour","stoppour","delpour","deldry","tick","addcheck","poured","clsave","cldel"];
+  const WRITES = ["wagesloc","mark","rest","ot","otnow","waive","pay","savepay","unpay","savenewworker","saveworker","toggleactive","savesettings","delphoto","setpay","machine","savepour","stoppour","delpour","deldry","tick","addcheck","poured","clsave","cldel"];
   if (S.readOnly && WRITES.includes(a)){ window.scrollTo(0,0); return toast("View only. Ask the owner for edit access."); }
   // A second tap is needed to pour with checks left, or to delete a checklist: anything else in between starts over.
   if (a !== "poured") S.confirmPoured = null;
@@ -1122,6 +1140,9 @@ document.addEventListener("click", async e => {
       S.days[d] = deepMerge({date:d, ...(S.days[d]||{})}, patch);
       writeDoc("days/"+d, patch, {date:d}); S.dayEdit = null;
       toast(S.workers[wid].name.split(" ")[0]+", "+dayLabel(d).slice(0,3)+": "+(val == null ? "paid as marked" : payTxt(val))); break; }
+    case "wagesloc": { const patch = {location:v};
+      S.pays[S.week] = deepMerge({weekStart:S.week, ...(S.pays[S.week]||{})}, patch);
+      writeDoc("payments/"+S.week, patch, {weekStart:S.week}); toast("This week's wages go under "+v); break; }
     case "waive": { const cur = !!S.pays[S.week]?.waived?.[v]; const patch = {waived:{[v]:!cur}};
       S.pays[S.week] = deepMerge({weekStart:S.week, ...(S.pays[S.week]||{})}, patch); writeDoc("payments/"+S.week, patch, {weekStart:S.week}); break; }
     case "pay": { S.payForm = {id:wid, method:v, ws:S.week}; delete S.draft["pf-amount"]; delete S.draft["pf-ref"];

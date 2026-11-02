@@ -25,6 +25,19 @@ const KEYS = ["momo", "cash", "bank", "mach"];
 const entryId = (week: string, key: string) => `${EXPENSE_PREFIX}wg${week.replace(/-/g, "")}${key}`;
 const shortDay = (day: string) => new Date(`${day}T12:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
 
+/** The location chosen for the last week before this one that has one. */
+async function earlierLocation(week: string): Promise<string | null> {
+  const rows = await getBuyersClient().fetch<Array<{ key: string; json: string }>>(
+    `*[_type == "rollcallDoc" && string::startsWith(_id, $prefix) && col == "payments" && key < $week] | order(key desc)[0...12]{ key, json }`,
+    { prefix: ROLLCALL_PREFIX, week }
+  );
+  for (const r of rows) {
+    const loc = (JSON.parse(r.json) as { location?: unknown }).location;
+    if (typeof loc === "string" && loc.trim()) return loc.trim();
+  }
+  return null;
+}
+
 /** A pay week's payments, saved in Payday a moment ago, into the expenses. */
 export async function syncWages(week: string): Promise<void> {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(week) || week < WAGES_FROM_WEEK) return;
@@ -35,7 +48,10 @@ export async function syncWages(week: string): Promise<void> {
       client.fetch<Array<{ key: string; json: string }>>(`*[_type == "rollcallDoc" && string::startsWith(_id, $prefix) && col == "workers"]{ key, json }`, { prefix: ROLLCALL_PREFIX }),
       cachedBookLists().catch(() => ({ classes: [], locations: [], fetchedAt: null })),
     ]);
-    const paid = record ? ((JSON.parse(record) as { paid?: Record<string, unknown> }).paid ?? {}) : {};
+    const weekRecord = record ? (JSON.parse(record) as { paid?: Record<string, unknown>; location?: unknown }) : {};
+    const paid = weekRecord.paid ?? {};
+    // The QuickBooks location chosen in Payday for the week, else the last week's before it (2 Nov 2026).
+    const location = typeof weekRecord.location === "string" && weekRecord.location.trim() ? weekRecord.location.trim() : await earlierLocation(week);
     const workers = new Map(workerRows.map((r) => [r.key, JSON.parse(r.json) as { name?: string; trade?: string }]));
     const groups = paydayGroups(paid, workers);
 
@@ -57,6 +73,7 @@ export async function syncWages(week: string): Promise<void> {
                 ? `Steel machines, week from ${shortDay(week)} (Payday)`
                 : `Wages, week from ${shortDay(week)} (Payday): ${g.lines.length} ${g.lines.length === 1 ? "worker" : "workers"}`,
               costClass: machines ? classNamed(TRADE_CLASS.machines, books.classes) : null,
+              floor: location ?? "Whole building",
               payday: { week, kind: g.kind, lines: g.lines },
             }
           : null

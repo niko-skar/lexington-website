@@ -1,5 +1,6 @@
+import { cachedBookLists } from "@/lib/quickbooks/booksCache";
 import { photoBase, readRollcall, requireRollcallUser, rollcallMoved, writeRollcall } from "@/lib/rollcall/server";
-import { ROLLCALL_PARTS } from "@/lib/rollcall/shared";
+import { ROLLCALL_PARTS, rollcallAccess } from "@/lib/rollcall/shared";
 import { errorResponse, readJson } from "@/lib/todo/server";
 
 export const dynamic = "force-dynamic";
@@ -21,7 +22,9 @@ export async function GET(request: Request): Promise<Response> {
       const note = (await rollcallMoved())
         ? null
         : "The roll call is moving into this app on Sunday morning. Until then, keep marking and paying on the Site Roll Call page.";
-      return Response.json({ me: { id: me.id, name: me.name, kind: me.kind, sections }, cdn: photoBase(), note }, { headers });
+      // Payday chooses where the week's wages go in QuickBooks: the books' locations (2 Nov 2026).
+      const locations = rollcallAccess(me.sections).payday ? (await cachedBookLists().catch(() => ({ locations: [] }))).locations.map((l) => l.name) : [];
+      return Response.json({ me: { id: me.id, name: me.name, kind: me.kind, sections }, cdn: photoBase(), note, locations }, { headers });
     }
     const since = params.get("since");
     if (since && !ISO_RE.test(since)) return Response.json({ error: "Bad time." }, { status: 400 });
