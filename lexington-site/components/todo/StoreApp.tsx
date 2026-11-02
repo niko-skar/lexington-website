@@ -26,6 +26,7 @@ import {
   type ToolOut,
 } from "@/lib/store/shared";
 import { photoAt, type TodoMe } from "@/lib/todo/shared";
+import { categoryOf, guessCategory, STORE_CATEGORIES, type StoreCategory } from "@/lib/store/categories";
 import { AccessSheet } from "./AccessSheet";
 import { dayName, errorText, send, startPolling, when } from "./api";
 import { QtyPicker } from "./QtyPicker";
@@ -144,6 +145,8 @@ export function StoreApp({
   const [loaded, setLoaded] = useState(initial !== null);
   const [tab, setTab] = useState<Tab>("stock");
   const [search, setSearch] = useState("");
+  // One category shown (a chip tapped), or all of them under their headings.
+  const [cat, setCat] = useState<StoreCategory | "all">("all");
   const [showHidden, setShowHidden] = useState(false);
   const [showDismissed, setShowDismissed] = useState(false);
   const [sheet, setSheet] = useState<Sheet | null>(null);
@@ -369,6 +372,8 @@ export function StoreApp({
     return stocked.filter((i) => !q || i.name.toLowerCase().includes(q));
   }, [stocked, search]);
   const toReorder = useMemo(() => stocked.filter(needsReorder), [stocked]);
+  const shownGroups = useMemo(() => byCategory(shown).filter(([c]) => cat === "all" || c === cat), [shown, cat]);
+  const chips = useMemo(() => byCategory(stocked).map(([c, l]) => [c, l.length] as const), [stocked]);
   const dismissed = useMemo(() => stocked.filter((i) => atReorderPoint(i) && i.reorderDismissed), [stocked]);
   const people = useMemo(() => {
     const seen = new Map<string, string>();
@@ -399,7 +404,11 @@ export function StoreApp({
   const orderText = () =>
     [
       `Lexington site: to order (${new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short" })})`,
-      ...toReorder.map((i) => `• ${i.name}: ${i.reorderQty ? qtyUnit(i.reorderQty, i.unit) : "how many?"} (${qtyUnit(Math.max(0, i.level), i.unit)} left)`),
+      ...byCategory(toReorder).flatMap(([c, list]) => [
+        "",
+        `*${c}*`,
+        ...list.map((i) => `• ${i.name}: ${i.reorderQty ? qtyUnit(i.reorderQty, i.unit) : "how many?"} (${qtyUnit(Math.max(0, i.level), i.unit)} left)`),
+      ]),
     ].join("\n");
   const copyOrder = async () => {
     try {
@@ -510,14 +519,33 @@ export function StoreApp({
                 + New item
               </button>
             </div>
-            {shown.length === 0 ? (
+            {chips.length > 1 && (
+              <div className={site.catChips} role="group" aria-label="Categories">
+                <button type="button" className={cat === "all" ? styles.chipOn : styles.chip} aria-pressed={cat === "all"} onClick={() => setCat("all")}>
+                  All
+                </button>
+                {chips.map(([c, n]) => (
+                  <button key={c} type="button" className={cat === c ? styles.chipOn : styles.chip} aria-pressed={cat === c} onClick={() => setCat(cat === c ? "all" : c)}>
+                    {c} <span className={site.catCount}>{n}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            {shownGroups.length === 0 ? (
               <p className={styles.empty}>
                 {stocked.length === 0
                   ? "Nothing in the store yet. Tap + New item for each thing on the shelves, take a photo and say how many there are. Materials bought from now on come in by themselves when the office logs the payment."
                   : "Nothing matches."}
               </p>
             ) : (
-              <div className={site.itemList}>{shown.map(itemRow)}</div>
+              shownGroups.map(([c, list]) => (
+                <section key={c} className={site.catGroup} aria-label={c}>
+                  <h2 className={styles.groupTitle}>
+                    {c} <span>{list.length}</span>
+                  </h2>
+                  <div className={site.itemList}>{list.map(itemRow)}</div>
+                </section>
+              ))
             )}
             {isAdmin && hidden.length > 0 && (
               <section className={styles.group}>
@@ -542,7 +570,11 @@ export function StoreApp({
                 <button type="button" className={site.copyList} onClick={() => void copyOrder()}>
                   Copy the order list for WhatsApp
                 </button>
-                {toReorder.map((item) => (
+                {byCategory(toReorder).flatMap(([c, list]) => [
+                  <h2 key={c} className={styles.groupTitle}>
+                    {c} <span>{list.length}</span>
+                  </h2>,
+                  ...list.map((item) => (
                   <article key={item.id} className={`${site.reorderCard} ${item.level <= 0 ? site.reorderCardOut : ""}`}>
                     <div className={site.reorderTop}>
                       {item.photoUrl && (
@@ -571,7 +603,8 @@ export function StoreApp({
                       </div>
                     )}
                   </article>
-                ))}
+                  )),
+                ])}
               </>
             )}
             {dismissed.length > 0 && (
@@ -1272,6 +1305,8 @@ function NewItemSheet({ items, onClose, onSaved }: { items: StoreItem[]; onClose
   const [error, setError] = useState("");
   const { slot, start, clear, settled } = useUploadSlot("/api/store/photo");
   const clash = items.find((i) => i.name.toLowerCase() === name.trim().replace(/\s+/g, " ").toLowerCase());
+  const [picked, setPicked] = useState<StoreCategory | null>(null);
+  const category = picked ?? guessCategory(name);
 
   const save = async () => {
     setError("");
@@ -1286,6 +1321,7 @@ function NewItemSheet({ items, onClose, onSaved }: { items: StoreItem[]; onClose
         unit: unit.trim() || "pcs",
         count: Number(count),
         photoId: photo?.id ?? null,
+        category,
       });
       clear(true);
       onSaved(item);
@@ -1314,6 +1350,7 @@ function NewItemSheet({ items, onClose, onSaved }: { items: StoreItem[]; onClose
           placeholder="e.g. Cement 50kg"
         />
         {clash && <p className={site.gapOdd}>&ldquo;{clash.name}&rdquo; is already in the store: find it in the list and count it there.</p>}
+        <CategoryChips value={category} onChange={setPicked} />
         <PhotoField idBase="store-new" slot={slot} onPick={start} onClear={() => clear()} label="Photo of the stock (optional)" />
         <span className={styles.label}>Counted in</span>
         <UnitPicker id="store-new-unit" value={unit} onChange={setUnit} />
@@ -1361,6 +1398,7 @@ function EditItemSheet({ item, onClose, onSaved }: { item: StoreItem; onClose: (
   const [low, setLow] = useState(item.low === null ? "" : String(item.low));
   const [reorderQty, setReorderQty] = useState(item.reorderQty === null ? "" : String(item.reorderQty));
   const [stocked, setStocked] = useState(item.stocked);
+  const [category, setCategory] = useState<StoreCategory>(categoryOf(item));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -1371,6 +1409,7 @@ function EditItemSheet({ item, onClose, onSaved }: { item: StoreItem; onClose: (
       const { item: saved } = await send<{ item: StoreItem }>(`/api/store/items/${item.id}`, "PATCH", {
         name: name.trim(),
         unit: unit.trim() || "pcs",
+        category,
         low: low.trim() === "" ? null : Number(low),
         reorderQty: reorderQty.trim() === "" ? null : Number(reorderQty),
         stocked,
@@ -1392,6 +1431,7 @@ function EditItemSheet({ item, onClose, onSaved }: { item: StoreItem; onClose: (
         </label>
         <input id="store-edit-name" className={styles.input} value={name} onChange={(e) => setName(e.target.value)} maxLength={MAX_ITEM_NAME} autoComplete="off" />
         <p className={styles.sheetNote}>Purchases typed with the old name still come here.</p>
+        <CategoryChips value={category} onChange={setCategory} />
         <span className={styles.label}>Counted in</span>
         <UnitPicker id="store-edit-unit" value={unit} onChange={setUnit} />
         <label className={styles.label} htmlFor="store-edit-low">
@@ -1440,5 +1480,26 @@ function EditItemSheet({ item, onClose, onSaved }: { item: StoreItem; onClose: (
         </div>
       </div>
     </div>
+  );
+}
+
+/** The categories in their order, each with its items (empty ones left out). */
+function byCategory(list: StoreItem[]) {
+  return STORE_CATEGORIES.map((c) => [c, list.filter((i) => categoryOf(i) === c)] as const).filter(([, l]) => l.length > 0);
+}
+
+/** The store room's categories as chips: one is picked (a new item starts on what its name suggests). */
+function CategoryChips({ value, onChange }: { value: StoreCategory; onChange: (c: StoreCategory) => void }) {
+  return (
+    <>
+      <span className={styles.label}>Category</span>
+      <div className={styles.chips}>
+        {STORE_CATEGORIES.map((c) => (
+          <button key={c} type="button" className={value === c ? styles.chipOn : styles.chip} aria-pressed={value === c} onClick={() => onChange(c)}>
+            {c}
+          </button>
+        ))}
+      </div>
+    </>
   );
 }

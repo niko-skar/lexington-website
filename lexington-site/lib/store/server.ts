@@ -5,6 +5,7 @@ import { getBuyersClient } from "@/lib/sanity/buyersClient";
 import { CHECK_PREFIX, EXPENSE_PREFIX, isId, ITEM_PREFIX, MOVE_PREFIX, newId, TOOL_OUT_PREFIX, TOOL_PREFIX } from "@/lib/site/ids";
 import { cleanPhotoRef, cleanText, dropPhoto, photoRef, TodoError } from "@/lib/todo/server";
 import type { TodoMe } from "@/lib/todo/shared";
+import { guessCategory, isStoreCategory } from "./categories";
 import { CHECK_FIELDS, toCheck, type RawCheck } from "./checks";
 import {
   MAX_ITEM_NAME,
@@ -41,6 +42,7 @@ const ITEM_FIELDS = `{
   "reorderQty": reorderQty,
   "reorderDismissed": coalesce(reorderDismissed, false),
   "photoUrl": photo.asset->url,
+  "category": category,
   "bought": coalesce(math::sum(*[_type == "siteExpense" && string::startsWith(_id, $expensePrefix) && itemId == ^._id && toStore == true].qty), 0),
   "added": coalesce(math::sum(*[_type == "storeMove" && itemId == ^._id && kind == "in"].qty), 0),
   "back": coalesce(math::sum(*[_type == "storeMove" && itemId == ^._id && kind == "back"].qty), 0),
@@ -202,13 +204,14 @@ async function findItem(name: string): Promise<{ id: string; stocked: boolean } 
   );
 }
 
-async function createItemDoc(me: TodoMe, name: string, unit: string, photoId: string | null = null): Promise<string> {
+async function createItemDoc(me: TodoMe, name: string, unit: string, photoId: string | null = null, category: string = guessCategory(name)): Promise<string> {
   const id = newId(ITEM_PREFIX);
   await getBuyersClient().create({
     _id: id,
     _type: "storeItem",
     name,
     unit,
+    category,
     stocked: true,
     ...(photoId ? { photo: photoRef(photoId) } : {}),
     createdAt: new Date().toISOString(),
@@ -239,8 +242,10 @@ export async function createItem(me: TodoMe, body: Record<string, unknown>): Pro
   const unit = cleanUnit(body.unit);
   const count = cleanOptionalQty(body.count, "Type how many are there now (0 if none).");
   const photoId = cleanPhotoRef(body.photoId);
+  // The category picked, else what the name suggests.
+  const category = isStoreCategory(body.category) ? body.category : guessCategory(name);
   if (await findItem(name)) throw new TodoError(409, `"${name}" is already in the store. Find it in the list and count it there.`);
-  const id = await createItemDoc(me, name, unit, photoId);
+  const id = await createItemDoc(me, name, unit, photoId, category);
   if (count !== null) {
     await getBuyersClient().create({
       _id: newId(MOVE_PREFIX),
@@ -276,7 +281,7 @@ export async function setItemPhoto(id: string, value: unknown): Promise<StoreIte
   return item;
 }
 
-/** The office: rename, unit, reorder point and quantity, dismiss a reorder, or stop keeping it in the store. */
+/** The office: rename, unit, category, reorder point and quantity, dismiss a reorder, or stop keeping it in the store. */
 export async function updateItem(id: string, body: Record<string, unknown>): Promise<StoreItem> {
   if (!isId(ITEM_PREFIX, id)) throw new TodoError(404, "That item isn't in the store any more.");
   const client = getBuyersClient();
@@ -294,6 +299,10 @@ export async function updateItem(id: string, body: Record<string, unknown>): Pro
     }
   }
   if ("unit" in body) set.unit = cleanUnit(body.unit);
+  if ("category" in body) {
+    if (!isStoreCategory(body.category)) throw new TodoError(400, "Pick one of the categories.");
+    set.category = body.category;
+  }
   if ("low" in body) set.low = cleanOptionalQty(body.low, "Type the reorder point as a number, or leave it empty.");
   if ("reorderQty" in body) set.reorderQty = cleanOptionalQty(body.reorderQty, "Type how much to reorder as a number, or leave it empty.");
   if ("reorderDismissed" in body) {

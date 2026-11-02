@@ -27,6 +27,8 @@ export interface StoreItem {
   reorderDismissed: boolean;
   /** A photo of the stock as it is (anyone using the store can add one). */
   photoUrl: string | null;
+  /** Its category (lib/store/categories.ts), or null: then it goes by its name. */
+  category: string | null;
   /** In the store now, by the record: bought + added + brought back - taken out +/- counts. */
   level: number;
   lastCountAt: string | null;

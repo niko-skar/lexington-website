@@ -108,6 +108,31 @@
   font-weight: 600;
   white-space: nowrap;
 }
+/* The store room's categories (2 Nov 2026): chips to show one, a heading over each. */
+.catChips {
+  display: flex;
+  gap: 6px;
+  margin: 2px 0 4px;
+  padding-bottom: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.catChips button {
+  flex: none;
+  white-space: nowrap;
+}
+.catCount {
+  margin-left: 4px;
+  font-family: var(--x-num);
+  font-size: 12px;
+  opacity: 0.75;
+}
+.catGroup {
+  margin-top: 16px;
+}
+.catGroup .itemList {
+  margin-top: 0;
+}
 .itemList {
   display: grid;
   margin-top: 12px;
