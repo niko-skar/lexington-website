@@ -24,7 +24,8 @@ import { useUploadSlot } from "./useUploadSlot";
 
 // Tools in the store room (Niko, 23 Oct 2026: "a section for tools with daily take outs and
 // returns"): who has what right now, several tools taken out at once with one photo, and what came
-// back, ticked off person by person at the end of the day. Anything not back by the next day is red.
+// back, ticked off person by person at the end of the day, with a photo too (Niko, 2 Nov 2026: "when tools
+// come back into the storeroom photos are required as well"). Anything not back by the next day is red.
 
 /** Out now per tool, added up from the take-outs still open. */
 export function outByTool(outs: ToolOut[]) {
@@ -722,14 +723,15 @@ export function ReturnSheet({
   const save = async () => {
     setError("");
     if (total === 0) return setError("Tick what came back.");
+    if (!slot) return setError("Take a photo of the tools coming back first.");
     setSaving(true);
     try {
-      const photo = slot ? await settled() : null;
-      if (slot && !photo) return setError("The photo didn't upload. Take it again, or remove it.");
+      const photo = await settled();
+      if (!photo) return setError("The photo didn't upload. Take it again.");
       const { outs } = await send<{ outs: ToolOut[] }>("/api/store/tools/back", "POST", {
         returns: ticked,
         note: note.trim(),
-        photoId: photo?.id ?? null,
+        photoId: photo.id,
       });
       clear(true);
       onSaved(outs);
@@ -772,7 +774,16 @@ export function ReturnSheet({
             );
           })}
         </div>
-        <PhotoField idBase="tool-back" slot={slot} onPick={start} onClear={() => clear()} label="Photo (optional)" />
+        <PhotoField
+          idBase="tool-back"
+          slot={slot}
+          onPick={start}
+          onClear={() => clear()}
+          required
+          cameraOnly
+          label="Photo of the tools coming back"
+          need="A photo of the tools coming back is needed (all of them in one photo is fine)."
+        />
         <label className={styles.label} htmlFor="tool-back-note">
           Note (optional)
         </label>
@@ -798,8 +809,16 @@ export function ReturnSheet({
           >
             Cancel
           </button>
-          <button type="button" className={styles.sheetSave} onClick={() => void save()} disabled={saving || total === 0 || slot?.state === "uploading"}>
-            {saving ? "Saving…" : slot?.state === "uploading" ? "Uploading the photo…" : total === 0 ? "Tick what came back" : `Back: ${total} ${toolWord(total)}`}
+          <button type="button" className={styles.sheetSave} onClick={() => void save()} disabled={saving || total === 0 || slot?.state !== "ready"}>
+            {saving
+              ? "Saving…"
+              : total === 0
+                ? "Tick what came back"
+                : !slot
+                  ? "Take the photo first"
+                  : slot.state === "uploading"
+                    ? "Uploading the photo…"
+                    : `Back: ${total} ${toolWord(total)}`}
           </button>
         </div>
       </div>

@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 
 /**
  * POST /api/store/tools/back
- *   { returns: [{ outId, qty }], note?, photoId? }  -- what came back (anyone using the store)
+ *   { returns: [{ outId, qty }], photoId, note? }  -- what came back, with its photo (anyone using the store)
  *   { lost: outId, note? }                         -- the office: the rest of it isn't coming back
  */
 export async function POST(request: Request): Promise<Response> {

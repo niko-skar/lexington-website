@@ -802,8 +802,9 @@ function setOt(wid, hours){
 
 // Marked rows go below the ones still to mark (Niko, 30 Oct 2026: "as I mark them present or absent, they
 // can move to the bottom list, so that I don't have to constantly scroll looking for names of people I
-// haven't marked yet"), once tapping stops for a moment: a row never moves out from under a finger.
-const SETTLE_MS = 1500;
+// haven't marked yet"), once tapping stops for a moment: a row never moves out from under a finger. A moment is
+// 0.4 s (2 Nov 2026: 1.5 s felt slow), still longer than a double tap.
+const SETTLE_MS = 400;
 function markedLast(g, list, date){
   const key = date+"|"+S.slot+"|"+g.id, frozen = S.freeze?.[key];
   if (frozen && Date.now() - (S.lastMarkAt || 0) < SETTLE_MS){

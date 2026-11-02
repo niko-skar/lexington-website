@@ -260,7 +260,10 @@ async function closeOuts(
   return readOuts(me, ids);
 }
 
-/** What came back, from one or more take-outs, with an optional photo and note. Anyone using the store. */
+/**
+ * What came back, from one or more take-outs, with its photo (needed since 2 Nov 2026, like a take-out's) and an
+ * optional note. Anyone using the store.
+ */
 export async function returnTools(me: TodoMe, body: Record<string, unknown>): Promise<ToolOut[]> {
   const note = cleanText(body.note, MAX_MOVE_NOTE, "note");
   const photoId = cleanPhotoRef(body.photoId);
@@ -272,6 +275,7 @@ export async function returnTools(me: TodoMe, body: Record<string, unknown>): Pr
   }
   if (wanted.size === 0) throw new TodoError(400, "Tick what came back.");
   if (wanted.size > 40) throw new TodoError(400, "That's a lot at once: save it in two goes.");
+  if (!photoId) throw new TodoError(400, "Take a photo of the tools coming back first.");
   return closeOuts(me, wanted, { note, photoId, lost: false });
 }
 
