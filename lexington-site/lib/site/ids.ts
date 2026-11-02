@@ -30,6 +30,12 @@ export const BANK_TEXT_SETTINGS_ID = `banktexts-${TAG}`;
 export const ROLLCALL_PREFIX = `rc-${TAG}-`;
 /** Steel bent and installed (lib/steel): one document per entry of tons installed. */
 export const STEEL_INSTALL_PREFIX = `steelinstall-${TAG}-`;
+/** Suppliers' bills (lib/suppliers, 2 Nov 2026): one document per bill, and the running number behind BILL-0001.
+ */
+export const BILL_PREFIX = `bill-${TAG}-`;
+export const BILL_COUNTER_ID = `billcounter-${TAG}`;
+/** The company's suppliers as QuickBooks has them (its vendors), as last read (lib/quickbooks/vendors.ts). */
+export const QBO_VENDORS_ID = `qbovendors-${TAG}`;
 /** The company's QuickBooks classes and locations as last read (lib/quickbooks/booksCache.ts). */
 export const QBO_LISTS_ID = `qbolists-${TAG}`;
 /** Concrete deliveries (30 Oct 2026): one document per truck, and one per pour day ("concreteday-live-2026-10-30"). */

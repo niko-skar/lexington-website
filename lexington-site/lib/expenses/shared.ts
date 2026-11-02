@@ -78,6 +78,8 @@ export interface Expense {
   payday: PaydayInfo | null;
   /** Tons of steel this entry brought, when typed on the steel page (lib/expenses/steel.ts); otherwise worked out. */
   steelTons: number | null;
+  /** The supplier's bill this pays (lib/suppliers), or null: in QuickBooks it's then that bill's payment. */
+  billId: string | null;
   createdAt: string;
   createdBy: string;
   updatedAt: string;

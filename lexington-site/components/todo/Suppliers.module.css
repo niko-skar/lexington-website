@@ -1,0 +1,253 @@
+/* Suppliers and their bills (2 Nov 2026). Colours come from .app in Todo.module.css. */
+
+.addBar {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.list {
+  display: grid;
+  overflow: hidden;
+  border: 1px solid var(--x-line);
+  border-radius: 10px;
+  background: var(--x-surface);
+}
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 60px;
+  padding: 10px 14px;
+  border: 0;
+  border-top: 1px solid var(--x-line);
+  background: transparent;
+  color: var(--x-ink);
+  text-align: left;
+}
+.row:first-child {
+  border-top: 0;
+}
+.rowText {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.rowText b {
+  font-size: 16px;
+}
+.rowText small {
+  font-size: 13px;
+  color: var(--x-muted);
+}
+.owed,
+.owedLate {
+  flex: none;
+  font-family: var(--x-num);
+  font-size: 16px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.owedLate {
+  color: var(--x-warn);
+}
+.small {
+  margin: 10px 2px 0;
+  font-size: 13px;
+  color: var(--x-muted);
+}
+.back {
+  min-height: 40px;
+  margin-bottom: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--x-accent);
+  font-weight: 600;
+}
+.card {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 16px;
+  padding: 14px;
+  border: 1px solid var(--x-line);
+  border-radius: 10px;
+  background: var(--x-surface);
+  box-shadow: inset 4px 0 0 var(--x-amber);
+}
+.big {
+  margin: 0;
+  font-family: var(--x-display);
+  font-size: 24px;
+  font-weight: 700;
+}
+.bigNone {
+  color: var(--x-ok);
+}
+.line {
+  margin: 0;
+  font-size: 15px;
+}
+.line a {
+  color: var(--x-accent);
+  font-weight: 600;
+}
+.warn {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--x-amber);
+}
+.newBill {
+  justify-self: start;
+  min-height: 44px;
+  margin-top: 8px;
+  padding: 0 14px;
+  border: 1px dashed var(--x-accent);
+  border-radius: 8px;
+  background: var(--x-bg);
+  color: var(--x-accent);
+  font-weight: 700;
+}
+.bills {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.bill {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--x-line);
+  border-radius: 10px;
+  background: var(--x-surface);
+}
+.billLate {
+  border-color: var(--x-warn);
+  box-shadow: inset 4px 0 0 var(--x-warn);
+}
+.billMain {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  text-align: left;
+}
+.billMain > span:first-child {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.billMain small {
+  font-size: 13px;
+  color: var(--x-muted);
+}
+.billMain b {
+  font-size: 16px;
+}
+.billAmounts {
+  display: grid;
+  justify-items: end;
+  align-content: start;
+  gap: 2px;
+  white-space: nowrap;
+}
+.billAmounts b {
+  font-family: var(--x-num);
+  font-weight: 500;
+}
+.lateWords {
+  color: var(--x-warn) !important;
+  font-weight: 600;
+}
+.pay {
+  min-height: 46px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--x-accent);
+  color: var(--x-accent-ink);
+  font-weight: 700;
+}
+.payments {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.payments li {
+  display: grid;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--x-surface);
+  border: 1px solid var(--x-line);
+  font-size: 14px;
+}
+.payments small {
+  color: var(--x-muted);
+  font-size: 12px;
+}
+.chosen {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 48px;
+  padding: 0 12px;
+  border: 1px solid var(--x-line);
+  border-radius: 8px;
+  background: var(--x-bg);
+}
+.chosen button {
+  min-height: 36px;
+  border: 0;
+  background: none;
+  color: var(--x-accent);
+  font-weight: 600;
+}
+.grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.grid2 label {
+  display: grid;
+  gap: 6px;
+}
+.delete {
+  width: 100%;
+  min-height: 48px;
+  border: 1px solid var(--x-warn);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--x-warn);
+  font-weight: 600;
+}
+/* A laptop: the owed and the other suppliers side by side in two columns, the bills two to a row. */
+@media (min-width: 1280px) {
+  .list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .row:nth-child(2) {
+    border-top: 0;
+  }
+  .row:nth-child(odd) {
+    border-right: 1px solid var(--x-line);
+  }
+  .bills {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+}
+@media (hover: hover) and (pointer: fine) {
+  .row:hover {
+    background: var(--x-bg);
+  }
+}

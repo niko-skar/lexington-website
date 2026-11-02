@@ -4,20 +4,25 @@ import { debitFor, listPendingDebits, pendingDebit, settleDebit } from "@/lib/ex
 import { createExpense, listExpenses } from "@/lib/expenses/server";
 import { syncExpense } from "@/lib/expenses/sheet";
 import { cachedBookLists } from "@/lib/quickbooks/booksCache";
+import { cachedVendors } from "@/lib/quickbooks/vendors";
+import { ghanaDay } from "@/lib/store/shared";
+import { listBills } from "@/lib/suppliers/server";
+import { openBillsOf } from "@/lib/suppliers/shared";
 import { feedExpense, refreshBookLists } from "@/lib/quickbooks/feed";
 import { errorResponse, readJson, requireTodoUser } from "@/lib/todo/server";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-/** GET /api/expenses: every expense and money in, and the bank's debits waiting to be completed. The office only. */
+/** GET /api/expenses: every expense and money in, the bank's debits waiting to be completed, the bills still to pay and QuickBooks' supplier names. The office only. */
 export async function GET(): Promise<Response> {
   try {
     await requireTodoUser(true, "expenses");
-    const [expenses, pending, books] = await Promise.all([listExpenses(), listPendingDebits(), cachedBookLists()]);
+    const [expenses, pending, books, bills, vendors] = await Promise.all([listExpenses(), listPendingDebits(), cachedBookLists(), listBills(), cachedVendors()]);
     // The QuickBooks classes and locations, read again when they're a few hours old (for next time).
     after(() => refreshBookLists());
-    return Response.json({ expenses, pending, books }, { headers: { "Cache-Control": "no-store" } });
+    // The suppliers' bills still to pay ("Pays a bill?") and QuickBooks' supplier names (the form's suggestions).
+    return Response.json({ expenses, pending, books, bills: openBillsOf(bills, expenses, ghanaDay()), vendors: vendors.vendors.map((v) => v.name) }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     return errorResponse(error);
   }

@@ -100,6 +100,20 @@ function tiles(d: DashboardData, unread: number): Tile[] {
         : { section: "steel", name: "Steel", big: "Log the tons installed", small: [`${t(x.bought)} bought · ${money(x.paid)} paid`, toType].filter(Boolean).join(" · "), tone: "warn" }
     );
   }
+  if (d.suppliers) {
+    const x = d.suppliers;
+    out.push(
+      x.owed > 0
+        ? {
+            section: "suppliers",
+            name: "Suppliers",
+            big: `${money(x.owed)} owed`,
+            small: [`${x.open} ${x.open === 1 ? "bill" : "bills"} to ${x.suppliers} ${x.suppliers === 1 ? "supplier" : "suppliers"}`, x.overdue ? `${x.overdue} overdue` : x.nextDue ? `next due ${shortDay(x.nextDue)}` : ""].filter(Boolean).join(" · "),
+            tone: x.overdue ? "warn" : undefined,
+          }
+        : { section: "suppliers", name: "Suppliers", big: "Nothing owed", small: "add a bill when a supplier gives credit", tone: "ok" }
+    );
+  }
   if (d.buyers) {
     const x = d.buyers;
     const usd = (n: number) => `US$ ${n.toLocaleString("en-US")}`;

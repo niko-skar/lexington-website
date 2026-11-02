@@ -10,6 +10,7 @@ import { BANK_TEXT_PREFIX, EXPENSE_PREFIX, ROLLCALL_PREFIX } from "@/lib/site/id
 import { steelData } from "@/lib/steel/server";
 import { getStore } from "@/lib/store/server";
 import { ghanaDay, needsReorder, stillOut } from "@/lib/store/shared";
+import { suppliersOwed } from "@/lib/suppliers/server";
 import { listTasks } from "@/lib/todo/server";
 import type { TodoMe } from "@/lib/todo/shared";
 
@@ -34,6 +35,8 @@ export interface DashboardData {
   workers?: { active: number };
   /** Buyers: what they've paid of their prices (US$), and the latest payment. */
   buyers?: { count: number; paidUSD: number; priceUSD: number; last: { date: string | null; name: string; receipt: string | null } | null };
+  /** Suppliers: what their open bills still want, how many are open and overdue, the next due (lib/suppliers). */
+  suppliers?: { owed: number; open: number; overdue: number; nextDue: string | null; suppliers: number };
   /** Concrete trucks: today's (with how many don't add up), else the last pour day's. */
   concrete?: { day: string | null; trucks: number; volume: number; flagged: number };
   /** Steel: the tons bought, installed and in stock; what the steel benders were paid and are owed (below 0: paid ahead); the buys with no tons. */
@@ -179,7 +182,7 @@ async function steelPart(me: TodoMe): Promise<NonNullable<DashboardData["steel"]
 export async function getDashboard(me: TodoMe): Promise<DashboardData> {
   const today = ghanaDay();
   const has = (s: string) => me.sections.includes(s as never);
-  const [todo, store, expenses, unread, rollcall, concrete, buyers, steel] = await Promise.all([
+  const [todo, store, expenses, unread, rollcall, concrete, buyers, suppliers, steel] = await Promise.all([
     has("todo") ? settle(todoPart(me, today)) : undefined,
     has("store") ? settle(storePart(me, today)) : undefined,
     has("expenses") ? settle(expensesPart(today)) : undefined,
@@ -187,6 +190,7 @@ export async function getDashboard(me: TodoMe): Promise<DashboardData> {
     has("rollcall") || has("payday") || has("workers") ? settle(rollcallParts(me, today)) : undefined,
     has("concrete") ? settle(concretePart(today)) : undefined,
     has("buyers") ? settle(buyersPart()) : undefined,
+    has("suppliers") ? settle(suppliersOwed()) : undefined,
     has("steel") ? settle(steelPart(me)) : undefined,
   ]);
   return {
@@ -199,5 +203,6 @@ export async function getDashboard(me: TodoMe): Promise<DashboardData> {
     ...(concrete ? { concrete } : {}),
     ...(buyers ? { buyers } : {}),
     ...(steel ? { steel } : {}),
+    ...(suppliers ? { suppliers } : {}),
   };
 }

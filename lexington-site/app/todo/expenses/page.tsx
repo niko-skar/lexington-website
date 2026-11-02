@@ -7,8 +7,12 @@ import { listPendingDebits } from "@/lib/expenses/bankDebit";
 import { listExpenses } from "@/lib/expenses/server";
 import type { BookLists } from "@/lib/quickbooks/books";
 import { cachedBookLists } from "@/lib/quickbooks/booksCache";
+import { cachedVendors } from "@/lib/quickbooks/vendors";
 import type { BankDebit, Expense } from "@/lib/expenses/shared";
 import { getStore } from "@/lib/store/server";
+import { ghanaDay } from "@/lib/store/shared";
+import { listBills } from "@/lib/suppliers/server";
+import { openBillsOf, type OpenBill } from "@/lib/suppliers/shared";
 import type { StoreItem } from "@/lib/store/shared";
 import { getTodoUser } from "@/lib/todo/server";
 
@@ -31,12 +35,17 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
   let items: StoreItem[] = [];
   let pending: BankDebit[] = [];
   let books: BookLists | undefined;
+  let bills: OpenBill[] = [];
+  let vendors: string[] = [];
   let failed = false;
   try {
-    [expenses, { items }, pending, books] = await Promise.all([listExpenses(), getStore(me), listPendingDebits(), cachedBookLists()]);
+    const [x, store, debits, lists, allBills, vendorList] = await Promise.all([listExpenses(), getStore(me), listPendingDebits(), cachedBookLists(), listBills(), cachedVendors()]);
+    [expenses, items, pending, books] = [x, store.items, debits, lists];
+    bills = openBillsOf(allBills, x, ghanaDay());
+    vendors = vendorList.vendors.map((v) => v.name);
   } catch (error) {
     console.error("[expenses] load failed:", error instanceof Error ? error.message : error);
     failed = true;
   }
-  return <SiteApp me={me} section="expenses" initial={{ expenses: { expenses, items, pending, books } }} openEntry={openEntry} openDebit={openDebit} seenAlert={seenAlert} startedOffline={failed} />;
+  return <SiteApp me={me} section="expenses" initial={{ expenses: { expenses, items, pending, books, bills, vendors } }} openEntry={openEntry} openDebit={openDebit} seenAlert={seenAlert} startedOffline={failed} />;
 }

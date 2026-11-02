@@ -31,6 +31,9 @@ export const QBO_SCOPE = "com.intuit.quickbooks.accounting";
 export const QBO_MINOR_VERSION = 75;
 
 export function qboApiBase(environment: QboEnvironment): string {
+  // The tests' QuickBooks stand-in on this machine (todo-dev.mjs); never set on the website.
+  const stub = process.env.QUICKBOOKS_API_BASE?.trim();
+  if (stub) return stub;
   return environment === "production" ? "https://quickbooks.api.intuit.com" : "https://sandbox-quickbooks.api.intuit.com";
 }
 

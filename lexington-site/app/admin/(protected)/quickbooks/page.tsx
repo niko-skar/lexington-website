@@ -258,7 +258,8 @@ async function FeedPanel({ conn }: { conn: QboConnection }) {
             {status.gone.map((g) => (
               <li key={g.id} className={crm.noteItem}>
                 <div className={crm.noteMeta}>
-                  {g.ref ?? "No ref"} · QuickBooks {g.txnType === "Deposit" ? "deposit" : "expense"} {g.txnId} · {when(g.at)}
+                  {g.ref ?? "No ref"} · QuickBooks {g.txnType === "Deposit" ? "deposit" : g.txnType === "Bill" ? "bill" : g.txnType === "BillPayment" ? "bill payment" : "expense"} {g.txnId} ·{" "}
+                  {when(g.at)}
                 </div>
                 <div>{g.reason}.</div>
                 <form method="post" action="/api/quickbooks/feed" style={{ marginTop: 6 }}>

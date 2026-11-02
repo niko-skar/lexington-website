@@ -7,6 +7,7 @@ import type { BuyersData } from "@/lib/buyers/shared";
 import type { ConcreteData } from "@/lib/concrete/shared";
 import type { BankDebit, Expense } from "@/lib/expenses/shared";
 import type { SteelData } from "@/lib/expenses/steel";
+import type { OpenBill, SuppliersPage } from "@/lib/suppliers/shared";
 import type { BookLists } from "@/lib/quickbooks/books";
 import { opensRollcall } from "@/lib/rollcall/shared";
 import { needsReorder, type StoreData, type StoreItem } from "@/lib/store/shared";
@@ -22,6 +23,7 @@ import { RollcallPart, rollcallTabOf, type RollcallTab } from "./RollcallPart";
 import { appClass, SiteNav, type View } from "./SiteChrome";
 import { SteelApp } from "./SteelApp";
 import { StoreApp } from "./StoreApp";
+import { SuppliersApp, type BillPayment } from "./SuppliersApp";
 import { TodoApp } from "./TodoApp";
 import styles from "./Todo.module.css";
 
@@ -31,8 +33,8 @@ import styles from "./Todo.module.css";
 // after the app opens, so the first tap on them is instant too. The address bar follows along.
 
 export type { StoreData };
-export type ExpensesData = { expenses: Expense[]; items: StoreItem[]; pending?: BankDebit[]; books?: BookLists };
-export type SiteData = { todo?: TodoTask[]; store?: StoreData; expenses?: ExpensesData; alerts?: AlertsData; concrete?: ConcreteData; buyers?: BuyersData; steel?: SteelData };
+export type ExpensesData = { expenses: Expense[]; items: StoreItem[]; pending?: BankDebit[]; books?: BookLists; bills?: OpenBill[]; vendors?: string[] };
+export type SiteData = { todo?: TodoTask[]; store?: StoreData; expenses?: ExpensesData; alerts?: AlertsData; concrete?: ConcreteData; buyers?: BuyersData; steel?: SteelData; suppliers?: SuppliersPage };
 
 // Since 30 Oct 2026 the app opens on its home page (/todo) and the to-do list is /todo/jobs.
 const sectionFrom = (path: string): View | null =>
@@ -50,6 +52,8 @@ const sectionFrom = (path: string): View | null =>
             ? "steel"
           : path.startsWith("/todo/rollcall")
             ? "rollcall"
+          : path.startsWith("/todo/suppliers")
+            ? "suppliers"
           : path.startsWith("/todo/jobs")
           ? "todo"
           : path === "/todo" || path === "/todo/"
@@ -69,8 +73,9 @@ async function load(section: PageSection): Promise<SiteData> {
   if (section === "concrete") return { concrete: await get("/api/concrete") };
   if (section === "buyers") return { buyers: await get("/api/buyers") };
   if (section === "steel") return { steel: await get("/api/steel") };
+  if (section === "suppliers") return { suppliers: await get("/api/suppliers") };
   const [x, s] = await Promise.all([get("/api/expenses"), get("/api/store")]);
-  return { expenses: { expenses: x.expenses, items: s.items, pending: x.pending, books: x.books } };
+  return { expenses: { expenses: x.expenses, items: s.items, pending: x.pending, books: x.books, bills: x.bills, vendors: x.vendors } };
 }
 
 /* ---------- put it on the home screen ---------- */
@@ -201,6 +206,8 @@ export function SiteApp({
   const current = useRef(first);
   const scrollAt = useRef<Partial<Record<View, number>>>({});
   const hasAlerts = me.sections.includes("alerts");
+  // "Pay" on a supplier's bill: the expense form, filled in for it.
+  const [payAsk, setPayAsk] = useState<{ payment: BillPayment; at: number } | null>(null);
   // The roll call's tab asked for (the address's #week, the home page's Payday tile).
   const [rcAsk, setRcAsk] = useState<{ tab: RollcallTab; at: number } | null>(null);
   useEffect(() => {
@@ -382,6 +389,7 @@ export function SiteApp({
             openEntry={openEntry}
             openDebit={openDebit}
             onSteel={() => go("steel")}
+            payBill={payAsk}
             startedOffline={startedOffline && first === "expenses"}
             fresh={first === "expenses"}
           />
@@ -421,6 +429,21 @@ export function SiteApp({
       {show("steel") && (
         <div hidden={section !== "steel"}>
           <SteelApp me={me} active={section === "steel"} initial={data.steel ?? null} startedOffline={startedOffline && first === "steel"} fresh={first === "steel"} />
+        </div>
+      )}
+      {show("suppliers") && (
+        <div hidden={section !== "suppliers"}>
+          <SuppliersApp
+            me={me}
+            active={section === "suppliers"}
+            initial={data.suppliers ?? null}
+            startedOffline={startedOffline && first === "suppliers"}
+            fresh={first === "suppliers"}
+            onPay={(payment) => {
+              setPayAsk({ payment, at: Date.now() });
+              go("expenses");
+            }}
+          />
         </div>
       )}
       {show("rollcall") && (

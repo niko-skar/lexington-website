@@ -23,6 +23,7 @@ import { areasWith, guessClass, type BookLists, type BookNamed } from "@/lib/qui
 import { WAGES_FROM_WEEK } from "@/lib/rollcall/payday";
 import { MAX_UNIT, qtyUnit, UNITS, type StoreItem } from "@/lib/store/shared";
 import { photoAt } from "@/lib/todo/shared";
+import { supplierKey, type OpenBill } from "@/lib/suppliers/shared";
 import { errorText, send } from "./api";
 import { QtyPicker } from "./QtyPicker";
 import { forgetReceipt, isPdf, uploadReceipt } from "./receipt";
@@ -35,7 +36,8 @@ import styles from "./Todo.module.css";
 
 type Receipt = { id: string; url: string; type: string };
 /** A new expense started from the bank's debit text (lib/expenses/bankDebit.ts): what the text gives, and a line saying so. */
-export type ExpensePrefill = { debitId: string; date: string; amount: number; method: string | null; supplier: string; description: string; note: string };
+/** A new one started for the user: from a bank debit waiting in the app (debitId), or paying a supplier's bill (billId). */
+export type ExpensePrefill = { debitId?: string; billId?: string; date: string; amount: number; method: string | null; supplier: string; description: string; note: string };
 const RECEIPT_CAMERA = "exp-receipt-camera";
 const RECEIPT_FILE = "exp-receipt-file";
 
@@ -149,6 +151,8 @@ export function ExpenseForm({
   focusAmount,
   prefill,
   books,
+  bills,
+  vendors,
 }: {
   /** The entry being changed; null for a new one. */
   editing: Expense | null;
@@ -156,6 +160,10 @@ export function ExpenseForm({
   prefill?: ExpensePrefill | null;
   /** The QuickBooks classes and locations (null until they've come). */
   books?: BookLists | null;
+  /** The suppliers' bills still to pay: "Pays a bill?" under the supplier (lib/suppliers). */
+  bills?: OpenBill[];
+  /** QuickBooks' supplier names, offered as the supplier is typed (so the names match). */
+  vendors?: string[];
   expenses: Expense[];
   items: StoreItem[];
   onSaved: (expense: Expense, wasEdit: boolean) => void;
@@ -182,6 +190,8 @@ export function ExpenseForm({
   const [toStoreChoice, setToStoreChoice] = useState<boolean | null>(x?.category === "Material" ? x.toStore : null);
   const [unit, setUnit] = useState("pcs");
   const [supplier, setSupplier] = useState(x?.supplier ?? p?.supplier ?? "");
+  // The supplier's bill this pays (lib/suppliers), if any.
+  const [billId, setBillId] = useState<string | null>(x?.billId ?? p?.billId ?? null);
   const [description, setDescription] = useState(x?.description ?? p?.description ?? "");
   const [floor, setFloor] = useState<string | null>(x?.floor ?? null);
   const [method, setMethod] = useState<string | null>(x?.method ?? p?.method ?? null);
@@ -359,6 +369,18 @@ export function ExpenseForm({
       });
     return [...seen.values()];
   }, [expenses, inflow]);
+  // The suggestions as the supplier is typed: those used before, then QuickBooks' own (money out only).
+  const supplierOptions = useMemo(() => {
+    if (inflow) return suppliers;
+    const seen = new Set(suppliers.map((s) => s.toLowerCase()));
+    return [...suppliers, ...(vendors ?? []).filter((v) => !seen.has(v.toLowerCase()))];
+  }, [suppliers, vendors, inflow]);
+  // This supplier's bills still to pay (and the one this already pays).
+  const supplierBills = useMemo(
+    () => (inflow || !supplier.trim() ? [] : (bills ?? []).filter((b) => supplierKey(b.supplier) === supplierKey(supplier))),
+    [bills, supplier, inflow]
+  );
+  const billKept = !!billId && (supplierBills.some((b) => b.id === billId) || billId === x?.billId);
   const materials = useMemo(() => {
     const stats = new Map<string, { name: string; count: number; lastAt: string }>();
     for (const e of expenses) {
@@ -428,7 +450,9 @@ export function ExpenseForm({
         // The QuickBooks class (site expenses); without the lists here, an entry keeps the one it had.
         costClass: showFloors ? (showClass ? (chosenClass ? { id: chosenClass.id, name: chosenClass.name } : null) : (x?.costClass ?? null)) : null,
         // Made from a bank debit: that debit is done once this is saved.
-        ...(p ? { bankDebitId: p.debitId } : {}),
+        ...(p?.debitId ? { bankDebitId: p.debitId } : {}),
+        // The supplier's bill it pays (money out only).
+        billId: inflow || !billKept ? null : billId,
       };
       const { expense } = x
         ? await send<{ expense: Expense }>(`/api/expenses/${x.id}`, "PATCH", body)
@@ -726,7 +750,7 @@ export function ExpenseForm({
               placeholder={inflow ? "e.g. tenant, buyer, bank" : "e.g. block factory"}
             />
             <datalist id="exp-supplier-list">
-              {suppliers.map((s) => (
+              {supplierOptions.map((s) => (
                 <option key={s} value={s} />
               ))}
             </datalist>
@@ -746,6 +770,36 @@ export function ExpenseForm({
             />
           </div>
         </div>
+        {!inflow && (supplierBills.length > 0 || billKept) && (
+          <>
+            <span className={styles.label}>Pays a bill?</span>
+            <div className={styles.chips} role="group" aria-label="Pays a bill">
+              <button type="button" className={!billKept ? styles.chipOn : styles.chip} aria-pressed={!billKept} onClick={() => setBillId(null)}>
+                No bill
+              </button>
+              {supplierBills.map((b) => (
+                <button
+                  key={b.id}
+                  type="button"
+                  className={billId === b.id ? styles.chipOn : styles.chip}
+                  aria-pressed={billId === b.id}
+                  onClick={() => {
+                    setBillId(b.id);
+                    // An empty amount takes what's left to pay.
+                    if (!amount.trim()) setAmount(String(b.left));
+                  }}
+                >
+                  {b.appRef ?? "Bill"} · {b.description.slice(0, 40)} · {money(b.left)} left
+                </button>
+              ))}
+              {billKept && !supplierBills.some((b) => b.id === billId) && (
+                <button type="button" className={styles.chipOn} aria-pressed>
+                  Pays a bill (paid off)
+                </button>
+              )}
+            </div>
+          </>
+        )}
         {suppliers.length > 0 && (
           <div className={styles.chips} aria-label="Recent suppliers">
             {suppliers.slice(0, 5).map((s) => (

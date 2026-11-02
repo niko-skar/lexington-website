@@ -4,7 +4,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { areasWith } from "@/lib/quickbooks/books";
 import { cachedBookLists } from "@/lib/quickbooks/booksCache";
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
-import { EXPENSE_COUNTER_ID, EXPENSE_PREFIX, EXPENSE_SETTINGS_ID, isId, newId, QBO_GONE_PREFIX, SHEET_DELETION_PREFIX } from "@/lib/site/ids";
+import { BILL_PREFIX, EXPENSE_COUNTER_ID, EXPENSE_PREFIX, EXPENSE_SETTINGS_ID, isId, newId, QBO_GONE_PREFIX, SHEET_DELETION_PREFIX } from "@/lib/site/ids";
 import { itemForPurchase } from "@/lib/store/server";
 import { cleanText, TodoError } from "@/lib/todo/server";
 import type { TodoMe } from "@/lib/todo/shared";
@@ -17,6 +17,7 @@ import {
   MAX_MATERIAL,
   MAX_SUPPLIER,
   METHODS,
+  money,
   todayISO,
   VAT_RATE,
   type Expense,
@@ -51,6 +52,7 @@ export const FIELDS = `{
   "costClass": costClass{ id, name },
   "payday": payday{ week, kind, lines[]{ id, name, group, amount, at, ref } },
   "steelTons": steelTons,
+  "billId": billId,
   createdAt,
   "createdBy": coalesce(createdBy, ""),
   "updatedAt": coalesce(updatedAt, sourceUpdatedAt, createdAt)
@@ -140,7 +142,8 @@ function cleanReceiptId(value: unknown) {
 }
 
 /** What gets saved, in the shape the old expense page saved it (so its entries carry over as they are). */
-async function fields(me: TodoMe, body: Record<string, unknown>, receiptId: string | null) {
+/** The entry as typed, checked. `self`: the entry being changed (its own payment of a bill doesn't count twice). */
+async function fields(me: TodoMe, body: Record<string, unknown>, receiptId: string | null, self: string | null = null) {
   const kind: "expense" | "inflow" = body.kind === "inflow" ? "inflow" : "expense";
   const inflow = kind === "inflow";
   const forWho = pick(body.forWho ?? "Site", FOR_WHO, "Pick who it's for: Site, House, Niko or Event.");
@@ -192,7 +195,33 @@ async function fields(me: TodoMe, body: Record<string, unknown>, receiptId: stri
     toStore,
     // The QuickBooks class (cost type): site expenses only.
     costClass: inflow || forWho !== "Site" ? null : cleanClass(body.costClass),
+    // The supplier's bill it pays (lib/suppliers): money out only.
+    billId: inflow ? null : await cleanBillId(body.billId, amount, self),
   };
+}
+
+/**
+ * The bill a payment pays: one that's there (not deleted), or none. It can't pay more than the bill has left
+ * (QuickBooks would refuse the bill payment): the rest goes in as an expense of its own, or the bill is changed first.
+ */
+async function cleanBillId(value: unknown, amount: number, self: string | null): Promise<string | null> {
+  if (value === null || value === undefined || value === "") return null;
+  if (!isId(BILL_PREFIX, value)) throw new TodoError(404, "That bill isn't there any more: pick it again.");
+  const bill = await getBuyersClient().fetch<{ amount: number; appRef: string | null; paid: number | null } | null>(
+    `*[_id == $id && _type == "supplierBill" && !coalesce(deleted, false)][0]{ amount, appRef, "paid": math::sum(*[_type == "siteExpense" && billId == $id && _id != $self && coalesce(kind, "expense") == "expense"].amount) }`,
+    { id: value, self: self ?? "" }
+  );
+  if (!bill) throw new TodoError(404, "That bill isn't there any more: pick it again.");
+  const left = Math.round((bill.amount - (bill.paid ?? 0)) * 100) / 100;
+  if (amount > left + 0.005) {
+    throw new TodoError(
+      400,
+      left > 0
+        ? `That's more than the ${money(left)} left on ${bill.appRef ?? "the bill"}. Change the bill first (on the supplier's page), or put the rest in as an expense of its own.`
+        : `${bill.appRef ?? "That bill"} is paid off already: pick "No bill".`
+    );
+  }
+  return value;
 }
 
 function cleanClass(value: unknown): { id: string; name: string } | null {
@@ -246,7 +275,7 @@ export async function updateExpense(me: TodoMe, id: string, body: Record<string,
   if (!before) throw new TodoError(404, "That entry isn't there any more.");
   if (before.payday) throw new TodoError(409, FROM_PAYDAY);
   const receiptId = cleanReceiptId(body.receiptId);
-  const data = await fields(me, body, receiptId);
+  const data = await fields(me, body, receiptId, id);
   // Switched between expense and money in: it takes a number from the other series.
   const ref = before.ref && before.kind === data.kind ? before.ref : await nextRef(data.kind);
   const set = { ...data, ref, updatedAt: new Date().toISOString(), updatedBy: me.name, ...(receiptId ? { receipt: receiptRef(receiptId) } : {}) };

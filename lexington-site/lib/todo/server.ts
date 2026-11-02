@@ -318,7 +318,7 @@ const MAX_BYTES = 4_400_000; // the phone shrinks photos first; Vercel refuses o
 const TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 /** A phone photo into the private store, named "<kind>-<date>-<hex>" (to-do photos "todo-", the store's "store-", the roll call's "rollcall-", waybills "concrete-"). */
-export async function storePhoto(file: File, kind: "todo" | "store" | "rollcall" | "concrete" = "todo"): Promise<{ id: string; url: string }> {
+export async function storePhoto(file: File, kind: "todo" | "store" | "rollcall" | "concrete" | "bill" = "todo"): Promise<{ id: string; url: string }> {
   if (!TYPES.includes(file.type)) throw new TodoError(415, "That file is not a JPEG, PNG or WebP photo.");
   if (file.size === 0) throw new TodoError(400, "No photo was sent.");
   if (file.size > MAX_BYTES) throw new TodoError(413, "That photo is too big (over 4 MB).");
@@ -331,7 +331,7 @@ export async function storePhoto(file: File, kind: "todo" | "store" | "rollcall"
 }
 
 /** Deletes a to-do (or store, or roll call) photo nothing points at any more (a retake, a removed or deleted item). */
-export async function dropPhoto(assetId: string, kind: "todo" | "store" | "rollcall" | "concrete" = "todo"): Promise<void> {
+export async function dropPhoto(assetId: string, kind: "todo" | "store" | "rollcall" | "concrete" | "bill" = "todo"): Promise<void> {
   if (!PHOTO_ID_RE.test(assetId)) return;
   const client = getBuyersClient();
   try {
