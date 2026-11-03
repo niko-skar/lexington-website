@@ -8,7 +8,10 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   try {
     const me = await requireTodoUser(false, "store");
     const { id } = await params;
-    return Response.json(await itemHistory(me, id), { headers: { "Cache-Control": "no-store" } });
+    const found = await itemHistory(me, id);
+    // The office's "To check" mark stays the office's.
+    if (me.kind !== "admin") delete found.item.review;
+    return Response.json(found, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     return errorResponse(error);
   }

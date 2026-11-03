@@ -59,9 +59,15 @@ function tiles(d: DashboardData, unread: number): Tile[] {
     out.push({
       section: "store",
       name: "Store",
-      big: s.reorders ? `${s.reorders} to reorder` : "Stock fine",
-      small: [`${s.toolsOut} ${s.toolsOut === 1 ? "tool" : "tools"} out`, s.opened ? `opened ${clock(s.opened)}${s.closed ? `, closed ${clock(s.closed)}` : ""}` : "not opened today"].join(" · "),
-      tone: s.reorders ? "warn" : undefined,
+      big: s.toCheck ? `${s.toCheck} new to check` : s.reorders ? `${s.reorders} to reorder` : "Stock fine",
+      small: [
+        s.toCheck && s.reorders ? `${s.reorders} to reorder` : "",
+        `${s.toolsOut} ${s.toolsOut === 1 ? "tool" : "tools"} out`,
+        s.opened ? `opened ${clock(s.opened)}${s.closed ? `, closed ${clock(s.closed)}` : ""}` : "not opened today",
+      ]
+        .filter(Boolean)
+        .join(" · "),
+      tone: s.toCheck || s.reorders ? "warn" : undefined,
     });
   }
   if (d.workers) out.push({ section: "workers", name: "Workers", big: `${d.workers.active} on the books`, small: "names, numbers, ID photos" });

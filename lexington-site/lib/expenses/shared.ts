@@ -80,10 +80,35 @@ export interface Expense {
   steelTons: number | null;
   /** The supplier's bill this pays (lib/suppliers), or null: in QuickBooks it's then that bill's payment. */
   billId: string | null;
+  /** More photos with the receipt (3 Nov 2026); the receipt itself stays the first. */
+  moreReceipts: { id: string; url: string; type: string }[];
+  /** More materials on the same receipt (3 Nov 2026), each into the store room or not; the first is material and qty. */
+  moreLines: ExpenseLine[];
   createdAt: string;
   createdBy: string;
   updatedAt: string;
 }
+
+/** One more material on an entry (the first is the entry's own material and qty). */
+export interface ExpenseLine {
+  material: string;
+  qty: number;
+  /** The store room item it added stock to (when toStore). */
+  itemId: string | null;
+  toStore: boolean;
+}
+/** Materials on one entry, and photos with one receipt, at most. */
+export const MAX_LINES = 20;
+export const MAX_RECEIPTS = 10;
+
+/** Every material on an entry, the first one first. */
+export const linesOf = (x: Pick<Expense, "category" | "material" | "qty" | "itemId" | "toStore" | "moreLines">): ExpenseLine[] =>
+  x.category === "Material" && x.material ? [{ material: x.material, qty: x.qty ?? 1, itemId: x.itemId, toStore: x.toStore }, ...(x.moreLines ?? [])] : [];
+/** The materials in words: "2in nails x 1; 4in nails x 3" (one line: just its name). */
+export const materialWords = (x: Pick<Expense, "category" | "material" | "qty" | "itemId" | "toStore" | "moreLines">) => {
+  const lines = linesOf(x);
+  return lines.length > 1 ? lines.map((l) => `${l.material} x ${l.qty}`).join("; ") : (x.material ?? "");
+};
 
 /** One payment made in Payday, as a line of that week's wage entry. */
 export interface PaydayLine {

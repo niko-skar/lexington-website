@@ -2,24 +2,21 @@
 
 import { useState } from "react";
 
+import { addDays, dayWords as pourDayWords, type PourCubes, type PourPhoto } from "@/lib/concrete/pourExtras";
 import { type ConcreteData, type PourBooking, type PourInfo, type Truck } from "@/lib/concrete/shared";
 import { ghanaDay } from "@/lib/store/shared";
+import type { TodoMe } from "@/lib/todo/shared";
 import { errorText, send } from "./api";
+import { cubesLine, PourCubesCard } from "./PourCubes";
+import { PourPhotos } from "./PourPhotos";
 import ps from "./Pours.module.css";
 import styles from "./Todo.module.css";
 
 // Pours booked on the concrete page (lib/concrete/pours.ts says what and why): each booked for a day with what's
 // poured, the mix and m³ ordered, a checklist (a copy of one of the roll call's) and who cures it. Its checks are
-// ticked here or on the roll call; the first waybill on its day marks it poured and starts its curing.
+// ticked here or on the roll call; the first waybill on its day marks it poured and starts its curing. Each has its
+// pre-pour photos (PourPhotos.tsx); once poured, its concrete cubes' tests (PourCubes.tsx).
 
-const addDays = (day: string, n: number) => new Date(Date.parse(`${day}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
-export const pourDayWords = (day: string) => {
-  const today = ghanaDay();
-  if (day === today) return "Today";
-  if (day === addDays(today, 1)) return "Tomorrow";
-  if (day === addDays(today, -1)) return "Yesterday";
-  return new Date(`${day}T12:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
-};
 const ordered = (b: PourBooking) => [b.mix, b.volume ? `${b.volume} m³` : ""].filter(Boolean).join(", ");
 
 /** What the day's bookings came to, under the day's heading: poured and curing, or still waiting. */
@@ -33,7 +30,7 @@ export function pourStatus(b: PourBooking): string {
 }
 
 /** The pours booked and not poured yet, soonest first, each with its checklist. */
-export function BookedPours({ info, onData, onToast }: { info: PourInfo; onData: (data: ConcreteData) => void; onToast: (text: string, error?: boolean) => void }) {
+export function BookedPours({ info, me, onData, onToast }: { info: PourInfo; me: TodoMe; onData: (data: ConcreteData) => void; onToast: (text: string, error?: boolean) => void }) {
   const [sheet, setSheet] = useState<{ booking: PourBooking | null } | null>(null);
   const coming = info.pours.filter((b) => b.phase === "check");
   return (
@@ -42,7 +39,7 @@ export function BookedPours({ info, onData, onToast }: { info: PourInfo; onData:
         Pours booked <span>{coming.length || ""}</span>
       </h2>
       {coming.map((b) => (
-        <PourCard key={b.id} booking={b} onData={onData} onToast={onToast} onChange={() => setSheet({ booking: b })} />
+        <PourCard key={b.id} booking={b} photos={info.photos ?? []} me={me} onData={onData} onToast={onToast} onChange={() => setSheet({ booking: b })} />
       ))}
       <button type="button" className={ps.book} onClick={() => setSheet({ booking: null })}>
         + Book a pour
@@ -64,7 +61,21 @@ export function BookedPours({ info, onData, onToast }: { info: PourInfo; onData:
   );
 }
 
-function PourCard({ booking: b, onData, onToast, onChange }: { booking: PourBooking; onData: (data: ConcreteData) => void; onToast: (text: string, error?: boolean) => void; onChange: () => void }) {
+function PourCard({
+  booking: b,
+  photos,
+  me,
+  onData,
+  onToast,
+  onChange,
+}: {
+  booking: PourBooking;
+  photos: PourPhoto[];
+  me: TodoMe;
+  onData: (data: ConcreteData) => void;
+  onToast: (text: string, error?: boolean) => void;
+  onChange: () => void;
+}) {
   // A tick shows at once; the website catches up (and a failure puts it back).
   const [ticking, setTicking] = useState<Record<string, boolean>>({});
   const [armed, setArmed] = useState(false);
@@ -132,9 +143,75 @@ function PourCard({ booking: b, onData, onToast, onChange }: { booking: PourBook
           </ul>
         </>
       )}
+      <PourPhotos pourId={b.id} photos={photos} me={me} onData={onData} onToast={onToast} />
       <button type="button" className={left ? ps.pouredLeft : ps.poured} onClick={() => void poured()} disabled={busy}>
         {busy ? "Saving…" : !left ? "Poured: start curing" : armed ? `Tap again: poured with ${left} not checked` : `Poured by hand (${left} not checked yet)`}
       </button>
+    </article>
+  );
+}
+
+const noCubes = (pourId: string): PourCubes => ({ pourId, taken: null, takenAt: null, target: 35, tests: [] });
+
+/**
+ * The pours poured these last weeks, newest first: their cubes' tests (due 7, 14 and 28 days after) and their pre-pour
+ * photos. A pour with a test due, or poured in the last three days, opens by itself; the others fold to one line.
+ */
+export function PouredPours({ info, me, onData, onToast }: { info: PourInfo; me: TodoMe; onData: (data: ConcreteData) => void; onToast: (text: string, error?: boolean) => void }) {
+  const poured = info.pours.filter((b) => b.phase === "poured" && b.poured).sort((a, b) => (b.poured ?? "").localeCompare(a.poured ?? "") || a.what.localeCompare(b.what));
+  if (!poured.length) return null;
+  return (
+    <section className={styles.group} aria-label="Poured">
+      <h2 className={styles.groupTitle}>
+        Poured <span>cubes and photos</span>
+      </h2>
+      {poured.map((b) => (
+        <PouredCard key={b.id} booking={b} cubes={info.cubes?.find((c) => c.pourId === b.id) ?? noCubes(b.id)} photos={info.photos ?? []} me={me} onData={onData} onToast={onToast} />
+      ))}
+    </section>
+  );
+}
+
+function PouredCard({
+  booking: b,
+  cubes,
+  photos,
+  me,
+  onData,
+  onToast,
+}: {
+  booking: PourBooking;
+  cubes: PourCubes;
+  photos: PourPhoto[];
+  me: TodoMe;
+  onData: (data: ConcreteData) => void;
+  onToast: (text: string, error?: boolean) => void;
+}) {
+  const today = ghanaDay();
+  const due = cubes.tests.some((t) => t.average === null && t.due && t.due <= today) || (b.poured ?? "") >= addDays(today, -3);
+  const [open, setOpen] = useState(due);
+  const count = photos.filter((p) => p.pourId === b.id).length;
+  const words = pourDayWords(b.poured!);
+  return (
+    <article className={`${ps.card} ${ps.cardPoured}`} aria-label={`Poured: ${b.what}`}>
+      <div className={ps.top}>
+        <span className={ps.dayPoured}>Poured {words === "Today" || words === "Yesterday" ? words.toLowerCase() : words}</span>
+        <button type="button" className={ps.link} onClick={() => setOpen(!open)} aria-expanded={open}>
+          {open ? "Fold" : "Open"}
+        </button>
+      </div>
+      <p className={ps.what}>{b.what}</p>
+      {open ? (
+        <>
+          <PourCubesCard pour={b} cubes={cubes} onData={onData} onToast={onToast} />
+          <PourPhotos pourId={b.id} photos={photos} me={me} onData={onData} onToast={onToast} />
+        </>
+      ) : (
+        <p className={ps.line}>
+          {cubesLine(cubes, today)}
+          {count ? ` · ${count} ${count === 1 ? "photo" : "photos"}` : ""}
+        </p>
+      )}
     </article>
   );
 }

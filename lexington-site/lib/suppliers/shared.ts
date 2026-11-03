@@ -37,6 +37,8 @@ export interface Bill {
   floor: string | null;
   costClass: { id: string; name: string } | null;
   photoUrl: string | null;
+  /** The photo's id in the image store (it becomes the receipt of the payment that pays it). */
+  photoId: string | null;
   createdAt: string;
   createdBy: string;
   /** In QuickBooks: its bill there, or why not yet. */

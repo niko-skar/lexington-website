@@ -34,6 +34,11 @@ async function decode(file: Blob): Promise<{ source: CanvasImageSource; width: n
 
 /** A phone photo as a JPEG at most `side` px on its long side (fast on site data). */
 export async function shrink(file: Blob, side = 1600, quality = 0.82): Promise<Blob> {
+  return (await shrinkSized(file, side, quality)).blob;
+}
+
+/** As shrink(), with the photo's own size (a pre-pour photo's original keeps it on record). */
+export async function shrinkSized(file: Blob, side: number, quality: number): Promise<{ blob: Blob; width: number; height: number }> {
   const { source, width, height } = await decode(file);
   const scale = Math.min(1, side / Math.max(width, height));
   const canvas = document.createElement("canvas");
@@ -41,9 +46,10 @@ export async function shrink(file: Blob, side = 1600, quality = 0.82): Promise<B
   canvas.height = Math.round(height * scale);
   canvas.getContext("2d")!.drawImage(source, 0, 0, canvas.width, canvas.height);
   if ("close" in source && typeof source.close === "function") source.close();
-  return new Promise<Blob>((resolve, reject) =>
+  const blob = await new Promise<Blob>((resolve, reject) =>
     canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("The photo could not be read."))), "image/jpeg", quality)
   );
+  return { blob, width, height };
 }
 
 /** The photo as small as its use allows; as it is when the phone can't read it (the server still checks it). */

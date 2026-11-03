@@ -23,7 +23,7 @@ import { useUploadSlot } from "./useUploadSlot";
 
 type ToastData = { text: string; tone?: "error" };
 /** What "Pay" hands the expense form. */
-export type BillPayment = { billId: string; supplier: string; amount: number; description: string; bill: OpenBill };
+export type BillPayment = { billId: string; supplier: string; amount: number; description: string; bill: OpenBill; receipt: { id: string; url: string; type: string } | null };
 
 const addDays = (day: string, n: number) => new Date(Date.parse(`${day}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
 const dueWords = (b: Pick<BillState, "due" | "left" | "overdue">, today: string) =>
@@ -165,6 +165,8 @@ export function SuppliersApp({
                 amount: b.left,
                 description: `Pays ${b.appRef ?? "the bill"}${b.ref ? ` (their ${b.ref})` : ""}: ${b.description}`.slice(0, 200),
                 bill: { id: b.id, appRef: b.appRef, supplier: b.supplier, description: b.description, amount: b.amount, left: b.left, due: b.due },
+                // Niko, 3 Nov 2026: "when i add a bill for a supplier and attach a photo, that photo should also carry over to the expense when it's paid".
+                receipt: b.photoId && b.photoUrl ? { id: b.photoId, url: b.photoUrl, type: "image/jpeg" } : null,
               })
             }
           />

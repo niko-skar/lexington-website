@@ -8,7 +8,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   try {
     const me = await requireTodoUser(false, "store");
     const { id } = await params;
-    return Response.json(await toolHistory(me, id), { headers: { "Cache-Control": "no-store" } });
+    const found = await toolHistory(me, id);
+    if (me.kind !== "admin") delete found.tool.review;
+    return Response.json(found, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     return errorResponse(error);
   }

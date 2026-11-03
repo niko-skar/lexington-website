@@ -34,6 +34,7 @@ const BILL_FIELDS = `{
   "floor": floor,
   "costClass": costClass{ id, name },
   "photoUrl": photo.asset->url,
+  "photoId": photo.asset._ref,
   createdAt,
   "createdBy": coalesce(createdBy, ""),
   "qboTxnId": qbo.txnId,

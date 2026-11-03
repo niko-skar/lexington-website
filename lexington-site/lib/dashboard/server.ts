@@ -26,7 +26,7 @@ export interface DashboardData {
   /** Today in Ghana, YYYY-MM-DD. */
   today: string;
   todo?: { open: number; urgent: number; doneToday: number };
-  store?: { reorders: number; toolsOut: number; opened: string | null; closed: string | null };
+  store?: { reorders: number; toolsOut: number; opened: string | null; closed: string | null; toCheck?: number };
   /** Spent on site this month, and the bank's debits waiting to be completed. */
   expenses?: { monthOut: number; monthCount: number; fromBank: number };
   alerts?: { unread: number };
@@ -73,6 +73,8 @@ async function storePart(me: TodoMe, today: string) {
   const at = (kind: string) => checksToday.filter((c) => c.kind === kind).sort((a, b) => a.at.localeCompare(b.at))[0]?.at ?? null;
   return {
     reorders: store.items.filter(needsReorder).length,
+    // The office: new things the site logins added, to check.
+    ...(me.kind === "admin" ? { toCheck: [...store.items, ...store.tools].filter((x) => x.review).length } : {}),
     toolsOut: store.toolOuts.reduce((n, o) => n + stillOut(o), 0),
     opened: at("open"),
     closed: at("close"),

@@ -38,7 +38,8 @@ export const TOOL_FIELDS = `{
   "retired": coalesce(retired, false),
   "photoUrl": photo.asset->url,
   "trade": trade,
-  "condition": condition
+  "condition": condition,
+  "review": review{ by, at }
 }`;
 export const OUT_FIELDS = `{
   "id": _id, toolId, qty, "person": coalesce(person, ""), "note": coalesce(note, ""), "photoUrl": photo.asset->url,
@@ -129,6 +130,8 @@ export async function createTool(me: TodoMe, body: Record<string, unknown>): Pro
     count,
     trade,
     ...(condition ? { condition } : {}),
+    // A site login's new tool waits for the office's check.
+    ...(me.kind !== "admin" ? { review: { by: me.name, byId: me.id, at: new Date().toISOString() } } : {}),
     ...(photoId ? { photo: photoRef(photoId) } : {}),
     createdAt: new Date().toISOString(),
     createdBy: me.name,
@@ -196,7 +199,9 @@ export async function updateTool(id: string, body: Record<string, unknown>): Pro
     const condition = cleanCondition(body.condition);
     if (condition) set.condition = condition;
   }
-  if (Object.keys(set).length) await getBuyersClient().patch(id).set(set).commit();
+  // The office looked at it (checked, or changed it): off "To check".
+  const patch = getBuyersClient().patch(id).unset(["review"]);
+  await (Object.keys(set).length ? patch.set(set) : patch).commit();
   const tool = await getTool(id);
   if (!tool) throw new TodoError(404, GONE);
   return tool;

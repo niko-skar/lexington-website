@@ -2,7 +2,7 @@ import "server-only";
 import { createHash, randomBytes } from "node:crypto";
 
 import { FIELDS } from "@/lib/expenses/server";
-import { CATEGORIES, METHODS, receiptFileName, todayISO, vatParts, type Expense } from "@/lib/expenses/shared";
+import { CATEGORIES, materialWords, METHODS, receiptFileName, todayISO, vatParts, type Expense } from "@/lib/expenses/shared";
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
 import { BILL_PREFIX, EXPENSE_PREFIX, QBO_FEED_ID, QBO_GONE_PREFIX } from "@/lib/site/ids";
 
@@ -186,6 +186,8 @@ interface FeedState {
   hash?: string;
   /** "Bill" on a supplier's bill (lib/suppliers). */
   txnType?: TxnType | "Bill";
+  /** The entry's more photos already attached in QuickBooks (3 Nov 2026). */
+  moreAttached?: string[];
   txnId?: string;
   realmId?: string;
   receiptId?: string | null;
@@ -237,6 +239,9 @@ function contentHash(x: FeedDoc): string {
         x.costClass?.id ?? null,
         x.payday?.lines?.map((l) => [l.id, l.amount, l.group]) ?? null,
         x.billId ?? null,
+        // Only an entry that has them: every other entry keeps the check it had (nothing is sent again for nothing).
+        ...(x.moreLines?.length ? [x.moreLines.map((l) => [l.material, l.qty])] : []),
+        ...(x.moreReceipts?.length ? [x.moreReceipts.map((r) => r.id)] : []),
       ])
     )
     .digest("hex");
@@ -342,7 +347,7 @@ export function planFor(x: FeedDoc, s: FeedSettings, lists: Lists, conn: QboConn
   // Wages from Payday: a line per payment, each on the class of the worker's trade.
   const lineClass = (group: string) => classNamed(TRADE_CLASS[group] ?? "", lists.classes)?.id ?? classId;
   const paid = x.payday?.lines?.length ? x.payday : null;
-  const what = [x.material ? `${x.material}${x.qty ? ` x ${x.qty}` : ""}` : "", x.description].filter(Boolean).join(" · ");
+  const what = [x.moreLines?.length ? materialWords(x) : x.material ? `${x.material}${x.qty ? ` x ${x.qty}` : ""}` : "", x.description].filter(Boolean).join(" · ");
   const vat = x.vat ? vatParts(x.amount, x.vatRate) : null;
   const note = [
     `${ref} from the site app`,
@@ -575,6 +580,16 @@ async function sendOne(x: FeedDoc, s: FeedSettings, lists: QboLists, conn: QboCo
     let attachableId = state.txnId === txnId ? (state.attachableId ?? null) : null;
     // (A bill payment's receipt stays in the app: the bill carries the paper.)
     if (plan.type !== "BillPayment" && x.receiptId && (x.receiptId !== state.receiptId || state.txnId !== txnId)) attachableId = await attachReceipt(plan.type, txnId, x);
+    // The more photos with it go along too, each once.
+    const moreAttached = new Set(state.txnId === txnId ? (state.moreAttached ?? []) : []);
+    if (plan.type !== "BillPayment") {
+      for (const [i, r] of (x.moreReceipts ?? []).entries()) {
+        if (moreAttached.has(r.id)) continue;
+        const pdf = r.type === "application/pdf";
+        await attachFile(plan.type, txnId, r.url, r.type || "image/jpeg", `${x.ref ?? x.id} photo ${i + 2}${pdf ? ".pdf" : ".jpg"}`);
+        moreAttached.add(r.id);
+      }
+    }
 
     await client
       .patch(x.id)
@@ -586,6 +601,7 @@ async function sendOne(x: FeedDoc, s: FeedSettings, lists: QboLists, conn: QboCo
           realmId: conn.realmId,
           receiptId: x.receiptId ?? null,
           attachableId,
+          ...(moreAttached.size ? { moreAttached: [...moreAttached] } : {}),
           syncedAt: new Date().toISOString(),
           error: null,
         },

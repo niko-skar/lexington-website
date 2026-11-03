@@ -7,7 +7,13 @@ import { POUR_DAY_PREFIX, TRUCK_PREFIX } from "@/lib/site/ids";
 import { ghanaDay } from "@/lib/store/shared";
 import { cleanText, TodoError } from "@/lib/todo/server";
 import type { TodoMe } from "@/lib/todo/shared";
+import { pourCubes, pourPhotos } from "./pourFiles";
 import type { PourBooking, PourCheck, PourInfo, Truck } from "./shared";
+
+// Every pour's checklist ends with the cubes (Niko, 3 Nov 2026: "part of the checklist should include concrete cubes
+// ready to be taken").
+const CUBES_KEY = "cubes";
+const CUBES_TEXT = "Concrete cubes ready to be taken (moulds clean, oiled, labelled)";
 
 // Pours booked on the concrete page (Niko, 2 Nov 2026: "i should be able to book pours into the concrete tab, the
 // checklist should be there and then as the waybills come in, that marks that the pour happened and automatically
@@ -83,11 +89,15 @@ function defaultCurer(state: State): string {
   return (list.find((w) => /albert/i.test(String(w.name))) ?? list.find((w) => w.trade === "mforeman") ?? curers(state)[0])?.id ?? "";
 }
 
-const checksOf = (p: RcPour): PourCheck[] =>
-  Object.entries(p.check?.items ?? {})
+const checksOf = (p: RcPour): PourCheck[] => {
+  const list = Object.entries(p.check?.items ?? {})
     .filter((e): e is [string, NonNullable<Item>] => !!e[1] && !!e[1].text)
     .sort((a, b) => (Number(a[1].n) || 0) - (Number(b[1].n) || 0))
     .map(([key, x]) => ({ key, text: String(x.text), ok: !!x.ok, at: x.ok && x.at ? x.at : null }));
+  // A pour booked before the cubes were on every checklist gets them too while it's still before its pour (ticking
+  // writes the check).
+  return p.phase !== "check" || list.some((c) => c.key === CUBES_KEY) ? list : [...list, { key: CUBES_KEY, text: CUBES_TEXT, ok: false, at: null }];
+};
 
 function toBooking(id: string, p: RcPour, state: State): PourBooking {
   const worker = state.workers.find((w) => w.id === p.worker);
@@ -107,15 +117,26 @@ function toBooking(id: string, p: RcPour, state: State): PourBooking {
   };
 }
 
-/** The bookings to show: every pour still before its pour, and those poured in the last two weeks. */
+/**
+ * The bookings to show, with their photos and cubes: every pour still before its pour, those poured in the last five
+ * weeks (their cube tests run to 28 days), and, up to two months, those with cube results still missing.
+ */
 export async function listPours(): Promise<PourInfo> {
   const state = await rollcallState();
-  const since = addDays(ghanaDay(), -14);
-  const pours = state.pours
-    .filter(({ p }) => !p.deleted && p.planned && (p.phase === "check" || (p.phase === "poured" && (p.poured ?? "") >= since)))
-    .map(({ id, p }) => toBooking(id, p, state))
+  const today = ghanaDay();
+  const recent = addDays(today, -35);
+  const oldest = addDays(today, -60);
+  const listed = state.pours
+    .filter(({ p }) => !p.deleted && p.planned && (p.phase === "check" || (p.phase === "poured" && (p.poured ?? "") >= oldest)))
+    .map(({ id, p }) => toBooking(id, p, state));
+  const allCubes = await pourCubes(listed.map((b) => ({ id: b.id, poured: b.poured })));
+  const missing = (id: string) => allCubes.some((c) => c.pourId === id && c.taken && c.tests.some((t) => t.average === null));
+  const pours = listed
+    .filter((b) => b.phase === "check" || (b.poured ?? "") >= recent || missing(b.id))
     .sort((a, b) => a.day.localeCompare(b.day) || a.what.localeCompare(b.what));
-  return { pours, checklists: state.checklists.map((c) => ({ id: c.id, name: c.name })), curers: curers(state), curingDays: state.curing.days };
+  const photos = await pourPhotos(pours.map((b) => b.id));
+  const cubes = allCubes.filter((c) => pours.some((b) => b.id === c.pourId));
+  return { pours, photos, cubes, checklists: state.checklists.map((c) => ({ id: c.id, name: c.name })), curers: curers(state), curingDays: state.curing.days };
 }
 
 /* ---------- the concrete day: what's poured and the mix ordered, from the day's bookings ---------- */
@@ -186,6 +207,7 @@ export async function bookPour(me: TodoMe, body: Data): Promise<string> {
       .sort((a, b) => (Number(a[1].n) || 0) - (Number(b[1].n) || 0))
       .forEach(([key, x], i) => (items[key] = { text: x.text, n: i + 1, ok: false }));
   }
+  if (!items[CUBES_KEY]) items[CUBES_KEY] = { text: CUBES_TEXT, n: Object.keys(items).length + 1, ok: false };
   const id = newPourId();
   const doc: Data = {
     what,
@@ -233,10 +255,12 @@ export async function tickPour(me: TodoMe, id: unknown, checkKey: unknown, okVal
   const state = await rollcallState();
   const { id: key, p } = pourOf(state, id);
   if (p.phase !== "check") throw new TodoError(409, "It's poured already.");
-  const item = typeof checkKey === "string" && CHECK_KEY_RE.test(checkKey) ? p.check?.items?.[checkKey] : null;
+  // The cubes check on a pour booked before it was on every checklist: written now, with its words.
+  const cubes = checkKey === CUBES_KEY && !p.check?.items?.[CUBES_KEY] ? { text: CUBES_TEXT, n: Object.keys(p.check?.items ?? {}).length + 1 } : null;
+  const item = typeof checkKey === "string" && CHECK_KEY_RE.test(checkKey) ? (p.check?.items?.[checkKey] ?? (cubes ? { ok: false } : null)) : null;
   if (!item) throw new TodoError(404, "That check isn't on this pour any more.");
   const ok = typeof okValue === "boolean" ? okValue : !item.ok;
-  await saveRollcallRecord(me.name, "pours", key, "update", { check: { items: { [checkKey as string]: ok ? { ok: true, at: new Date().toISOString() } : { ok: false, at: null } } } });
+  await saveRollcallRecord(me.name, "pours", key, "update", { check: { items: { [checkKey as string]: { ...(cubes ?? {}), ...(ok ? { ok: true, at: new Date().toISOString() } : { ok: false, at: null }) } } } });
 }
 
 /** A booking taken off (only before its pour; after it, on the roll call). */

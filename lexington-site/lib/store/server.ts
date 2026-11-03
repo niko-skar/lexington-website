@@ -46,7 +46,9 @@ const ITEM_FIELDS = `{
   "photoUrl": photo.asset->url,
   "category": category,
   "trade": trade,
-  "bought": coalesce(math::sum(*[_type == "siteExpense" && string::startsWith(_id, $expensePrefix) && itemId == ^._id && toStore == true].qty), 0),
+  "review": review{ by, at },
+  "bought": coalesce(math::sum(*[_type == "siteExpense" && string::startsWith(_id, $expensePrefix) && itemId == ^._id && toStore == true].qty), 0)
+    + coalesce(math::sum(*[_type == "siteExpense" && string::startsWith(_id, $expensePrefix) && ^._id in moreLines[toStore == true].itemId]{ "q": math::sum(moreLines[itemId == ^.^._id && toStore == true].qty) }.q), 0),
   "added": coalesce(math::sum(*[_type == "storeMove" && itemId == ^._id && kind == "in"].qty), 0),
   "back": coalesce(math::sum(*[_type == "storeMove" && itemId == ^._id && kind == "back"].qty), 0),
   "taken": coalesce(math::sum(*[_type == "storeMove" && itemId == ^._id && kind == "out"].qty), 0),
@@ -61,6 +63,18 @@ const BOUGHT_FIELDS = `{
   "id": _id, "kind": "bought", itemId, qty, "diff": null, "floor": floor, "person": null, "note": "", "photoUrl": null, date,
   "at": createdAt, "by": coalesce(createdBy, ""), supplier, amount
 }`;
+// An entry's more materials into the store room, each as its own "bought" line (the receipt's total is the entry's).
+const MORE_BOUGHT_FIELDS = `{
+  "id": _id, floor, date, "at": createdAt, "by": coalesce(createdBy, ""), supplier,
+  "lines": moreLines[toStore == true]{ _key, itemId, qty }
+}`;
+type RawMoreBought = { id: string; floor: string | null; date: string; at: string; by: string; supplier?: string; lines: { _key: string; itemId: string; qty: number }[] | null };
+const moreBought = (rows: RawMoreBought[], itemId?: string): RawMove[] =>
+  rows.flatMap((r) =>
+    (r.lines ?? [])
+      .filter((l) => !itemId || l.itemId === itemId)
+      .map((l) => ({ id: `${r.id}:${l._key}`, kind: "bought" as const, itemId: l.itemId, qty: l.qty, diff: null, floor: r.floor, person: null, note: "", photoUrl: null, date: r.date, at: r.at, by: r.by, supplier: r.supplier }))
+  );
 const params = { itemPrefix: ITEM_PREFIX, movePrefix: MOVE_PREFIX, expensePrefix: EXPENSE_PREFIX };
 
 const round = (n: number) => Math.round(n * 1000) / 1000;
@@ -117,6 +131,7 @@ export async function getStore(me: TodoMe): Promise<StoreData> {
     items: RawItem[];
     moves: RawMove[];
     bought: RawMove[];
+    boughtMore: RawMoreBought[];
     tools: StoreTool[];
     outsOpen: RawOut[];
     outsDone: RawOut[];
@@ -126,6 +141,7 @@ export async function getStore(me: TodoMe): Promise<StoreData> {
       "items": *[_type == "storeItem" && string::startsWith(_id, $itemPrefix)] | order(lower(name) asc) ${ITEM_FIELDS},
       "moves": *[_type == "storeMove" && string::startsWith(_id, $movePrefix)] | order(at desc)[0...200] ${MOVE_FIELDS},
       "bought": *[_type == "siteExpense" && string::startsWith(_id, $expensePrefix) && toStore == true && defined(itemId)] | order(createdAt desc)[0...100] ${BOUGHT_FIELDS},
+      "boughtMore": *[_type == "siteExpense" && string::startsWith(_id, $expensePrefix) && count(moreLines[toStore == true]) > 0] | order(createdAt desc)[0...100] ${MORE_BOUGHT_FIELDS},
       "tools": *[_type == "storeTool" && string::startsWith(_id, $toolPrefix)] | order(lower(name) asc) ${TOOL_FIELDS},
       "outsOpen": *[_type == "toolOut" && string::startsWith(_id, $outPrefix) && !defined(closedAt)] | order(at desc)[0...500] ${OUT_FIELDS},
       "outsDone": *[_type == "toolOut" && string::startsWith(_id, $outPrefix) && defined(closedAt) && at >= $weekAgo] | order(at desc)[0...300] ${OUT_FIELDS},
@@ -143,16 +159,18 @@ export async function getStore(me: TodoMe): Promise<StoreData> {
   const items = data.items.map(withLevel);
   await clearStaleDismissals(items);
   const known = new Set(items.map((i) => i.id));
+  const tools = data.tools;
+  if (me.kind !== "admin") for (const x of [...items, ...tools]) delete x.review;
   return {
     items,
     history: history(
       me,
       data.moves,
-      data.bought.filter((b) => known.has(b.itemId)),
+      [...data.bought, ...moreBought(data.boughtMore)].filter((b) => known.has(b.itemId)),
       200,
-      100
+      100 + moreBought(data.boughtMore).length
     ),
-    tools: data.tools,
+    tools,
     toolOuts: [...data.outsOpen, ...data.outsDone].sort((a, b) => b.at.localeCompare(a.at)).map((o) => toOut(me, o)),
     checks: data.checks.map((c) => toCheck(me, c)),
   };
@@ -166,16 +184,18 @@ async function getItem(id: string): Promise<StoreItem | null> {
 /** Everything that ever moved for one item. */
 export async function itemHistory(me: TodoMe, id: string): Promise<{ item: StoreItem; history: StoreEntry[] }> {
   if (!isId(ITEM_PREFIX, id)) throw new TodoError(404, "That item isn't in the store any more.");
-  const data = await getBuyersClient().fetch<{ item: RawItem | null; moves: RawMove[]; bought: RawMove[] }>(
+  const data = await getBuyersClient().fetch<{ item: RawItem | null; moves: RawMove[]; bought: RawMove[]; boughtMore: RawMoreBought[] }>(
     `{
       "item": *[_id == $id && _type == "storeItem"][0] ${ITEM_FIELDS},
       "moves": *[_type == "storeMove" && itemId == $id] | order(at desc)[0...1000] ${MOVE_FIELDS},
-      "bought": *[_type == "siteExpense" && string::startsWith(_id, $expensePrefix) && itemId == $id && toStore == true] | order(createdAt desc)[0...1000] ${BOUGHT_FIELDS}
+      "bought": *[_type == "siteExpense" && string::startsWith(_id, $expensePrefix) && itemId == $id && toStore == true] | order(createdAt desc)[0...1000] ${BOUGHT_FIELDS},
+      "boughtMore": *[_type == "siteExpense" && string::startsWith(_id, $expensePrefix) && $id in moreLines[toStore == true].itemId] | order(createdAt desc)[0...1000] ${MORE_BOUGHT_FIELDS}
     }`,
     { ...params, id }
   );
   if (!data.item) throw new TodoError(404, "That item isn't in the store any more.");
-  return { item: withLevel(data.item), history: history(me, data.moves, data.bought, 1000, 1000) };
+  const more = moreBought(data.boughtMore, id);
+  return { item: withLevel(data.item), history: history(me, data.moves, [...data.bought, ...more], 1000, 1000 + more.length) };
 }
 
 /* ---------- items ---------- */
@@ -220,7 +240,8 @@ async function createItemDoc(
   unit: string,
   photoId: string | null = null,
   category: StoreCategory = guessCategory(name),
-  trade: Trade = guessItemTrade(name, category)
+  trade: Trade = guessItemTrade(name, category),
+  review = false
 ): Promise<string> {
   const id = newId(ITEM_PREFIX);
   await getBuyersClient().create({
@@ -230,6 +251,7 @@ async function createItemDoc(
     unit,
     category,
     trade,
+    ...(review ? { review: { by: me.name, byId: me.id, at: new Date().toISOString() } } : {}),
     stocked: true,
     ...(photoId ? { photo: photoRef(photoId) } : {}),
     createdAt: new Date().toISOString(),
@@ -251,7 +273,8 @@ export async function itemForPurchase(me: TodoMe, material: string, unit: unknow
     return { id: found.id, name: name || material };
   }
   const name = cleanName(material);
-  return { id: await createItemDoc(me, name, cleanUnit(unit)), name };
+  // New in the store from a site login's purchase: on the office's "To check" too.
+  return { id: await createItemDoc(me, name, cleanUnit(unit), null, undefined, undefined, me.kind !== "admin"), name };
 }
 
 /** A new item, with what is on the shelf now (its starting count) and a photo of it. Anyone who uses the store. */
@@ -264,7 +287,8 @@ export async function createItem(me: TodoMe, body: Record<string, unknown>): Pro
   const category = isStoreCategory(body.category) ? body.category : guessCategory(name);
   const trade = cleanTrade(body.trade) ?? guessItemTrade(name, category);
   if (await findItem(name)) throw new TodoError(409, `"${name}" is already in the store. Find it in the list and count it there.`);
-  const id = await createItemDoc(me, name, unit, photoId, category, trade);
+  // A site login's new item waits for the office's check (the storekeeper's names aren't always right).
+  const id = await createItemDoc(me, name, unit, photoId, category, trade, me.kind !== "admin");
   if (count !== null) {
     await getBuyersClient().create({
       _id: newId(MOVE_PREFIX),
@@ -334,7 +358,9 @@ export async function updateItem(id: string, body: Record<string, unknown>): Pro
     set.reorderDismissedAt = body.reorderDismissed === true ? new Date().toISOString() : null;
   }
   if ("stocked" in body) set.stocked = body.stocked !== false;
-  if (Object.keys(set).length) await client.patch(id).set(set).commit();
+  // The office looked at it (checked, or changed it): off "To check".
+  const patch = client.patch(id).unset(["review"]);
+  await (Object.keys(set).length ? patch.set(set) : patch).commit();
   const item = await getItem(id);
   if (!item) throw new TodoError(404, "That item isn't in the store any more.");
   return item;
@@ -348,11 +374,12 @@ export async function updateItem(id: string, body: Record<string, unknown>): Pro
 export async function deleteItem(id: string): Promise<void> {
   if (!isId(ITEM_PREFIX, id)) throw new TodoError(404, "That item isn't in the store any more.");
   const client = getBuyersClient();
-  const found = await client.fetch<{ photo?: string; moves: { _id: string; photo?: string }[]; bought: string[] } | null>(
+  const found = await client.fetch<{ photo?: string; moves: { _id: string; photo?: string }[]; bought: string[]; boughtMore: string[] } | null>(
     `*[_id == $id && _type == "storeItem"][0]{
       "photo": photo.asset._ref,
       "moves": *[_type == "storeMove" && itemId == ^._id]{ _id, "photo": photo.asset._ref },
-      "bought": *[_type == "siteExpense" && itemId == ^._id]._id
+      "bought": *[_type == "siteExpense" && itemId == ^._id]._id,
+      "boughtMore": *[_type == "siteExpense" && ^._id in moreLines[].itemId]._id
     }`,
     { id }
   );
@@ -360,6 +387,8 @@ export async function deleteItem(id: string): Promise<void> {
   const tx = client.transaction();
   for (const move of found.moves) tx.delete(move._id);
   for (const expense of found.bought) tx.patch(expense, (p) => p.set({ toStore: false }).unset(["itemId"]));
+  const line = `moreLines[itemId == "${id}"]`;
+  for (const expense of found.boughtMore) tx.patch(expense, (p) => p.set({ [`${line}.toStore`]: false }).unset([`${line}.itemId`]));
   tx.delete(id);
   await tx.commit();
   for (const photo of [found.photo, ...found.moves.map((m) => m.photo)]) if (photo) await dropPhoto(photo, "store");

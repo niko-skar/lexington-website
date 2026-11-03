@@ -29,9 +29,10 @@ import { photoAt, type TodoMe } from "@/lib/todo/shared";
 import { AccessSheet } from "./AccessSheet";
 import { errorText, send, startPolling } from "./api";
 import cx from "./Concrete.module.css";
-import { BookedPours, pourStatus, TruckPour } from "./ConcretePours";
+import { BookedPours, PouredPours, pourStatus, TruckPour } from "./ConcretePours";
 import { forgetPhoto, uploadPhoto } from "./photo";
 import { arrivalOf } from "./photoTime";
+import { setPourDataSink } from "./pourPhotoQueue";
 import ps from "./Pours.module.css";
 import { SiteHeader, SiteMenu } from "./SiteChrome";
 import styles from "./Todo.module.css";
@@ -158,8 +159,8 @@ export function ConcreteApp({
     return startPolling(refresh, 20_000, 120_000);
   }, [active, refresh]);
 
-  // While a waybill is being read: look every few seconds, so its details appear as soon as they're in.
-  const reading = data.trucks.some((t) => t.reading === "working");
+  // While a waybill or a lab's cube form is being read: look every few seconds, so what it says appears as soon as it's in.
+  const reading = data.trucks.some((t) => t.reading === "working") || (data.pours?.cubes ?? []).some((c) => c.tests.some((t) => t.reading === "working"));
   useEffect(() => {
     if (!active || !reading) return;
     const timer = setInterval(() => void refresh(), 2_500);
@@ -191,6 +192,11 @@ export function ConcreteApp({
     localAt.current = Date.now();
     setData(next);
   }, []);
+  // A pre-pour photo in (they go up one by one, wherever the page is): the page as the website has it then.
+  useEffect(() => {
+    setPourDataSink(putData);
+    return () => setPourDataSink(null);
+  }, [putData]);
   const putPours = useCallback((pours: PourInfo | undefined) => {
     if (!pours) return;
     localAt.current = Date.now();
@@ -319,7 +325,8 @@ export function ConcreteApp({
               </div>
             ))}
 
-            {data.pours && <BookedPours info={data.pours} onData={putData} onToast={(text, error) => showToast({ text, tone: error ? "error" : undefined })} />}
+            {data.pours && <BookedPours info={data.pours} me={me} onData={putData} onToast={(text, error) => showToast({ text, tone: error ? "error" : undefined })} />}
+            {data.pours && <PouredPours info={data.pours} me={me} onData={putData} onToast={(text, error) => showToast({ text, tone: error ? "error" : undefined })} />}
 
             {!days.includes(today) && (
               <section className={styles.group}>

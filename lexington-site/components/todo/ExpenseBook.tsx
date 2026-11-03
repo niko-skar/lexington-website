@@ -358,6 +358,13 @@ export const ExpenseBook = memo(function ExpenseBook({
                             {x.toStore ? <span className={site.storeTag}>Store</span> : null}
                           </span>
                         )}
+                        {(x.moreLines ?? []).map((l, i) => (
+                          <span key={i} className={site.item}>
+                            <span className={site.num}>{fmtQty(l.qty)} × </span>
+                            {l.material}
+                            {l.toStore ? <span className={site.storeTag}>Store</span> : null}
+                          </span>
+                        ))}
                         {x.description && <span className={site.desc}>{x.description}</span>}
                       </button>
                       <span className={site.tags}>
@@ -373,6 +380,11 @@ export const ExpenseBook = memo(function ExpenseBook({
                             📎 Receipt
                           </button>
                         )}
+                        {(x.moreReceipts ?? []).map((r, i) => (
+                          <button key={r.id} type="button" className={site.clip} onClick={() => onOpenReceipt({ ...x, receiptUrl: r.url, receiptType: r.type })}>
+                            📎 {i + 2}
+                          </button>
+                        ))}
                       </span>
                     </div>
                   );

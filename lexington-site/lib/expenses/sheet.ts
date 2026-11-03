@@ -4,7 +4,7 @@ import { createHash } from "node:crypto";
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
 import { EXPENSE_PREFIX, EXPENSE_SETTINGS_ID, SHEET_DELETION_PREFIX } from "@/lib/site/ids";
 import { FIELDS } from "./server";
-import { isInflow, receiptFileName, vatParts, type Expense } from "./shared";
+import { isInflow, materialWords, receiptFileName, vatParts, type Expense } from "./shared";
 
 // Every expense and money in, copied to Niko's own Google Sheet, with the receipt saved in his
 // Google Drive under a name that traces back to the entry (Niko, 23 Oct 2026: "so they can be
@@ -61,8 +61,9 @@ function rowFor(x: SyncDoc): Record<string, string | number> {
     Category: x.category ?? "",
     "Supplier / from": x.supplier,
     Description: x.description,
-    Material: x.material ?? "",
-    Qty: x.qty ?? "",
+    // More materials on one entry: all of them, with how many of each.
+    Material: materialWords(x),
+    Qty: x.moreLines?.length ? "" : (x.qty ?? ""),
     "Floor / area": x.floor ?? "",
     "Paid by": x.method ?? "",
     "Amount (GHS)": x.amount,

@@ -171,3 +171,258 @@
     border-color: var(--x-muted);
   }
 }
+
+/* Pre-pour photos and concrete cubes (3 Nov 2026). */
+.cardPoured {
+  box-shadow: inset 4px 0 0 var(--x-ok);
+}
+.dayPoured {
+  font-family: var(--x-display);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--x-ok);
+}
+.photos,
+.cubes {
+  display: grid;
+  gap: 8px;
+  margin-top: 6px;
+  padding-top: 10px;
+  border-top: 1px solid var(--x-line);
+}
+.photoButtons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.photoAdd,
+.photoPick {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  user-select: none;
+}
+.photoAdd {
+  background: var(--x-accent);
+  color: var(--x-accent-ink);
+}
+.photoPick {
+  border: 1px solid var(--x-accent);
+  background: var(--x-bg);
+  color: var(--x-accent);
+}
+.photoAdd[aria-disabled="true"],
+.photoPick[aria-disabled="true"] {
+  opacity: 0.5;
+}
+.photoNote,
+.photoError {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+.photoNote {
+  color: var(--x-amber);
+}
+.photoError {
+  color: var(--x-warn);
+}
+.kindTitle {
+  margin: 2px 0 6px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--x-muted);
+}
+.kindTitle span {
+  font-weight: 400;
+}
+.thumbs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
+  gap: 6px;
+}
+.thumb {
+  position: relative;
+  aspect-ratio: 1;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--x-line);
+}
+.thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.thumbUp img {
+  opacity: 0.6;
+}
+.thumbError {
+  outline: 2px solid var(--x-warn);
+  outline-offset: -2px;
+}
+.thumbPct {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 2px 0;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+}
+.thumbBar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+}
+.thumbBar button {
+  flex: 1;
+  min-height: 36px;
+  border: 0;
+  background: rgba(0, 0, 0, 0.7);
+  color: #fff;
+  font-weight: 700;
+}
+.viewerBar {
+  display: grid;
+  gap: 8px;
+  padding-top: 10px;
+}
+.viewerCaption {
+  margin: 0;
+  color: #fff;
+  font-size: 13px;
+  text-align: center;
+}
+.viewerButtons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+.viewerButtons a,
+.viewerButtons button {
+  min-height: 48px;
+  min-width: 48px;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+  font-weight: 600;
+  font-size: 16px;
+  text-decoration: none;
+}
+.viewerButtons button:disabled {
+  opacity: 0.35;
+}
+.viewerButtons .viewerArmed {
+  background: #b3261e;
+}
+.tests {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.test {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 52px;
+  padding: 8px 10px;
+  border: 1px solid var(--x-line);
+  border-radius: 8px;
+  background: var(--x-bg);
+  color: var(--x-ink);
+  text-align: left;
+  font-size: 15px;
+}
+.testAge {
+  flex: none;
+  width: 62px;
+  font-weight: 700;
+}
+.testBody {
+  flex: 1;
+  display: grid;
+  gap: 2px;
+}
+.testBody small {
+  font-size: 13px;
+  color: var(--x-muted);
+}
+.testGo {
+  flex: none;
+  color: var(--x-muted);
+  font-size: 18px;
+}
+.testDue {
+  border-color: var(--x-amber);
+  box-shadow: inset 4px 0 0 var(--x-amber);
+}
+.testLate {
+  border-color: var(--x-warn);
+  box-shadow: inset 4px 0 0 var(--x-warn);
+}
+.testOk small {
+  color: var(--x-ok);
+  font-weight: 600;
+}
+.testLow small {
+  color: var(--x-warn);
+  font-weight: 600;
+}
+.formLine {
+  margin: 0;
+  font-size: 15px;
+}
+.readNote {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--x-ok-soft);
+  font-size: 14px;
+}
+.readFailed {
+  background: var(--x-bg);
+  border: 1px solid var(--x-warn);
+}
+.strengths {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.addCube {
+  min-height: 44px;
+  border: 1px dashed var(--x-accent);
+  border-radius: 8px;
+  background: none;
+  color: var(--x-accent);
+  font-weight: 700;
+}
+.cubeAverage {
+  margin: 0;
+  font-size: 15px;
+}

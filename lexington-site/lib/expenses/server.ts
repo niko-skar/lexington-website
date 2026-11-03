@@ -16,6 +16,8 @@ import {
   MAX_DESCRIPTION,
   MAX_MATERIAL,
   MAX_SUPPLIER,
+  MAX_LINES,
+  MAX_RECEIPTS,
   METHODS,
   money,
   todayISO,
@@ -53,6 +55,8 @@ export const FIELDS = `{
   "payday": payday{ week, kind, lines[]{ id, name, group, amount, at, ref } },
   "steelTons": steelTons,
   "billId": billId,
+  "moreReceipts": coalesce(moreReceipts[defined(asset)]{ "id": asset._ref, "url": asset->url, "type": asset->mimeType }, []),
+  "moreLines": coalesce(moreLines[]{ material, qty, itemId, "toStore": coalesce(toStore, false) }, []),
   createdAt,
   "createdBy": coalesce(createdBy, ""),
   "updatedAt": coalesce(updatedAt, sourceUpdatedAt, createdAt)
@@ -197,8 +201,42 @@ async function fields(me: TodoMe, body: Record<string, unknown>, receiptId: stri
     costClass: inflow || forWho !== "Site" ? null : cleanClass(body.costClass),
     // The supplier's bill it pays (lib/suppliers): money out only.
     billId: inflow ? null : await cleanBillId(body.billId, amount, self),
+    moreLines: category === "Material" ? await cleanMoreLines(me, body.moreLines) : [],
   };
 }
+
+/** More materials on one entry (the first is the entry's own): each named, how many, and into the store room or not. */
+async function cleanMoreLines(me: TodoMe, value: unknown): Promise<Array<{ _key: string; material: string; qty: number; itemId: string | null; toStore: boolean }>> {
+  if (value === null || value === undefined) return [];
+  if (!Array.isArray(value)) throw new TodoError(400, "The materials didn't come through: try again.");
+  if (value.length > MAX_LINES - 1) throw new TodoError(400, `${MAX_LINES} materials at most on one entry.`);
+  const out: Array<{ _key: string; material: string; qty: number; itemId: string | null; toStore: boolean }> = [];
+  for (const raw of value) {
+    const line = (raw ?? {}) as Record<string, unknown>;
+    let material = cleanText(line.material, MAX_MATERIAL, "material").replace(/\s+/g, " ");
+    if (!material) throw new TodoError(400, "Write which material each line is, or take the empty line off.");
+    const qty = Math.round(cleanNumber(line.qty ?? 1, "Pick how many of each.") * 1000) / 1000;
+    let itemId: string | null = null;
+    const toStore = line.toStore === true;
+    if (toStore) {
+      const item = await itemForPurchase(me, material, line.unit);
+      itemId = item.id;
+      material = item.name;
+    }
+    out.push({ _key: randomBytes(4).toString("hex"), material, qty, itemId, toStore });
+  }
+  return out;
+}
+
+/** More photos with the receipt: stored ones (photos or PDFs), at most MAX_RECEIPTS with the receipt. */
+function cleanMoreReceipts(value: unknown): string[] {
+  if (value === null || value === undefined) return [];
+  if (!Array.isArray(value)) throw new TodoError(400, "The photos didn't come through: add them again.");
+  const ids = [...new Set(value.map((v) => cleanReceiptId(v)).filter((v): v is string => !!v))];
+  if (ids.length > MAX_RECEIPTS - 1) throw new TodoError(400, `${MAX_RECEIPTS} photos at most on one entry.`);
+  return ids;
+}
+const moreReceiptRefs = (ids: string[]) => ids.map((id) => ({ _key: randomBytes(4).toString("hex"), ...receiptRef(id) }));
 
 /**
  * The bill a payment pays: one that's there (not deleted), or none. It can't pay more than the bill has left
@@ -246,6 +284,8 @@ const receiptRef = (assetId: string) => ({
 /** A new entry. `extra` is saved with it as it is (the bank text's note on money in it added). */
 export async function createExpense(me: TodoMe, body: Record<string, unknown>, extra: Record<string, unknown> = {}): Promise<Expense> {
   const receiptId = cleanReceiptId(body.receiptId);
+  const more = cleanMoreReceipts(body.moreReceiptIds);
+  if (more.length && !receiptId) throw new TodoError(400, "Add the receipt first, then the other photos.");
   const data = await fields(me, body, receiptId);
   const id = newId(EXPENSE_PREFIX);
   const now = new Date().toISOString();
@@ -256,6 +296,7 @@ export async function createExpense(me: TodoMe, body: Record<string, unknown>, e
     ...data,
     ...extra,
     ...(receiptId ? { receipt: receiptRef(receiptId) } : {}),
+    ...(more.length ? { moreReceipts: moreReceiptRefs(more) } : {}),
     createdAt: now,
     createdBy: me.name,
     updatedAt: now,
@@ -268,20 +309,28 @@ export async function createExpense(me: TodoMe, body: Record<string, unknown>, e
 export async function updateExpense(me: TodoMe, id: string, body: Record<string, unknown>): Promise<Expense> {
   if (!isId(EXPENSE_PREFIX, id)) throw new TodoError(404, "That entry isn't there any more.");
   const client = getBuyersClient();
-  const before = await client.fetch<{ receipt?: string; ref?: string; kind?: string; payday: boolean } | null>(
-    `*[_id == $id && _type == "siteExpense"][0]{ "receipt": receipt.asset._ref, ref, "kind": coalesce(kind, "expense"), "payday": defined(payday) }`,
+  const before = await client.fetch<{ receipt?: string; more: string[] | null; ref?: string; kind?: string; payday: boolean } | null>(
+    `*[_id == $id && _type == "siteExpense"][0]{ "receipt": receipt.asset._ref, "more": moreReceipts[].asset._ref, ref, "kind": coalesce(kind, "expense"), "payday": defined(payday) }`,
     { id }
   );
   if (!before) throw new TodoError(404, "That entry isn't there any more.");
   if (before.payday) throw new TodoError(409, FROM_PAYDAY);
   const receiptId = cleanReceiptId(body.receiptId);
+  // Sent without its photos list (an older page): the photos stay as they are.
+  const more = body.moreReceiptIds === undefined ? (before.more ?? []) : cleanMoreReceipts(body.moreReceiptIds);
+  if (more.length && !receiptId) throw new TodoError(400, "Add the receipt first, then the other photos.");
   const data = await fields(me, body, receiptId, id);
   // Switched between expense and money in: it takes a number from the other series.
   const ref = before.ref && before.kind === data.kind ? before.ref : await nextRef(data.kind);
   const set = { ...data, ref, updatedAt: new Date().toISOString(), updatedBy: me.name, ...(receiptId ? { receipt: receiptRef(receiptId) } : {}) };
-  const patch = client.patch(id).set(set);
-  await (receiptId ? patch : patch.unset(["receipt"])).commit();
+  // The same photos keep their place (and their copies in QuickBooks); new ones join them.
+  const keptMore = (before.more ?? []).join() === more.join();
+  let patch = client.patch(id).set(keptMore ? set : { ...set, ...(more.length ? { moreReceipts: moreReceiptRefs(more) } : {}) });
+  if (!receiptId) patch = patch.unset(["receipt"]);
+  if (!keptMore && !more.length) patch = patch.unset(["moreReceipts"]);
+  await patch.commit();
   if (before.receipt && before.receipt !== receiptId) await dropReceipt(before.receipt);
+  for (const gone of (before.more ?? []).filter((m) => !more.includes(m) && m !== receiptId)) await dropReceipt(gone);
   const expense = await getExpense(id);
   if (!expense) throw new TodoError(404, "That entry isn't there any more.");
   return expense;
@@ -298,6 +347,7 @@ export async function deleteExpense(id: string, { payday = false } = {}): Promis
   const client = getBuyersClient();
   const before = await client.fetch<{
     receipt?: string;
+    more?: string[] | null;
     ref?: string;
     fileId?: string;
     synced?: string;
@@ -305,7 +355,7 @@ export async function deleteExpense(id: string, { payday = false } = {}): Promis
     qboTxn?: string;
     qboRealm?: string;
   } | null>(
-    `*[_id == $id && _type == "siteExpense"][0]{ "receipt": receipt.asset._ref, ref, "fileId": sheet.fileId, "synced": sheet.syncedAt, "qboType": qbo.txnType, "qboTxn": qbo.txnId, "qboRealm": qbo.realmId }`,
+    `*[_id == $id && _type == "siteExpense"][0]{ "receipt": receipt.asset._ref, "more": moreReceipts[].asset._ref, ref, "fileId": sheet.fileId, "synced": sheet.syncedAt, "qboType": qbo.txnType, "qboTxn": qbo.txnId, "qboRealm": qbo.realmId }`,
     { id }
   );
   if (!before) return;
@@ -329,6 +379,7 @@ export async function deleteExpense(id: string, { payday = false } = {}): Promis
   }
   await tx.commit();
   if (before.receipt) await dropReceipt(before.receipt);
+  for (const m of before.more ?? []) await dropReceipt(m);
 }
 
 /* ---------- receipts ---------- */

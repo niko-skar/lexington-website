@@ -1,4 +1,4 @@
-import type { Expense } from "./shared";
+import { linesOf, type Expense } from "./shared";
 
 // Steel bought against steel labour paid (Niko, 31 Oct 2026: "will also shortly have to track how much steel i buy
 // and how much steel labour i pay to see the balance, i pay wonder 2000ghc per ton of steel bent and installed").
@@ -81,6 +81,13 @@ export function steelSummary(expenses: readonly Expense[], rate: number, unitOf:
       } else if (PART_PAYMENT.test(x.description)) {
         tons = 0;
         how = "part payment";
+      } else if (x.moreLines?.length) {
+        // Several materials: the tons of those counted in tons.
+        const inTons = linesOf(x).filter((l) => /\btons?\b/i.test(l.material) || /^tons?$/i.test(unitOf(l.material) ?? ""));
+        if (inTons.length) {
+          tons = Math.round(inTons.reduce((n, l) => n + l.qty, 0) * 1000) / 1000;
+          how = "quantity";
+        }
       } else if (x.qty && (/\btons?\b/i.test(text(x)) || /^tons?$/i.test(unitOf(x.material ?? "") ?? ""))) {
         tons = x.qty;
         how = "quantity";

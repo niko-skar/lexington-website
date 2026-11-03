@@ -36,6 +36,7 @@ import site from "./Site.module.css";
 import { SiteHeader, SiteMenu } from "./SiteChrome";
 import { CameraIcon, EntryPhoto, minutesSince, PhotoField, time, TradeChips, TradeFilter } from "./StoreBits";
 import { CheckSheet, CheckStrip, DaysSheet } from "./StoreChecks";
+import { ToCheckSheet, toCheckOf } from "./StoreToCheck";
 import { EditToolSheet, isLate, NewToolSheet, outByTool, ReturnSheet, TakeOutSheet, ToolSheet, ToolsTab } from "./StoreTools";
 import styles from "./Todo.module.css";
 import { useUploadSlot } from "./useUploadSlot";
@@ -45,12 +46,13 @@ type Sheet =
   | { kind: "item"; id: string }
   | { kind: "move"; id: string; move: MoveKind }
   | { kind: "new" }
-  | { kind: "edit"; id: string }
+  | { kind: "edit"; id: string; back?: "toCheck" }
   | { kind: "tool"; toolId: string }
   | { kind: "takeOut"; first?: string; back?: string }
   | { kind: "return"; outIds: string[]; back?: string }
   | { kind: "newTool" }
-  | { kind: "editTool"; toolId: string }
+  | { kind: "editTool"; toolId: string; back?: "toCheck" }
+  | { kind: "toCheck" }
   | { kind: "check"; check: CheckKind }
   | { kind: "days" };
 type ToastData = { text: string; tone?: "error"; onUndo?: () => void };
@@ -426,6 +428,9 @@ export function StoreApp({
     return groups;
   }, [history]);
 
+  // The office's check of what the site logins added (only the office's data carries the mark).
+  const toCheck = useMemo(() => (isAdmin ? toCheckOf(items, tools) : []), [isAdmin, items, tools]);
+
   const canUndo = (e: StoreEntry) => e.kind !== "bought" && (isAdmin || (e.mine && minutesSince(e.at) < UNDO_MINUTES));
   const current = sheet && (sheet.kind === "item" || sheet.kind === "move" || sheet.kind === "edit") ? byId.get(sheet.id) : undefined;
   const currentTool = sheet && (sheet.kind === "tool" || sheet.kind === "editTool") ? toolById.get(sheet.toolId) : undefined;
@@ -517,6 +522,14 @@ export function StoreApp({
       <main className={styles.main}>
         {!loaded && <p className={styles.loading}>Loading the store…</p>}
         {loaded && <CheckStrip checks={checks} onCheck={(check) => setSheet({ kind: "check", check })} onDays={() => setSheet({ kind: "days" })} />}
+        {loaded && toCheck.length > 0 && (
+          <button type="button" className={site.toCheckBar} onClick={() => setSheet({ kind: "toCheck" })}>
+            <b>
+              {toCheck.length} new {toCheck.length === 1 ? "thing" : "things"} to check
+            </b>
+            <span>added by {[...new Set(toCheck.map((e) => (e.type === "item" ? e.item.review!.by : e.tool.review!.by)))].join(", ")}: check the names and how many</span>
+          </button>
+        )}
 
         {loaded && tab === "tools" && (
           <ToolsTab
@@ -750,12 +763,15 @@ export function StoreApp({
         <EditItemSheet
           key={current.id}
           item={current}
-          onDeleted={removeItem}
-          onClose={() => setSheet({ kind: "item", id: current.id })}
+          onDeleted={(item) => {
+            removeItem(item);
+            if (sheet.back) setSheet({ kind: "toCheck" });
+          }}
+          onClose={() => setSheet(sheet.back ? { kind: "toCheck" } : { kind: "item", id: current.id })}
           onSaved={(item) => {
             applyItem(item);
-            setSheet(item.stocked ? { kind: "item", id: item.id } : null);
-            showToast({ text: item.stocked ? "Saved" : `${item.name} is no longer kept in the store` });
+            setSheet(sheet.back ? { kind: "toCheck" } : item.stocked ? { kind: "item", id: item.id } : null);
+            showToast({ text: sheet.back ? `${item.name}: checked` : item.stocked ? "Saved" : `${item.name} is no longer kept in the store` });
           }}
         />
       )}
@@ -846,12 +862,40 @@ export function StoreApp({
           key={currentTool.id}
           tool={currentTool}
           outNow={outByTool(toolOuts).get(currentTool.id) ?? 0}
-          onDeleted={removeTool}
-          onClose={() => setSheet({ kind: "tool", toolId: currentTool.id })}
+          onDeleted={(tool) => {
+            removeTool(tool);
+            if (sheet.back) setSheet({ kind: "toCheck" });
+          }}
+          onClose={() => setSheet(sheet.back ? { kind: "toCheck" } : { kind: "tool", toolId: currentTool.id })}
           onSaved={(tool) => {
             applyTool(tool);
-            setSheet(tool.retired ? null : { kind: "tool", toolId: tool.id });
-            showToast({ text: tool.retired ? `${tool.name}: not used any more` : "Saved" });
+            setSheet(sheet.back ? { kind: "toCheck" } : tool.retired ? null : { kind: "tool", toolId: tool.id });
+            showToast({ text: sheet.back ? `${tool.name}: checked` : tool.retired ? `${tool.name}: not used any more` : "Saved" });
+          }}
+        />
+      )}
+      {sheet?.kind === "toCheck" && isAdmin && (
+        <ToCheckSheet
+          items={items}
+          tools={tools}
+          onClose={() => setSheet(null)}
+          onItem={(item) => {
+            applyItem(item);
+            showToast({ text: `${item.name}: checked` });
+          }}
+          onTool={(tool) => {
+            applyTool(tool);
+            showToast({ text: `${tool.name}: checked` });
+          }}
+          onChangeItem={(item) => setSheet({ kind: "edit", id: item.id, back: "toCheck" })}
+          onChangeTool={(tool) => setSheet({ kind: "editTool", toolId: tool.id, back: "toCheck" })}
+          onDeletedItem={(item) => {
+            removeItem(item);
+            setSheet({ kind: "toCheck" });
+          }}
+          onDeletedTool={(tool) => {
+            removeTool(tool);
+            setSheet({ kind: "toCheck" });
           }}
         />
       )}

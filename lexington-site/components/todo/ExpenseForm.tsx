@@ -8,7 +8,9 @@ import {
   FOR_WHO,
   isInflow,
   MAX_DESCRIPTION,
+  MAX_LINES,
   MAX_MATERIAL,
+  MAX_RECEIPTS,
   MAX_SUPPLIER,
   METHODS,
   money,
@@ -34,12 +36,24 @@ import styles from "./Todo.module.css";
 // store room" for materials and VAT. It keeps its own state, so typing never redraws the totals
 // and the list below it.
 
-type Receipt = { id: string; url: string; type: string };
+export type Receipt = { id: string; url: string; type: string };
 /** A new expense started from the bank's debit text (lib/expenses/bankDebit.ts): what the text gives, and a line saying so. */
-/** A new one started for the user: from a bank debit waiting in the app (debitId), or paying a supplier's bill (billId). */
-export type ExpensePrefill = { debitId?: string; billId?: string; date: string; amount: number; method: string | null; supplier: string; description: string; note: string };
+/** A new one started for the user: from a bank debit waiting in the app (debitId), or paying a supplier's bill (billId, with the bill's photo as its receipt). */
+export type ExpensePrefill = {
+  debitId?: string;
+  billId?: string;
+  receipt?: Receipt | null;
+  date: string;
+  amount: number;
+  method: string | null;
+  supplier: string;
+  description: string;
+  note: string;
+};
 const RECEIPT_CAMERA = "exp-receipt-camera";
 const RECEIPT_FILE = "exp-receipt-file";
+const MORE_CAMERA = "exp-more-camera";
+const MORE_FILE = "exp-more-file";
 
 const key = (s: string) => s.trim().replace(/\s+/g, " ").toLowerCase();
 const pdfType = (type: string | null | undefined) => type === "application/pdf";
@@ -102,6 +116,137 @@ function useReceiptSlot() {
   /** Waits for an upload still on its way; null when there's none or it failed. */
   const settled = useCallback(async () => (job.current ? job.current : null), []);
   return { slot, start, clear, settled };
+}
+
+/* ---------- more photos with the receipt (each uploads as soon as it's picked) ---------- */
+
+type MorePhoto = { key: number; preview: string | null; pdf: boolean; state: "uploading" | "ready" | "error"; stored?: Receipt; kept?: boolean };
+
+function useMorePhotos(initial: readonly Receipt[]) {
+  const [list, setList] = useState<MorePhoto[]>(() => initial.map((r, i) => ({ key: -1 - i, preview: null, pdf: pdfType(r.type), state: "ready", stored: r, kept: true })));
+  const jobs = useRef(new Map<number, Promise<Receipt | null>>());
+  const next = useRef(0);
+  const add = useCallback((file: File) => {
+    const key = ++next.current;
+    const pdf = isPdf(file);
+    setList((l) => [...l, { key, preview: pdf ? null : URL.createObjectURL(file), pdf, state: "uploading" }]);
+    jobs.current.set(
+      key,
+      uploadReceipt(file).then(
+        (stored) => {
+          if (!jobs.current.has(key)) {
+            forgetReceipt(stored.id); // taken off meanwhile
+            return null;
+          }
+          setList((l) => l.map((p) => (p.key === key ? { ...p, state: "ready", stored } : p)));
+          return stored;
+        },
+        () => {
+          setList((l) => l.map((p) => (p.key === key ? { ...p, state: "error" } : p)));
+          return null;
+        }
+      )
+    );
+  }, []);
+  const remove = useCallback((key: number) => {
+    jobs.current.delete(key);
+    setList((l) => {
+      const gone = l.find((p) => p.key === key);
+      if (gone?.preview) URL.revokeObjectURL(gone.preview);
+      if (gone?.stored && !gone.kept) forgetReceipt(gone.stored.id);
+      return l.filter((p) => p.key !== key);
+    });
+  }, []);
+  /** The photos' ids to save with (waiting for those still uploading); null if one didn't upload. */
+  const settled = useCallback(async (current: readonly MorePhoto[]) => {
+    const ids: string[] = [];
+    for (const p of current) {
+      const got = p.stored ?? (await jobs.current.get(p.key)) ?? null;
+      if (!got) return null;
+      ids.push(got.id);
+    }
+    return ids;
+  }, []);
+  /** Empties it; the uploads are kept only when they were just saved with the entry. */
+  const clear = useCallback((keepStored = false) => {
+    setList((l) => {
+      for (const p of l) {
+        if (p.preview) URL.revokeObjectURL(p.preview);
+        if (p.stored && !p.kept && !keepStored) forgetReceipt(p.stored.id);
+      }
+      return [];
+    });
+    jobs.current.clear();
+  }, []);
+  return { list, add, remove, settled, clear };
+}
+
+/* ---------- more materials on one entry ---------- */
+
+type LineDraft = { key: number; material: string; qty: number; unit: string; toStore: boolean | null };
+
+/** A material after the first: what, how many, into the store room or not (a new item says what it's counted in). */
+function MaterialLine({
+  n,
+  line,
+  items,
+  forWho,
+  onChange,
+  onRemove,
+}: {
+  n: number;
+  line: LineDraft;
+  items: StoreItem[];
+  forWho: ForWho;
+  onChange: (line: LineDraft) => void;
+  onRemove: () => void;
+}) {
+  const match = line.material.trim() ? items.find((i) => key(i.name) === key(line.material)) : undefined;
+  const toStore = line.toStore ?? (forWho === "Site" && (match ? match.stocked : true));
+  return (
+    <div className={site.matBox} role="group" aria-label={`Material ${n}`}>
+      <div className={site.lineHead}>
+        <label className={styles.label} htmlFor={`exp-material-${n}`}>
+          Material {n}
+        </label>
+        <button type="button" className={styles.linkButton} onClick={onRemove}>
+          Take this line off
+        </button>
+      </div>
+      <input
+        id={`exp-material-${n}`}
+        className={styles.input}
+        list="exp-material-list"
+        value={line.material}
+        onChange={(e) => onChange({ ...line, material: e.target.value })}
+        maxLength={MAX_MATERIAL}
+        autoCapitalize="sentences"
+        placeholder={'e.g. 4" nails'}
+      />
+      <span className={styles.label}>Quantity</span>
+      <QtyPicker id={`exp-qty-${n}`} value={line.qty} onChange={(qty) => onChange({ ...line, qty })} unit={match?.unit} />
+      <button type="button" className={toStore ? site.storeOn : site.storeOff} aria-pressed={toStore} onClick={() => onChange({ ...line, toStore: !toStore })}>
+        {toStore ? "✓ Into the store room" : "Not into the store room"}
+      </button>
+      {toStore &&
+        (match ? (
+          <p className={site.storeNote}>
+            In the store now: {qtyUnit(match.level, match.unit)}. This adds {qtyUnit(line.qty, match.unit)}.
+          </p>
+        ) : line.material.trim() ? (
+          <>
+            <p className={site.storeNote}>New in the store room. Counted in:</p>
+            <div className={styles.chips}>
+              {UNITS.map((u) => (
+                <button key={u} type="button" className={line.unit === u ? styles.chipOn : styles.chip} aria-pressed={line.unit === u} onClick={() => onChange({ ...line, unit: u })}>
+                  {u}
+                </button>
+              ))}
+            </div>
+          </>
+        ) : null)}
+    </div>
+  );
 }
 
 /** The classes as QuickBooks groups them: "Materials" with its Blocks, Cement Bags... under it. */
@@ -198,7 +343,12 @@ export function ExpenseForm({
   // The QuickBooks class: suggested from what it is until one is picked by hand.
   const [classPick, setClassPick] = useState<string | null>(x?.costClass?.id ?? null);
   const [classTouched, setClassTouched] = useState(!!x?.costClass);
-  const [kept, setKept] = useState<Receipt | null>(x?.receiptId && x.receiptUrl ? { id: x.receiptId, url: x.receiptUrl, type: x.receiptType ?? "image/jpeg" } : null);
+  // Paying a supplier's bill: the bill's photo is the receipt from the start (it stays the bill's too).
+  const [kept, setKept] = useState<Receipt | null>(x?.receiptId && x.receiptUrl ? { id: x.receiptId, url: x.receiptUrl, type: x.receiptType ?? "image/jpeg" } : (p?.receipt ?? null));
+  const more = useMorePhotos(x?.moreReceipts ?? []);
+  // More materials on this entry (the first is the one above).
+  const [lines, setLines] = useState<LineDraft[]>(() => (x?.moreLines ?? []).map((l, i) => ({ key: i + 1, material: l.material, qty: l.qty, unit: "pcs", toStore: l.toStore })));
+  const nextLine = useRef(lines.length);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [armed, setArmed] = useState(false);
@@ -303,7 +453,10 @@ export function ExpenseForm({
         if (readFor.current === id) fillFrom(r);
       },
       (e) => {
-        if (readFor.current === id) setReading({ state: "failed", note: `${errorText(e)} Fill in the form yourself.` });
+        if (readFor.current === id) {
+          const why = errorText(e);
+          setReading({ state: "failed", note: /fill in the form yourself/i.test(why) ? why : `${why} Fill in the form yourself.` });
+        }
       }
     );
   }, [x, stored, fillFrom]);
@@ -416,6 +569,7 @@ export function ExpenseForm({
     if (showFloors && !floor) return setError("Pick the floor or area.");
     if (!inflow && !category) return setError("Pick Material, Service or Other.");
     if (isMaterial && !material.trim()) return setError("Write which material you bought.");
+    if (isMaterial && lines.some((l) => !l.material.trim())) return setError("Write which material each line is, or take the empty line off.");
     if (!method) return setError(inflow ? "Pick how the money came in." : "Pick how it was paid.");
     if (vat && !hasReceipt) return setError("With VAT, the receipt is a must: take a photo of it or upload it.");
     setError("");
@@ -430,6 +584,13 @@ export function ExpenseForm({
         }
         receiptId = stored.id;
       }
+      const moreIds = await more.settled(more.list);
+      if (moreIds === null) {
+        setError("A photo didn't upload: take it off (✕) and add it again.");
+        return;
+      }
+      // The receipt taken off but other photos kept: the first of them is the receipt now.
+      if (!receiptId && moreIds.length) receiptId = moreIds.shift() ?? null;
       const body = {
         date,
         kind,
@@ -447,6 +608,13 @@ export function ExpenseForm({
         toStore,
         unit: unit.trim() || "pcs",
         receiptId,
+        moreReceiptIds: moreIds,
+        moreLines: isMaterial
+          ? lines.map((l) => {
+              const m = items.find((i) => key(i.name) === key(l.material));
+              return { material: l.material.trim(), qty: l.qty, unit: l.unit.trim() || "pcs", toStore: l.toStore ?? (forWho === "Site" && (m ? m.stocked : true)) };
+            })
+          : [],
         // The QuickBooks class (site expenses); without the lists here, an entry keeps the one it had.
         costClass: showFloors ? (showClass ? (chosenClass ? { id: chosenClass.id, name: chosenClass.name } : null) : (x?.costClass ?? null)) : null,
         // Made from a bank debit: that debit is done once this is saved.
@@ -458,6 +626,7 @@ export function ExpenseForm({
         ? await send<{ expense: Expense }>(`/api/expenses/${x.id}`, "PATCH", body)
         : await send<{ expense: Expense }>("/api/expenses", "POST", body);
       receipt.clear(true);
+      more.clear(true);
       readFor.current = null;
       setReading(null);
       setSaving(false);
@@ -497,6 +666,20 @@ export function ExpenseForm({
     setError("");
     setKept(null);
     receipt.start(file);
+  };
+
+  const pickMore = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = [...(e.target.files ?? [])];
+    e.target.value = "";
+    const room = MAX_RECEIPTS - 1 - more.list.length;
+    for (const file of files.slice(0, Math.max(0, room))) {
+      if (!isPdf(file) && !file.type.startsWith("image/")) {
+        setError("That file can't be attached. Use a photo or a PDF.");
+        continue;
+      }
+      more.add(file);
+    }
+    if (files.length > room) setError(`${MAX_RECEIPTS} photos at most on one entry.`);
   };
 
   // Wages from Payday are kept by the roll call: shown here, changed there.
@@ -733,6 +916,23 @@ export function ExpenseForm({
             {!toStore && match && match.stocked && <p className={site.storeNote}>The stock of {match.name} won&rsquo;t change.</p>}
           </div>
         )}
+        {isMaterial &&
+          lines.map((l, i) => (
+            <MaterialLine
+              key={l.key}
+              n={i + 2}
+              line={l}
+              items={items}
+              forWho={forWho}
+              onChange={(next) => setLines((ls) => ls.map((x2) => (x2.key === l.key ? next : x2)))}
+              onRemove={() => setLines((ls) => ls.filter((x2) => x2.key !== l.key))}
+            />
+          ))}
+        {isMaterial && lines.length < MAX_LINES - 1 && (
+          <button type="button" className={site.addLine} onClick={() => setLines((ls) => [...ls, { key: ++nextLine.current, material: "", qty: 1, unit: "pcs", toStore: null }])}>
+            + Another material on this receipt
+          </button>
+        )}
 
         <div className={site.row2}>
           <div className={site.field}>
@@ -907,8 +1107,42 @@ export function ExpenseForm({
             </div>
           </>
         )}
+        {(receipt.slot || kept || more.list.length > 0) && (
+          <>
+            {more.list.length > 0 && (
+              <div className={site.morePhotos} aria-label="More photos">
+                {more.list.map((m, i) => (
+                  <span key={m.key} className={site.moreTile}>
+                    {m.pdf ? (
+                      <span className={site.pdf}>PDF</span>
+                    ) : (
+                      // eslint-disable-next-line @next/next/no-img-element -- the phone's own preview, or a resized copy from the image store
+                      <img src={m.preview ?? photoAt(m.stored!.url, 160)} alt={`Photo ${i + 2}`} />
+                    )}
+                    <small className={m.state === "error" ? styles.slotError : undefined}>{m.state === "uploading" ? "Uploading…" : m.state === "error" ? "Didn't upload" : `Photo ${i + 2}`}</small>
+                    <button type="button" onClick={() => more.remove(m.key)} aria-label={`Take photo ${i + 2} off`}>
+                      ✕
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+            {more.list.length < MAX_RECEIPTS - 1 && (
+              <div className={styles.slotButtons}>
+                <label htmlFor={MORE_CAMERA} role="button" tabIndex={0}>
+                  📷 Another photo
+                </label>
+                <label htmlFor={MORE_FILE} role="button" tabIndex={0}>
+                  Upload more
+                </label>
+              </div>
+            )}
+          </>
+        )}
         <input id={RECEIPT_CAMERA} data-picker="receipt-camera" className={styles.hiddenInput} type="file" accept="image/*" capture="environment" onChange={pickFile} />
         <input id={RECEIPT_FILE} data-picker="receipt-file" className={styles.hiddenInput} type="file" accept="image/*,application/pdf" onChange={pickFile} />
+        <input id={MORE_CAMERA} data-picker="receipt-more-camera" className={styles.hiddenInput} type="file" accept="image/*" capture="environment" onChange={pickMore} />
+        <input id={MORE_FILE} data-picker="receipt-more-file" className={styles.hiddenInput} type="file" accept="image/*,application/pdf" multiple onChange={pickMore} />
 
         {error && (
           <p className={styles.sheetError} role="alert">

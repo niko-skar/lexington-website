@@ -229,7 +229,7 @@ export function ExpensesApp({
   /** Opens the steel page (the steel card's button). */
   onSteel: () => void;
   /** "Pay" on a supplier's bill (lib/suppliers): the form starts filled in for it. "at" makes the same one count again. */
-  payBill?: { payment: { billId: string; supplier: string; amount: number; description: string; bill: OpenBill }; at: number } | null;
+  payBill?: { payment: { billId: string; supplier: string; amount: number; description: string; bill: OpenBill; receipt?: { id: string; url: string; type: string } | null }; at: number } | null;
   startedOffline: boolean;
   /** The page came with this part's data just now (it's the part the app opened on). */
   fresh: boolean;
@@ -425,6 +425,7 @@ export function ExpensesApp({
       setEditing(null);
       setPrefill({
         billId: payment.billId,
+        receipt: payment.receipt ?? null,
         date: todayISO(),
         amount: payment.amount,
         method: null,

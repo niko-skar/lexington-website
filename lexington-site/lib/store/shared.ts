@@ -56,6 +56,8 @@ export interface StoreItem {
   category: string | null;
   /** Who uses it, or null: then it goes by its name and category (tradeOfItem). */
   trade: Trade | null;
+  /** Added by a site login and not checked by the office yet (only the office sees it). */
+  review?: StoreReview | null;
   /** In the store now, by the record: bought + added + brought back - taken out +/- counts. */
   level: number;
   lastCountAt: string | null;
@@ -139,6 +141,14 @@ export interface StoreTool {
   trade: Trade | null;
   /** The state it's in, as last said (when added, when it came back, or set on the tool); null: not said yet. */
   condition: Condition | null;
+  /** Added by a site login and not checked by the office yet (only the office sees it). */
+  review?: StoreReview | null;
+}
+
+/** Who added it, and when, for the office's "To check". */
+export interface StoreReview {
+  by: string;
+  at: string;
 }
 
 export interface ToolReturn {

@@ -1556,3 +1556,89 @@
 .pickCond {
   padding: 0 4px 8px 12px;
 }
+
+/* The office's "To check" (3 Nov 2026): what the site logins added, waiting for the office's look. */
+.toCheckBar {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  margin: 0 0 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--x-amber);
+  border-radius: 10px;
+  background: var(--x-surface);
+  color: var(--x-ink);
+  text-align: left;
+  box-shadow: inset 4px 0 0 var(--x-amber);
+}
+.toCheckBar span {
+  font-size: 13px;
+  color: var(--x-muted);
+}
+.checkCard {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--x-line);
+  border-radius: 10px;
+  background: var(--x-surface);
+}
+.checkTop {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* More materials and more photos on one expense (3 Nov 2026). */
+.lineHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.addLine {
+  min-height: 44px;
+  margin: 4px 0 8px;
+  padding: 0 14px;
+  border: 1px dashed var(--x-accent);
+  border-radius: 8px;
+  background: var(--x-bg);
+  color: var(--x-accent);
+  font-weight: 700;
+}
+.morePhotos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 6px 0;
+}
+.moreTile {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  width: 84px;
+}
+.moreTile img,
+.moreTile .pdf {
+  width: 84px;
+  height: 84px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+.moreTile small {
+  font-size: 11px;
+  color: var(--x-muted);
+}
+.moreTile button {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-weight: 700;
+}

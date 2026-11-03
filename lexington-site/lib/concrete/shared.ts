@@ -105,6 +105,9 @@ export interface PourBooking {
 
 export interface PourInfo {
   pours: PourBooking[];
+  /** The listed pours' pre-pour photos, and their concrete cubes (lib/concrete/pourExtras.ts). */
+  photos: PourPhoto[];
+  cubes: PourCubes[];
   /** The roll call's checklists, to start a pour from. */
   checklists: Array<{ id: string; name: string }>;
   /** Who can cure: the roll call's active workers (not the steel benders), foremen first. */
@@ -112,6 +115,8 @@ export interface PourInfo {
   /** Days of curing a pour gets now (the roll call's settings). */
   curingDays: number;
 }
+
+import type { PourCubes, PourPhoto } from "./pourExtras";
 
 export interface ConcreteData {
   trucks: Truck[];
