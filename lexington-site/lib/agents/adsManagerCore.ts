@@ -18,6 +18,10 @@
  *   are only made while it has more than two days to run.
  * - An ad set about to reach its end date keeps running (its end date is taken off) once it has an
  *   ad without the offer.
+ * - An ad set whose new ads Meta keeps rejecting (three made in the last week, none running in good
+ *   standing) is switched off and gets no more ads; Niko is told once. One he switches back on starts
+ *   afresh. (The UK, 23 Oct to 3 Nov 2026: Meta read the ads as loans and wanted the business verified,
+ *   and the manager made four new UK ads every day, 37 in all.)
  * - Markets not running yet (UK, Canada) are tried once each, as a new ad set, on the share of the
  *   budget the autopilot gives anything new.
  * - At most six new ads a run, two per ad set.
@@ -136,6 +140,8 @@ export interface AdInfo {
   text: string;
   tag: AdTag | null;
   last14: { spend: number; leads: number; frequency: number };
+  /** Meta flagged it: rejected, or switched off with a problem (what a rejected ad shows once it is paused). */
+  problem?: boolean;
 }
 
 export interface AdsetInfo {
@@ -165,6 +171,8 @@ export interface ManagerInput {
   marketsTried: Market[];
   /** While VAT is on: today's prices (all with the VAT in them). An ad quoting another figure, or "+ VAT", is replaced. */
   prices?: number[];
+  /** Ad sets the manager switched off because Meta kept rejecting their ads, with the day. One switched back on starts afresh. */
+  stoppedOn?: Record<string, string>;
 }
 
 export interface NewAd {
@@ -184,6 +192,8 @@ export interface ManagerPlan {
   ongoing: Array<{ adsetId: string; name: string; reason: string }>;
   /** New markets to try, each a new ad set. */
   markets: Array<{ market: "uk" | "canada"; reason: string }>;
+  /** Ad sets Meta keeps refusing: switched off, and no more ads are made for them. */
+  stop: Array<{ adsetId: string; name: string; refused: number; reason: string }>;
   notes: string[];
 }
 
@@ -192,9 +202,18 @@ const MAX_NEW_PER_SET = 2;
 const MIN_LIVE = 2;
 const MAX_LIVE = 4;
 const CHALLENGER_DAYS = 7;
+/** Meta refused this many of an ad set's new ads within REFUSED_DAYS, with none running in good standing: stop. */
+const REFUSED_LIMIT = 3;
+const REFUSED_DAYS = 7;
 
 function daysBetween(a: string, b: string): number {
   return Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 86_400_000);
+}
+
+function shiftDay(day: string, days: number): string {
+  const t = new Date(`${day}T00:00:00Z`);
+  t.setUTCDate(t.getUTCDate() + days);
+  return t.toISOString().slice(0, 10);
 }
 
 const yieldOf = (r: { spend: number; leads: number } | undefined) => (r ? (r.leads + 0.5) / (r.spend + 5) : 0.1);
@@ -220,7 +239,7 @@ export function nextAngle(input: ManagerInput, set: AdsetInfo, taken: AngleKey[]
 }
 
 export function planManager(input: ManagerInput): ManagerPlan {
-  const plan: ManagerPlan = { pause: [], create: [], ongoing: [], markets: [], notes: [] };
+  const plan: ManagerPlan = { pause: [], create: [], ongoing: [], markets: [], stop: [], notes: [] };
   const offerLive = Boolean(input.offer && !input.offer.ended && input.offer.endsOn && daysBetween(input.today, input.offer.endsOn) > 2);
   const offerOver = (ad: AdInfo) => {
     if (ad.tag?.offerUntil) return ad.tag.offerUntil < input.today;
@@ -237,6 +256,20 @@ export function planManager(input: ManagerInput): ManagerPlan {
     // Rejected by Meta: switched off, and a new one takes its place below.
     for (const a of ads.filter((x) => x.status === "rejected")) {
       plan.pause.push({ adId: a.id, adsetId: set.id, name: a.name, cause: "rejected", reason: "Meta rejected it." });
+    }
+    // Meta keeps refusing this set's new ads (the UK, 23 Oct to 3 Nov 2026: 37 in 11 days, four more every
+    // morning): stop making them, switch the set off, and say so once. Only ads the manager made count, and
+    // only those made since the set was last stopped, so one he switches back on starts afresh.
+    const since = [shiftDay(input.today, -REFUSED_DAYS), input.stoppedOn?.[set.id] ?? ""].sort().pop() as string;
+    const refused = ads.filter((a) => a.problem && a.tag && a.tag.made > since);
+    if (refused.length >= REFUSED_LIMIT && !live.some((a) => !a.problem)) {
+      plan.stop.push({
+        adsetId: set.id,
+        name: set.name,
+        refused: refused.length,
+        reason: `Meta refused ${refused.length} of its new ads in the last ${REFUSED_DAYS} days and none is running, so no more are made and the ad set is switched off.`,
+      });
+      continue;
     }
     // The offer it quotes has ended.
     const expired = live.filter(offerOver);

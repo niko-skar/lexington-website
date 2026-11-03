@@ -25,6 +25,41 @@ export interface Period {
   leads: number;
 }
 
+/** An advert Meta lists as rejected or with a problem, as Meta's Graph API gives it. */
+export interface ProblemAdRow {
+  name?: string;
+  effective_status?: string;
+  /** What the advert is set to (ACTIVE = switched on), whatever Meta thinks of it. */
+  configured_status?: string;
+  created_time?: string;
+  ad_review_feedback?: { global?: Record<string, string> };
+  adset?: { status?: string };
+  campaign?: { status?: string };
+}
+
+/** The ads manager switches a rejected advert off the next night and makes another; a day and a half is its slack. */
+const MANAGER_SLACK_MS = 36 * 3_600_000;
+
+/**
+ * The rejected or troubled adverts Niko has to hear about: switched on, in an ad set and campaign that are
+ * on, and left that way for more than a day and a half. An advert the ads manager already switched off, one
+ * in an ad set switched off (the UK, 3 Nov 2026: 37 rejected ones were still listed every morning), or one
+ * made last night that the manager will deal with, is handled and not listed.
+ */
+export function unhandledProblemAds(rows: ProblemAdRow[], nowMs: number): MetaWatch["problemAds"] {
+  return rows
+    .filter((a) => {
+      if (a.configured_status !== "ACTIVE" || a.adset?.status !== "ACTIVE" || a.campaign?.status !== "ACTIVE") return false;
+      const made = Date.parse(a.created_time ?? "");
+      return Number.isFinite(made) && nowMs - made > MANAGER_SLACK_MS;
+    })
+    .map((a) => ({
+      name: a.name ?? "Unnamed advert",
+      status: a.effective_status ?? "",
+      reason: Object.values(a.ad_review_feedback?.global ?? {})[0],
+    }));
+}
+
 export interface MetaWatch {
   connected: true;
   /** A part that could not be read, in Meta's words. */

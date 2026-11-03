@@ -21,7 +21,17 @@ import { pilotSettings, readPilotRun, readPilotSwitch } from "./adsPilot";
 import { usd } from "./adsPilotCore";
 import { parseOffer } from "./factsCore";
 import { metaLeadsConfigured, readMetaLeadsState } from "./metaLeads";
-import { checkAll, emailSubject, shouldEmail, type Finding, type MetaWatch, type PilotWatch, type WatchInput } from "./watchdogCore";
+import {
+  checkAll,
+  emailSubject,
+  shouldEmail,
+  unhandledProblemAds,
+  type Finding,
+  type MetaWatch,
+  type PilotWatch,
+  type ProblemAdRow,
+  type WatchInput,
+} from "./watchdogCore";
 
 /**
  * THE ADS WATCHDOG. Every morning at 7 (Ghana time = GMT) it reads what Meta and
@@ -68,11 +78,11 @@ async function gatherMeta(today: string): Promise<WatchInput["meta"]> {
   const [report, account, ads] = await Promise.all([
     fetchMetaReport(config, shiftDay(today, -14), yesterday),
     metaGet<{ account_status?: number }>(config, act, { fields: "account_status" }).catch((e: Error) => e),
-    metaGet<{ data?: Array<{ name?: string; effective_status?: string; ad_review_feedback?: { global?: Record<string, string> } }> }>(
-      config,
-      `${act}/ads`,
-      { fields: "name,effective_status,ad_review_feedback", effective_status: JSON.stringify(["DISAPPROVED", "WITH_ISSUES"]), limit: "50" }
-    ).catch((e: Error) => e),
+    metaGet<{ data?: ProblemAdRow[] }>(config, `${act}/ads`, {
+      fields: "name,effective_status,configured_status,created_time,ad_review_feedback,adset{status},campaign{status}",
+      effective_status: JSON.stringify(["DISAPPROVED", "WITH_ISSUES"]),
+      limit: "200",
+    }).catch((e: Error) => e),
   ]);
 
   const errors: string[] = [];
@@ -115,14 +125,9 @@ async function gatherMeta(today: string): Promise<WatchInput["meta"]> {
     last7,
     prev7: sum(0, n - 7),
     campaigns: r.campaigns.map((c) => ({ name: c.name, status: c.status, stopTime: c.stopTime, dailyBudget: c.dailyBudget })),
-    problemAds:
-      ads instanceof Error
-        ? []
-        : (ads.data ?? []).map((a) => ({
-            name: a.name ?? "Unnamed advert",
-            status: a.effective_status ?? "",
-            reason: Object.values(a.ad_review_feedback?.global ?? {})[0],
-          })),
+    // Only what is still switched on: the ads manager switches a rejected advert off and replaces it, and
+    // tells Niko itself when Meta keeps refusing an ad set's adverts.
+    problemAds: ads instanceof Error ? [] : unhandledProblemAds(ads.data ?? [], Date.now()),
   };
   return meta;
 }
@@ -220,7 +225,9 @@ async function gatherPilot(): Promise<PilotWatch> {
         ? `ad switched off in ${c.adsetName} (${c.reason.replace(/\.$/, "")})`
         : c.kind === "keep running"
           ? `${c.adsetName} keeps running past its end date`
-          : `${c.name} diaspora tried as a new ad set`;
+          : c.kind === "stop set"
+            ? `${c.adsetName} switched off: Meta kept rejecting its ads`
+            : `${c.name} diaspora tried as a new ad set`;
   return {
     mode: settings.mode === "dry" ? "dry" : toggle.paused ? "paused" : "on",
     ranAt: run?.ranAt ?? null,

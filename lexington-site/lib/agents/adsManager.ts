@@ -2,6 +2,7 @@ import "server-only";
 
 import { randomUUID } from "node:crypto";
 
+import { notifyOwner } from "@/lib/alerts/notify";
 import { claudeConfigured, writeWithClaude } from "@/lib/ai/claude";
 import { leadsOf, metaConfig, type MetaConfig } from "@/lib/ads/meta";
 import { MetaError, metaGraph } from "@/lib/ads/metaGraph";
@@ -46,6 +47,8 @@ import { listLeadForms } from "./metaLeads";
  * - switches off ads that spend without real leads, ads Meta rejected, and ads quoting an offer
  *   that has ended (a 00:10 run catches those the night the offer ends);
  * - keeps ad sets running past their end date once they have ads without the offer;
+ * - switches off an ad set whose new ads Meta keeps rejecting, and tells Niko once (3 Nov 2026: the UK
+ *   ads were rejected as loans, and it made four new ones every day for eleven days);
  * - tries the UK and Canada once each, as a new ad set in a housing-ad campaign.
  * It never touches budgets (the autopilot does) and it stops when the autopilot is paused or
  * ADS_PILOT is off; in trial mode (dry) it only works out what it would do.
@@ -60,7 +63,7 @@ const newKey = () => randomUUID().replace(/-/g, "").slice(0, 12);
 export interface ManagerChange {
   _key: string;
   day: string;
-  kind: "new ad" | "pause" | "keep running" | "new market";
+  kind: "new ad" | "pause" | "keep running" | "new market" | "stop set";
   adsetId: string;
   adsetName: string;
   adId?: string;
@@ -100,6 +103,8 @@ export interface ManagerRun {
   experiments?: Experiment[];
   lastNew?: Array<{ _key: string; id: string; day: string }>;
   marketsTried?: string[];
+  /** Ad sets switched off because Meta kept rejecting their ads, with the day. */
+  stopped?: Array<{ _key: string; id: string; day: string }>;
   recent?: ManagerChange[];
 }
 
@@ -244,6 +249,8 @@ async function readAccount(config: MetaConfig, nowMs: number): Promise<Account> 
         name: a.name ?? "Ad",
         adsetId: a.adset_id ?? "",
         status: a.effective_status === "DISAPPROVED" ? "rejected" : a.status === "ACTIVE" ? "live" : "paused",
+        // A rejected ad the manager has switched off shows "WITH_ISSUES": still a refusal, for counting them.
+        problem: a.effective_status === "DISAPPROVED" || a.effective_status === "WITH_ISSUES",
         text,
         tag: readTag(a.name ?? ""),
         last14: { spend: num(s?.spend), leads: leadsOf(s?.actions).leads, frequency: num(s?.frequency) },
@@ -528,6 +535,7 @@ export async function runAdsManager(opts: { mode?: "full" | "guard"; nowMs?: num
     experiments: previous?.experiments ?? [],
     lastNew: Object.fromEntries((previous?.lastNew ?? []).map((m) => [m.id, m.day])) as Record<string, string>,
     marketsTried: previous?.marketsTried ?? [],
+    stopped: Object.fromEntries((previous?.stopped ?? []).map((m) => [m.id, m.day])) as Record<string, string>,
   };
   const save = async (today: string) => {
     const run: ManagerRun = {
@@ -542,6 +550,7 @@ export async function runAdsManager(opts: { mode?: "full" | "guard"; nowMs?: num
       experiments: keep.experiments.slice(-120),
       lastNew: Object.entries(keep.lastNew).map(([id, day]) => ({ _key: newKey(), id, day })),
       marketsTried: keep.marketsTried,
+      stopped: Object.entries(keep.stopped).map(([id, day]) => ({ _key: newKey(), id, day })),
       recent: [...changes.filter((c) => c.done), ...(previous?.recent ?? [])].slice(0, 60),
     };
     await buyers.createOrReplace(run);
@@ -586,6 +595,7 @@ export async function runAdsManager(opts: { mode?: "full" | "guard"; nowMs?: num
       markets: ["ghana", "us", "uk", "canada"],
       marketsTried: keep.marketsTried as Market[],
       prices: pack.vat.on ? [...allowedAmounts(pack)] : undefined,
+      stoppedOn: keep.stopped,
     });
     if (mode === "guard") {
       plan = {
@@ -599,6 +609,7 @@ export async function runAdsManager(opts: { mode?: "full" | "guard"; nowMs?: num
     const setName = (id: string) => account.adsets.find((s) => s.id === id)?.name ?? "Ad set";
 
     if (mode !== "on" && mode !== "guard") {
+      for (const s of plan.stop) changes.push({ _key: newKey(), day: today, kind: "stop set", adsetId: s.adsetId, adsetName: s.name, name: s.name, reason: s.reason, done: false });
       for (const c of plan.create) changes.push({ _key: newKey(), day: today, kind: "new ad", adsetId: c.adsetId, adsetName: setName(c.adsetId), name: `${c.angle} ad`, reason: c.reason, done: false });
       for (const p of plan.pause) changes.push({ _key: newKey(), day: today, kind: "pause", adsetId: p.adsetId, adsetName: setName(p.adsetId), adId: p.adId, name: p.name, reason: p.reason, done: false });
       for (const o of plan.ongoing) changes.push({ _key: newKey(), day: today, kind: "keep running", adsetId: o.adsetId, adsetName: o.name, name: o.name, reason: o.reason, done: false });
@@ -627,6 +638,34 @@ export async function runAdsManager(opts: { mode?: "full" | "guard"; nowMs?: num
       }
       return error instanceof Error ? error.message : "Meta refused it.";
     };
+
+    // 0. Ad sets Meta keeps refusing: switched off first, and Niko is told once (it is then paused, so
+    // the next run doesn't look at it again; one he switches back on starts afresh from this day).
+    for (const s of plan.stop) {
+      const base = { _key: newKey(), day: today, kind: "stop set" as const, adsetId: s.adsetId, adsetName: s.name, name: s.name, reason: s.reason };
+      if (blocked) {
+        changes.push({ ...base, done: false, error: blocked });
+        continue;
+      }
+      try {
+        await metaGraph(config, "POST", s.adsetId, { status: "PAUSED" });
+        changes.push({ ...base, done: true });
+        keep.stopped[s.adsetId] = today;
+        // Not urgent: the harm is already stopped; he decides later whether to fix the reason and bring it back.
+        await notifyOwner({
+          kind: "ads",
+          title: `Facebook kept rejecting the adverts in "${s.name}": switched it off`,
+          lines: [
+            s.reason,
+            "Facebook's reason for each one is in Meta Business Suite > Account quality > Your rejected ads.",
+            "To bring it back: fix the reason, then switch the ad set on in Ads Manager. It starts afresh.",
+          ],
+          links: [{ label: "The ads", url: "/admin/dashboard?view=ads" }],
+        });
+      } catch (error) {
+        changes.push({ ...base, done: false, error: stopIfNotAllowed(error) });
+      }
+    }
 
     // 1. New ads first, so no ad set is left empty.
     for (const item of plan.create) {

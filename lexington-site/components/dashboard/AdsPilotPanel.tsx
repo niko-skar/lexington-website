@@ -40,6 +40,7 @@ const MANAGER_TAG: Record<ManagerChange["kind"], string> = {
   pause: "Off",
   "keep running": "Runs on",
   "new market": "Market",
+  "stop set": "Stopped",
 };
 
 function ManagerItem({ c, live }: { c: ManagerChange; live: boolean }) {
@@ -48,7 +49,9 @@ function ManagerItem({ c, live }: { c: ManagerChange; live: boolean }) {
       <span className={c.done ? styles.levelOk : live ? styles.levelAct : styles.levelWatch}>
         {c.done ? MANAGER_TAG[c.kind] : live ? "Not done" : "Would do"}
       </span>
-      <span>{c.kind === "new market" ? `${c.name}: a new ad set` : `${c.adsetName}: ${c.name}`}</span>
+      <span>
+        {c.kind === "new market" ? `${c.name}: a new ad set` : c.kind === "stop set" ? `${c.adsetName}: switched off` : `${c.adsetName}: ${c.name}`}
+      </span>
       <span className={styles.watchDetail}>
         {c.done ? `${c.day.slice(8, 10)}/${c.day.slice(5, 7)} · ` : ""}
         {c.words ? `“${c.words}” ` : ""}
