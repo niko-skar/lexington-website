@@ -13,6 +13,8 @@ export const MOVE_PREFIX = `storemove-${TAG}-`;
 export const TOOL_PREFIX = `storetool-${TAG}-`;
 export const TOOL_OUT_PREFIX = `toolout-${TAG}-`;
 export const CHECK_PREFIX = `storecheck-${TAG}-`;
+/** A tool (or some of one) broken or needing repair: to send out, at the repairer, then fixed or written off (3 Nov 2026). */
+export const TOOL_REPAIR_PREFIX = `toolrepair-${TAG}-`;
 /** The running numbers behind the expense refs (EXP-0001, IN-0001). */
 export const EXPENSE_COUNTER_ID = `expensecounter-${TAG}`;
 /** Deleted entries still to be marked "Deleted" on the Google Sheet. */

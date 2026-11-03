@@ -25,6 +25,7 @@ import {
   type StoreItem,
   type StoreTool,
   type ToolOut,
+  type ToolRepair,
   type Trade,
 } from "@/lib/store/shared";
 import { photoAt, type TodoMe } from "@/lib/todo/shared";
@@ -36,6 +37,7 @@ import site from "./Site.module.css";
 import { SiteHeader, SiteMenu } from "./SiteChrome";
 import { CameraIcon, EntryPhoto, minutesSince, PhotoField, time, TradeChips, TradeFilter } from "./StoreBits";
 import { CheckSheet, CheckStrip, DaysSheet } from "./StoreChecks";
+import { RepairSheet, repairListText, ReportSheet } from "./StoreRepairs";
 import { ToCheckSheet, toCheckOf } from "./StoreToCheck";
 import { EditToolSheet, isLate, NewToolSheet, outByTool, ReturnSheet, TakeOutSheet, ToolSheet, ToolsTab } from "./StoreTools";
 import styles from "./Todo.module.css";
@@ -53,6 +55,8 @@ type Sheet =
   | { kind: "newTool" }
   | { kind: "editTool"; toolId: string; back?: "toCheck" }
   | { kind: "toCheck" }
+  | { kind: "repair"; id: string; back?: string }
+  | { kind: "report"; toolId: string }
   | { kind: "check"; check: CheckKind }
   | { kind: "days" };
 type ToastData = { text: string; tone?: "error"; onUndo?: () => void };
@@ -142,6 +146,7 @@ export function StoreApp({
   const [history, setHistory] = useState(initial?.history ?? []);
   const [tools, setTools] = useState<StoreTool[]>(initial?.tools ?? []);
   const [toolOuts, setToolOuts] = useState<ToolOut[]>(initial?.toolOuts ?? []);
+  const [repairs, setRepairs] = useState<ToolRepair[]>(initial?.repairs ?? []);
   const [checks, setChecks] = useState<StoreCheck[]>(initial?.checks ?? []);
   // Opening and closing photos from before the month the page keeps fresh (asked for in the days list).
   const [olderChecks, setOlderChecks] = useState<StoreCheck[]>([]);
@@ -200,6 +205,7 @@ export function StoreApp({
       setHistory(data.history);
       setTools(data.tools ?? []);
       setToolOuts(data.toolOuts ?? []);
+      setRepairs(data.repairs ?? []);
       setChecks(data.checks ?? []);
     } catch {
       setOffline(true);
@@ -243,6 +249,15 @@ export function StoreApp({
       return [...kept, ...outs].sort((a, b) => b.at.localeCompare(a.at));
     });
   }, []);
+  /** Repairs as the website has them now: these (new or changed), and for `tools`, every one of theirs. */
+  const applyRepairs = useCallback((list: ToolRepair[], opts: { tools?: string[]; removed?: string } = {}) => {
+    localAt.current = Date.now();
+    setRepairs((now) => {
+      const fresh = new Set(list.map((r) => r.id));
+      const kept = now.filter((r) => !fresh.has(r.id) && r.id !== opts.removed && !opts.tools?.includes(r.toolId));
+      return [...list, ...kept].sort((a, b) => b.at.localeCompare(a.at));
+    });
+  }, []);
   const applyTool = useCallback((tool: StoreTool | null) => {
     if (!tool) return;
     localAt.current = Date.now();
@@ -281,11 +296,12 @@ export function StoreApp({
         applyOuts(after ? [after] : [], after ? undefined : out.id);
         applyTool(tool);
         showToast({ text: "Out again" });
+        void refresh();
       } catch (e) {
         failed(e);
       }
     },
-    [applyOuts, applyTool, showToast, failed]
+    [applyOuts, applyTool, showToast, failed, refresh]
   );
   const markLost = useCallback(
     async (out: ToolOut) => {
@@ -434,6 +450,9 @@ export function StoreApp({
   const canUndo = (e: StoreEntry) => e.kind !== "bought" && (isAdmin || (e.mine && minutesSince(e.at) < UNDO_MINUTES));
   const current = sheet && (sheet.kind === "item" || sheet.kind === "move" || sheet.kind === "edit") ? byId.get(sheet.id) : undefined;
   const currentTool = sheet && (sheet.kind === "tool" || sheet.kind === "editTool") ? toolById.get(sheet.toolId) : undefined;
+  const currentRepair = sheet?.kind === "repair" ? repairs.find((r) => r.id === sheet.id) : undefined;
+  const reportTool = sheet?.kind === "report" ? toolById.get(sheet.toolId) : undefined;
+  const repairBack = sheet?.kind === "repair" && sheet.back ? sheet.back : null;
 
   const orderText = () =>
     [
@@ -444,6 +463,14 @@ export function StoreApp({
         ...list.map((i) => `• ${i.name}: ${i.reorderQty ? qtyUnit(i.reorderQty, i.unit) : "how many?"} (${qtyUnit(Math.max(0, i.level), i.unit)} left)`),
       ]),
     ].join("\n");
+  const copyRepairs = async () => {
+    try {
+      await navigator.clipboard.writeText(repairListText(repairs, toolName));
+      showToast({ text: "Repair list copied: paste it in WhatsApp" });
+    } catch {
+      showToast({ text: "Couldn't copy here. Long-press the list instead.", tone: "error" });
+    }
+  };
   const copyOrder = async () => {
     try {
       await navigator.clipboard.writeText(orderText());
@@ -536,6 +563,9 @@ export function StoreApp({
             me={me}
             tools={tools}
             outs={toolOuts}
+            repairs={repairs}
+            onOpenRepair={(id) => setSheet({ kind: "repair", id })}
+            onCopyRepairs={() => void copyRepairs()}
             onOpenTool={(toolId) => setSheet({ kind: "tool", toolId })}
             onTakeOut={(first) => setSheet({ kind: "takeOut", first })}
             onReturn={(outIds) => setSheet({ kind: "return", outIds })}
@@ -782,6 +812,9 @@ export function StoreApp({
           tool={currentTool}
           me={me}
           outs={toolOuts}
+          repairs={repairs}
+          onReport={() => setSheet({ kind: "report", toolId: currentTool.id })}
+          onOpenRepair={(id) => setSheet({ kind: "repair", id, back: currentTool.id })}
           onClose={() => setSheet(null)}
           onTakeOut={() => setSheet({ kind: "takeOut", first: currentTool.id, back: currentTool.id })}
           onReturn={(outIds) => setSheet({ kind: "return", outIds, back: currentTool.id })}
@@ -793,6 +826,7 @@ export function StoreApp({
           onChanged={(tool, text) => {
             applyTool(tool);
             showToast({ text });
+            void refresh();
           }}
           onLost={(out) => void markLost(out)}
           onOpenPhoto={setLightbox}
@@ -804,6 +838,7 @@ export function StoreApp({
         <TakeOutSheet
           tools={tools}
           outs={toolOuts}
+          repairs={repairs}
           people={people}
           first={sheet.first}
           onClose={() => setSheet(sheet.back ? { kind: "tool", toolId: sheet.back } : null)}
@@ -829,9 +864,10 @@ export function StoreApp({
           name={toolName}
           conditionOf={(id) => toolById.get(id)?.condition ?? null}
           onClose={() => setSheet(sheet.back ? { kind: "tool", toolId: sheet.back } : null)}
-          onSaved={(outs, changedTools) => {
+          onSaved={(outs, changedTools, toolRepairs) => {
             applyOuts(outs);
             for (const tool of changedTools) applyTool(tool);
+            applyRepairs(toolRepairs, { tools: changedTools.map((t) => t.id) });
             setSheet(sheet.back ? { kind: "tool", toolId: sheet.back } : null);
             // What this phone just recorded: the newest return on each.
             const made = outs.map((o) => ({ out: o, ret: o.returns[o.returns.length - 1] })).filter((m) => m.ret);
@@ -871,6 +907,42 @@ export function StoreApp({
             applyTool(tool);
             setSheet(sheet.back ? { kind: "toCheck" } : tool.retired ? null : { kind: "tool", toolId: tool.id });
             showToast({ text: sheet.back ? `${tool.name}: checked` : tool.retired ? `${tool.name}: not used any more` : "Saved" });
+          }}
+        />
+      )}
+      {currentRepair && (
+        <RepairSheet
+          key={currentRepair.id}
+          repair={currentRepair}
+          tool={toolById.get(currentRepair.toolId) ?? null}
+          me={me}
+          onClose={() => setSheet(repairBack ? { kind: "tool", toolId: repairBack } : null)}
+          onSaved={(saved, tool, text) => {
+            if (saved) applyRepairs([saved]);
+            applyTool(tool);
+            setSheet(repairBack ? { kind: "tool", toolId: repairBack } : null);
+            showToast({ text });
+          }}
+          onDeleted={(id, tool) => {
+            applyRepairs([], { removed: id });
+            applyTool(tool);
+            setSheet(repairBack ? { kind: "tool", toolId: repairBack } : null);
+            showToast({ text: "Taken off the repair list" });
+          }}
+          onOpenPhoto={setLightbox}
+        />
+      )}
+      {reportTool && (
+        <ReportSheet
+          key={reportTool.id}
+          tool={reportTool}
+          onRepair={repairs.filter((r) => r.toolId === reportTool.id && (r.state === "waiting" || r.state === "away")).reduce((n, r) => n + r.qty, 0)}
+          onClose={() => setSheet({ kind: "tool", toolId: reportTool.id })}
+          onSaved={(repair, saved) => {
+            applyRepairs([repair]);
+            applyTool(saved);
+            setSheet({ kind: "tool", toolId: reportTool.id });
+            showToast({ text: `On the repair list: ${repair.qty > 1 ? `${repair.qty} x ` : ""}${reportTool.name}` });
           }}
         />
       )}

@@ -186,6 +186,57 @@ export interface ToolOut {
 export const stillOut = (out: ToolOut) => Math.max(0, out.qty - out.returns.reduce((n, r) => n + r.qty, 0));
 export const toolWord = (n: number) => (Math.abs(n) === 1 ? "tool" : "tools");
 
+/* ---------- tools to fix (Niko, 3 Nov 2026) ---------- */
+// "make a place for broken tools or needs repair to show so i know at any one time what needs to be sent out to be
+// fixed". Each breakage is its own record with how many (one broken shovel of ten says one): made when a tool comes
+// back broken or needing repair, or when it's said on the tool; then sent out to be fixed, and back fixed (or, the
+// office, written off).
+
+export type RepairState = "waiting" | "away" | "fixed" | "scrapped";
+export const MAX_REPAIRER = 60;
+
+export interface ToolRepair {
+  id: string;
+  toolId: string;
+  qty: number;
+  condition: "repair" | "broken";
+  /** What's wrong: the note it came back with, or what was typed when it was reported. */
+  note: string;
+  photoUrl: string | null;
+  /** Who had it when it came back that way, or null (said on the tool). */
+  person: string | null;
+  /** Reported: when, by whom. */
+  at: string;
+  by: string;
+  state: RepairState;
+  /** Sent out to be fixed: when, to whom (a fundi, a shop), by whom. */
+  sentAt: string | null;
+  sentTo: string;
+  sentBy: string | null;
+  /** Back fixed, or written off: when, by whom. */
+  closedAt: string | null;
+  closedBy: string | null;
+  /** Reported from this login: it can take it off for a few minutes (a mistake). */
+  mine: boolean;
+}
+
+/** Still to be dealt with: waiting to go out, or at the repairer. */
+export const isOpenRepair = (r: Pick<ToolRepair, "state">) => r.state === "waiting" || r.state === "away";
+
+/** Per tool: how many wait to go out to be fixed, and how many are at the repairer. */
+export function repairsByTool(repairs: readonly ToolRepair[]): Map<string, { waiting: number; away: number; worst: "repair" | "broken" }> {
+  const map = new Map<string, { waiting: number; away: number; worst: "repair" | "broken" }>();
+  for (const r of repairs) {
+    if (!isOpenRepair(r)) continue;
+    const now = map.get(r.toolId) ?? { waiting: 0, away: 0, worst: "repair" as const };
+    if (r.state === "waiting") now.waiting += r.qty;
+    else now.away += r.qty;
+    if (r.condition === "broken") now.worst = "broken";
+    map.set(r.toolId, now);
+  }
+  return map;
+}
+
 /* ---------- opening and closing the store room ---------- */
 // Niko, 23 Oct 2026: "daily pictures of opening store room and closing store room". Taken there and
 // then with the camera; closing also notes how many tools were still out.
@@ -206,4 +257,4 @@ export interface StoreCheck {
 }
 
 /** The whole store room as the page gets it. */
-export type StoreData = { items: StoreItem[]; history: StoreEntry[]; tools: StoreTool[]; toolOuts: ToolOut[]; checks: StoreCheck[] };
+export type StoreData = { items: StoreItem[]; history: StoreEntry[]; tools: StoreTool[]; toolOuts: ToolOut[]; repairs: ToolRepair[]; checks: StoreCheck[] };

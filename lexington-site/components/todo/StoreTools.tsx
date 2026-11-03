@@ -10,7 +10,9 @@ import {
   MAX_PERSON,
   MAX_TOOL_COUNT,
   MAX_TOOL_NAME,
+  isOpenRepair,
   needsFixing,
+  repairsByTool,
   stillOut,
   toolWord,
   TRADE_NAMES,
@@ -18,6 +20,7 @@ import {
   type Condition,
   type StoreTool,
   type ToolOut,
+  type ToolRepair,
   type ToolReturn,
   type Trade,
 } from "@/lib/store/shared";
@@ -25,6 +28,7 @@ import { photoAt, type TodoMe } from "@/lib/todo/shared";
 import { errorText, send } from "./api";
 import site from "./Site.module.css";
 import { CameraIcon, ConditionChips, dayLabel, EntryPhoto, ghanaTime, minutesSince, PhotoField, Stepper, TradeChips, TradeFilter } from "./StoreBits";
+import { RepairsSection } from "./StoreRepairs";
 import styles from "./Todo.module.css";
 import { useUploadSlot } from "./useUploadSlot";
 
@@ -138,6 +142,9 @@ export function ToolsTab({
   me,
   tools,
   outs,
+  repairs,
+  onOpenRepair,
+  onCopyRepairs,
   onOpenTool,
   onTakeOut,
   onReturn,
@@ -149,6 +156,10 @@ export function ToolsTab({
   me: TodoMe;
   tools: StoreTool[];
   outs: ToolOut[];
+  /** Broken or needing repair (StoreRepairs.tsx): to send out, at the repairer. */
+  repairs: ToolRepair[];
+  onOpenRepair: (id: string) => void;
+  onCopyRepairs: () => void;
   onOpenTool: (id: string) => void;
   onTakeOut: (toolId?: string) => void;
   onReturn: (outIds: string[]) => void;
@@ -164,6 +175,7 @@ export function ToolsTab({
   const [armed, setArmed] = useState<string | null>(null);
   const byId = useMemo(() => new Map(tools.map((t) => [t.id, t])), [tools]);
   const out = useMemo(() => outByTool(outs), [outs]);
+  const fixing = useMemo(() => repairsByTool(repairs), [repairs]);
   const name = (id: string) => byId.get(id)?.name ?? "A tool no longer on the list";
 
   // Who has what now, people with something out since an earlier day first.
@@ -206,18 +218,21 @@ export function ToolsTab({
 
   const toolRow = (t: StoreTool) => {
     const o = out.get(t.id) ?? 0;
-    const cond = shownCondition(t.condition);
+    const fix = fixing.get(t.id);
+    const away = fix?.away ?? 0;
+    // On the repair list: that says how many (the tool's own "Broken" would read as all of them).
+    const cond = fix ? null : shownCondition(t.condition);
     const tradeName = tradeWords(t);
-    const inStore = t.count - o;
+    const inStore = t.count - o - away;
     const who = holders.get(t.id) ?? [];
     const status =
-      o === 0
+      o === 0 && away === 0
         ? t.count === 0
           ? "None at the moment"
           : `All ${t.count} in the store`
         : inStore < 0
-          ? `${o} out: more than we have, check the number`
-          : `${o} out: ${who.slice(0, 3).join(", ")}${who.length > 3 ? "…" : ""}`;
+          ? `${o} out${away ? `, ${away} at the repairer` : ""}: more than we have, check the number`
+          : [o ? `${o} out: ${who.slice(0, 3).join(", ")}${who.length > 3 ? "…" : ""}` : "", away ? `${away} at the repairer` : ""].filter(Boolean).join(" · ");
     return (
       <button key={t.id} type="button" className={site.itemRow} onClick={() => onOpenTool(t.id)}>
         {t.photoUrl ? (
@@ -231,11 +246,18 @@ export function ToolsTab({
         <span className={site.itemName}>
           {t.name}
           <small className={inStore < 0 ? site.flagBad : o > 0 ? site.flagLow : undefined}>{status}</small>
-          {(tradeName || cond) && (
+          {(tradeName || cond || fix) && (
             <small>
               {tradeName}
-              {tradeName && cond ? " · " : ""}
-              {cond && <span className={needsFixing(cond) ? site.condBad : site.condWorn}>{CONDITION_NAMES[cond]}</span>}
+              {tradeName && (cond || fix) ? " · " : ""}
+              {fix ? (
+                <span className={fix.worst === "broken" ? site.condBad : site.condWorn}>
+                  {CONDITION_NAMES[fix.worst]}
+                  {fix.waiting ? `: ${fix.waiting} to send out` : ""}
+                </span>
+              ) : (
+                cond && <span className={needsFixing(cond) ? site.condBad : site.condWorn}>{CONDITION_NAMES[cond]}</span>
+              )}
             </small>
           )}
         </span>
@@ -260,6 +282,8 @@ export function ToolsTab({
       {tools.length === 0 && (
         <p className={styles.empty}>No tools on the list yet. Tap + New tool for each kind of tool in the store, with a photo and how many there are.</p>
       )}
+
+      <RepairsSection repairs={repairs} tools={tools} onOpen={onOpenRepair} onCopy={onCopyRepairs} />
 
       {people.length > 0 && (
         <section className={styles.group}>
@@ -351,6 +375,9 @@ export function ToolSheet({
   tool,
   me,
   outs,
+  repairs,
+  onReport,
+  onOpenRepair,
   onClose,
   onTakeOut,
   onReturn,
@@ -366,6 +393,10 @@ export function ToolSheet({
   me: TodoMe;
   /** All the take-outs the page has (this tool's are picked out). */
   outs: ToolOut[];
+  /** All the page's repairs (this tool's open ones are picked out). */
+  repairs: ToolRepair[];
+  onReport: () => void;
+  onOpenRepair: (id: string) => void;
   onClose: () => void;
   onTakeOut: () => void;
   onReturn: (outIds: string[]) => void;
@@ -400,7 +431,10 @@ export function ToolSheet({
   };
   const open = mine.filter((o) => !o.closedAt && stillOut(o) > 0);
   const outNow = open.reduce((n, o) => n + stillOut(o), 0);
-  const inStore = tool.count - outNow;
+  const toFix = repairs.filter((r) => r.toolId === tool.id && isOpenRepair(r));
+  const onRepair = toFix.reduce((n, r) => n + r.qty, 0);
+  const away = toFix.filter((r) => r.state === "away").reduce((n, r) => n + r.qty, 0);
+  const inStore = tool.count - outNow - away;
   // The page's own (fresh) take-outs over the whole history, which is asked for again when one
   // is added or taken off the record.
   const entries = useMemo(() => {
@@ -474,7 +508,7 @@ export function ToolSheet({
               {inStore} <small>in the store</small>
             </p>
             <p className={styles.sheetNote}>
-              {tool.count} in all · {outNow} out{tool.retired ? " · not used any more" : ""}
+              {tool.count} in all · {outNow} out{away ? ` · ${away} at the repairer` : ""}{tool.retired ? " · not used any more" : ""}
               {tradeWords(tool) ? ` · for the ${tradeWords(tool).toLowerCase()}` : ""}
             </p>
             {tool.photoUrl && (
@@ -487,6 +521,28 @@ export function ToolSheet({
         <input id="tool-camera" data-picker="tool-camera" className={styles.hiddenInput} type="file" accept="image/*" capture="environment" onChange={(e) => void pickPhoto(e)} />
         {inStore < 0 && <p className={site.gapBad}>More out than we have: something came back without being recorded, or the number is wrong.</p>}
         <ConditionChips value={tool.condition} onChange={(c) => void setCondition(c)} label={tool.condition ? "Condition" : "Condition: not said yet"} disabled={condBusy} />
+        {toFix.length > 0 && (
+          <div className={site.sheetEntries} aria-label="On the repair list">
+            {toFix.map((r) => (
+              <button key={r.id} type="button" className={site.repairLine} onClick={() => onOpenRepair(r.id)}>
+                <span className={r.condition === "broken" ? site.condBad : site.condWorn}>
+                  {CONDITION_NAMES[r.condition]}
+                  {r.qty > 1 ? ` ×${r.qty}` : ""}
+                </span>
+                <span>
+                  {r.state === "away" ? `at ${r.sentTo || "the repairer"}` : "to send out"}
+                  {r.note ? ` · ${r.note}` : ""}
+                </span>
+                <span aria-hidden="true">›</span>
+              </button>
+            ))}
+          </div>
+        )}
+        {!tool.retired && tool.count - onRepair > 0 && (
+          <button type="button" className={site.repairReport} onClick={onReport}>
+            Report broken or needs repair
+          </button>
+        )}
 
         <button type="button" className={site.bigAction} onClick={onTakeOut} disabled={tool.retired}>
           Take out
@@ -554,6 +610,7 @@ export function ToolSheet({
 export function TakeOutSheet({
   tools,
   outs,
+  repairs = [],
   people,
   first,
   onClose,
@@ -562,6 +619,7 @@ export function TakeOutSheet({
 }: {
   tools: StoreTool[];
   outs: ToolOut[];
+  repairs?: ToolRepair[];
   /** Names used lately, offered as buttons. */
   people: string[];
   /** The tool it was opened from, already picked. */
@@ -578,6 +636,7 @@ export function TakeOutSheet({
   const [error, setError] = useState("");
   const { slot, start, clear, settled } = useUploadSlot("/api/store/photo");
   const out = useMemo(() => outByTool(outs), [outs]);
+  const fixing = useMemo(() => repairsByTool(repairs), [repairs]);
   const q = find.trim().toLowerCase();
   // What's picked stays at the top; the rest in order, narrowed by the search.
   const list = [...tools.filter((t) => picked[t.id]), ...tools.filter((t) => !picked[t.id] && !t.retired && (!q || t.name.toLowerCase().includes(q)))];
@@ -661,7 +720,8 @@ export function TakeOutSheet({
         )}
         <div className={site.pickList}>
           {list.map((t) => {
-            const inStore = t.count - (out.get(t.id) ?? 0);
+            const fix = fixing.get(t.id);
+            const inStore = t.count - (out.get(t.id) ?? 0) - (fix ? fix.waiting + fix.away : 0);
             const n = picked[t.id];
             return (
               <div key={t.id} className={n ? site.pickRowOn : site.pickRow}>
@@ -669,7 +729,11 @@ export function TakeOutSheet({
                   {t.name}
                   <small>
                     {inStore <= 0 ? "None in the store by the record" : `${inStore} in the store`}
-                    {needsFixing(t.condition) && <span className={site.condBad}> · {CONDITION_NAMES[t.condition!]}</span>}
+                    {fix ? (
+                      <span className={site.condBad}> · {fix.waiting + fix.away} to fix</span>
+                    ) : (
+                      needsFixing(t.condition) && <span className={site.condBad}> · {CONDITION_NAMES[t.condition!]}</span>
+                    )}
                   </small>
                 </span>
                 {n ? (
@@ -754,16 +818,17 @@ export function ReturnSheet({
   /** The state each tool was in when it went out. */
   conditionOf: (toolId: string) => Condition | null;
   onClose: () => void;
-  onSaved: (outs: ToolOut[], tools: StoreTool[]) => void;
+  onSaved: (outs: ToolOut[], tools: StoreTool[], repairs: ToolRepair[]) => void;
   onSignedOut: () => void;
 }) {
   const [back, setBack] = useState<Record<string, number>>(() => Object.fromEntries(lines.map((o) => [o.id, stillOut(o)])));
-  // Each starts at the state it went out in (a new one comes back good at best).
+  // Each starts at the state it went out in (a new one comes back good at best). A "Broken" or "Needs repair" on the
+  // tool is about the ones on the repair list, not these: they start good, and are said broken when they are.
   const [cond, setCond] = useState<Record<string, Condition>>(() =>
     Object.fromEntries(
       lines.map((o) => {
         const was = conditionOf(o.toolId);
-        return [o.id, was && was !== "new" ? was : "good"];
+        return [o.id, was === "worn" ? "worn" : "good"];
       })
     )
   );
@@ -784,13 +849,13 @@ export function ReturnSheet({
     try {
       const photo = await settled();
       if (!photo) return setError("The photo didn't upload. Take it again.");
-      const { outs, tools } = await send<{ outs: ToolOut[]; tools: StoreTool[] }>("/api/store/tools/back", "POST", {
+      const { outs, tools, repairs } = await send<{ outs: ToolOut[]; tools: StoreTool[]; repairs?: ToolRepair[] }>("/api/store/tools/back", "POST", {
         returns: ticked.map((t) => ({ ...t, condition: cond[t.outId] ?? "good" })),
         note: note.trim(),
         photoId: photo.id,
       });
       clear(true);
-      onSaved(outs, tools ?? []);
+      onSaved(outs, tools ?? [], repairs ?? []);
     } catch (e) {
       if ((e as { status?: number }).status === 401) onSignedOut();
       setError(errorText(e));

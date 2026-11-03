@@ -385,7 +385,7 @@ async function landedPhoto(ticket: string): Promise<{ id: string; url: string } 
 }
 
 // Every kind of record a phone photo can belong to (the waybills wait for theirs: they're read from it).
-const PHOTO_TYPES = ["siteTask", "storeItem", "storeMove", "storeTool", "toolOut", "storeCheck", "supplierBill"];
+const PHOTO_TYPES = ["siteTask", "storeItem", "storeMove", "storeTool", "toolOut", "storeCheck", "supplierBill", "toolRepair"];
 
 /** A photo that landed after its record was saved: it takes the place of the record's marker. Never throws. */
 export async function attachPending(ticket: string): Promise<void> {

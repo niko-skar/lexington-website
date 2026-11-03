@@ -4,7 +4,7 @@ import { randomBytes } from "node:crypto";
 
 import { notifyOwner } from "@/lib/alerts/notify";
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
-import { isId, newId, TOOL_OUT_PREFIX, TOOL_PREFIX } from "@/lib/site/ids";
+import { isId, newId, TOOL_OUT_PREFIX, TOOL_PREFIX, TOOL_REPAIR_PREFIX } from "@/lib/site/ids";
 import { cleanPhotoRef, cleanText, dropPhoto, photoRef, TodoError } from "@/lib/todo/server";
 import type { TodoMe } from "@/lib/todo/shared";
 import { guessToolTrade } from "./categories";
@@ -12,16 +12,20 @@ import {
   CONDITION_NAMES,
   conditionAfter,
   isCondition,
+  isOpenRepair,
   isTrade,
   MAX_MOVE_NOTE,
   MAX_PERSON,
+  MAX_REPAIRER,
   MAX_TOOL_COUNT,
   MAX_TOOL_NAME,
   needsFixing,
   UNDO_MINUTES,
   type Condition,
+  type RepairState,
   type StoreTool,
   type ToolOut,
+  type ToolRepair,
   type ToolReturn,
   type Trade,
 } from "./shared";
@@ -49,6 +53,14 @@ export const OUT_FIELDS = `{
   }, [])
 }`;
 
+export const REPAIR_FIELDS = `{
+  "id": _id, toolId, qty, condition, "note": coalesce(note, ""), "photoUrl": photo.asset->url, "person": person,
+  at, "by": coalesce(by, ""), byId, "state": coalesce(state, "waiting"),
+  "sentAt": sentAt, "sentTo": coalesce(sentTo, ""), "sentBy": sentBy, "closedAt": closedAt, "closedBy": closedBy
+}`;
+export type RawRepair = Omit<ToolRepair, "mine"> & { byId?: string };
+export const toRepair = (me: TodoMe, { byId, ...r }: RawRepair): ToolRepair => ({ ...r, mine: !!byId && byId === me.id });
+
 type RawReturn = Omit<ToolReturn, "mine"> & { byId?: string };
 export type RawOut = Omit<ToolOut, "mine" | "returns"> & { byId?: string; returns: RawReturn[] };
 
@@ -64,6 +76,7 @@ export function toOut(me: TodoMe, { byId, returns, ...out }: RawOut): ToolOut {
 const key = (name: string) => name.trim().replace(/\s+/g, " ").toLowerCase();
 const GONE = "That tool isn't on the list any more.";
 const OUT_GONE = "That take-out isn't on the record any more. Refresh the page.";
+const REPAIR_GONE = "That isn't on the repair list any more. Refresh the page.";
 
 function cleanToolName(value: unknown) {
   const name = cleanText(value, MAX_TOOL_NAME, "name").replace(/\s+/g, " ");
@@ -136,6 +149,7 @@ export async function createTool(me: TodoMe, body: Record<string, unknown>): Pro
     createdAt: new Date().toISOString(),
     createdBy: me.name,
   });
+  if (condition && needsFixing(condition) && count > 0) await newRepair(me, { toolId: id, qty: count, condition, note: "", photoId: null, person: null });
   const tool = await getTool(id);
   if (!tool) throw new TodoError(502, "It was saved but couldn't be read back. Refresh the page.");
   return tool;
@@ -157,18 +171,36 @@ export async function setToolPhoto(id: string, value: unknown): Promise<StoreToo
 }
 
 /** The state a tool is in, set on the tool (repaired, or found broken). Anyone who uses the store. */
-export async function setToolCondition(id: string, value: unknown): Promise<StoreTool> {
+export async function setToolCondition(me: TodoMe, id: string, value: unknown): Promise<StoreTool> {
   if (!isId(TOOL_PREFIX, id)) throw new TodoError(404, GONE);
   const condition = cleanCondition(value);
   if (!condition) throw new TodoError(400, "Pick the state it's in.");
   const before = await getTool(id);
   if (!before) throw new TodoError(404, GONE);
   await getBuyersClient().patch(id).set({ condition }).commit();
+  await repairsFollow(me, before, condition);
   return { ...before, condition };
 }
 
+/**
+ * The state said on the tool, and its repair list: "Needs repair" or "Broken" puts one of it on the list (unless some
+ * of it is already); "Good" or "New" means what was on it is fixed.
+ */
+async function repairsFollow(me: TodoMe, tool: StoreTool, condition: Condition): Promise<void> {
+  const client = getBuyersClient();
+  const open = await client.fetch<string[]>(`*[_type == "toolRepair" && toolId == $id && state in ["waiting", "away"]]._id`, { id: tool.id });
+  if (needsFixing(condition) && open.length === 0 && tool.count > 0) {
+    await newRepair(me, { toolId: tool.id, qty: 1, condition, note: "", photoId: null, person: null });
+  } else if ((condition === "good" || condition === "new") && open.length) {
+    const at = new Date().toISOString();
+    const tx = client.transaction();
+    for (const id of open) tx.patch(id, (p) => p.set({ state: "fixed", closedAt: at, closedBy: me.name }));
+    await tx.commit();
+  }
+}
+
 /** The office: rename, how many we have, who uses it, the state it's in, or "not used any more". */
-export async function updateTool(id: string, body: Record<string, unknown>): Promise<StoreTool> {
+export async function updateTool(me: TodoMe, id: string, body: Record<string, unknown>): Promise<StoreTool> {
   if (!isId(TOOL_PREFIX, id)) throw new TodoError(404, GONE);
   const before = await getTool(id);
   if (!before) throw new TodoError(404, GONE);
@@ -202,23 +234,171 @@ export async function updateTool(id: string, body: Record<string, unknown>): Pro
   // The office looked at it (checked, or changed it): off "To check".
   const patch = getBuyersClient().patch(id).unset(["review"]);
   await (Object.keys(set).length ? patch.set(set) : patch).commit();
+  if (typeof set.condition === "string" && set.condition !== before.condition) await repairsFollow(me, before, set.condition as Condition);
   const tool = await getTool(id);
   if (!tool) throw new TodoError(404, GONE);
   return tool;
 }
 
-/** Everything that ever went out for one tool, newest first. */
-export async function toolHistory(me: TodoMe, id: string): Promise<{ tool: StoreTool; outs: ToolOut[] }> {
+/** Everything that ever went out for one tool, newest first, and every time it needed fixing. */
+export async function toolHistory(me: TodoMe, id: string): Promise<{ tool: StoreTool; outs: ToolOut[]; repairs: ToolRepair[] }> {
   if (!isId(TOOL_PREFIX, id)) throw new TodoError(404, GONE);
-  const data = await getBuyersClient().fetch<{ tool: StoreTool | null; outs: RawOut[] }>(
+  const data = await getBuyersClient().fetch<{ tool: StoreTool | null; outs: RawOut[]; repairs: RawRepair[] }>(
     `{
       "tool": *[_id == $id && _type == "storeTool"][0] ${TOOL_FIELDS},
-      "outs": *[_type == "toolOut" && toolId == $id] | order(at desc)[0...500] ${OUT_FIELDS}
+      "outs": *[_type == "toolOut" && toolId == $id] | order(at desc)[0...500] ${OUT_FIELDS},
+      "repairs": *[_type == "toolRepair" && toolId == $id] | order(at desc)[0...200] ${REPAIR_FIELDS}
     }`,
     { id }
   );
   if (!data.tool) throw new TodoError(404, GONE);
-  return { tool: data.tool, outs: data.outs.map((o) => toOut(me, o)) };
+  return { tool: data.tool, outs: data.outs.map((o) => toOut(me, o)), repairs: data.repairs.map((r) => toRepair(me, r)) };
+}
+
+/* ---------- tools to fix ---------- */
+
+type RepairInput = { toolId: string; qty: number; condition: Condition; note: string; photoId: string | null; person: string | null; outId?: string; returnKey?: string };
+
+async function newRepair(me: TodoMe, r: RepairInput): Promise<string> {
+  const id = newId(TOOL_REPAIR_PREFIX);
+  await getBuyersClient().create(repairDoc(me, id, r, new Date().toISOString()));
+  return id;
+}
+function repairDoc(me: TodoMe, _id: string, r: RepairInput, at: string) {
+  return {
+    _id,
+    _type: "toolRepair",
+    toolId: r.toolId,
+    qty: r.qty,
+    condition: r.condition,
+    note: r.note,
+    ...(r.photoId ? { photo: photoRef(r.photoId) } : {}),
+    person: r.person || null,
+    ...(r.outId ? { outId: r.outId, returnKey: r.returnKey } : {}),
+    state: "waiting",
+    at,
+    by: me.name,
+    byId: me.id,
+  };
+}
+
+async function readRepair(me: TodoMe, id: string): Promise<ToolRepair | null> {
+  const raw = await getBuyersClient().fetch<RawRepair | null>(`*[_id == $id && _type == "toolRepair"][0] ${REPAIR_FIELDS}`, { id });
+  return raw ? toRepair(me, raw) : null;
+}
+
+/** These tools' repairs: the open ones, and those closed in the last month (as the store page has them). */
+export async function repairsFor(me: TodoMe, toolIds: string[]): Promise<ToolRepair[]> {
+  if (!toolIds.length) return [];
+  const raw = await getBuyersClient().fetch<RawRepair[]>(
+    `*[_type == "toolRepair" && toolId in $ids && (state in ["waiting", "away"] || closedAt >= $since)] | order(at desc) ${REPAIR_FIELDS}`,
+    { ids: toolIds, since: new Date(Date.now() - 31 * 86_400_000).toISOString() }
+  );
+  return raw.map((r) => toRepair(me, r));
+}
+
+/** Nothing of a tool left on the repair list: a "Needs repair" or "Broken" said on the tool itself is over (it's Good). */
+async function settleCondition(toolId: string): Promise<void> {
+  const client = getBuyersClient();
+  const t = await client.fetch<{ condition: Condition | null; open: number } | null>(
+    `*[_id == $id && _type == "storeTool"][0]{ condition, "open": count(*[_type == "toolRepair" && toolId == ^._id && state in ["waiting", "away"]]) }`,
+    { id: toolId }
+  );
+  if (t && t.open === 0 && needsFixing(t.condition)) await client.patch(toolId).set({ condition: "good" }).commit();
+}
+
+/**
+ * Some of a tool found broken or needing repair (in the store, say): how many, what's wrong, a photo if there is one.
+ * Anyone who uses the store; a site login's reaches the office.
+ */
+export async function reportRepair(me: TodoMe, body: Record<string, unknown>): Promise<{ repair: ToolRepair; tool: StoreTool }> {
+  const toolId = body.toolId;
+  if (!isId(TOOL_PREFIX, toolId)) throw new TodoError(404, GONE);
+  const condition = cleanCondition(body.condition);
+  if (!condition || !needsFixing(condition)) throw new TodoError(400, "Pick Needs repair or Broken.");
+  const tool = await getTool(toolId);
+  if (!tool || tool.retired) throw new TodoError(404, GONE);
+  const client = getBuyersClient();
+  const open = await client.fetch<number>(`coalesce(math::sum(*[_type == "toolRepair" && toolId == $id && state in ["waiting", "away"]].qty), 0)`, { id: toolId });
+  const left = tool.count - open;
+  if (left <= 0) throw new TodoError(409, tool.count === 1 ? "It's on the repair list already." : `All ${tool.count} are on the repair list already.`);
+  const qty = cleanWhole(body.qty ?? 1, 1, "Say how many need fixing.");
+  if (qty > left) throw new TodoError(409, `Only ${left} more can go on the repair list: ${open} ${open === 1 ? "is" : "are"} on it already.`);
+  const note = cleanText(body.note, MAX_MOVE_NOTE, "note");
+  const photoId = cleanPhotoRef(body.photoId);
+  const id = newId(TOOL_REPAIR_PREFIX);
+  await client
+    .transaction()
+    .create(repairDoc(me, id, { toolId, qty, condition, note, photoId, person: null }, new Date().toISOString()))
+    .patch(toolId, (p) => p.set({ condition: conditionAfter(tool.condition, condition) }))
+    .commit();
+  if (me.kind !== "admin") {
+    await notifyOwner({
+      kind: "store",
+      title: `${qty > 1 ? `${qty} x ` : ""}${tool.name}: ${condition === "broken" ? "broken" : "needs repair"}`,
+      lines: [`Reported by ${me.name}`, ...(note ? [`Note: ${note}`] : [])],
+      links: [{ label: "Open the store room", url: "/todo/store" }],
+    });
+  }
+  const [repair, saved] = await Promise.all([readRepair(me, id), getTool(toolId)]);
+  return { repair: repair!, tool: saved! };
+}
+
+/**
+ * A repair moved on: { action: "sent", to? } (out to be fixed), "unsend" (it didn't go after all), "fixed" (back and
+ * working), or "scrap" (the office: it can't be fixed, it comes off how many we have).
+ */
+export async function changeRepair(me: TodoMe, id: string, body: Record<string, unknown>): Promise<{ repair: ToolRepair | null; tool: StoreTool | null }> {
+  if (!isId(TOOL_REPAIR_PREFIX, id)) throw new TodoError(404, REPAIR_GONE);
+  const client = getBuyersClient();
+  const r = await client.fetch<{ toolId: string; qty: number; state: RepairState } | null>(`*[_id == $id && _type == "toolRepair"][0]{ toolId, qty, "state": coalesce(state, "waiting") }`, { id });
+  if (!r) throw new TodoError(404, REPAIR_GONE);
+  const at = new Date().toISOString();
+  const closed = "It's off the repair list already.";
+  if (body.action === "sent") {
+    if (r.state !== "waiting") throw new TodoError(409, r.state === "away" ? "It's at the repairer already." : closed);
+    await client.patch(id).set({ state: "away", sentAt: at, sentTo: cleanText(body.to, MAX_REPAIRER, "repairer"), sentBy: me.name }).commit();
+  } else if (body.action === "unsend") {
+    if (r.state !== "away") throw new TodoError(409, "It isn't at the repairer.");
+    await client.patch(id).set({ state: "waiting" }).unset(["sentAt", "sentTo", "sentBy"]).commit();
+  } else if (body.action === "fixed") {
+    if (!isOpenRepair(r)) throw new TodoError(409, closed);
+    await client.patch(id).set({ state: "fixed", closedAt: at, closedBy: me.name }).commit();
+    await settleCondition(r.toolId);
+  } else if (body.action === "scrap") {
+    if (me.kind !== "admin") throw new TodoError(403, "Only the office can write a tool off.");
+    if (!isOpenRepair(r)) throw new TodoError(409, closed);
+    const tool = await getTool(r.toolId);
+    const out = await outNow(r.toolId);
+    const count = Math.max(0, (tool?.count ?? 0) - r.qty);
+    if (count < out) throw new TodoError(409, `${out} ${out === 1 ? "is" : "are"} out now: record what came back first.`);
+    await client
+      .transaction()
+      .patch(id, (p) => p.set({ state: "scrapped", closedAt: at, closedBy: me.name }))
+      .patch(r.toolId, (p) => p.set({ count }))
+      .commit();
+    await settleCondition(r.toolId);
+  } else throw new TodoError(400, "That button isn't known.");
+  const [repair, tool] = await Promise.all([readRepair(me, id), getTool(r.toolId)]);
+  return { repair, tool };
+}
+
+/** A repair reported by mistake taken off (the office, or whoever reported it, for a few minutes). One written off stays. */
+export async function deleteRepair(me: TodoMe, id: string): Promise<StoreTool | null> {
+  if (!isId(TOOL_REPAIR_PREFIX, id)) throw new TodoError(404, REPAIR_GONE);
+  const client = getBuyersClient();
+  const r = await client.fetch<{ toolId: string; byId?: string; at: string; state: RepairState; photo?: string } | null>(
+    `*[_id == $id && _type == "toolRepair"][0]{ toolId, byId, at, "state": coalesce(state, "waiting"), "photo": photo.asset._ref }`,
+    { id }
+  );
+  if (!r) return null;
+  mayUndo(me, r.byId, r.at);
+  if (r.state === "scrapped") throw new TodoError(409, "A tool written off stays on record.");
+  await client.delete(id);
+  // The photo a return shares with its take-out stays while that uses it.
+  if (r.photo) await dropPhoto(r.photo, "store");
+  await settleCondition(r.toolId);
+  return getTool(r.toolId);
 }
 
 /* ---------- out and back ---------- */
@@ -267,7 +447,7 @@ async function closeOuts(
 ): Promise<ToolOut[]> {
   const client = getBuyersClient();
   const ids = [...wanted.keys()];
-  let came: { toolId: string; person: string; condition: Condition }[] = [];
+  let came: Came[] = [];
   for (let attempt = 0; ; attempt++) {
     const docs = await client.fetch<{ _id: string; _rev: string; toolId: string; person: string; qty: number; returns: { qty: number }[] | null }[]>(
       `*[_type == "toolOut" && _id in $ids]{ _id, _rev, toolId, "person": coalesce(person, ""), qty, "returns": returns[]{ qty } }`,
@@ -285,9 +465,10 @@ async function closeOuts(
       const qty = asked === "rest" ? left : asked;
       if (qty > left) throw new TodoError(409, `Only ${left} of that ${left === 1 ? "is" : "are"} still out.`);
       const condition = extra.conditions?.get(doc._id) ?? null;
-      if (condition) came.push({ toolId: doc.toolId, person: doc.person, condition });
+      const returnKey = randomBytes(6).toString("hex");
+      if (condition) came.push({ toolId: doc.toolId, person: doc.person, condition, qty, outId: doc._id, key: returnKey });
       const entry = {
-        _key: randomBytes(6).toString("hex"),
+        _key: returnKey,
         qty,
         ...(extra.lost ? { lost: true } : {}),
         ...(condition ? { condition } : {}),
@@ -312,12 +493,17 @@ async function closeOuts(
       throw error;
     }
   }
-  if (came.length) await afterReturn(me, came, extra.note);
+  if (came.length) await afterReturn(me, came, extra.note, extra.photoId);
   return readOuts(me, ids);
 }
 
-/** Tools came back in a state: onto each tool (only ever worse), and a broken or needing-repair one tells the office. */
-async function afterReturn(me: TodoMe, came: { toolId: string; person: string; condition: Condition }[], note: string): Promise<void> {
+type Came = { toolId: string; person: string; condition: Condition; qty: number; outId: string; key: string };
+
+/**
+ * Tools came back in a state: onto each tool (only ever worse); a broken or needing-repair one goes on the repair list
+ * (how many, the note and the photo it came back with) and tells the office.
+ */
+async function afterReturn(me: TodoMe, came: Came[], note: string, photoId: string | null): Promise<void> {
   const client = getBuyersClient();
   const tools = await client.fetch<{ _id: string; name: string; condition: Condition | null }[]>(`*[_type == "storeTool" && _id in $ids]{ _id, "name": coalesce(name, ""), condition }`, {
     ids: [...new Set(came.map((c) => c.toolId))],
@@ -333,8 +519,16 @@ async function afterReturn(me: TodoMe, came: { toolId: string; person: string; c
     }
   }
   if (changed) await tx.commit();
-  // Niko records his own; the storekeeper's breakages reach him.
   const bad = came.filter((c) => needsFixing(c.condition));
+  if (bad.length) {
+    const at = new Date().toISOString();
+    const repairs = client.transaction();
+    for (const c of bad) {
+      repairs.create(repairDoc(me, newId(TOOL_REPAIR_PREFIX), { toolId: c.toolId, qty: c.qty, condition: c.condition, note, photoId, person: c.person, outId: c.outId, returnKey: c.key }, at));
+    }
+    await repairs.commit();
+  }
+  // Niko records his own; the storekeeper's breakages reach him.
   if (me.kind === "admin" || bad.length === 0) return;
   const name = (id: string) => tools.find((t) => t._id === id)?.name ?? "A tool";
   const words = (c: Condition) => (c === "broken" ? "broken" : "needing repair");
@@ -354,7 +548,7 @@ async function afterReturn(me: TodoMe, came: { toolId: string; person: string; c
  * What came back, from one or more take-outs, with its photo (needed since 2 Nov 2026, like a take-out's) and an
  * optional note. Anyone using the store.
  */
-export async function returnTools(me: TodoMe, body: Record<string, unknown>): Promise<{ outs: ToolOut[]; tools: StoreTool[] }> {
+export async function returnTools(me: TodoMe, body: Record<string, unknown>): Promise<{ outs: ToolOut[]; tools: StoreTool[]; repairs: ToolRepair[] }> {
   const note = cleanText(body.note, MAX_MOVE_NOTE, "note");
   const photoId = cleanPhotoRef(body.photoId);
   const wanted = new Map<string, number | "rest">();
@@ -371,9 +565,10 @@ export async function returnTools(me: TodoMe, body: Record<string, unknown>): Pr
   if (wanted.size > 40) throw new TodoError(400, "That's a lot at once: save it in two goes.");
   if (!photoId) throw new TodoError(400, "Take a photo of the tools coming back first.");
   const outs = await closeOuts(me, wanted, { note, photoId, lost: false, conditions });
-  // The tools as they are now (their state may have changed).
-  const tools = await getBuyersClient().fetch<StoreTool[]>(`*[_type == "storeTool" && _id in $ids] ${TOOL_FIELDS}`, { ids: [...new Set(outs.map((o) => o.toolId))] });
-  return { outs, tools };
+  // The tools as they are now (their state may have changed), and their repair list (a broken one is on it).
+  const toolIds = [...new Set(outs.map((o) => o.toolId))];
+  const [tools, repairs] = await Promise.all([getBuyersClient().fetch<StoreTool[]>(`*[_type == "storeTool" && _id in $ids] ${TOOL_FIELDS}`, { ids: toolIds }), repairsFor(me, toolIds)]);
+  return { outs, tools, repairs };
 }
 
 /** The office: what's still out of a take-out is never coming back. */
@@ -389,20 +584,26 @@ export async function markLost(me: TodoMe, outId: unknown, note: unknown): Promi
 export async function deleteTool(id: string): Promise<void> {
   if (!isId(TOOL_PREFIX, id)) throw new TodoError(404, GONE);
   const client = getBuyersClient();
-  const found = await client.fetch<{ photo?: string; outs: { _id: string; photo?: string; returns: (string | null)[] | null }[] } | null>(
+  const found = await client.fetch<{
+    photo?: string;
+    outs: { _id: string; photo?: string; returns: (string | null)[] | null }[];
+    repairs: { _id: string; photo?: string }[];
+  } | null>(
     `*[_id == $id && _type == "storeTool"][0]{
       "photo": photo.asset._ref,
-      "outs": *[_type == "toolOut" && toolId == ^._id]{ _id, "photo": photo.asset._ref, "returns": returns[].photo.asset._ref }
+      "outs": *[_type == "toolOut" && toolId == ^._id]{ _id, "photo": photo.asset._ref, "returns": returns[].photo.asset._ref },
+      "repairs": *[_type == "toolRepair" && toolId == ^._id]{ _id, "photo": photo.asset._ref }
     }`,
     { id }
   );
   if (!found) return;
   const tx = client.transaction();
   for (const out of found.outs) tx.delete(out._id);
+  for (const r of found.repairs) tx.delete(r._id);
   tx.delete(id);
   await tx.commit();
   // Tools taken out together share a photo: dropPhoto keeps one something still uses.
-  const photos = new Set([found.photo, ...found.outs.flatMap((o) => [o.photo, ...(o.returns ?? [])])].filter((p): p is string => !!p));
+  const photos = new Set([found.photo, ...found.outs.flatMap((o) => [o.photo, ...(o.returns ?? [])]), ...found.repairs.map((r) => r.photo)].filter((p): p is string => !!p));
   for (const photo of photos) await dropPhoto(photo, "store");
 }
 
@@ -458,6 +659,14 @@ export async function deleteToolReturn(me: TodoMe, outId: string, returnKey: str
       if (attempt < 3 && isClash(error)) continue;
       throw error;
     }
+  }
+  // What that return put on the repair list (if it hasn't gone to the repairer) comes off with it.
+  const made = await client.fetch<{ _id: string; toolId: string }[]>(`*[_type == "toolRepair" && outId == $outId && returnKey == $key && state == "waiting"]{ _id, toolId }`, { outId, key: returnKey });
+  if (made.length) {
+    const tx = client.transaction();
+    for (const r of made) tx.delete(r._id);
+    await tx.commit();
+    await settleCondition(made[0].toolId);
   }
   if (photo) await dropPhoto(photo, "store");
   return (await readOuts(me, [outId]))[0] ?? null;

@@ -2,7 +2,7 @@ import "server-only";
 
 import { FLOORS } from "@/lib/expenses/shared";
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
-import { CHECK_PREFIX, EXPENSE_PREFIX, isId, ITEM_PREFIX, MOVE_PREFIX, newId, TOOL_OUT_PREFIX, TOOL_PREFIX } from "@/lib/site/ids";
+import { CHECK_PREFIX, EXPENSE_PREFIX, isId, ITEM_PREFIX, MOVE_PREFIX, newId, TOOL_OUT_PREFIX, TOOL_PREFIX, TOOL_REPAIR_PREFIX } from "@/lib/site/ids";
 import { cleanPhotoRef, cleanText, dropPhoto, photoRef, TodoError } from "@/lib/todo/server";
 import type { TodoMe } from "@/lib/todo/shared";
 import { guessCategory, guessItemTrade, isStoreCategory, type StoreCategory } from "./categories";
@@ -21,7 +21,7 @@ import {
   type StoreTool,
   type Trade,
 } from "./shared";
-import { OUT_FIELDS, TOOL_FIELDS, toOut, type RawOut } from "./tools";
+import { OUT_FIELDS, REPAIR_FIELDS, TOOL_FIELDS, toOut, toRepair, type RawOut, type RawRepair } from "./tools";
 
 // The stock is never stored: it is always added up from what moved, so correcting or deleting a
 // purchase (in the expenses) or a wrong take-out puts the number right by itself.
@@ -135,6 +135,7 @@ export async function getStore(me: TodoMe): Promise<StoreData> {
     tools: StoreTool[];
     outsOpen: RawOut[];
     outsDone: RawOut[];
+    repairs: RawRepair[];
     checks: RawCheck[];
   }>(
     `{
@@ -145,12 +146,14 @@ export async function getStore(me: TodoMe): Promise<StoreData> {
       "tools": *[_type == "storeTool" && string::startsWith(_id, $toolPrefix)] | order(lower(name) asc) ${TOOL_FIELDS},
       "outsOpen": *[_type == "toolOut" && string::startsWith(_id, $outPrefix) && !defined(closedAt)] | order(at desc)[0...500] ${OUT_FIELDS},
       "outsDone": *[_type == "toolOut" && string::startsWith(_id, $outPrefix) && defined(closedAt) && at >= $weekAgo] | order(at desc)[0...300] ${OUT_FIELDS},
+      "repairs": *[_type == "toolRepair" && string::startsWith(_id, $repairPrefix) && (state in ["waiting", "away"] || closedAt >= $monthAgo)] | order(at desc)[0...300] ${REPAIR_FIELDS},
       "checks": *[_type == "storeCheck" && string::startsWith(_id, $checkPrefix) && at >= $monthAgo] | order(at desc)[0...200] ${CHECK_FIELDS}
     }`,
     {
       ...params,
       toolPrefix: TOOL_PREFIX,
       outPrefix: TOOL_OUT_PREFIX,
+      repairPrefix: TOOL_REPAIR_PREFIX,
       checkPrefix: CHECK_PREFIX,
       weekAgo: new Date(Date.now() - 8 * day).toISOString(),
       monthAgo: new Date(Date.now() - 31 * day).toISOString(),
@@ -161,6 +164,9 @@ export async function getStore(me: TodoMe): Promise<StoreData> {
   const known = new Set(items.map((i) => i.id));
   const tools = data.tools;
   if (me.kind !== "admin") for (const x of [...items, ...tools]) delete x.review;
+  // A take-out closed (or opened again) while this was read can show up in both halves: once only.
+  const seen = new Set<string>();
+  const outs = [...data.outsOpen, ...data.outsDone].filter((o) => !seen.has(o.id) && !!seen.add(o.id));
   return {
     items,
     history: history(
@@ -171,7 +177,8 @@ export async function getStore(me: TodoMe): Promise<StoreData> {
       100 + moreBought(data.boughtMore).length
     ),
     tools,
-    toolOuts: [...data.outsOpen, ...data.outsDone].sort((a, b) => b.at.localeCompare(a.at)).map((o) => toOut(me, o)),
+    toolOuts: outs.sort((a, b) => b.at.localeCompare(a.at)).map((o) => toOut(me, o)),
+    repairs: data.repairs.map((r) => toRepair(me, r)),
     checks: data.checks.map((c) => toCheck(me, c)),
   };
 }
