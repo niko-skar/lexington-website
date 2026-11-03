@@ -6,7 +6,7 @@ import { listConcrete } from "@/lib/concrete/server";
 import { daySummary, truckFlags, trucksOn } from "@/lib/concrete/shared";
 import { rollcallAccess } from "@/lib/rollcall/shared";
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
-import { BANK_TEXT_PREFIX, EXPENSE_PREFIX, ROLLCALL_PREFIX } from "@/lib/site/ids";
+import { BANK_TEXT_PREFIX, BILL_PREFIX, EXPENSE_PREFIX, QBO_HISTORY_ID, QBO_TXN_MONTH_PREFIX, ROLLCALL_PREFIX } from "@/lib/site/ids";
 import { steelData } from "@/lib/steel/server";
 import { getStore } from "@/lib/store/server";
 import { ghanaDay, needsReorder, stillOut } from "@/lib/store/shared";
@@ -37,6 +37,8 @@ export interface DashboardData {
   buyers?: { count: number; paidUSD: number; priceUSD: number; last: { date: string | null; name: string; receipt: string | null } | null };
   /** Suppliers: what their open bills still want, how many are open and overdue, the next due (lib/suppliers). */
   suppliers?: { owed: number; open: number; overdue: number; nextDue: string | null; suppliers: number };
+  /** Spending: this month and this year, QuickBooks' and the app's own not there yet (lib/spending). */
+  spending?: { month: number; year: number; read: string | null };
   /** Concrete trucks: today's (with how many don't add up), else the last pour day's. */
   concrete?: { day: string | null; trucks: number; volume: number; flagged: number };
   /** Steel: the tons bought, installed and in stock; what the steel benders were paid and are owed (below 0: paid ahead); the buys with no tons. */
@@ -182,7 +184,7 @@ async function steelPart(me: TodoMe): Promise<NonNullable<DashboardData["steel"]
 export async function getDashboard(me: TodoMe): Promise<DashboardData> {
   const today = ghanaDay();
   const has = (s: string) => me.sections.includes(s as never);
-  const [todo, store, expenses, unread, rollcall, concrete, buyers, suppliers, steel] = await Promise.all([
+  const [todo, store, expenses, unread, rollcall, concrete, buyers, suppliers, steel, spending] = await Promise.all([
     has("todo") ? settle(todoPart(me, today)) : undefined,
     has("store") ? settle(storePart(me, today)) : undefined,
     has("expenses") ? settle(expensesPart(today)) : undefined,
@@ -192,6 +194,7 @@ export async function getDashboard(me: TodoMe): Promise<DashboardData> {
     has("buyers") ? settle(buyersPart()) : undefined,
     has("suppliers") ? settle(suppliersOwed()) : undefined,
     has("steel") ? settle(steelPart(me)) : undefined,
+    has("spending") ? settle(spendingPart(today)) : undefined,
   ]);
   return {
     today,
@@ -204,5 +207,39 @@ export async function getDashboard(me: TodoMe): Promise<DashboardData> {
     ...(buyers ? { buyers } : {}),
     ...(steel ? { steel } : {}),
     ...(suppliers ? { suppliers } : {}),
+    ...(spending ? { spending } : {}),
   };
+}
+
+/**
+ * The Spending tile, light: QuickBooks' month totals (kept with each month read from the books) and the app's own
+ * entries not sent to QuickBooks yet. (The page itself adds up every entry; just sent ones show there after the
+ * next read.)
+ */
+async function spendingPart(today: string): Promise<NonNullable<DashboardData["spending"]>> {
+  const month = today.slice(0, 7);
+  const year = `${today.slice(0, 4)}-01`;
+  const x = await getBuyersClient().fetch<{ qMonth: number | null; qYear: number | null; aMonth: number | null; aYear: number | null; bMonth: number | null; bYear: number | null; read: string | null }>(
+    `{
+      "qMonth": math::sum(*[_type == "qboTxnMonth" && string::startsWith(_id, $txnPrefix) && month == $month].costs),
+      "qYear": math::sum(*[_type == "qboTxnMonth" && string::startsWith(_id, $txnPrefix) && month >= $year && month <= $month].costs),
+      "aMonth": math::sum(*[_type == "siteExpense" && string::startsWith(_id, $expPrefix) && coalesce(kind, "expense") == "expense" && coalesce(forWho, "Site") in ["Site", "Event"] && !defined(billId) && !defined(qbo.txnId) && date >= $monthStart].amount),
+      "aYear": math::sum(*[_type == "siteExpense" && string::startsWith(_id, $expPrefix) && coalesce(kind, "expense") == "expense" && coalesce(forWho, "Site") in ["Site", "Event"] && !defined(billId) && !defined(qbo.txnId) && date >= $yearStart].amount),
+      "bMonth": math::sum(*[_type == "supplierBill" && string::startsWith(_id, $billPrefix) && !coalesce(deleted, false) && !defined(qbo.txnId) && date >= $monthStart].amount),
+      "bYear": math::sum(*[_type == "supplierBill" && string::startsWith(_id, $billPrefix) && !coalesce(deleted, false) && !defined(qbo.txnId) && date >= $yearStart].amount),
+      "read": *[_id == $historyId][0].fetchedAt
+    }`,
+    {
+      txnPrefix: QBO_TXN_MONTH_PREFIX,
+      expPrefix: EXPENSE_PREFIX,
+      billPrefix: BILL_PREFIX,
+      historyId: QBO_HISTORY_ID,
+      month,
+      year,
+      monthStart: `${month}-01`,
+      yearStart: `${year}-01`,
+    }
+  );
+  const n = (v: number | null) => Number(v) || 0;
+  return { month: n(x.qMonth) + n(x.aMonth) + n(x.bMonth), year: n(x.qYear) + n(x.aYear) + n(x.bYear), read: x.read };
 }

@@ -42,6 +42,9 @@ export const QBO_LISTS_ID = `qbolists-${TAG}`;
 export const TRUCK_PREFIX = `concretetruck-${TAG}-`;
 export const POUR_DAY_PREFIX = `concreteday-${TAG}-`;
 
+/** QuickBooks' transactions read into the website for the Spending page (3 Nov 2026): one document a month, and how the last read went. */
+export const QBO_TXN_MONTH_PREFIX = `qbotxns-${TAG}-`;
+export const QBO_HISTORY_ID = `qbohistory-${TAG}`;
 /** A photo that landed after its record was saved (3 Nov 2026): which stored photo a phone's ticket became. */
 export const PHOTO_TICKET_PREFIX = `phototicket-${TAG}-`;
 

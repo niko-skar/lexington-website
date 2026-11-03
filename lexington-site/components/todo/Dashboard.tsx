@@ -114,6 +114,15 @@ function tiles(d: DashboardData, unread: number): Tile[] {
         : { section: "suppliers", name: "Suppliers", big: "Nothing owed", small: "add a bill when a supplier gives credit", tone: "ok" }
     );
   }
+  if (d.spending) {
+    const x = d.spending;
+    out.push({
+      section: "spending",
+      name: "Spending",
+      big: `${money(x.month)} this month`,
+      small: x.read ? `${money(x.year)} this year · by cost type, floor, supplier` : "QuickBooks not read yet: open it to read",
+    });
+  }
   if (d.buyers) {
     const x = d.buyers;
     const usd = (n: number) => `US$ ${n.toLocaleString("en-US")}`;

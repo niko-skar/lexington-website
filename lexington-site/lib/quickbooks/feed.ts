@@ -10,6 +10,7 @@ import { classNamed, locationForArea, TRADE_CLASS } from "./books";
 import { BOOK_LISTS_STALE_MS, cachedBookLists, saveBookLists } from "./booksCache";
 import { fetchCompany, qboApi, QboError } from "./client";
 import { loadConnection, writeLog, type QboConnection } from "./store";
+import { syncHistory } from "./history";
 import { refreshVendors } from "./vendors";
 
 // Site expenses into QuickBooks (Niko, 27 Oct 2026: "automate the expenses going into the site app
@@ -878,6 +879,9 @@ export async function feedCron(): Promise<Record<string, unknown>> {
   await refreshBookLists();
   await refreshVendors();
   const result: Record<string, unknown> = await feedPending(25);
+  // The books' transactions for the Spending page (read again when a few hours old; only reads).
+  const history = await syncHistory();
+  result.history = { count: history.count, fetchedAt: history.fetchedAt, error: history.error };
   const conn = await loadConnection();
   if (conn && conn.status === "connected") {
     const last = Date.parse(conn.lastRefreshAt ?? conn.connectedAt);

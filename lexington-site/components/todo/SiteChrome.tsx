@@ -66,6 +66,12 @@ const ICONS: Record<NavItem, React.ReactNode> = {
       <path d="M5 13l6 6M9 9l6 6M13 5l6 6" />
     </svg>
   ),
+  spending: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M4 20h16" />
+      <path d="M7 16v-5M12 16V6M17 16v-8" />
+    </svg>
+  ),
   suppliers: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M3 10.5L12 5l9 5.5" />
@@ -88,7 +94,7 @@ const BADGE_WORDS: Partial<Record<NavItem, string>> = { store: "to reorder", ale
  * Used now and then (Concrete on pour days, Buyers on a payment, Steel as it goes in): on a phone's bar when there's
  * room, else from the home page's tile. A laptop's rail has room for every part (2 Nov 2026).
  */
-const NOW_AND_THEN: readonly NavItem[] = ["concrete", "buyers", "steel", "suppliers"];
+const NOW_AND_THEN: readonly NavItem[] = ["concrete", "buyers", "steel", "suppliers", "spending"];
 type NavEntry = { item: NavItem; laptopOnly: boolean };
 const navItems = (me: TodoMe): NavEntry[] => {
   // Alerts last: the end of a phone's bar, the very bottom of a laptop's rail (Niko, 2 Nov 2026).

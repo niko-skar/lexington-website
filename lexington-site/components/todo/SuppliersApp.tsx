@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { money, type Expense } from "@/lib/expenses/shared";
+import { isCost, total, type SpendEntry } from "@/lib/spending/shared";
 import { ghanaDay } from "@/lib/store/shared";
 import { paymentsTo, type BillState, type OpenBill, type QboVendor, type SupplierRow, type SuppliersPage } from "@/lib/suppliers/shared";
 import type { TodoMe } from "@/lib/todo/shared";
@@ -10,6 +11,7 @@ import { AccessSheet } from "./AccessSheet";
 import { errorText, send, startPolling } from "./api";
 import { niceDate } from "./ExpenseForm";
 import { SiteHeader, SiteMenu } from "./SiteChrome";
+import { Entries } from "./SpendingApp";
 import { PhotoField } from "./StoreBits";
 import sp from "./Suppliers.module.css";
 import styles from "./Todo.module.css";
@@ -284,6 +286,26 @@ function SupplierView({
   const payments: Expense[] = useMemo(() => paymentsTo(r.vendor, data.bills, data.payments), [r.vendor, data.bills, data.payments]);
   const billRef = (id: string | null) => (id ? (data.bills.find((b) => b.id === id)?.appRef ?? "a bill") : null);
   const qboDiffers = Math.abs((r.vendor.balance || 0) - r.owed) >= 0.01;
+  // Their whole record (QuickBooks' and the app's not there yet), asked for when the page opens.
+  const [history, setHistory] = useState<SpendEntry[] | null>(null);
+  const changed = `${data.bills.length}:${data.payments.length}:${r.owed}`;
+  useEffect(() => {
+    let live = true;
+    fetch(`/api/spending?vendor=${encodeURIComponent(r.vendor.id)}`, { cache: "no-store" })
+      .then(async (res) => {
+        if (!res.ok) throw new Error(String(res.status));
+        const got = (await res.json()) as { entries: SpendEntry[] };
+        if (live) setHistory(got.entries);
+      })
+      .catch(() => {
+        // No signal or no QuickBooks: the app's own payments show instead.
+      });
+    return () => {
+      live = false;
+    };
+  }, [r.vendor.id, changed]);
+  const spentWith = history ? total(history) : null;
+  const since = history?.filter(isCost).map((e) => e.date).sort()[0] ?? null;
 
   return (
     <>
@@ -299,7 +321,14 @@ function SupplierView({
             {r.vendor.email}
           </p>
         )}
-        <p className={sp.line}>Paid to them in all: {money(r.paidTotal)}</p>
+        {spentWith !== null && spentWith !== 0 ? (
+          <p className={sp.line}>
+            Spent with them in all: {money(spentWith)}
+            {since ? ` (since ${niceDate(since)})` : ""}
+          </p>
+        ) : (
+          <p className={sp.line}>Paid to them in all: {money(r.paidTotal)}</p>
+        )}
         {qboDiffers && <p className={sp.warn}>QuickBooks says {money(r.vendor.balance)} is owed (bills entered there, or not gone in yet).</p>}
         <button type="button" className={sp.newBill} onClick={onNewBill}>
           + New bill from {r.vendor.name}
@@ -333,6 +362,15 @@ function SupplierView({
         </>
       )}
 
+      {history !== null ? (
+        <>
+          <h2 className={styles.groupTitle}>
+            Everything with them <span>{history.length}</span>
+          </h2>
+          {history.length === 0 ? <p className={sp.small}>Nothing with them yet, in QuickBooks or the app.</p> : <Entries entries={history} limit={60} hideSupplier />}
+        </>
+      ) : (
+        <>
       <h2 className={styles.groupTitle}>
         Payments <span>{payments.length}</span>
       </h2>
@@ -353,6 +391,8 @@ function SupplierView({
             </li>
           ))}
         </ul>
+      )}
+        </>
       )}
     </>
   );

@@ -1,0 +1,214 @@
+/* Spending (3 Nov 2026). Colours come from .app in Todo.module.css. */
+
+.periods {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.periods button {
+  flex: none;
+}
+.card {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 14px;
+  padding: 14px;
+  border: 1px solid var(--x-line);
+  border-radius: 10px;
+  background: var(--x-surface);
+  box-shadow: inset 4px 0 0 var(--x-accent);
+}
+.cardName {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--x-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.big {
+  margin: 0;
+  font-family: var(--x-display);
+  font-size: 28px;
+  font-weight: 700;
+}
+.line {
+  margin: 0;
+  font-size: 14px;
+  color: var(--x-muted);
+}
+.rows {
+  display: grid;
+  margin: 12px 0 18px;
+  overflow: hidden;
+  border: 1px solid var(--x-line);
+  border-radius: 10px;
+  background: var(--x-surface);
+}
+.row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 56px;
+  padding: 8px 14px;
+  border: 0;
+  border-top: 1px solid var(--x-line);
+  background: transparent;
+  color: var(--x-ink);
+  text-align: left;
+}
+.row:first-child {
+  border-top: 0;
+}
+.row:disabled {
+  opacity: 0.7;
+}
+/* How big each line is next to the biggest, as a pale bar behind it. */
+.bar {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--x-bg);
+  pointer-events: none;
+}
+.rowText {
+  position: relative;
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.rowText b {
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+.rowText small {
+  font-size: 12px;
+  color: var(--x-muted);
+}
+.amount,
+.amountNone {
+  position: relative;
+  flex: none;
+  font-family: var(--x-num);
+  font-size: 15px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.amountNone {
+  color: var(--x-muted);
+}
+.checks {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.check {
+  display: grid;
+  gap: 2px;
+  min-height: 52px;
+  padding: 8px 14px;
+  border: 1px solid var(--x-line);
+  border-radius: 10px;
+  background: var(--x-surface);
+  color: var(--x-ink);
+  text-align: left;
+  box-shadow: inset 4px 0 0 var(--x-amber);
+}
+.check small {
+  font-size: 13px;
+  color: var(--x-muted);
+}
+.checkLine {
+  margin: 0;
+  padding: 8px 2px;
+  font-size: 14px;
+}
+.note {
+  margin: 8px 2px;
+  font-size: 13px;
+  color: var(--x-muted);
+}
+.readAgain {
+  min-height: 44px;
+  margin: 4px 0 12px;
+  padding: 0 14px;
+  border: 1px solid var(--x-line);
+  border-radius: 8px;
+  background: var(--x-surface);
+  color: var(--x-accent);
+  font-weight: 600;
+}
+.back {
+  min-height: 40px;
+  margin-bottom: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--x-accent);
+  font-weight: 600;
+}
+.entries {
+  display: grid;
+  gap: 6px;
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+}
+.entries li {
+  display: grid;
+  gap: 2px;
+  padding: 8px 10px;
+  border: 1px solid var(--x-line);
+  border-radius: 8px;
+  background: var(--x-surface);
+  font-size: 14px;
+}
+.entries li small {
+  font-size: 12px;
+  color: var(--x-muted);
+}
+.entries li.entryOdd {
+  border-color: var(--x-amber);
+}
+.entryMain {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+.entryMain > b {
+  flex: none;
+  font-family: var(--x-num);
+  font-weight: 500;
+}
+.entryWhat {
+  overflow-wrap: anywhere;
+}
+.credit {
+  color: var(--x-ok);
+}
+/* A laptop: the lines in two columns. */
+@media (min-width: 1280px) {
+  .rows {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .row:nth-child(2) {
+    border-top: 0;
+  }
+  .row:nth-child(odd) {
+    border-right: 1px solid var(--x-line);
+  }
+  .entries {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+}
+@media (hover: hover) and (pointer: fine) {
+  .row:hover:not(:disabled),
+  .check:hover {
+    background: var(--x-bg);
+  }
+}

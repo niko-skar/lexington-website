@@ -7,6 +7,7 @@ import type { BuyersData } from "@/lib/buyers/shared";
 import type { ConcreteData } from "@/lib/concrete/shared";
 import type { BankDebit, Expense } from "@/lib/expenses/shared";
 import type { SteelData } from "@/lib/expenses/steel";
+import type { SpendingData } from "@/lib/spending/shared";
 import type { OpenBill, SuppliersPage } from "@/lib/suppliers/shared";
 import type { BookLists } from "@/lib/quickbooks/books";
 import { opensRollcall } from "@/lib/rollcall/shared";
@@ -22,6 +23,7 @@ import { usePhoneAlerts } from "./PhoneAlerts";
 import { onUploads, resumeUploads, waitingUploads } from "./photoQueue";
 import { RollcallPart, rollcallTabOf, type RollcallTab } from "./RollcallPart";
 import { appClass, SiteNav, type View } from "./SiteChrome";
+import { SpendingApp } from "./SpendingApp";
 import { SteelApp } from "./SteelApp";
 import { StoreApp } from "./StoreApp";
 import { SuppliersApp, type BillPayment } from "./SuppliersApp";
@@ -36,7 +38,7 @@ import { useSheetGestures } from "./useSheetGestures";
 
 export type { StoreData };
 export type ExpensesData = { expenses: Expense[]; items: StoreItem[]; pending?: BankDebit[]; books?: BookLists; bills?: OpenBill[]; vendors?: string[] };
-export type SiteData = { todo?: TodoTask[]; store?: StoreData; expenses?: ExpensesData; alerts?: AlertsData; concrete?: ConcreteData; buyers?: BuyersData; steel?: SteelData; suppliers?: SuppliersPage };
+export type SiteData = { todo?: TodoTask[]; store?: StoreData; expenses?: ExpensesData; alerts?: AlertsData; concrete?: ConcreteData; buyers?: BuyersData; steel?: SteelData; suppliers?: SuppliersPage; spending?: SpendingData };
 
 // Since 30 Oct 2026 the app opens on its home page (/todo) and the to-do list is /todo/jobs.
 const sectionFrom = (path: string): View | null =>
@@ -56,6 +58,8 @@ const sectionFrom = (path: string): View | null =>
             ? "rollcall"
           : path.startsWith("/todo/suppliers")
             ? "suppliers"
+          : path.startsWith("/todo/spending")
+            ? "spending"
           : path.startsWith("/todo/jobs")
           ? "todo"
           : path === "/todo" || path === "/todo/"
@@ -76,6 +80,7 @@ async function load(section: PageSection): Promise<SiteData> {
   if (section === "buyers") return { buyers: await get("/api/buyers") };
   if (section === "steel") return { steel: await get("/api/steel") };
   if (section === "suppliers") return { suppliers: await get("/api/suppliers") };
+  if (section === "spending") return { spending: await get("/api/spending") };
   const [x, s] = await Promise.all([get("/api/expenses"), get("/api/store")]);
   return { expenses: { expenses: x.expenses, items: s.items, pending: x.pending, books: x.books, bills: x.bills, vendors: x.vendors } };
 }
@@ -424,6 +429,17 @@ export function SiteApp({
       {show("steel") && (
         <div hidden={section !== "steel"}>
           <SteelApp me={me} active={section === "steel"} initial={data.steel ?? null} startedOffline={startedOffline && first === "steel"} fresh={first === "steel"} />
+        </div>
+      )}
+      {show("spending") && (
+        <div hidden={section !== "spending"}>
+          <SpendingApp
+            me={me}
+            active={section === "spending"}
+            initial={data.spending ?? null}
+            startedOffline={startedOffline && first === "spending"}
+            fresh={first === "spending"}
+          />
         </div>
       )}
       {show("suppliers") && (
