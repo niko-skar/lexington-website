@@ -5,19 +5,21 @@ import { getBuyersClient } from "@/lib/sanity/buyersClient";
 import { CHECK_PREFIX, EXPENSE_PREFIX, isId, ITEM_PREFIX, MOVE_PREFIX, newId, TOOL_OUT_PREFIX, TOOL_PREFIX } from "@/lib/site/ids";
 import { cleanPhotoRef, cleanText, dropPhoto, photoRef, TodoError } from "@/lib/todo/server";
 import type { TodoMe } from "@/lib/todo/shared";
-import { guessCategory, isStoreCategory } from "./categories";
+import { guessCategory, guessItemTrade, isStoreCategory, type StoreCategory } from "./categories";
 import { CHECK_FIELDS, toCheck, type RawCheck } from "./checks";
 import {
   MAX_ITEM_NAME,
   MAX_MOVE_NOTE,
   MAX_PERSON,
   MAX_UNIT,
+  isTrade,
   UNDO_MINUTES,
   type MoveKind,
   type StoreData,
   type StoreEntry,
   type StoreItem,
   type StoreTool,
+  type Trade,
 } from "./shared";
 import { OUT_FIELDS, TOOL_FIELDS, toOut, type RawOut } from "./tools";
 
@@ -43,6 +45,7 @@ const ITEM_FIELDS = `{
   "reorderDismissed": coalesce(reorderDismissed, false),
   "photoUrl": photo.asset->url,
   "category": category,
+  "trade": trade,
   "bought": coalesce(math::sum(*[_type == "siteExpense" && string::startsWith(_id, $expensePrefix) && itemId == ^._id && toStore == true].qty), 0),
   "added": coalesce(math::sum(*[_type == "storeMove" && itemId == ^._id && kind == "in"].qty), 0),
   "back": coalesce(math::sum(*[_type == "storeMove" && itemId == ^._id && kind == "back"].qty), 0),
@@ -139,9 +142,16 @@ export async function getStore(me: TodoMe): Promise<StoreData> {
   );
   const items = data.items.map(withLevel);
   await clearStaleDismissals(items);
+  const known = new Set(items.map((i) => i.id));
   return {
     items,
-    history: history(me, data.moves, data.bought, 200, 100),
+    history: history(
+      me,
+      data.moves,
+      data.bought.filter((b) => known.has(b.itemId)),
+      200,
+      100
+    ),
     tools: data.tools,
     toolOuts: [...data.outsOpen, ...data.outsDone].sort((a, b) => b.at.localeCompare(a.at)).map((o) => toOut(me, o)),
     checks: data.checks.map((c) => toCheck(me, c)),
@@ -204,7 +214,14 @@ async function findItem(name: string): Promise<{ id: string; stocked: boolean } 
   );
 }
 
-async function createItemDoc(me: TodoMe, name: string, unit: string, photoId: string | null = null, category: string = guessCategory(name)): Promise<string> {
+async function createItemDoc(
+  me: TodoMe,
+  name: string,
+  unit: string,
+  photoId: string | null = null,
+  category: StoreCategory = guessCategory(name),
+  trade: Trade = guessItemTrade(name, category)
+): Promise<string> {
   const id = newId(ITEM_PREFIX);
   await getBuyersClient().create({
     _id: id,
@@ -212,6 +229,7 @@ async function createItemDoc(me: TodoMe, name: string, unit: string, photoId: st
     name,
     unit,
     category,
+    trade,
     stocked: true,
     ...(photoId ? { photo: photoRef(photoId) } : {}),
     createdAt: new Date().toISOString(),
@@ -242,10 +260,11 @@ export async function createItem(me: TodoMe, body: Record<string, unknown>): Pro
   const unit = cleanUnit(body.unit);
   const count = cleanOptionalQty(body.count, "Type how many are there now (0 if none).");
   const photoId = cleanPhotoRef(body.photoId);
-  // The category picked, else what the name suggests.
+  // The category and trade picked, else what the name suggests.
   const category = isStoreCategory(body.category) ? body.category : guessCategory(name);
+  const trade = cleanTrade(body.trade) ?? guessItemTrade(name, category);
   if (await findItem(name)) throw new TodoError(409, `"${name}" is already in the store. Find it in the list and count it there.`);
-  const id = await createItemDoc(me, name, unit, photoId, category);
+  const id = await createItemDoc(me, name, unit, photoId, category, trade);
   if (count !== null) {
     await getBuyersClient().create({
       _id: newId(MOVE_PREFIX),
@@ -303,6 +322,11 @@ export async function updateItem(id: string, body: Record<string, unknown>): Pro
     if (!isStoreCategory(body.category)) throw new TodoError(400, "Pick one of the categories.");
     set.category = body.category;
   }
+  if ("trade" in body) {
+    const trade = cleanTrade(body.trade);
+    if (!trade) throw new TodoError(400, "Pick who uses it.");
+    set.trade = trade;
+  }
   if ("low" in body) set.low = cleanOptionalQty(body.low, "Type the reorder point as a number, or leave it empty.");
   if ("reorderQty" in body) set.reorderQty = cleanOptionalQty(body.reorderQty, "Type how much to reorder as a number, or leave it empty.");
   if ("reorderDismissed" in body) {
@@ -314,6 +338,38 @@ export async function updateItem(id: string, body: Record<string, unknown>): Pro
   const item = await getItem(id);
   if (!item) throw new TodoError(404, "That item isn't in the store any more.");
   return item;
+}
+
+/**
+ * The office: an item gone for good, with everything recorded for it (Niko, 3 Nov 2026: "Let me delete things outright
+ * but only me as admin, the new storekeeper put this hammer as a material and it's wrong, it's a tool"). Purchases of
+ * it stay in the expenses, no longer counted into the store.
+ */
+export async function deleteItem(id: string): Promise<void> {
+  if (!isId(ITEM_PREFIX, id)) throw new TodoError(404, "That item isn't in the store any more.");
+  const client = getBuyersClient();
+  const found = await client.fetch<{ photo?: string; moves: { _id: string; photo?: string }[]; bought: string[] } | null>(
+    `*[_id == $id && _type == "storeItem"][0]{
+      "photo": photo.asset._ref,
+      "moves": *[_type == "storeMove" && itemId == ^._id]{ _id, "photo": photo.asset._ref },
+      "bought": *[_type == "siteExpense" && itemId == ^._id]._id
+    }`,
+    { id }
+  );
+  if (!found) return;
+  const tx = client.transaction();
+  for (const move of found.moves) tx.delete(move._id);
+  for (const expense of found.bought) tx.patch(expense, (p) => p.set({ toStore: false }).unset(["itemId"]));
+  tx.delete(id);
+  await tx.commit();
+  for (const photo of [found.photo, ...found.moves.map((m) => m.photo)]) if (photo) await dropPhoto(photo, "store");
+}
+
+/** A trade sent by the phone: one of the list, null when none was sent. */
+function cleanTrade(value: unknown): Trade | null {
+  if (value === null || value === undefined || value === "") return null;
+  if (!isTrade(value)) throw new TodoError(400, "Pick who uses it.");
+  return value;
 }
 
 /* ---------- moves ---------- */

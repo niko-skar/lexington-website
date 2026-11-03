@@ -108,6 +108,8 @@ function cleanArrival(value: unknown, from: unknown): { at: string; from: Arrive
 export async function createTruck(me: TodoMe, body: Record<string, unknown>): Promise<Truck> {
   const photoId = cleanPhotoRef(body.photoId);
   if (!photoId) throw new TodoError(400, "Take a photo of the waybill first.");
+  // The waybill is read from its photo: it has to be in first (the phone waits for it).
+  if (photoId.startsWith("pending:")) throw new TodoError(400, "The waybill photo is still uploading: try again in a moment.");
   const id = TRUCK_PREFIX + createHash("sha256").update(photoId).digest("hex").slice(0, 12);
   const { at, from } = cleanArrival(body.arrivedAt, body.arrivedFrom);
   try {

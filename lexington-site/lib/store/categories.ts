@@ -3,6 +3,8 @@
 // such. you think of others we should separate"). Each item has one; an item that hasn't been given one goes by its
 // name (guessCategory) until someone picks.
 
+import { isTrade, type Trade } from "./shared";
+
 export const STORE_CATEGORIES = [
   "Cement, grout & additives",
   "Steel & mesh",
@@ -57,3 +59,47 @@ export function guessCategory(name: string): StoreCategory {
 
 /** An item's category: the one it was given, else what its name suggests. */
 export const categoryOf = (item: { name: string; category?: string | null }): StoreCategory => (isStoreCategory(item.category) ? item.category : guessCategory(item.name));
+
+/* ---------- who uses it (Niko, 3 Nov 2026: "Tool department carpenter, mason, or Steelbender ... Same for materials") ---------- */
+
+// Materials: their category says most of it; names settle the rest (form oil is the carpenters', tile adhesive the
+// masons'). Anything else is everyone's.
+const ITEM_TRADE_BY_CATEGORY: Partial<Record<StoreCategory, Trade>> = {
+  "Timber & formwork": "carpentry",
+  "Nails & fasteners": "carpentry",
+  "Cement, grout & additives": "masonry",
+  "Steel & mesh": "steel",
+};
+const ITEM_TRADE_RULES: Array<[Trade, RegExp]> = [
+  ["steel", /rebar|\brods?\b|binding wire|tie wire|\bbrc\b|spacer|\bchairs?\b/i],
+  ["carpentry", /form oil|release agent|plywood|timber|\bwood\b|batten|nails?\b|hinge/i],
+  ["masonry", /cement|\bblocks?\b|\bsand\b|chipping|stone|quarry|mortar|plaster|\btiles?\b|tile adhesive|grout|\blime\b|screed|\bdpm\b|damp proof/i],
+];
+
+/** Who a material is for, by its category and name ("all" when nothing says). */
+export function guessItemTrade(name: string, category: StoreCategory = guessCategory(name)): Trade {
+  const byCategory = ITEM_TRADE_BY_CATEGORY[category];
+  if (byCategory) return byCategory;
+  for (const [trade, re] of ITEM_TRADE_RULES) if (re.test(name)) return trade;
+  return "all";
+}
+
+// Tools: in order, the first that fits wins (a club hammer is the masons', a claw hammer the carpenters'; a grinder,
+// a drill or a ladder everyone's).
+const TOOL_TRADE_RULES: Array<[Trade, RegExp]> = [
+  ["steel", /bar bend|bending|rebar|bolt cutter|steel cutter|\bpincers?\b|tie wire|binding|\bsteel\b/i],
+  ["masonry", /club hammer|lump hammer|sledge|trowel|\bfloats?\b|spirit level|\bshovels?\b|\bspades?\b|head ?pans?|wheel ?barrows?|pick ?axe|mattock|block mou?ld|rammer|compactor|vibrator|poker|mixer|\bsieve\b|jointer|plumb ?bob|tile cutter/i],
+  ["carpentry", /\bsaws?\b|circular|jig ?saw|hammer|claw|chisel|\bplane\b|router|\bsquare\b|nail gun|\bclamps?\b|crow ?bar|pinch bar|\bwood\b|formwork/i],
+];
+
+/** Who a tool is for, by its name ("all" when nothing says). */
+export function guessToolTrade(name: string): Trade {
+  for (const [trade, re] of TOOL_TRADE_RULES) if (re.test(name)) return trade;
+  return "all";
+}
+
+/** A material's trade: the one it was given, else what its category and name suggest. */
+export const tradeOfItem = (item: { name: string; category?: string | null; trade?: string | null }): Trade =>
+  isTrade(item.trade) ? item.trade : guessItemTrade(item.name, categoryOf(item));
+/** A tool's trade: the one it was given, else what its name suggests. */
+export const tradeOfTool = (tool: { name: string; trade?: string | null }): Trade => (isTrade(tool.trade) ? tool.trade : guessToolTrade(tool.name));

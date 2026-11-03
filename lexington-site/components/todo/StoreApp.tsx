@@ -14,6 +14,7 @@ import {
   qtyUnit,
   stillOut,
   toolWord,
+  TRADE_NAMES,
   UNDO_MINUTES,
   UNITS,
   type CheckKind,
@@ -24,15 +25,16 @@ import {
   type StoreItem,
   type StoreTool,
   type ToolOut,
+  type Trade,
 } from "@/lib/store/shared";
 import { photoAt, type TodoMe } from "@/lib/todo/shared";
-import { categoryOf, guessCategory, STORE_CATEGORIES, type StoreCategory } from "@/lib/store/categories";
+import { categoryOf, guessCategory, guessItemTrade, STORE_CATEGORIES, tradeOfItem, type StoreCategory } from "@/lib/store/categories";
 import { AccessSheet } from "./AccessSheet";
 import { dayName, errorText, send, startPolling, when } from "./api";
 import { QtyPicker } from "./QtyPicker";
 import site from "./Site.module.css";
 import { SiteHeader, SiteMenu } from "./SiteChrome";
-import { CameraIcon, EntryPhoto, minutesSince, PhotoField, time } from "./StoreBits";
+import { CameraIcon, EntryPhoto, minutesSince, PhotoField, time, TradeChips, TradeFilter } from "./StoreBits";
 import { CheckSheet, CheckStrip, DaysSheet } from "./StoreChecks";
 import { EditToolSheet, isLate, NewToolSheet, outByTool, ReturnSheet, TakeOutSheet, ToolSheet, ToolsTab } from "./StoreTools";
 import styles from "./Todo.module.css";
@@ -145,8 +147,9 @@ export function StoreApp({
   const [loaded, setLoaded] = useState(initial !== null);
   const [tab, setTab] = useState<Tab>("stock");
   const [search, setSearch] = useState("");
-  // One category shown (a chip tapped), or all of them under their headings.
+  // One category shown (a chip tapped), or all of them under their headings; and one trade's, or everyone's.
   const [cat, setCat] = useState<StoreCategory | "all">("all");
+  const [trade, setTrade] = useState<Trade | "any">("any");
   const [showHidden, setShowHidden] = useState(false);
   const [showDismissed, setShowDismissed] = useState(false);
   const [sheet, setSheet] = useState<Sheet | null>(null);
@@ -349,6 +352,27 @@ export function StoreApp({
     [applyItem, showToast]
   );
 
+  const removeItem = useCallback(
+    (item: StoreItem) => {
+      localAt.current = Date.now();
+      setItems((list) => list.filter((i) => i.id !== item.id));
+      setHistory((list) => list.filter((e) => e.itemId !== item.id));
+      setSheet(null);
+      showToast({ text: `Deleted ${item.name}` });
+    },
+    [showToast]
+  );
+  const removeTool = useCallback(
+    (tool: StoreTool) => {
+      localAt.current = Date.now();
+      setTools((list) => list.filter((t) => t.id !== tool.id));
+      setToolOuts((list) => list.filter((o) => o.toolId !== tool.id));
+      setSheet(null);
+      showToast({ text: `Deleted ${tool.name}` });
+    },
+    [showToast]
+  );
+
   const changeItem = useCallback(
     async (item: StoreItem, change: Record<string, unknown>, done: string) => {
       try {
@@ -369,8 +393,13 @@ export function StoreApp({
   const hidden = useMemo(() => items.filter((i) => !i.stocked), [items]);
   const shown = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return stocked.filter((i) => !q || i.name.toLowerCase().includes(q));
-  }, [stocked, search]);
+    return stocked.filter((i) => (!q || i.name.toLowerCase().includes(q)) && (trade === "any" || tradeOfItem(i) === trade));
+  }, [stocked, search, trade]);
+  const tradeCounts = useMemo(() => {
+    const counts = new Map<Trade, number>();
+    for (const i of stocked) counts.set(tradeOfItem(i), (counts.get(tradeOfItem(i)) ?? 0) + 1);
+    return counts;
+  }, [stocked]);
   const toReorder = useMemo(() => stocked.filter(needsReorder), [stocked]);
   const shownGroups = useMemo(() => byCategory(shown).filter(([c]) => cat === "all" || c === cat), [shown, cat]);
   const chips = useMemo(() => byCategory(stocked).map(([c, l]) => [c, l.length] as const), [stocked]);
@@ -434,6 +463,7 @@ export function StoreApp({
         <span className={site.itemName}>
           {item.name}
           <small className={item.level < 0 ? site.flagBad : flag ? site.flagLow : undefined}>
+            {tradeOfItem(item) !== "all" ? `${TRADE_NAMES[tradeOfItem(item)]} · ` : ""}
             {flag ?? (item.lastCountAt ? `Counted ${when(item.lastCountAt)}` : "Not counted yet")}
           </small>
         </span>
@@ -519,6 +549,7 @@ export function StoreApp({
                 + New item
               </button>
             </div>
+            <TradeFilter value={trade} onChange={setTrade} counts={tradeCounts} />
             {chips.length > 1 && (
               <div className={site.catChips} role="group" aria-label="Categories">
                 <button type="button" className={cat === "all" ? styles.chipOn : styles.chip} aria-pressed={cat === "all"} onClick={() => setCat("all")}>
@@ -719,6 +750,7 @@ export function StoreApp({
         <EditItemSheet
           key={current.id}
           item={current}
+          onDeleted={removeItem}
           onClose={() => setSheet({ kind: "item", id: current.id })}
           onSaved={(item) => {
             applyItem(item);
@@ -741,6 +773,10 @@ export function StoreApp({
           onPhoto={(tool) => {
             applyTool(tool);
             showToast({ text: "Photo saved" });
+          }}
+          onChanged={(tool, text) => {
+            applyTool(tool);
+            showToast({ text });
           }}
           onLost={(out) => void markLost(out)}
           onOpenPhoto={setLightbox}
@@ -775,9 +811,11 @@ export function StoreApp({
           key={sheet.outIds.join()}
           lines={toolOuts.filter((o) => sheet.outIds.includes(o.id) && !o.closedAt && stillOut(o) > 0)}
           name={toolName}
+          conditionOf={(id) => toolById.get(id)?.condition ?? null}
           onClose={() => setSheet(sheet.back ? { kind: "tool", toolId: sheet.back } : null)}
-          onSaved={(outs) => {
+          onSaved={(outs, changedTools) => {
             applyOuts(outs);
+            for (const tool of changedTools) applyTool(tool);
             setSheet(sheet.back ? { kind: "tool", toolId: sheet.back } : null);
             // What this phone just recorded: the newest return on each.
             const made = outs.map((o) => ({ out: o, ret: o.returns[o.returns.length - 1] })).filter((m) => m.ret);
@@ -808,6 +846,7 @@ export function StoreApp({
           key={currentTool.id}
           tool={currentTool}
           outNow={outByTool(toolOuts).get(currentTool.id) ?? 0}
+          onDeleted={removeTool}
           onClose={() => setSheet({ kind: "tool", toolId: currentTool.id })}
           onSaved={(tool) => {
             applyTool(tool);
@@ -822,10 +861,9 @@ export function StoreApp({
           outs={toolOuts}
           name={toolName}
           onClose={() => setSheet(null)}
-          onSaved={(check) => {
+          onSaved={(check, n) => {
             applyCheck(check);
             setSheet(null);
-            const n = check.photoUrls.length;
             showToast({
               text: `Store room ${check.kind === "open" ? "open" : "closed"} at ${time(check.at)}: ${n} ${n === 1 ? "photo" : "photos"}`,
               onUndo: () => void undoCheck(check),
@@ -943,13 +981,13 @@ function ItemSheet({
   }, [entries]);
 
   // A new photo of the stock: upload, then put it on the item.
-  const { start, settled, clear } = useUploadSlot("/api/store/photo");
+  const { start, landed, clear } = useUploadSlot("/api/store/photo");
   const newPhoto = async (file: File) => {
     setPhotoBusy(true);
     setError("");
     start(file);
     try {
-      const stored = await settled();
+      const stored = await landed();
       if (!stored) throw new Error("The photo didn't upload. Try again.");
       const { item: saved } = await send<{ item: StoreItem }>(`/api/store/items/${item.id}`, "PATCH", { photoId: stored.id });
       clear(true);
@@ -994,7 +1032,9 @@ function ItemSheet({
             <p className={item.level < 0 ? site.bigLevelBad : atReorderPoint(item) ? site.bigLevelLow : site.bigLevel}>
               {fmtQty(item.level)} <small>{item.unit}</small>
             </p>
-            <p className={styles.sheetNote}>In the store by the record.</p>
+            <p className={styles.sheetNote}>
+              {tradeOfItem(item) !== "all" ? `For the ${TRADE_NAMES[tradeOfItem(item)].toLowerCase()} · ` : ""}In the store by the record.
+            </p>
             {item.photoUrl && (
               <label htmlFor="store-item-camera" className={styles.linkButton} role="button" tabIndex={0}>
                 {photoBusy ? "Saving the photo…" : "New photo"}
@@ -1252,17 +1292,15 @@ function MoveSheet({
             type="button"
             className={styles.sheetSave}
             onClick={() => void save()}
-            disabled={saving || (counting && countText.trim() === "") || (photoNeeded && slot?.state !== "ready")}
+            disabled={saving || (counting && countText.trim() === "") || (photoNeeded && !slot)}
           >
             {saving
               ? "Saving…"
               : photoNeeded && !slot
                 ? "Take the photo first"
-                : photoNeeded && slot?.state === "uploading"
-                  ? "Uploading the photo…"
-                  : counting
-                    ? "Save the count"
-                    : `${MOVE_TITLE[move]} ${qtyUnit(qty, item.unit)}`}
+                : counting
+                  ? "Save the count"
+                  : `${MOVE_TITLE[move]} ${qtyUnit(qty, item.unit)}`}
           </button>
         </div>
       </div>
@@ -1307,6 +1345,8 @@ function NewItemSheet({ items, onClose, onSaved }: { items: StoreItem[]; onClose
   const clash = items.find((i) => i.name.toLowerCase() === name.trim().replace(/\s+/g, " ").toLowerCase());
   const [picked, setPicked] = useState<StoreCategory | null>(null);
   const category = picked ?? guessCategory(name);
+  const [pickedTrade, setPickedTrade] = useState<Trade | null>(null);
+  const trade = pickedTrade ?? guessItemTrade(name, category);
 
   const save = async () => {
     setError("");
@@ -1322,6 +1362,7 @@ function NewItemSheet({ items, onClose, onSaved }: { items: StoreItem[]; onClose
         count: Number(count),
         photoId: photo?.id ?? null,
         category,
+        trade,
       });
       clear(true);
       onSaved(item);
@@ -1351,6 +1392,7 @@ function NewItemSheet({ items, onClose, onSaved }: { items: StoreItem[]; onClose
         />
         {clash && <p className={site.gapOdd}>&ldquo;{clash.name}&rdquo; is already in the store: find it in the list and count it there.</p>}
         <CategoryChips value={category} onChange={setPicked} />
+        <TradeChips value={trade} onChange={setPickedTrade} />
         <PhotoField idBase="store-new" slot={slot} onPick={start} onClear={() => clear()} label="Photo of the stock (optional)" />
         <span className={styles.label}>Counted in</span>
         <UnitPicker id="store-new-unit" value={unit} onChange={setUnit} />
@@ -1392,15 +1434,39 @@ function NewItemSheet({ items, onClose, onSaved }: { items: StoreItem[]; onClose
 
 /* ---------- the office: change an item ---------- */
 
-function EditItemSheet({ item, onClose, onSaved }: { item: StoreItem; onClose: () => void; onSaved: (item: StoreItem) => void }) {
+function EditItemSheet({
+  item,
+  onClose,
+  onSaved,
+  onDeleted,
+}: {
+  item: StoreItem;
+  onClose: () => void;
+  onSaved: (item: StoreItem) => void;
+  /** Deleted outright (Niko, 3 Nov 2026: "Let me delete things outright but only me as admin"). */
+  onDeleted: (item: StoreItem) => void;
+}) {
   const [name, setName] = useState(item.name);
   const [unit, setUnit] = useState(item.unit);
   const [low, setLow] = useState(item.low === null ? "" : String(item.low));
   const [reorderQty, setReorderQty] = useState(item.reorderQty === null ? "" : String(item.reorderQty));
   const [stocked, setStocked] = useState(item.stocked);
   const [category, setCategory] = useState<StoreCategory>(categoryOf(item));
+  const [trade, setTrade] = useState<Trade>(tradeOfItem(item));
   const [saving, setSaving] = useState(false);
+  const [armed, setArmed] = useState(false);
   const [error, setError] = useState("");
+  const remove = async () => {
+    setSaving(true);
+    setError("");
+    try {
+      await send(`/api/store/items/${item.id}`, "DELETE");
+      onDeleted(item);
+    } catch (e) {
+      setError(errorText(e));
+      setSaving(false);
+    }
+  };
 
   const save = async () => {
     setError("");
@@ -1410,6 +1476,7 @@ function EditItemSheet({ item, onClose, onSaved }: { item: StoreItem; onClose: (
         name: name.trim(),
         unit: unit.trim() || "pcs",
         category,
+        trade,
         low: low.trim() === "" ? null : Number(low),
         reorderQty: reorderQty.trim() === "" ? null : Number(reorderQty),
         stocked,
@@ -1432,6 +1499,7 @@ function EditItemSheet({ item, onClose, onSaved }: { item: StoreItem; onClose: (
         <input id="store-edit-name" className={styles.input} value={name} onChange={(e) => setName(e.target.value)} maxLength={MAX_ITEM_NAME} autoComplete="off" />
         <p className={styles.sheetNote}>Purchases typed with the old name still come here.</p>
         <CategoryChips value={category} onChange={setCategory} />
+        <TradeChips value={trade} onChange={setTrade} />
         <span className={styles.label}>Counted in</span>
         <UnitPicker id="store-edit-unit" value={unit} onChange={setUnit} />
         <label className={styles.label} htmlFor="store-edit-low">
@@ -1469,6 +1537,10 @@ function EditItemSheet({ item, onClose, onSaved }: { item: StoreItem; onClose: (
           &ldquo;Not kept in the store&rdquo; is for things used straight away (ready-mix, sand): they leave the stock list, and buying them doesn&rsquo;t add stock
           unless you say so on the expense.
         </p>
+        <button type="button" className={armed ? `${site.deleteItem} ${styles.dangerArmed}` : site.deleteItem} onClick={() => (armed ? void remove() : setArmed(true))} disabled={saving}>
+          {armed ? `Tap again: delete ${item.name} and everything recorded for it` : "Delete this item"}
+        </button>
+        {armed && <p className={styles.sheetNote}>Purchases of it stay in the expenses (no longer counted into the store).</p>}
         {error && <p className={styles.sheetError}>{error}</p>}
         <div className={styles.sheetButtons}>
           <button type="button" className={styles.sheetCancel} onClick={onClose} disabled={saving}>

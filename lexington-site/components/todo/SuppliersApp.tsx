@@ -570,7 +570,7 @@ function BillSheet({
           >
             Cancel
           </button>
-          <button type="button" className={styles.sheetSave} onClick={() => void save()} disabled={saving || slot?.state === "uploading"}>
+          <button type="button" className={styles.sheetSave} onClick={() => void save()} disabled={saving}>
             {saving ? "Saving…" : bill ? "Save" : "Save the bill"}
           </button>
         </div>

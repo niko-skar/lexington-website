@@ -1,10 +1,10 @@
 "use client";
 
-import { ghanaDay } from "@/lib/store/shared";
+import { CONDITION_NAMES, CONDITIONS, ghanaDay, needsFixing, TRADE_NAMES, TRADES, type Condition, type Trade } from "@/lib/store/shared";
 import { photoAt } from "@/lib/todo/shared";
 import site from "./Site.module.css";
 import styles from "./Todo.module.css";
-import type { useUploadSlot } from "./useUploadSlot";
+import { slotWords, type useUploadSlot } from "./useUploadSlot";
 
 // Small pieces the store room's parts share: stock, tools, and opening and closing the store.
 
@@ -74,9 +74,7 @@ export function PhotoField({
             {/* eslint-disable-next-line @next/next/no-img-element -- the phone's own preview of the photo */}
             <img src={slot.preview} alt="" />
           </span>
-          <p className={slot.state === "error" ? styles.slotError : site.photoState}>
-            {slot.state === "uploading" ? "Uploading the photo…" : slot.state === "ready" ? "Photo ready" : slot.error}
-          </p>
+          <p className={slot.state === "error" && slot.final ? styles.slotError : site.photoState}>{slotWords(slot)}</p>
           <div className={styles.slotButtons}>
             <label htmlFor={`${idBase}-camera`} role="button" tabIndex={0}>
               Retake
@@ -105,6 +103,76 @@ export function PhotoField({
       )}
       <input id={`${idBase}-camera`} data-picker={`${idBase}-camera`} className={styles.hiddenInput} type="file" accept="image/*" capture="environment" onChange={pick} />
       {!cameraOnly && <input id={`${idBase}-gallery`} data-picker={`${idBase}-gallery`} className={styles.hiddenInput} type="file" accept="image/*" onChange={pick} />}
+    </div>
+  );
+}
+
+/* ---------- who uses it, and the state a tool is in (Niko, 3 Nov 2026) ---------- */
+
+/** Who uses it: one of the trades, or everyone. */
+export function TradeChips({ value, onChange }: { value: Trade; onChange: (t: Trade) => void }) {
+  return (
+    <>
+      <span className={styles.label}>Who uses it?</span>
+      <div className={styles.chips} role="group" aria-label="Who uses it">
+        {TRADES.map((t) => (
+          <button key={t} type="button" className={value === t ? styles.chipOn : styles.chip} aria-pressed={value === t} onClick={() => onChange(t)}>
+            {TRADE_NAMES[t]}
+          </button>
+        ))}
+      </div>
+    </>
+  );
+}
+
+/** The state a tool is in (a returned one can't be new). */
+export function ConditionChips({
+  value,
+  onChange,
+  label = "Condition",
+  returned,
+  disabled,
+}: {
+  value: Condition | null;
+  onChange: (c: Condition) => void;
+  label?: string;
+  returned?: boolean;
+  disabled?: boolean;
+}) {
+  return (
+    <>
+      {label && <span className={styles.label}>{label}</span>}
+      <div className={styles.chips} role="group" aria-label={label || "Condition"}>
+        {CONDITIONS.filter((c) => !returned || c !== "new").map((c) => (
+          <button
+            key={c}
+            type="button"
+            className={value === c ? (needsFixing(c) ? site.chipBad : styles.chipOn) : styles.chip}
+            aria-pressed={value === c}
+            onClick={() => onChange(c)}
+            disabled={disabled}
+          >
+            {CONDITION_NAMES[c]}
+          </button>
+        ))}
+      </div>
+    </>
+  );
+}
+
+/** A filter row over a list: all of it, or one trade's (with how many each has). */
+export function TradeFilter({ value, onChange, counts }: { value: Trade | "any"; onChange: (t: Trade | "any") => void; counts: Map<Trade, number> }) {
+  if ([...counts.values()].filter((n) => n > 0).length < 2) return null;
+  return (
+    <div className={site.catChips} role="group" aria-label="Who uses it">
+      <button type="button" className={value === "any" ? styles.chipOn : styles.chip} aria-pressed={value === "any"} onClick={() => onChange("any")}>
+        All trades
+      </button>
+      {TRADES.filter((t) => (counts.get(t) ?? 0) > 0).map((t) => (
+        <button key={t} type="button" className={value === t ? styles.chipOn : styles.chip} aria-pressed={value === t} onClick={() => onChange(value === t ? "any" : t)}>
+          {TRADE_NAMES[t]} <span className={site.catCount}>{counts.get(t)}</span>
+        </button>
+      ))}
     </div>
   );
 }

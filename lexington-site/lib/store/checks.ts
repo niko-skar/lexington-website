@@ -13,7 +13,7 @@ import { MAX_CHECK_PHOTOS, MAX_MOVE_NOTE, UNDO_MINUTES, type StoreCheck } from "
 // how many tools were still out, as it was at that moment.
 
 export const CHECK_FIELDS = `{
-  "id": _id, kind, "photoUrls": coalesce(photos[].asset->url, []), "note": coalesce(note, ""), "toolsOut": toolsOut, at, "by": coalesce(by, ""), byId
+  "id": _id, kind, "photoUrls": coalesce(photos[defined(asset)].asset->url, []), "note": coalesce(note, ""), "toolsOut": toolsOut, at, "by": coalesce(by, ""), byId
 }`;
 
 export type RawCheck = Omit<StoreCheck, "mine"> & { byId?: string };

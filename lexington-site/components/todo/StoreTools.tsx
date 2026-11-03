@@ -1,24 +1,30 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 
+import { guessToolTrade, tradeOfTool } from "@/lib/store/categories";
 import {
+  CONDITION_NAMES,
   ghanaDay,
   MAX_MOVE_NOTE,
   MAX_PERSON,
   MAX_TOOL_COUNT,
   MAX_TOOL_NAME,
+  needsFixing,
   stillOut,
   toolWord,
+  TRADE_NAMES,
   UNDO_MINUTES,
+  type Condition,
   type StoreTool,
   type ToolOut,
   type ToolReturn,
+  type Trade,
 } from "@/lib/store/shared";
 import { photoAt, type TodoMe } from "@/lib/todo/shared";
 import { errorText, send } from "./api";
 import site from "./Site.module.css";
-import { CameraIcon, dayLabel, EntryPhoto, ghanaTime, minutesSince, PhotoField, Stepper } from "./StoreBits";
+import { CameraIcon, ConditionChips, dayLabel, EntryPhoto, ghanaTime, minutesSince, PhotoField, Stepper, TradeChips, TradeFilter } from "./StoreBits";
 import styles from "./Todo.module.css";
 import { useUploadSlot } from "./useUploadSlot";
 
@@ -43,6 +49,10 @@ const since = (iso: string) => {
 const named = (name: string, n: number) => (n > 1 ? `${name} ×${n}` : name);
 const canUndoOut = (o: ToolOut, isAdmin: boolean) => o.returns.length === 0 && (isAdmin || (o.mine && minutesSince(o.at) < UNDO_MINUTES));
 const canUndoReturn = (r: ToolReturn, isAdmin: boolean) => isAdmin || (r.mine && !r.lost && minutesSince(r.at) < UNDO_MINUTES);
+/** A state worth showing on a tool's row (good and new go without saying). */
+const shownCondition = (c: Condition | null) => (c === "worn" || needsFixing(c) ? c : null);
+/** A tool's trade in words, or nothing when everyone uses it. */
+const tradeWords = (t: StoreTool) => (tradeOfTool(t) === "all" ? "" : TRADE_NAMES[tradeOfTool(t)]);
 
 type Armed = { armed: string | null; setArmed: (id: string | null) => void };
 
@@ -93,8 +103,9 @@ function OutEntry({
         </p>
         {out.returns.map((r) => (
           <div key={r.key} className={site.returnLine}>
-            <p className={r.lost ? site.entryBad : site.entryWho}>
-              {r.lost ? `Lost: ${r.qty}` : `Back ${r.qty}`} · {ghanaDay(r.at) === ghanaDay(out.at) ? ghanaTime(r.at) : `${dayLabel(ghanaDay(r.at))} ${ghanaTime(r.at)}`} ·{" "}
+            <p className={r.lost || needsFixing(r.condition) ? site.entryBad : site.entryWho}>
+              {r.lost ? `Lost: ${r.qty}` : `Back ${r.qty}`}
+              {r.condition && !r.lost ? ` (${CONDITION_NAMES[r.condition].toLowerCase()})` : ""} · {ghanaDay(r.at) === ghanaDay(out.at) ? ghanaTime(r.at) : `${dayLabel(ghanaDay(r.at))} ${ghanaTime(r.at)}`} ·{" "}
               {r.lost ? "marked by" : "by"} {r.by}
               {r.note ? ` · “${r.note}”` : ""}
             </p>
@@ -148,6 +159,7 @@ export function ToolsTab({
 }) {
   const isAdmin = me.kind === "admin";
   const [find, setFind] = useState("");
+  const [trade, setTrade] = useState<Trade | "any">("any");
   const [showRetired, setShowRetired] = useState(false);
   const [armed, setArmed] = useState<string | null>(null);
   const byId = useMemo(() => new Map(tools.map((t) => [t.id, t])), [tools]);
@@ -178,7 +190,9 @@ export function ToolsTab({
   const active = tools.filter((t) => !t.retired);
   const retired = tools.filter((t) => t.retired);
   const q = find.trim().toLowerCase();
-  const shown = active.filter((t) => !q || t.name.toLowerCase().includes(q));
+  const tradeCounts = new Map<Trade, number>();
+  for (const t of active) tradeCounts.set(tradeOfTool(t), (tradeCounts.get(tradeOfTool(t)) ?? 0) + 1);
+  const shown = active.filter((t) => (!q || t.name.toLowerCase().includes(q)) && (trade === "any" || tradeOfTool(t) === trade));
   const days = useMemo(() => {
     const groups: { day: string; outs: ToolOut[] }[] = [];
     for (const o of outs) {
@@ -192,6 +206,8 @@ export function ToolsTab({
 
   const toolRow = (t: StoreTool) => {
     const o = out.get(t.id) ?? 0;
+    const cond = shownCondition(t.condition);
+    const tradeName = tradeWords(t);
     const inStore = t.count - o;
     const who = holders.get(t.id) ?? [];
     const status =
@@ -215,6 +231,13 @@ export function ToolsTab({
         <span className={site.itemName}>
           {t.name}
           <small className={inStore < 0 ? site.flagBad : o > 0 ? site.flagLow : undefined}>{status}</small>
+          {(tradeName || cond) && (
+            <small>
+              {tradeName}
+              {tradeName && cond ? " · " : ""}
+              {cond && <span className={needsFixing(cond) ? site.condBad : site.condWorn}>{CONDITION_NAMES[cond]}</span>}
+            </small>
+          )}
         </span>
         <span className={inStore < 0 ? site.levelBad : inStore === 0 && t.count > 0 ? site.levelLow : site.level}>
           {inStore} <small>of {t.count}</small>
@@ -285,6 +308,7 @@ export function ToolsTab({
               enterKeyHint="search"
             />
           )}
+          <TradeFilter value={trade} onChange={setTrade} counts={tradeCounts} />
           {shown.length > 0 ? <div className={site.itemList}>{shown.map(toolRow)}</div> : active.length > 0 && <p className={styles.empty}>Nothing matches.</p>}
           {isAdmin && retired.length > 0 && (
             <>
@@ -332,6 +356,7 @@ export function ToolSheet({
   onReturn,
   onEdit,
   onPhoto,
+  onChanged,
   onLost,
   onOpenPhoto,
   onUndoOut,
@@ -346,6 +371,8 @@ export function ToolSheet({
   onReturn: (outIds: string[]) => void;
   onEdit: () => void;
   onPhoto: (tool: StoreTool) => void;
+  /** Its state set here. */
+  onChanged: (tool: StoreTool, text: string) => void;
   onLost: (out: ToolOut) => void;
   onOpenPhoto: (url: string) => void;
   onUndoOut: (out: ToolOut) => void;
@@ -356,7 +383,21 @@ export function ToolSheet({
   const [error, setError] = useState("");
   const [armed, setArmed] = useState<string | null>(null);
   const [photoBusy, setPhotoBusy] = useState(false);
+  const [condBusy, setCondBusy] = useState(false);
   const mine = useMemo(() => outs.filter((o) => o.toolId === tool.id), [outs, tool.id]);
+  const setCondition = async (condition: Condition) => {
+    if (condition === tool.condition) return;
+    setCondBusy(true);
+    setError("");
+    try {
+      const { tool: saved } = await send<{ tool: StoreTool }>(`/api/store/tools/${tool.id}`, "PATCH", { condition });
+      onChanged(saved, `${tool.name}: ${CONDITION_NAMES[condition].toLowerCase()}`);
+    } catch (e) {
+      setError(errorText(e));
+    } finally {
+      setCondBusy(false);
+    }
+  };
   const open = mine.filter((o) => !o.closedAt && stillOut(o) > 0);
   const outNow = open.reduce((n, o) => n + stillOut(o), 0);
   const inStore = tool.count - outNow;
@@ -383,7 +424,7 @@ export function ToolSheet({
     };
   }, [tool.id, ids]);
 
-  const { start, settled, clear } = useUploadSlot("/api/store/photo");
+  const { start, landed, clear } = useUploadSlot("/api/store/photo");
   const pickPhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = "";
@@ -392,7 +433,7 @@ export function ToolSheet({
     setError("");
     start(file);
     try {
-      const stored = await settled();
+      const stored = await landed();
       if (!stored) throw new Error("The photo didn't upload. Try again.");
       const { tool: saved } = await send<{ tool: StoreTool }>(`/api/store/tools/${tool.id}`, "PATCH", { photoId: stored.id });
       clear(true);
@@ -434,6 +475,7 @@ export function ToolSheet({
             </p>
             <p className={styles.sheetNote}>
               {tool.count} in all · {outNow} out{tool.retired ? " · not used any more" : ""}
+              {tradeWords(tool) ? ` · for the ${tradeWords(tool).toLowerCase()}` : ""}
             </p>
             {tool.photoUrl && (
               <label htmlFor="tool-camera" className={styles.linkButton} role="button" tabIndex={0}>
@@ -444,6 +486,7 @@ export function ToolSheet({
         </div>
         <input id="tool-camera" data-picker="tool-camera" className={styles.hiddenInput} type="file" accept="image/*" capture="environment" onChange={(e) => void pickPhoto(e)} />
         {inStore < 0 && <p className={site.gapBad}>More out than we have: something came back without being recorded, or the number is wrong.</p>}
+        <ConditionChips value={tool.condition} onChange={(c) => void setCondition(c)} label={tool.condition ? "Condition" : "Condition: not said yet"} disabled={condBusy} />
 
         <button type="button" className={site.bigAction} onClick={onTakeOut} disabled={tool.retired}>
           Take out
@@ -624,7 +667,10 @@ export function TakeOutSheet({
               <div key={t.id} className={n ? site.pickRowOn : site.pickRow}>
                 <span className={site.pickName}>
                   {t.name}
-                  <small>{inStore <= 0 ? "None in the store by the record" : `${inStore} in the store`}</small>
+                  <small>
+                    {inStore <= 0 ? "None in the store by the record" : `${inStore} in the store`}
+                    {needsFixing(t.condition) && <span className={site.condBad}> · {CONDITION_NAMES[t.condition!]}</span>}
+                  </small>
                 </span>
                 {n ? (
                   <Stepper value={n} min={0} onChange={(v) => pick(t.id, v)} label={`How many: ${t.name}`} />
@@ -674,19 +720,17 @@ export function TakeOutSheet({
             type="button"
             className={styles.sheetSave}
             onClick={() => void save()}
-            disabled={saving || slot?.state !== "ready" || total === 0 || !person.trim()}
+            disabled={saving || !slot || total === 0 || !person.trim()}
           >
             {saving
               ? "Saving…"
               : !slot
                 ? "Take the photo first"
-                : slot.state === "uploading"
-                  ? "Uploading the photo…"
-                  : total === 0
-                    ? "Pick the tools"
-                    : !person.trim()
-                      ? "Who is taking them?"
-                      : `Take out ${total} ${toolWord(total)}`}
+                : total === 0
+                  ? "Pick the tools"
+                  : !person.trim()
+                    ? "Who is taking them?"
+                    : `Take out ${total} ${toolWord(total)}`}
           </button>
         </div>
       </div>
@@ -699,6 +743,7 @@ export function TakeOutSheet({
 export function ReturnSheet({
   lines,
   name,
+  conditionOf,
   onClose,
   onSaved,
   onSignedOut,
@@ -706,11 +751,22 @@ export function ReturnSheet({
   /** The take-outs it was opened for (one, or everything one person has). */
   lines: ToolOut[];
   name: (toolId: string) => string;
+  /** The state each tool was in when it went out. */
+  conditionOf: (toolId: string) => Condition | null;
   onClose: () => void;
-  onSaved: (outs: ToolOut[]) => void;
+  onSaved: (outs: ToolOut[], tools: StoreTool[]) => void;
   onSignedOut: () => void;
 }) {
   const [back, setBack] = useState<Record<string, number>>(() => Object.fromEntries(lines.map((o) => [o.id, stillOut(o)])));
+  // Each starts at the state it went out in (a new one comes back good at best).
+  const [cond, setCond] = useState<Record<string, Condition>>(() =>
+    Object.fromEntries(
+      lines.map((o) => {
+        const was = conditionOf(o.toolId);
+        return [o.id, was && was !== "new" ? was : "good"];
+      })
+    )
+  );
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -728,13 +784,13 @@ export function ReturnSheet({
     try {
       const photo = await settled();
       if (!photo) return setError("The photo didn't upload. Take it again.");
-      const { outs } = await send<{ outs: ToolOut[] }>("/api/store/tools/back", "POST", {
-        returns: ticked,
+      const { outs, tools } = await send<{ outs: ToolOut[]; tools: StoreTool[] }>("/api/store/tools/back", "POST", {
+        returns: ticked.map((t) => ({ ...t, condition: cond[t.outId] ?? "good" })),
         note: note.trim(),
         photoId: photo.id,
       });
       clear(true);
-      onSaved(outs);
+      onSaved(outs, tools ?? []);
     } catch (e) {
       if ((e as { status?: number }).status === 401) onSignedOut();
       setError(errorText(e));
@@ -747,13 +803,14 @@ export function ReturnSheet({
     <div className={styles.sheetBackdrop}>
       <div className={styles.sheet} role="dialog" aria-label="Tools back">
         <h2 className={styles.sheetTitle}>{people.length === 1 ? `Back from ${people[0]}` : "Back to the store"}</h2>
-        <p className={styles.sheetNote}>Untick anything that didn&rsquo;t come back.</p>
+        <p className={styles.sheetNote}>Untick anything that didn&rsquo;t come back, and say the state each came back in.</p>
         <div className={site.pickList}>
           {lines.map((o) => {
             const left = stillOut(o);
             const n = back[o.id] ?? 0;
             return (
-              <div key={o.id} className={n ? site.pickRowOn : site.pickRow}>
+              <Fragment key={o.id}>
+              <div className={n ? site.pickRowOn : site.pickRow}>
                 <button
                   type="button"
                   className={site.pickTick}
@@ -771,6 +828,12 @@ export function ReturnSheet({
                 </span>
                 {n > 0 && left > 1 && <Stepper value={n} max={left} onChange={(v) => setBack((b) => ({ ...b, [o.id]: v }))} label={`How many came back: ${name(o.toolId)}`} />}
               </div>
+              {n > 0 && (
+                <div className={site.pickCond}>
+                  <ConditionChips returned label="" value={cond[o.id] ?? "good"} onChange={(c) => setCond((m) => ({ ...m, [o.id]: c }))} />
+                </div>
+              )}
+              </Fragment>
             );
           })}
         </div>
@@ -809,16 +872,8 @@ export function ReturnSheet({
           >
             Cancel
           </button>
-          <button type="button" className={styles.sheetSave} onClick={() => void save()} disabled={saving || total === 0 || slot?.state !== "ready"}>
-            {saving
-              ? "Saving…"
-              : total === 0
-                ? "Tick what came back"
-                : !slot
-                  ? "Take the photo first"
-                  : slot.state === "uploading"
-                    ? "Uploading the photo…"
-                    : `Back: ${total} ${toolWord(total)}`}
+          <button type="button" className={styles.sheetSave} onClick={() => void save()} disabled={saving || total === 0 || !slot}>
+            {saving ? "Saving…" : total === 0 ? "Tick what came back" : !slot ? "Take the photo first" : `Back: ${total} ${toolWord(total)}`}
           </button>
         </div>
       </div>
@@ -849,20 +904,30 @@ const wholeOk = (v: string) => v.trim() !== "" && Number.isInteger(Number(v)) &&
 export function NewToolSheet({ tools, onClose, onSaved }: { tools: StoreTool[]; onClose: () => void; onSaved: (tool: StoreTool) => void }) {
   const [name, setName] = useState("");
   const [count, setCount] = useState("");
+  const [pickedTrade, setPickedTrade] = useState<Trade | null>(null);
+  const [condition, setCondition] = useState<Condition | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const { slot, start, clear, settled } = useUploadSlot("/api/store/photo");
   const clash = tools.find((t) => t.name.toLowerCase() === name.trim().replace(/\s+/g, " ").toLowerCase());
+  const trade = pickedTrade ?? guessToolTrade(name);
 
   const save = async () => {
     setError("");
     if (!name.trim()) return setError("Type what the tool is, e.g. Angle grinder.");
     if (!wholeOk(count)) return setError("Type how many we have (0 if none).");
+    if (!condition) return setError("Pick the state it's in.");
     setSaving(true);
     try {
       const photo = slot ? await settled() : null;
       if (slot && !photo) return setError("The photo didn't upload. Take it again, or remove it.");
-      const { tool } = await send<{ tool: StoreTool }>("/api/store/tools", "POST", { name: name.trim(), count: Number(count), photoId: photo?.id ?? null });
+      const { tool } = await send<{ tool: StoreTool }>("/api/store/tools", "POST", {
+        name: name.trim(),
+        count: Number(count),
+        photoId: photo?.id ?? null,
+        trade,
+        condition,
+      });
       clear(true);
       onSaved(tool);
     } catch (e) {
@@ -895,6 +960,8 @@ export function NewToolSheet({ tools, onClose, onSaved }: { tools: StoreTool[]; 
           How many do we have?
         </label>
         <CountField id="tool-new-count" value={count} onChange={setCount} placeholder="e.g. 4" />
+        <TradeChips value={trade} onChange={setPickedTrade} />
+        <ConditionChips value={condition} onChange={setCondition} label="What state is it in?" />
         {error && <p className={styles.sheetError}>{error}</p>}
         <div className={styles.sheetButtons}>
           <button
@@ -908,8 +975,8 @@ export function NewToolSheet({ tools, onClose, onSaved }: { tools: StoreTool[]; 
           >
             Cancel
           </button>
-          <button type="button" className={styles.sheetSave} onClick={() => void save()} disabled={saving || !!clash}>
-            {saving ? "Saving…" : "Add to the tools"}
+          <button type="button" className={styles.sheetSave} onClick={() => void save()} disabled={saving || !!clash || !condition}>
+            {saving ? "Saving…" : !condition ? "Pick its state" : "Add to the tools"}
           </button>
         </div>
       </div>
@@ -918,19 +985,52 @@ export function NewToolSheet({ tools, onClose, onSaved }: { tools: StoreTool[]; 
 }
 
 /** The office: rename, how many we have, not used any more. */
-export function EditToolSheet({ tool, outNow, onClose, onSaved }: { tool: StoreTool; outNow: number; onClose: () => void; onSaved: (tool: StoreTool) => void }) {
+export function EditToolSheet({
+  tool,
+  outNow,
+  onClose,
+  onSaved,
+  onDeleted,
+}: {
+  tool: StoreTool;
+  outNow: number;
+  onClose: () => void;
+  onSaved: (tool: StoreTool) => void;
+  /** Deleted outright (the office, 3 Nov 2026). */
+  onDeleted: (tool: StoreTool) => void;
+}) {
   const [name, setName] = useState(tool.name);
   const [count, setCount] = useState(String(tool.count));
   const [retired, setRetired] = useState(tool.retired);
+  const [trade, setTrade] = useState<Trade>(tradeOfTool(tool));
+  const [condition, setCondition] = useState<Condition | null>(tool.condition);
   const [saving, setSaving] = useState(false);
+  const [armed, setArmed] = useState(false);
   const [error, setError] = useState("");
+  const remove = async () => {
+    setSaving(true);
+    setError("");
+    try {
+      await send(`/api/store/tools/${tool.id}`, "DELETE");
+      onDeleted(tool);
+    } catch (e) {
+      setError(errorText(e));
+      setSaving(false);
+    }
+  };
 
   const save = async () => {
     setError("");
     if (!wholeOk(count)) return setError("Type how many we have (0 if none).");
     setSaving(true);
     try {
-      const { tool: saved } = await send<{ tool: StoreTool }>(`/api/store/tools/${tool.id}`, "PATCH", { name: name.trim(), count: Number(count), retired });
+      const { tool: saved } = await send<{ tool: StoreTool }>(`/api/store/tools/${tool.id}`, "PATCH", {
+        name: name.trim(),
+        count: Number(count),
+        retired,
+        trade,
+        ...(condition ? { condition } : {}),
+      });
       onSaved(saved);
     } catch (e) {
       setError(errorText(e));
@@ -955,8 +1055,13 @@ export function EditToolSheet({ tool, outNow, onClose, onSaved }: { tool: StoreT
           {outNow > 0 ? `${outNow} out now (counted in this number). ` : ""}Bought more, or found one: change it here. One that won&rsquo;t come back: mark it lost
           where it shows who has it.
         </p>
+        <TradeChips value={trade} onChange={setTrade} />
+        <ConditionChips value={condition} onChange={setCondition} />
         <button type="button" className={retired ? styles.chipOn : styles.chip} aria-pressed={retired} onClick={() => setRetired(!retired)}>
           {retired ? "Not used any more ✓" : "In use"}
+        </button>
+        <button type="button" className={armed ? `${site.deleteItem} ${styles.dangerArmed}` : site.deleteItem} onClick={() => (armed ? void remove() : setArmed(true))} disabled={saving}>
+          {armed ? `Tap again: delete ${tool.name} and everything recorded for it` : "Delete this tool"}
         </button>
         {error && <p className={styles.sheetError}>{error}</p>}
         <div className={styles.sheetButtons}>

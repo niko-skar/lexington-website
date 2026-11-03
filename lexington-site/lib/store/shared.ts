@@ -13,6 +13,31 @@ export const MAX_MOVE_NOTE = 200;
 /** Units offered as buttons (anything else can be typed). */
 export const UNITS = ["pcs", "bags", "sheets", "lengths", "rolls", "boxes", "tons", "kg", "m", "litres"] as const;
 
+/* ---------- who uses it, and the state a tool is in (Niko, 3 Nov 2026) ---------- */
+// "Tool department carpenter, mason, or Steelbender ... Same for materials", and "Add tool condition buttons".
+
+/** The trade a tool or material is for; "all" when everyone uses it (a ladder, cutting discs). */
+export const TRADES = ["carpentry", "masonry", "steel", "all"] as const;
+export type Trade = (typeof TRADES)[number];
+export const TRADE_NAMES: Record<Trade, string> = { carpentry: "Carpenters", masonry: "Masons", steel: "Steel benders", all: "Everyone" };
+export const isTrade = (value: unknown): value is Trade => typeof value === "string" && (TRADES as readonly string[]).includes(value);
+
+export const CONDITIONS = ["new", "good", "worn", "repair", "broken"] as const;
+export type Condition = (typeof CONDITIONS)[number];
+export const CONDITION_NAMES: Record<Condition, string> = { new: "New", good: "Good", worn: "Worn", repair: "Needs repair", broken: "Broken" };
+export const isCondition = (value: unknown): value is Condition => typeof value === "string" && (CONDITIONS as readonly string[]).includes(value);
+/** Something has to be done about it (repaired or replaced). */
+export const needsFixing = (c: Condition | null | undefined) => c === "repair" || c === "broken";
+const WORSE: Record<Condition, number> = { new: 0, good: 1, worn: 2, repair: 3, broken: 4 };
+/**
+ * A tool's condition after it comes back reported as `back`: only ever worse (a used new one is good); a repair or a
+ * breakage stays until someone sets it right on the tool.
+ */
+export const conditionAfter = (now: Condition | null, back: Condition): Condition => {
+  const was = now === "new" || now === null ? "good" : now;
+  return WORSE[back] > WORSE[was] ? back : was;
+};
+
 export interface StoreItem {
   id: string;
   name: string;
@@ -29,6 +54,8 @@ export interface StoreItem {
   photoUrl: string | null;
   /** Its category (lib/store/categories.ts), or null: then it goes by its name. */
   category: string | null;
+  /** Who uses it, or null: then it goes by its name and category (tradeOfItem). */
+  trade: Trade | null;
   /** In the store now, by the record: bought + added + brought back - taken out +/- counts. */
   level: number;
   lastCountAt: string | null;
@@ -108,6 +135,10 @@ export interface StoreTool {
   /** Not used any more: off the list (what happened to it stays on record). */
   retired: boolean;
   photoUrl: string | null;
+  /** Who uses it, or null: then it goes by its name (tradeOfTool). */
+  trade: Trade | null;
+  /** The state it's in, as last said (when added, when it came back, or set on the tool); null: not said yet. */
+  condition: Condition | null;
 }
 
 export interface ToolReturn {
@@ -115,6 +146,8 @@ export interface ToolReturn {
   qty: number;
   /** The office marked it lost: it never came back. */
   lost: boolean;
+  /** The state it came back in (since 3 Nov 2026). */
+  condition: Condition | null;
   note: string;
   photoUrl: string | null;
   at: string;

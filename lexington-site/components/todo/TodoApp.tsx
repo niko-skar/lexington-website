@@ -8,7 +8,7 @@ import { dayName, errorText, send, startPolling, when } from "./api";
 import { JobAlertsCard, JobAlertsMenu, type PhoneAlerts } from "./PhoneAlerts";
 import { SiteHeader, SiteMenu } from "./SiteChrome";
 import styles from "./Todo.module.css";
-import { useUploadSlot } from "./useUploadSlot";
+import { slotWords, useUploadSlot } from "./useUploadSlot";
 
 type Tab = "open" | "done";
 /** A message at the bottom; after a tick it offers "Add photo of the fix" and "Undo" for that job. */
@@ -743,9 +743,7 @@ function Composer({
           <div className={styles.slot}>
             {/* eslint-disable-next-line @next/next/no-img-element -- the phone's own preview of the photo */}
             <img className={styles.sheetPhoto} src={slot.preview} alt="" />
-            <p className={slot.state === "error" ? styles.slotError : styles.slotState}>
-              {slot.state === "uploading" ? "Uploading the photo…" : slot.state === "ready" ? "Photo ready" : slot.error}
-            </p>
+            <p className={slot.state === "error" && slot.final ? styles.slotError : styles.slotState}>{slotWords(slot)}</p>
             <div className={styles.slotButtons}>
               <label htmlFor="todo-sheet-camera" role="button" tabIndex={0}>
                 Retake
@@ -816,7 +814,7 @@ function Composer({
             Cancel
           </button>
           <button type="button" className={styles.sheetSave} onClick={() => void save()} disabled={saving}>
-            {saving ? (slot?.state === "uploading" ? "Uploading…" : "Saving…") : editing ? "Save" : "Add to the list"}
+            {saving ? "Saving…" : editing ? "Save" : "Add to the list"}
           </button>
         </div>
       </div>
@@ -879,9 +877,7 @@ function ProofSheet({
             <div className={styles.slot}>
               {/* eslint-disable-next-line @next/next/no-img-element -- the phone's own preview of the photo */}
               <img className={styles.sheetPhoto} src={slot.preview} alt="" />
-              <p className={slot.state === "error" ? styles.slotError : styles.slotState}>
-                {slot.state === "uploading" ? "Uploading the photo…" : slot.state === "ready" ? "Photo ready" : slot.error}
-              </p>
+              <p className={slot.state === "error" && slot.final ? styles.slotError : styles.slotState}>{slotWords(slot)}</p>
               <div className={styles.slotButtons}>
                 <label htmlFor="todo-proof-camera" role="button" tabIndex={0}>
                   Retake

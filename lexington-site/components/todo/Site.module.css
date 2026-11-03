@@ -1521,3 +1521,38 @@
   font-size: 14px;
   font-weight: 600;
 }
+
+/* A tool's state that needs fixing, picked (3 Nov 2026): red, not the usual blue. */
+.chipBad {
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 8px;
+  border: 1px solid var(--x-warn);
+  background: var(--x-warn);
+  color: #fff;
+  font-weight: 600;
+  font-size: 15px;
+}
+/* A tool's state on its row and in the lists: worn in grey, needing repair or broken in red. */
+.condBad {
+  color: var(--x-warn);
+  font-weight: 700;
+}
+.condWorn {
+  color: var(--x-muted);
+  font-weight: 600;
+}
+.deleteItem {
+  width: 100%;
+  min-height: 48px;
+  margin-top: 6px;
+  border: 1px solid var(--x-warn);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--x-warn);
+  font-weight: 600;
+}
+/* The state a returned tool came back in, under its line (3 Nov 2026). */
+.pickCond {
+  padding: 0 4px 8px 12px;
+}

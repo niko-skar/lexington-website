@@ -1,81 +1,85 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
-import { errorText } from "./api";
-import { forgetPhoto, uploadPhoto, type PhotoEndpoint } from "./photo";
+import type { PhotoEndpoint } from "./photo";
+import { dropUpload, keepUpload, onUploads, startUpload, uploadOf } from "./photoQueue";
 
-// Several photos in one sheet (opening or closing the store room): each starts uploading the
-// moment it's taken; one taken off, or a cancelled sheet's, is tidied away.
+// Several photos in one sheet (opening or closing the store room): each starts uploading the moment it's taken, and
+// the sheet can be saved while they're still on their way (3 Nov 2026, photoQueue.ts). One taken off, or a cancelled
+// sheet's, is tidied away.
 
-export type ListPhoto = { key: number; preview: string; state: "uploading" | "ready" | "error"; error?: string };
+/** final: refused for good (take it off and again); otherwise an error is no signal yet, and it goes on trying. */
+export type ListPhoto = { key: number; preview: string; state: "uploading" | "ready" | "error"; error?: string; final?: boolean; ticket: string };
 
 export function usePhotoList(endpoint: PhotoEndpoint) {
   const [photos, setPhotos] = useState<ListPhoto[]>([]);
-  const jobs = useRef(new Map<number, Promise<string | null>>());
-  const stored = useRef(new Map<number, string>());
+  const list = useRef<ListPhoto[]>([]);
   const next = useRef(0);
+
+  const show = useCallback((nextList: ListPhoto[]) => {
+    list.current = nextList;
+    setPhotos(nextList);
+  }, []);
+
+  useEffect(
+    () =>
+      onUploads(() => {
+        let moved = false;
+        const nextList = list.current.map((p) => {
+          const job = uploadOf(p.ticket);
+          const state: ListPhoto["state"] = job?.state === "ready" ? "ready" : job?.state === "failed" ? "error" : "uploading";
+          if (state === p.state && !!job?.final === !!p.final) return p;
+          moved = true;
+          return { ...p, state, error: job?.error ?? undefined, final: !!job?.final };
+        });
+        if (moved) show(nextList);
+      }),
+    [show]
+  );
 
   const add = useCallback(
     (file: File) => {
       const key = ++next.current;
-      const preview = URL.createObjectURL(file);
-      setPhotos((list) => [...list, { key, preview, state: "uploading" }]);
-      jobs.current.set(
-        key,
-        uploadPhoto(file, endpoint).then(
-          (photo) => {
-            if (!jobs.current.has(key)) {
-              forgetPhoto(photo.id, endpoint); // taken off while it uploaded
-              return null;
-            }
-            stored.current.set(key, photo.id);
-            setPhotos((list) => list.map((p) => (p.key === key ? { ...p, state: "ready" } : p)));
-            return photo.id;
-          },
-          (e) => {
-            setPhotos((list) => list.map((p) => (p.key === key ? { ...p, state: "error", error: errorText(e) } : p)));
-            return null;
-          }
-        )
-      );
+      show([...list.current, { key, preview: URL.createObjectURL(file), state: "uploading", ticket: startUpload(file, endpoint) }]);
     },
-    [endpoint]
+    [endpoint, show]
   );
 
   const remove = useCallback(
     (key: number) => {
-      jobs.current.delete(key);
-      const id = stored.current.get(key);
-      if (id) forgetPhoto(id, endpoint);
-      stored.current.delete(key);
-      setPhotos((list) => {
-        const gone = list.find((p) => p.key === key);
-        if (gone) URL.revokeObjectURL(gone.preview);
-        return list.filter((p) => p.key !== key);
-      });
+      const gone = list.current.find((p) => p.key === key);
+      if (!gone) return;
+      dropUpload(gone.ticket);
+      URL.revokeObjectURL(gone.preview);
+      show(list.current.filter((p) => p.key !== key));
     },
-    [endpoint]
+    [show]
   );
 
-  /** Empties the sheet; the uploaded photos are kept only when they were just saved with something. */
+  /** Empties the sheet; the photos go on (and onto the record) only when they were just saved with something. */
   const clear = useCallback(
     (keepStored = false) => {
-      if (!keepStored) for (const id of stored.current.values()) forgetPhoto(id, endpoint);
-      stored.current.clear();
-      jobs.current.clear();
-      setPhotos((list) => {
-        for (const p of list) URL.revokeObjectURL(p.preview);
-        return [];
-      });
+      for (const p of list.current) {
+        if (keepStored) keepUpload(p.ticket);
+        else dropUpload(p.ticket);
+        URL.revokeObjectURL(p.preview);
+      }
+      show([]);
     },
-    [endpoint]
+    [show]
   );
 
-  /** Waits for uploads still going: the photos' ids, or null if one of them failed. */
+  /** The photos to save with: ids for those in, "pending:<ticket>" for those on their way; null if one was refused for good. */
   const settled = useCallback(async () => {
-    const ids = await Promise.all([...jobs.current.values()]);
-    return ids.every((id): id is string => !!id) ? ids : null;
+    const ids: string[] = [];
+    for (const p of list.current) {
+      const job = uploadOf(p.ticket);
+      if (job?.result) ids.push(job.result.id);
+      else if (!job || job.final) return null;
+      else ids.push(`pending:${p.ticket}`);
+    }
+    return ids;
   }, []);
 
   return { photos, add, remove, clear, settled };

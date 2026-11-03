@@ -1,4 +1,4 @@
-import { itemHistory, setItemPhoto, updateItem } from "@/lib/store/server";
+import { deleteItem, itemHistory, setItemPhoto, updateItem } from "@/lib/store/server";
 import { errorResponse, readJson, requireTodoUser } from "@/lib/todo/server";
 
 export const dynamic = "force-dynamic";
@@ -17,7 +17,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
 /**
  * PATCH /api/store/items/:id
  *   { photoId }                                                   -- a new photo of the stock (anyone using the store)
- *   { name?, unit?, low?, reorderQty?, reorderDismissed?, stocked? } -- the office only
+ *   { name?, unit?, category?, trade?, low?, reorderQty?, reorderDismissed?, stocked? } -- the office only
  */
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
   try {
@@ -29,6 +29,18 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     }
     await requireTodoUser(true, "store");
     return Response.json({ item: await updateItem(id, body) });
+  } catch (error) {
+    return errorResponse(error);
+  }
+}
+
+/** DELETE /api/store/items/:id: the office deletes an item outright, with everything recorded for it. */
+export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
+  try {
+    await requireTodoUser(true, "store");
+    const { id } = await params;
+    await deleteItem(id);
+    return Response.json({ ok: true });
   } catch (error) {
     return errorResponse(error);
   }

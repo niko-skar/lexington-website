@@ -1,4 +1,4 @@
-import { dropPhoto, errorResponse, requireTodoUser, storePhoto, TodoError } from "@/lib/todo/server";
+import { dropPhoto, errorResponse, photoUpload, requireTodoUser, storePhoto } from "@/lib/todo/server";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -7,14 +7,8 @@ export const maxDuration = 60;
 export async function POST(request: Request): Promise<Response> {
   try {
     await requireTodoUser(true, "suppliers");
-    let file: FormDataEntryValue | null = null;
-    try {
-      file = (await request.formData()).get("photo");
-    } catch {
-      throw new TodoError(400, "No photo was sent.");
-    }
-    if (!(file instanceof File)) throw new TodoError(400, "No photo was sent.");
-    return Response.json(await storePhoto(file, "bill"));
+    const { file, ticket } = await photoUpload(request);
+    return Response.json(await storePhoto(file, "bill", ticket));
   } catch (error) {
     return errorResponse(error);
   }

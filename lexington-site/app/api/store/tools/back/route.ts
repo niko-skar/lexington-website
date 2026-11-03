@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 
 /**
  * POST /api/store/tools/back
- *   { returns: [{ outId, qty }], photoId, note? }  -- what came back, with its photo (anyone using the store)
+ *   { returns: [{ outId, qty, condition? }], photoId, note? }  -- what came back, with its photo and the state it's in (anyone using the store)
  *   { lost: outId, note? }                         -- the office: the rest of it isn't coming back
  */
 export async function POST(request: Request): Promise<Response> {
@@ -18,7 +18,7 @@ export async function POST(request: Request): Promise<Response> {
       return Response.json({ outs, tool: outs[0] ? await getTool(outs[0].toolId) : null });
     }
     const me = await requireTodoUser(false, "store");
-    return Response.json({ outs: await returnTools(me, body) });
+    return Response.json(await returnTools(me, body));
   } catch (error) {
     return errorResponse(error);
   }

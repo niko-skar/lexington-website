@@ -54,15 +54,16 @@ export function CheckSheet({
   outs: ToolOut[];
   name: (toolId: string) => string;
   onClose: () => void;
-  onSaved: (check: StoreCheck) => void;
+  /** With how many photos were taken (some may still be uploading). */
+  onSaved: (check: StoreCheck, photos: number) => void;
   onSignedOut: () => void;
 }) {
   const { photos, add, remove, clear, settled } = usePhotoList("/api/store/photo");
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const uploading = photos.some((p) => p.state === "uploading");
-  const failed = photos.some((p) => p.state === "error");
+  // Photos still on their way go on by themselves after saving; one refused for good has to be taken again.
+  const failed = photos.some((p) => p.state === "error" && p.final);
   const stillOutLines = kind === "close" ? outs.filter((o) => !o.closedAt && stillOut(o) > 0) : [];
   const outCount = stillOutLines.reduce((n, o) => n + stillOut(o), 0);
   const title = kind === "open" ? "Open the store room" : "Close the store room";
@@ -81,8 +82,9 @@ export function CheckSheet({
       const ids = await settled();
       if (!ids) return setError("A photo didn't upload: take it off (✕) and take it again.");
       const { check } = await send<{ check: StoreCheck }>("/api/store/checks", "POST", { kind, photoIds: ids, note: note.trim() });
+      const taken = photos.length;
       clear(true);
-      onSaved(check);
+      onSaved(check, taken);
     } catch (e) {
       if ((e as { status?: number }).status === 401) onSignedOut();
       setError(errorText(e));
@@ -107,7 +109,7 @@ export function CheckSheet({
               {/* eslint-disable-next-line @next/next/no-img-element -- the phone's own preview of the photo */}
               <img src={p.preview} alt={`Photo ${i + 1}`} />
               <span className={p.state === "error" ? site.photoTileError : site.photoTileState}>
-                {p.state === "uploading" ? "Uploading…" : p.state === "ready" ? "Ready" : "Didn't upload"}
+                {p.state === "uploading" ? "Uploading…" : p.state === "ready" ? "Ready" : p.final ? "Can't be used" : "Waiting for signal"}
               </span>
               <button type="button" className={site.photoTileOff} onClick={() => remove(p.key)} aria-label={`Take photo ${i + 1} off`}>
                 ✕
@@ -153,16 +155,14 @@ export function CheckSheet({
           >
             Cancel
           </button>
-          <button type="button" className={styles.sheetSave} onClick={() => void save()} disabled={saving || photos.length === 0 || uploading || failed}>
+          <button type="button" className={styles.sheetSave} onClick={() => void save()} disabled={saving || photos.length === 0 || failed}>
             {saving
               ? "Saving…"
               : photos.length === 0
                 ? "Take a photo first"
-                : uploading
-                  ? "Uploading the photos…"
-                  : failed
-                    ? "A photo didn't upload"
-                    : kind === "open"
+                : failed
+                  ? "Take the ✕ photo off and again"
+                  : kind === "open"
                       ? "Save: store room open"
                       : "Save: store room closed"}
           </button>

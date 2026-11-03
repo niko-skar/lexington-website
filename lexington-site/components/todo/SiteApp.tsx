@@ -19,6 +19,7 @@ import { ConcreteApp } from "./ConcreteApp";
 import { Dashboard } from "./Dashboard";
 import { ExpensesApp } from "./ExpensesApp";
 import { usePhoneAlerts } from "./PhoneAlerts";
+import { onUploads, resumeUploads, waitingUploads } from "./photoQueue";
 import { RollcallPart, rollcallTabOf, type RollcallTab } from "./RollcallPart";
 import { appClass, SiteNav, type View } from "./SiteChrome";
 import { SteelApp } from "./SteelApp";
@@ -26,6 +27,7 @@ import { StoreApp } from "./StoreApp";
 import { SuppliersApp, type BillPayment } from "./SuppliersApp";
 import { TodoApp } from "./TodoApp";
 import styles from "./Todo.module.css";
+import { useSheetGestures } from "./useSheetGestures";
 
 // The whole site app in one page, so moving between To-do, Store and Expenses is instant (Niko,
 // 23 Oct 2026: "its too slow, clicking between things is laggy"). Each part loads once and stays
@@ -316,30 +318,23 @@ export function SiteApp({
     (unread > 0 ? nav.setAppBadge?.(unread) : nav.clearAppBadge?.())?.catch(() => {});
   }, [hasAlerts, unread]);
 
-  // A laptop: Esc closes the window on top, as its Cancel or Close button would.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "Escape" || e.defaultPrevented) return;
-      const open = [...document.querySelectorAll<HTMLElement>('[role="dialog"]')].filter((d) => d.getClientRects().length > 0);
-      const top = open[open.length - 1];
-      if (!top) return;
-      const close = [...top.querySelectorAll<HTMLButtonElement>("button")].filter(
-        (b) => b.getClientRects().length > 0 && (b.classList.contains(styles.sheetCancel) || /^(close|cancel|done)$/i.test(b.textContent?.trim() ?? ""))
-      );
-      const button = close[close.length - 1];
-      if (!button || button.disabled) return;
-      e.preventDefault();
-      button.click();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  // Sheets close on a tap outside, a pull down, or Esc on a laptop (useSheetGestures.ts).
+  useSheetGestures();
+
+  // Photos saved before they landed: the ones left from last time go on now, and the app says while any are going.
+  useEffect(() => void resumeUploads(), []);
+  const photosGoing = useSyncExternalStore(onUploads, waitingUploads, () => 0);
 
   const show = (s: View) => opened.includes(s) && (s === "home" || (s === "rollcall" ? opensRollcall(me.sections) : me.sections.includes(s)));
 
   return (
     <div className={appClass(me)} data-app="site">
       <InstallHint />
+      {photosGoing > 0 && (
+        <p className={styles.photosGoing} role="status">
+          {photosGoing === 1 ? "1 photo" : `${photosGoing} photos`} still uploading: keep the app open until it&rsquo;s done
+        </p>
+      )}
       {show("home") && (
         <div hidden={section !== "home"}>
           <Dashboard

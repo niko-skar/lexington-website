@@ -6,6 +6,7 @@ import { clip, notifyOwner, pushToPeople } from "@/lib/alerts/notify";
 import { hashPassword } from "@/lib/auth/password";
 import { getAdminSession, getBuyerSession } from "@/lib/auth/session";
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
+import { PHOTO_TICKET_PREFIX } from "@/lib/site/ids";
 import {
   areaLabel,
   AREAS,
@@ -29,6 +30,9 @@ const PREFIX = LIVE ? "sitetask-live-" : "sitetask-dev-";
 const ID_RE = LIVE ? /^sitetask-live-[a-f0-9]{12}$/ : /^sitetask-dev-[a-f0-9]{12}$/;
 // Sanity image asset ids: image-<sha1>-<width>x<height>-<format>
 const PHOTO_ID_RE = /^image-[a-f0-9]{40}-\d+x\d+-(jpg|png|webp)$/;
+// A photo still uploading when its record was saved: "pending:" and the phone's ticket for it (components/todo/photoQueue.ts).
+const TICKET_RE = /^[a-f0-9]{24}$/;
+const PENDING_RE = /^pending:([a-f0-9]{24})$/;
 
 export class TodoError extends Error {
   constructor(
@@ -123,7 +127,22 @@ async function getTask(id: string): Promise<TodoTask | null> {
   return getBuyersClient().fetch<TodoTask | null>(`*[_id == $id && _type == "siteTask"][0] ${FIELDS}`, { id });
 }
 
-export const photoRef = (assetId: string) => ({ _type: "image", asset: { _type: "reference", _ref: assetId } });
+/**
+ * A photo on a record. "pending:<ticket>" is one still on its way from the phone (Niko, 3 Nov 2026: "it should load
+ * fast in my phone and upload in the background"): the record keeps a marker, and the photo takes its place when it
+ * lands (attachPending), whichever comes first.
+ */
+export const photoRef = (assetId: string) => {
+  const pending = PENDING_RE.exec(assetId);
+  if (!pending) return { _type: "image", asset: { _type: "reference", _ref: assetId } };
+  try {
+    // It may have landed while this record was being written: look again once it's saved.
+    after(() => attachPending(pending[1]));
+  } catch {
+    // Outside a request (a script): the photo puts itself on the record when it lands.
+  }
+  return { _type: "image", pending: pending[1] };
+};
 
 export function cleanText(value: unknown, max: number, what: string) {
   const text = typeof value === "string" ? value.replace(/\s+\n/g, "\n").trim() : "";
@@ -317,17 +336,81 @@ export async function deleteTask(me: TodoMe, id: string): Promise<void> {
 const MAX_BYTES = 4_400_000; // the phone shrinks photos first; Vercel refuses over 4.5 MB anyway
 const TYPES = ["image/jpeg", "image/png", "image/webp"];
 
-/** A phone photo into the private store, named "<kind>-<date>-<hex>" (to-do photos "todo-", the store's "store-", the roll call's "rollcall-", waybills "concrete-"). */
-export async function storePhoto(file: File, kind: "todo" | "store" | "rollcall" | "concrete" | "bill" = "todo"): Promise<{ id: string; url: string }> {
+/** The photo an upload sent, and its ticket when the phone gave it one (it may save the record before the photo lands). */
+export async function photoUpload(request: Request): Promise<{ file: File; ticket: string | null }> {
+  let form: FormData;
+  try {
+    form = await request.formData();
+  } catch {
+    throw new TodoError(400, "No photo was sent.");
+  }
+  const file = form.get("photo");
+  if (!(file instanceof File)) throw new TodoError(400, "No photo was sent.");
+  const ticket = form.get("ticket");
+  return { file, ticket: typeof ticket === "string" && TICKET_RE.test(ticket) ? ticket : null };
+}
+
+/**
+ * A phone photo into the private store, named "<kind>-<date>-<hex>" (to-do photos "todo-", the store's "store-", the
+ * roll call's "rollcall-", waybills "concrete-"). With a ticket it also goes onto any record already saved with it.
+ */
+export async function storePhoto(file: File, kind: "todo" | "store" | "rollcall" | "concrete" | "bill" = "todo", ticket: string | null = null): Promise<{ id: string; url: string }> {
+  // Sent again after an answer that never reached the phone: the same photo, not a second copy.
+  const landed = ticket ? await landedPhoto(ticket) : null;
+  if (ticket && landed) {
+    await attachPending(ticket);
+    return landed;
+  }
   if (!TYPES.includes(file.type)) throw new TodoError(415, "That file is not a JPEG, PNG or WebP photo.");
   if (file.size === 0) throw new TodoError(400, "No photo was sent.");
   if (file.size > MAX_BYTES) throw new TodoError(413, "That photo is too big (over 4 MB).");
   const ext = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
-  const asset = await getBuyersClient().assets.upload("image", Buffer.from(await file.arrayBuffer()), {
+  const client = getBuyersClient();
+  const asset = await client.assets.upload("image", Buffer.from(await file.arrayBuffer()), {
     filename: `${kind}-${new Date().toISOString().slice(0, 10)}-${randomBytes(3).toString("hex")}.${ext}`,
     contentType: file.type,
   });
+  if (ticket) {
+    await client.createOrReplace({ _id: PHOTO_TICKET_PREFIX + ticket, _type: "photoTicket", assetId: asset._id, url: asset.url, kind, at: new Date().toISOString() });
+    await attachPending(ticket);
+    // Only the moments around a save need a ticket: old ones go.
+    const cut = new Date(Date.now() - 3 * 86_400_000).toISOString();
+    after(() => client.delete({ query: `*[_type == "photoTicket" && string::startsWith(_id, $prefix) && at < $cut][0...100]`, params: { prefix: PHOTO_TICKET_PREFIX, cut } }).catch(() => {}));
+  }
   return { id: asset._id, url: asset.url };
+}
+
+async function landedPhoto(ticket: string): Promise<{ id: string; url: string } | null> {
+  return getBuyersClient().fetch<{ id: string; url: string } | null>(`*[_id == $id && defined(assetId)][0]{ "id": assetId, url }`, { id: PHOTO_TICKET_PREFIX + ticket });
+}
+
+// Every kind of record a phone photo can belong to (the waybills wait for theirs: they're read from it).
+const PHOTO_TYPES = ["siteTask", "storeItem", "storeMove", "storeTool", "toolOut", "storeCheck", "supplierBill"];
+
+/** A photo that landed after its record was saved: it takes the place of the record's marker. Never throws. */
+export async function attachPending(ticket: string): Promise<void> {
+  try {
+    const landed = await landedPhoto(ticket);
+    if (!landed) return;
+    const client = getBuyersClient();
+    const docs = await client.fetch<{ _id: string; photo: boolean | null; done: boolean | null; photos: string[] | null; returns: string[] | null }[]>(
+      `*[_type in $types && (photo.pending == $t || donePhoto.pending == $t || count(photos[pending == $t]) > 0 || count(returns[photo.pending == $t]) > 0)]{
+        _id, "photo": photo.pending == $t, "done": donePhoto.pending == $t, "photos": photos[pending == $t]._key, "returns": returns[photo.pending == $t]._key
+      }`,
+      { types: PHOTO_TYPES, t: ticket }
+    );
+    const ref = photoRef(landed.id);
+    for (const doc of docs) {
+      const set: Record<string, unknown> = {};
+      if (doc.photo) set.photo = ref;
+      if (doc.done) set.donePhoto = ref;
+      for (const key of doc.photos ?? []) set[`photos[_key=="${key}"]`] = { _key: key, ...ref };
+      for (const key of doc.returns ?? []) set[`returns[_key=="${key}"].photo`] = ref;
+      if (Object.keys(set).length) await client.patch(doc._id).set(set).commit();
+    }
+  } catch (error) {
+    console.error("[photos] putting a late photo on its record failed:", error instanceof Error ? error.message : error);
+  }
 }
 
 /** Deletes a to-do (or store, or roll call) photo nothing points at any more (a retake, a removed or deleted item). */
@@ -345,10 +428,10 @@ export async function dropPhoto(assetId: string, kind: "todo" | "store" | "rollc
   }
 }
 
-/** A photo id sent by the phone, checked: null when there is none. */
+/** A photo id sent by the phone, checked: null when there is none. "pending:<ticket>" is one still uploading. */
 export function cleanPhotoRef(value: unknown): string | null {
   if (value === null || value === undefined || value === "") return null;
-  if (typeof value !== "string" || !PHOTO_ID_RE.test(value)) throw new TodoError(400, "That photo didn't upload properly. Take it again.");
+  if (typeof value !== "string" || !(PHOTO_ID_RE.test(value) || PENDING_RE.test(value))) throw new TodoError(400, "That photo didn't upload properly. Take it again.");
   return value;
 }
 

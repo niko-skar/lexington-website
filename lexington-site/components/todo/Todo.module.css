@@ -1183,3 +1183,31 @@ select.input {
     transition: background-color 0.12s, color 0.12s, border-color 0.12s;
   }
 }
+
+/* Photos saved before they landed, still uploading (3 Nov 2026): a small note above the bar and the messages. */
+.photosGoing {
+  position: fixed;
+  z-index: 36;
+  left: 50%;
+  bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  width: max-content;
+  max-width: calc(100% - 24px);
+  margin: 0;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--x-amber);
+  color: var(--x-bg);
+  font-size: 13px;
+  font-weight: 600;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.withNav .photosGoing {
+  bottom: calc(140px + env(safe-area-inset-bottom, 0px));
+}
+@media (min-width: 1024px) {
+  .withNav .photosGoing {
+    left: calc(var(--x-rail) + (100% - var(--x-rail)) / 2);
+    bottom: 84px;
+  }
+}

@@ -1,4 +1,4 @@
-import { setToolPhoto, toolHistory, updateTool } from "@/lib/store/tools";
+import { deleteTool, setToolCondition, setToolPhoto, toolHistory, updateTool } from "@/lib/store/tools";
 import { errorResponse, readJson, requireTodoUser } from "@/lib/todo/server";
 
 export const dynamic = "force-dynamic";
@@ -17,7 +17,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
 /**
  * PATCH /api/store/tools/:id
  *   { photoId }                  -- a new photo of the tool (anyone using the store)
- *   { name?, count?, retired? }  -- the office only
+ *   { condition }                -- the state it's in (anyone using the store)
+ *   { name?, count?, retired?, trade?, condition? }  -- the office only
  */
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
   try {
@@ -27,8 +28,24 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       await requireTodoUser(false, "store");
       return Response.json({ tool: await setToolPhoto(id, body.photoId) });
     }
+    if (Object.keys(body).length === 1 && "condition" in body) {
+      await requireTodoUser(false, "store");
+      return Response.json({ tool: await setToolCondition(id, body.condition) });
+    }
     await requireTodoUser(true, "store");
     return Response.json({ tool: await updateTool(id, body) });
+  } catch (error) {
+    return errorResponse(error);
+  }
+}
+
+/** DELETE /api/store/tools/:id: the office deletes a tool outright, with every take-out it had. */
+export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
+  try {
+    await requireTodoUser(true, "store");
+    const { id } = await params;
+    await deleteTool(id);
+    return Response.json({ ok: true });
   } catch (error) {
     return errorResponse(error);
   }

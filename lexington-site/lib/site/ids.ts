@@ -42,6 +42,9 @@ export const QBO_LISTS_ID = `qbolists-${TAG}`;
 export const TRUCK_PREFIX = `concretetruck-${TAG}-`;
 export const POUR_DAY_PREFIX = `concreteday-${TAG}-`;
 
+/** A photo that landed after its record was saved (3 Nov 2026): which stored photo a phone's ticket became. */
+export const PHOTO_TICKET_PREFIX = `phototicket-${TAG}-`;
+
 export const newId = (prefix: string) => prefix + randomBytes(6).toString("hex");
 
 /** New ids end in 12 hex; expenses brought over from the old Claude page keep its 20-letter ids. */

@@ -106,5 +106,5 @@ export interface SiteAccount {
   sections: SiteSection[];
 }
 
-/** A smaller copy of a stored photo from Sanity's image CDN (it resizes on the fly). */
-export const photoAt = (url: string, width: number) => `${url}?w=${width}&fit=max&auto=format&q=72`;
+/** A smaller copy of a stored photo from Sanity's image CDN (it resizes on the fly); the phone's own copy of one still uploading as it is. */
+export const photoAt = (url: string, width: number) => (url.startsWith("blob:") ? url : `${url}?w=${width}&fit=max&auto=format&q=72`);
