@@ -86,8 +86,8 @@ export function ToCheckSheet({
 
   return (
     <div className={styles.sheetBackdrop}>
-      <div className={`${styles.sheet} ${site.sheetTall}`} role="dialog" aria-label="To check">
-        <h2 className={styles.sheetTitle}>To check</h2>
+      <div className={`${styles.sheet} ${site.sheetTall} ${site.sheetWide}`} role="dialog" aria-label="To check">
+        <h2 className={styles.sheetTitle}>To check{list.length ? ` · ${list.length}` : ""}</h2>
         <p className={styles.sheetNote}>
           New things the site logins added to the store room. Check each name and how many: &ldquo;Looks right&rdquo;, or change it. They don&rsquo;t see this list.
         </p>
@@ -95,7 +95,7 @@ export function ToCheckSheet({
         {list.length === 0 ? (
           <p className={styles.sheetNote}>Nothing left to check.</p>
         ) : (
-          <div className={site.sheetEntries}>
+          <div className={site.checkList}>
             {list.map((e) => {
               const id = e.type === "item" ? e.item.id : e.tool.id;
               const photo = e.type === "item" ? e.item.photoUrl : e.tool.photoUrl;

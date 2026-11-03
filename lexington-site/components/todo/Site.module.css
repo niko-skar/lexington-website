@@ -344,7 +344,7 @@
 }
 .sheetEntries {
   display: grid;
-  overflow: hidden;
+  overflow: clip;
   border: 1px solid var(--x-line);
   border-radius: 10px;
   background: var(--x-bg);
@@ -1718,4 +1718,19 @@
   background: transparent;
   color: var(--x-warn);
   font-weight: 600;
+}
+
+/* To check: every card, the sheet scrolls; on a laptop a wide window with the cards side by side (3 Nov 2026). */
+.checkList {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+}
+@media (min-width: 1024px) {
+  [role="dialog"].sheetWide {
+    max-width: min(1080px, 100%);
+  }
+  .checkList {
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  }
 }

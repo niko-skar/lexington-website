@@ -1,7 +1,7 @@
 import { after } from "next/server";
 
 import { debitFor, listPendingDebits, pendingDebit, settleDebit } from "@/lib/expenses/bankDebit";
-import { createExpense, listExpenses } from "@/lib/expenses/server";
+import { createWithExtras, listExpenses, totalWithExtras } from "@/lib/expenses/server";
 import { syncExpense } from "@/lib/expenses/sheet";
 import { cachedBookLists } from "@/lib/quickbooks/booksCache";
 import { cachedVendors } from "@/lib/quickbooks/vendors";
@@ -37,17 +37,20 @@ export async function POST(request: Request): Promise<Response> {
     const me = await requireTodoUser(true, "expenses");
     const body = await readJson(request);
     const fromBank = body.bankDebitId ? await pendingDebit(body.bankDebitId) : null;
-    const debit = fromBank ?? (body.kind === "inflow" ? null : await debitFor(body.date, body.amount));
-    const expense = await createExpense(me, body, debit ? { bank: debit.note } : {});
+    // The bank's text is for all that was paid: the entry and its other costs together.
+    const debit = fromBank ?? (body.kind === "inflow" ? null : await debitFor(body.date, totalWithExtras(body)));
+    const { expense, extras } = await createWithExtras(me, body, debit ? { bank: debit.note } : {});
     if (debit) {
       await settleDebit(debit, expense.id, fromBank ? "completed" : "matched").catch((error) =>
         console.error("[expenses] bank debit not marked done:", error instanceof Error ? error.message : error)
       );
     }
     // Off to the Google Sheet and QuickBooks once the phone has its answer (the crons catch up any miss).
-    after(() => syncExpense(expense.id));
-    after(() => feedExpense(expense.id));
-    return Response.json({ expense }, { status: 201 });
+    for (const x of [expense, ...extras]) {
+      after(() => syncExpense(x.id));
+      after(() => feedExpense(x.id));
+    }
+    return Response.json({ expense, extras }, { status: 201 });
   } catch (error) {
     return errorResponse(error);
   }

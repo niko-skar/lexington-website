@@ -80,6 +80,8 @@ export interface Expense {
   steelTons: number | null;
   /** The supplier's bill this pays (lib/suppliers), or null: in QuickBooks it's then that bill's payment. */
   billId: string | null;
+  /** Another cost on the same receipt as that entry (transport with the wawa boards): its own entry, its own class. */
+  withId: string | null;
   /** More photos with the receipt (3 Nov 2026); the receipt itself stays the first. */
   moreReceipts: { id: string; url: string; type: string }[];
   /** More materials on the same receipt (3 Nov 2026), each into the store room or not; the first is material and qty. */
@@ -102,6 +104,13 @@ export const MAX_LINES = 20;
 export const MAX_RECEIPTS = 10;
 
 /** Every material on an entry, the first one first. */
+/** Other costs on one receipt, each saved as its own entry (transport, loading): how many at most. */
+export const MAX_EXTRAS = 5;
+export const EXTRA_CATEGORIES = ["Service", "Other"] as const;
+export type ExtraCategory = (typeof EXTRA_CATEGORIES)[number];
+/** Ready-made words for the usual ones. */
+export const EXTRA_WORDS = ["Transport", "Loading", "Delivery"] as const;
+
 export const linesOf = (x: Pick<Expense, "category" | "material" | "qty" | "itemId" | "toStore" | "moreLines">): ExpenseLine[] =>
   x.category === "Material" && x.material ? [{ material: x.material, qty: x.qty ?? 1, itemId: x.itemId, toStore: x.toStore }, ...(x.moreLines ?? [])] : [];
 /** The materials in words: "2in nails x 1; 4in nails x 3" (one line: just its name). */

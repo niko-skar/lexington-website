@@ -51,6 +51,13 @@ export const ExpenseBook = memo(function ExpenseBook({
   onEdit: (x: Expense) => void;
   onOpenReceipt: (x: Expense) => void;
 }) {
+  // Other costs on the same receipt as an entry (transport with the wawa boards): shown with each other.
+  const withOthers = useMemo(() => {
+    const byMain = new Map<string, Expense[]>();
+    for (const e of expenses) if (e.withId) byMain.set(e.withId, [...(byMain.get(e.withId) ?? []), e]);
+    return byMain;
+  }, [expenses]);
+  const refOf = useMemo(() => new Map(expenses.map((e) => [e.id, e.ref ?? ""])), [expenses]);
   const [period, setPeriod] = useState("this");
   const [forFilter, setForFilter] = useState("all");
   const [floorFilter, setFloorFilter] = useState("all");
@@ -366,6 +373,12 @@ export const ExpenseBook = memo(function ExpenseBook({
                           </span>
                         ))}
                         {x.description && <span className={site.desc}>{x.description}</span>}
+                        {(withOthers.get(x.id) ?? []).length > 0 && (
+                          <span className={site.desc}>
+                            Same receipt: {(withOthers.get(x.id) ?? []).map((o) => `${o.description} ${money(o.amount)}${o.ref ? ` (${o.ref})` : ""}`).join(", ")}
+                          </span>
+                        )}
+                        {x.withId && <span className={site.desc}>Same receipt as {refOf.get(x.withId) || "another entry"}</span>}
                       </button>
                       <span className={site.tags}>
                         {x.ref && <span className={site.ref}>{x.ref}</span>}

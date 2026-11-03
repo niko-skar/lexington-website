@@ -358,9 +358,10 @@ export function ExpensesApp({
   }, [openEntry, loaded, expenses, offline, onEdit, showToast]);
 
   const onSaved = useCallback(
-    (expense: Expense, wasEdit: boolean) => {
+    (expense: Expense, wasEdit: boolean, extras: Expense[] = []) => {
       localAt.current = Date.now();
-      setExpenses((list) => sortExpenses([expense, ...list.filter((x) => x.id !== expense.id)]));
+      const made = new Set([expense.id, ...extras.map((e) => e.id)]);
+      setExpenses((list) => sortExpenses([expense, ...extras, ...list.filter((x) => !made.has(x.id))]));
       // Made from a bank debit: it's done. (One typed for the same day and amount is matched on the server.)
       const done = prefillRef.current?.debitId;
       if (done) setPending((list) => list.filter((d) => d.id !== done));
@@ -369,7 +370,8 @@ export function ExpensesApp({
       setJustSaved(true);
       setFormKey((k) => k + 1);
       const stockNote = expense.toStore && expense.qty ? ` · ${expense.qty} into the store` : "";
-      showToast({ text: wasEdit ? `Changes saved · ${expense.ref ?? ""}` : `${isInflow(expense) ? "Money in saved" : "Expense saved"} · ${expense.ref ?? ""} · ${money(expense.amount)}${stockNote}` });
+      const extraNote = extras.length ? ` + ${extras.map((e) => `${e.description} ${money(e.amount)}`).join(", ")}` : "";
+      showToast({ text: wasEdit ? `Changes saved · ${expense.ref ?? ""}` : `${isInflow(expense) ? "Money in saved" : "Expense saved"} · ${expense.ref ?? ""} · ${money(expense.amount)}${extraNote}${stockNote}` });
       // The store's stock may have moved (a purchase into the store room, or one changed), a bank debit matched it, or a
       // supplier's bill has less left to pay.
       if (expense.toStore || wasEdit || expense.billId || pendingCount.current > 0) void refresh();

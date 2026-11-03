@@ -11,9 +11,11 @@ import type { TodoMe } from "@/lib/todo/shared";
 import { STEEL_RATE } from "./steel";
 import {
   CATEGORIES,
+  EXTRA_CATEGORIES,
   FLOORS,
   FOR_WHO,
   MAX_DESCRIPTION,
+  MAX_EXTRAS,
   MAX_MATERIAL,
   MAX_SUPPLIER,
   MAX_LINES,
@@ -23,6 +25,7 @@ import {
   todayISO,
   VAT_RATE,
   type Expense,
+  type ExtraCategory,
 } from "./shared";
 
 // Sanity asset ids: image-<sha1>-<width>x<height>-<format>, file-<sha1>-<extension>.
@@ -55,6 +58,7 @@ export const FIELDS = `{
   "payday": payday{ week, kind, lines[]{ id, name, group, amount, at, ref } },
   "steelTons": steelTons,
   "billId": billId,
+  "withId": withId,
   "moreReceipts": coalesce(moreReceipts[defined(asset)]{ "id": asset._ref, "url": asset->url, "type": asset->mimeType }, []),
   "moreLines": coalesce(moreLines[]{ material, qty, itemId, "toStore": coalesce(toStore, false) }, []),
   createdAt,
@@ -305,6 +309,64 @@ export async function createExpense(me: TodoMe, body: Record<string, unknown>, e
   if (!expense) throw new TodoError(502, "It was saved but couldn't be read back. Refresh the page.");
   return expense;
 }
+
+/** The other costs sent with a new entry, checked before anything is saved: what each is, how much, its class. */
+function cleanExtras(value: unknown): Array<{ category: ExtraCategory; description: string; amount: number; costClass: unknown }> {
+  if (value === null || value === undefined) return [];
+  if (!Array.isArray(value)) throw new TodoError(400, "The other costs didn't come through: try again.");
+  if (value.length > MAX_EXTRAS) throw new TodoError(400, `${MAX_EXTRAS} other costs at most on one receipt.`);
+  return value.map((raw) => {
+    const line = (raw ?? {}) as Record<string, unknown>;
+    const description = cleanText(line.description, MAX_DESCRIPTION, "description");
+    if (!description) throw new TodoError(400, "Say what each other cost is, e.g. Transport.");
+    const amount = Math.round(cleanNumber(line.amount, `Enter how much the ${description.toLowerCase()} was.`) * 100) / 100;
+    if (!(amount > 0)) throw new TodoError(400, `Enter how much the ${description.toLowerCase()} was.`);
+    const category = pick(line.category ?? "Service", EXTRA_CATEGORIES, "Pick Service or Other for each other cost.");
+    return { category, description, amount, costClass: line.costClass };
+  });
+}
+
+/**
+ * A new entry with other costs on the same receipt (the bill's wawa boards, and the transport): the entry, then each
+ * other cost as an entry of its own on the same day, supplier, payment and photos (so each has its own class in
+ * QuickBooks, and the bill is paid exactly what it's owed). `amount` is the entry's own part.
+ */
+export async function createWithExtras(me: TodoMe, body: Record<string, unknown>, extra: Record<string, unknown> = {}): Promise<{ expense: Expense; extras: Expense[] }> {
+  const extras = body.kind === "inflow" ? [] : cleanExtras(body.extras);
+  const expense = await createExpense(me, body, extra);
+  const made: Expense[] = [];
+  for (const e of extras) {
+    made.push(
+      await createExpense(
+        me,
+        {
+          date: body.date,
+          kind: "expense",
+          forWho: body.forWho,
+          amount: e.amount,
+          vat: false,
+          method: body.method,
+          category: e.category,
+          supplier: body.supplier,
+          description: e.description,
+          floor: body.floor,
+          costClass: e.costClass,
+          receiptId: body.receiptId,
+          moreReceiptIds: body.moreReceiptIds,
+        },
+        { withId: expense.id }
+      )
+    );
+  }
+  return { expense, extras: made };
+}
+
+/** What a new entry and its other costs come to (the bank's debit is for all of it). */
+export const totalWithExtras = (body: Record<string, unknown>): unknown => {
+  if (!Array.isArray(body.extras) || !body.extras.length) return body.amount;
+  const n = (v: unknown) => Number(String(v ?? "").replace(/,/g, "")) || 0;
+  return Math.round((n(body.amount) + body.extras.reduce((sum: number, e) => sum + n((e as { amount?: unknown })?.amount), 0)) * 100) / 100;
+};
 
 export async function updateExpense(me: TodoMe, id: string, body: Record<string, unknown>): Promise<Expense> {
   if (!isId(EXPENSE_PREFIX, id)) throw new TodoError(404, "That entry isn't there any more.");

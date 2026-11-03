@@ -4,10 +4,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   CATEGORIES,
+  EXTRA_CATEGORIES,
+  EXTRA_WORDS,
   FLOORS,
   FOR_WHO,
   isInflow,
   MAX_DESCRIPTION,
+  MAX_EXTRAS,
   MAX_LINES,
   MAX_MATERIAL,
   MAX_RECEIPTS,
@@ -18,6 +21,7 @@ import {
   VAT_RATE,
   vatParts,
   type Expense,
+  type ExtraCategory,
   type ForWho,
 } from "@/lib/expenses/shared";
 import type { ReceiptReading } from "@/lib/expenses/readReceipt";
@@ -184,6 +188,84 @@ function useMorePhotos(initial: readonly Receipt[]) {
 /* ---------- more materials on one entry ---------- */
 
 type LineDraft = { key: number; material: string; qty: number; unit: string; toStore: boolean | null };
+/** Another cost on the same receipt (transport): saved as its own entry. */
+type ExtraDraft = { key: number; description: string; amount: string; category: ExtraCategory; classPick: string | null; classTouched: boolean };
+const toAmount = (text: string) => {
+  const n = parseFloat(text.replace(/[^0-9.,]/g, "").replace(/,/g, ""));
+  return Number.isFinite(n) ? Math.round(n * 100) / 100 : NaN;
+};
+
+/** One other cost: what it is, how much, Service or Other, and its QuickBooks class (guessed until picked). */
+function ExtraLine({
+  n,
+  line,
+  classes,
+  guessed,
+  onChange,
+  onRemove,
+}: {
+  n: number;
+  line: ExtraDraft;
+  /** The QuickBooks classes, when the entry has one (a Site entry). */
+  classes: BookNamed[] | null;
+  guessed: BookNamed | null;
+  onChange: (line: ExtraDraft) => void;
+  onRemove: () => void;
+}) {
+  const chosen = line.classTouched ? (classes?.find((c) => c.id === line.classPick) ?? null) : guessed;
+  return (
+    <div className={site.matBox} role="group" aria-label={`Other cost ${n}`}>
+      <div className={site.lineHead}>
+        <label className={styles.label} htmlFor={`exp-extra-${n}`}>
+          Other cost {n}
+        </label>
+        <button type="button" className={styles.linkButton} onClick={onRemove}>
+          Take this line off
+        </button>
+      </div>
+      <input
+        id={`exp-extra-${n}`}
+        className={styles.input}
+        value={line.description}
+        onChange={(e) => onChange({ ...line, description: e.target.value })}
+        maxLength={MAX_DESCRIPTION}
+        autoCapitalize="sentences"
+        placeholder="e.g. Transport"
+      />
+      {!line.description.trim() && (
+        <div className={styles.chips} aria-label={`What other cost ${n} is`}>
+          {EXTRA_WORDS.map((w) => (
+            <button key={w} type="button" className={site.smallChip} onClick={() => onChange({ ...line, description: w })}>
+              {w}
+            </button>
+          ))}
+        </div>
+      )}
+      <div className={site.amount}>
+        <span>GH₵</span>
+        <input id={`exp-extra-amount-${n}`} type="text" inputMode="decimal" placeholder="0.00" value={line.amount} onChange={(e) => onChange({ ...line, amount: e.target.value })} aria-label={`How much: other cost ${n}`} />
+      </div>
+      <div className={site.chipsTwo} role="group" aria-label={`Other cost ${n}: Service or Other`}>
+        {EXTRA_CATEGORIES.map((c) => (
+          <button key={c} type="button" className={line.category === c ? styles.chipOn : styles.chip} aria-pressed={line.category === c} onClick={() => onChange({ ...line, category: c })}>
+            {c}
+          </button>
+        ))}
+      </div>
+      {classes && (
+        <select
+          className={styles.input}
+          aria-label={`Cost type (QuickBooks class): other cost ${n}`}
+          value={chosen?.id ?? ""}
+          onChange={(e) => onChange({ ...line, classPick: e.target.value || null, classTouched: true })}
+        >
+          <option value="">No class</option>
+          <ClassOptions classes={classes} kept={null} />
+        </select>
+      )}
+    </div>
+  );
+}
 
 /** A material after the first: what, how many, into the store room or not (a new item says what it's counted in). */
 function MaterialLine({
@@ -311,7 +393,8 @@ export function ExpenseForm({
   vendors?: string[];
   expenses: Expense[];
   items: StoreItem[];
-  onSaved: (expense: Expense, wasEdit: boolean) => void;
+  /** Saved, with the other costs that went in with it as entries of their own. */
+  onSaved: (expense: Expense, wasEdit: boolean, extras: Expense[]) => void;
   onDeleted: (expense: Expense) => void;
   onCancel: () => void;
   onBusy: (busy: boolean) => void;
@@ -349,6 +432,9 @@ export function ExpenseForm({
   // More materials on this entry (the first is the one above).
   const [lines, setLines] = useState<LineDraft[]>(() => (x?.moreLines ?? []).map((l, i) => ({ key: i + 1, material: l.material, qty: l.qty, unit: "pcs", toStore: l.toStore })));
   const nextLine = useRef(lines.length);
+  // Other costs on this receipt (a new entry only): each saved as its own entry.
+  const [extras, setExtras] = useState<ExtraDraft[]>([]);
+  const nextExtra = useRef(0);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [armed, setArmed] = useState(false);
@@ -497,6 +583,14 @@ export function ExpenseForm({
     const n = parseFloat(amount.replace(/[^0-9.,]/g, "").replace(/,/g, ""));
     return Number.isFinite(n) ? Math.round(n * 100) / 100 : NaN;
   };
+  // With other costs, the amount is all that was paid: this entry's part is what they leave.
+  const extrasTotal = Math.round(extras.reduce((n, l) => n + (toAmount(l.amount) || 0), 0) * 100) / 100;
+  const ownAmount = () => Math.round((parsedAmount() - extrasTotal) * 100) / 100;
+  const extraGuess = (l: ExtraDraft) => (showClass ? guessClass({ category: l.category, material: null, description: l.description, supplier }, classes, classHistory) : null);
+  const extraClass = (l: ExtraDraft): BookNamed | null => (l.classTouched ? (classes.find((c) => c.id === l.classPick) ?? null) : extraGuess(l));
+  const addExtra = (amountText = "") => {
+    setExtras((list) => [...list, { key: ++nextExtra.current, description: "", amount: amountText, category: "Service", classPick: null, classTouched: false }]);
+  };
   const rate = Number(vatRate);
   const vatPreview = vat && parsedAmount() > 0 && rate > 0 ? vatParts(parsedAmount(), rate) : null;
   const hasReceipt = !!receipt.slot || !!kept;
@@ -534,6 +628,9 @@ export function ExpenseForm({
     [bills, supplier, inflow]
   );
   const billKept = !!billId && (supplierBills.some((b) => b.id === billId) || billId === x?.billId);
+  // Paying a bill more than it's owed (the transport on top): the rest can be its own cost.
+  const payingBill = !x && billKept ? (supplierBills.find((b) => b.id === billId) ?? null) : null;
+  const overBill = payingBill && parsedAmount() > 0 ? Math.round((ownAmount() - payingBill.left) * 100) / 100 : 0;
   const materials = useMemo(() => {
     const stats = new Map<string, { name: string; count: number; lastAt: string }>();
     for (const e of expenses) {
@@ -572,6 +669,11 @@ export function ExpenseForm({
     if (isMaterial && lines.some((l) => !l.material.trim())) return setError("Write which material each line is, or take the empty line off.");
     if (!method) return setError(inflow ? "Pick how the money came in." : "Pick how it was paid.");
     if (vat && !hasReceipt) return setError("With VAT, the receipt is a must: take a photo of it or upload it.");
+    for (const l of extras) {
+      if (!l.description.trim()) return setError("Say what each other cost is, e.g. Transport.");
+      if (!(toAmount(l.amount) > 0)) return setError(`Enter how much the ${l.description.trim().toLowerCase()} was.`);
+    }
+    if (extras.length && !(ownAmount() > 0)) return setError("The other costs come to more than the total paid: check the amounts.");
     setError("");
     setSaving(true);
     try {
@@ -595,7 +697,7 @@ export function ExpenseForm({
         date,
         kind,
         forWho,
-        amount: value,
+        amount: extras.length ? ownAmount() : value,
         vat,
         vatRate: vat ? rate : null,
         supplier: supplier.trim(),
@@ -621,16 +723,25 @@ export function ExpenseForm({
         ...(p?.debitId ? { bankDebitId: p.debitId } : {}),
         // The supplier's bill it pays (money out only).
         billId: inflow || !billKept ? null : billId,
+        // Other costs on the same receipt: each its own entry (a new one only).
+        ...(!x && !inflow && extras.length
+          ? {
+              extras: extras.map((l) => {
+                const c = showFloors && showClass ? extraClass(l) : null;
+                return { description: l.description.trim(), amount: toAmount(l.amount), category: l.category, costClass: c ? { id: c.id, name: c.name } : null };
+              }),
+            }
+          : {}),
       };
-      const { expense } = x
-        ? await send<{ expense: Expense }>(`/api/expenses/${x.id}`, "PATCH", body)
-        : await send<{ expense: Expense }>("/api/expenses", "POST", body);
+      const { expense, extras: madeExtras } = x
+        ? await send<{ expense: Expense; extras?: Expense[] }>(`/api/expenses/${x.id}`, "PATCH", body)
+        : await send<{ expense: Expense; extras?: Expense[] }>("/api/expenses", "POST", body);
       receipt.clear(true);
       more.clear(true);
       readFor.current = null;
       setReading(null);
       setSaving(false);
-      onSaved(expense, !!x);
+      onSaved(expense, !!x, madeExtras ?? []);
     } catch (err) {
       setError(errorText(err));
       setSaving(false);
@@ -803,7 +914,7 @@ export function ExpenseForm({
         )}
 
         <label className={styles.label} htmlFor="exp-amount">
-          Amount
+          {extras.length ? "Total paid" : "Amount"}
         </label>
         <div className={site.amount}>
           <span>GH₵</span>
@@ -933,6 +1044,39 @@ export function ExpenseForm({
             + Another material on this receipt
           </button>
         )}
+        {!x && !inflow && (
+          <>
+            {extras.map((l, i) => (
+              <ExtraLine
+                key={l.key}
+                n={i + 1}
+                line={l}
+                classes={showFloors && showClass ? classes : null}
+                guessed={extraGuess(l)}
+                onChange={(next) => setExtras((list) => list.map((e) => (e.key === l.key ? next : e)))}
+                onRemove={() => setExtras((list) => list.filter((e) => e.key !== l.key))}
+              />
+            ))}
+            {extras.length > 0 && parsedAmount() > 0 && (
+              <p className={ownAmount() > 0 ? site.storeNote : styles.slotError} role="status">
+                {ownAmount() > 0 ? (
+                  <>
+                    Total {money(parsedAmount())}: {payingBill ? `${payingBill.appRef ?? "the bill"}` : isMaterial ? material.trim() || "the materials" : description.trim() || category || "this"}{" "}
+                    <b>{money(ownAmount())}</b>
+                    {extras.map((l) => ` + ${l.description.trim() || "other cost"} ${money(toAmount(l.amount) || 0)}`).join("")}. Each goes in as its own entry.
+                  </>
+                ) : (
+                  "The other costs come to more than the total paid: check the amounts."
+                )}
+              </p>
+            )}
+            {extras.length < MAX_EXTRAS && (
+              <button type="button" className={site.addLine} onClick={() => addExtra()}>
+                + Transport or another cost
+              </button>
+            )}
+          </>
+        )}
 
         <div className={site.row2}>
           <div className={site.field}>
@@ -998,6 +1142,14 @@ export function ExpenseForm({
                 </button>
               )}
             </div>
+            {payingBill && overBill > 0.004 && (
+              <p className={site.receiptNeeded} role="status">
+                That&rsquo;s {money(overBill)} more than the {money(payingBill.left)} left on {payingBill.appRef ?? "the bill"}. Transport, or something else?{" "}
+                <button type="button" className={styles.linkButton} onClick={() => addExtra(overBill.toFixed(2))}>
+                  Add {money(overBill)} as another cost
+                </button>
+              </p>
+            )}
           </>
         )}
         {suppliers.length > 0 && (
