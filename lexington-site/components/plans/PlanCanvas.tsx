@@ -64,6 +64,14 @@ const SNAP_PX = 10;
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 const r1 = (v: number) => Math.round(v * 10) / 10;
 const fmt = (mm: number) => Math.round(mm).toLocaleString("en-GB");
+const lined = (what: string) => (what ? `lined up on ${what}` : "");
+const selId = (x: Sel) => (!x ? "" : x.kind === "room" ? `room:${x.id}` : `${x.kind}:${x.key}`);
+
+/** How far a point is from a wall (0 on it). */
+function distToWall(w: WallLine, p: P): number {
+  const [along, across] = w.dir === "h" ? [p[0], p[1]] : [p[1], p[0]];
+  return Math.hypot(Math.max(0, w.s0 - along, along - w.s1), Math.max(0, Math.abs(across - w.c) - w.t / 2));
+}
 
 /** An arc of radius r round c, from p0 to p1 (the short way). */
 function arcPath(c: P, p0: P, p1: P, r: number): string {
@@ -90,12 +98,15 @@ function snapPoint(floor: Floor, lines: SnapLine[], p: P, reach: number): { pos:
   };
 }
 
+// `last`: the plan as the drag has left it so far (saved when it is let go).
 type Drag =
   | { kind: "pan"; startX: number; startY: number; view: View; moved: boolean }
-  | { kind: "wall"; key: string; start: P; along: Axis; attached: { wall: string; end: "a" | "b" }[]; moved: boolean; base: PlanContent; lines: SnapLine[] }
-  | { kind: "end"; key: string; end: "a" | "b"; moved: boolean; base: PlanContent; lines: SnapLine[] }
-  | { kind: "opening"; key: string; moved: boolean; base: PlanContent }
-  | { kind: "label"; key: string; moved: boolean; base: PlanContent };
+  | { kind: "wall"; key: string; start: P; along: Axis; attached: { wall: string; end: "a" | "b" }[]; moved: boolean; base: PlanContent; lines: SnapLine[]; last?: PlanContent }
+  | { kind: "end"; key: string; end: "a" | "b"; moved: boolean; base: PlanContent; lines: SnapLine[]; last?: PlanContent }
+  // A door or window slides along its wall or onto another one; `grab` is where along it it was taken
+  // hold of (from its middle), and `added` says it was only just put in (one change with the slide).
+  | { kind: "opening"; key: string; wall: string; start: P; grab: number; moved: boolean; base: PlanContent; last?: PlanContent; added?: string }
+  | { kind: "label"; key: string; start: P; moved: boolean; base: PlanContent; last?: PlanContent };
 
 export function PlanCanvas(props: Props) {
   const { floor, plan, analysis, tool, wallKind, wallT, openingKind, openingW, selection, onSelect, onPreview, onCommit, onLabelAt, colourOf, focus, reference, referenceShade } =
@@ -108,6 +119,9 @@ export function PlanCanvas(props: Props) {
   const [start, setStart] = useState<{ pos: P; pt: PlanPoint } | null>(null);
   const [typed, setTyped] = useState("");
   const [hint, setHint] = useState("");
+  // The hand: what the pointer is over that can be picked up, and whether something is being moved.
+  const [hoverItem, setHoverItem] = useState<Sel>(null);
+  const [grabbing, setGrabbing] = useState(false);
   const dragRef = useRef<Drag | null>(null);
   const pointers = useRef(new Map<number, P>());
   const pinch = useRef<{ dist: number; view: View; mid: P } | null>(null);
@@ -252,6 +266,7 @@ export function PlanCanvas(props: Props) {
   const [toolWas, setToolWas] = useState(tool);
   if (toolWas !== tool) {
     setToolWas(tool);
+    setHoverItem(null);
     if (tool !== "wall") {
       setStart(null);
       setTyped("");
@@ -322,26 +337,32 @@ export function PlanCanvas(props: Props) {
     [plan.labels, floor],
   );
 
-  // ---- pointer handling -------------------------------------------------------------------------
-  const onPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
-    if (!view) return;
-    const p = toMm(e.clientX, e.clientY);
-    if (!p) return;
-    (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
-    pointers.current.set(e.pointerId, [e.clientX, e.clientY]);
-    if (pointers.current.size === 2) {
-      const [a, b] = [...pointers.current.values()];
-      pinch.current = { dist: Math.hypot(a[0] - b[0], a[1] - b[1]), view, mid: [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2] };
-      dragRef.current = null;
-      return;
-    }
-    const within = 8 / view.k;
-    const pan = (): Drag => ({ kind: "pan", startX: e.clientX, startY: e.clientY, view, moved: false });
+  // What the Move tool would pick up here: a room name, a door or window, a wall.
+  const itemAt = useCallback(
+    (p: P, within: number): Sel => {
+      const label = labelAt(p, within);
+      if (label) return { kind: "label", key: label._key };
+      const opening = openingAt(p, within);
+      if (opening) return { kind: "opening", key: opening._key };
+      const w = nearestWall(p, within);
+      return w ? { kind: "wall", key: w.key } : null;
+    },
+    [labelAt, openingAt, nearestWall],
+  );
 
-    if (e.button === 1 || e.button === 2) {
-      dragRef.current = pan();
-      return;
-    }
+  // ---- pointer handling -------------------------------------------------------------------------
+  /** What a press begins: a drag (of the plan, a wall, a door...), or nothing (a click while drawing). */
+  const press = (e: ReactPointerEvent<HTMLDivElement>, p: P, v: View): Drag | null => {
+    const within = 8 / v.k;
+    const pan = (): Drag => ({ kind: "pan", startX: e.clientX, startY: e.clientY, view: v, moved: false });
+    const grabOpening = (o: PlanOpening): Drag => {
+      onSelect({ kind: "opening", key: o._key });
+      const w = wallsByKey.get(o.wall);
+      const grab = w ? (w.dir === "h" ? p[0] : p[1]) - (w.aFirst ? w.s0 + o.at : w.s1 - o.at) : 0;
+      return { kind: "opening", key: o._key, wall: o.wall, start: p, grab, moved: false, base: plan };
+    };
+
+    if (e.button === 1 || e.button === 2) return pan();
     if (tool === "wall") {
       if (!start) {
         const sp = snapPoint(floor, lines, p, reach);
@@ -350,60 +371,54 @@ export function PlanCanvas(props: Props) {
         const end = wallEndFor(p);
         if (end) finishWall(end);
       }
-      return;
+      return null;
     }
     if (tool === "door" || tool === "window") {
+      // One that is already there is taken hold of (to move it), not doubled.
+      const there = openingAt(p, within);
+      if (there) return grabOpening(there);
       const w = nearestWall(p, within * 2);
-      if (!w) {
-        dragRef.current = pan();
-        return;
-      }
+      if (!w) return pan();
       const along = w.dir === "h" ? p[0] : p[1];
       const width = openingW;
       const centre = clamp(along, w.s0 + width / 2, w.s1 - width / 2);
       const at = r1(Math.round((w.aFirst ? centre - w.s0 : w.s1 - centre) / 10) * 10);
       const kind: OpeningKind = tool === "window" ? "window" : openingKind;
       const opening: PlanOpening = { _key: newKey("o"), wall: w.key, at, w: width, kind };
-      onCommit({ ...plan, openings: [...plan.openings, opening] }, kind === "window" ? "Window added" : "Door added");
+      const next = { ...plan, openings: [...plan.openings, opening] };
+      // It shows at once, can be slid into place before letting go, and is saved as one change.
+      onPreview(next);
       onSelect({ kind: "opening", key: opening._key });
-      return;
+      return { kind: "opening", key: opening._key, wall: w.key, start: p, grab: along - centre, moved: false, base: next, last: next, added: kind === "window" ? "Window added" : "Door added" };
     }
     if (tool === "label") {
       const room = roomAt(p);
       if (room?.label) onSelect({ kind: "label", key: room.label._key });
       else if (room) onLabelAt(pointAt(floor, p));
-      return;
+      return null;
     }
-    // Select: a label, an opening, a wall end, a wall, a room; else the plan pans.
+    // Move: a room name, a door or window, a wall end, a wall, a room; else the plan pans.
     const label = labelAt(p, within);
     if (label) {
       onSelect({ kind: "label", key: label._key });
-      dragRef.current = { kind: "label", key: label._key, moved: false, base: plan };
-      return;
+      return { kind: "label", key: label._key, start: p, moved: false, base: plan };
     }
     const opening = openingAt(p, within);
-    if (opening) {
-      onSelect({ kind: "opening", key: opening._key });
-      dragRef.current = { kind: "opening", key: opening._key, moved: false, base: plan };
-      return;
-    }
+    if (opening) return grabOpening(opening);
     if (selection?.kind === "wall") {
       const w = wallsByKey.get(selection.key);
       if (w) {
         for (const end of ["a", "b"] as const) {
           const sAt = (end === "a") === w.aFirst ? w.s0 : w.s1;
           const ep: P = w.dir === "h" ? [sAt, w.c] : [w.c, sAt];
-          if (Math.hypot(ep[0] - p[0], ep[1] - p[1]) < 12 / view.k) {
-            dragRef.current = { kind: "end", key: w.key, end, moved: false, base: plan, lines: snapLines(floor, plan, w.key) };
-            return;
-          }
+          if (Math.hypot(ep[0] - p[0], ep[1] - p[1]) < 12 / v.k) return { kind: "end", key: w.key, end, moved: false, base: plan, lines: snapLines(floor, plan, w.key) };
         }
       }
     }
     const w = nearestWall(p, within);
     if (w) {
       onSelect({ kind: "wall", key: w.key });
-      dragRef.current = {
+      return {
         kind: "wall",
         key: w.key,
         start: p,
@@ -413,11 +428,30 @@ export function PlanCanvas(props: Props) {
         base: plan,
         lines: snapLines(floor, plan, w.key),
       };
-      return;
     }
     const room = roomAt(p);
     onSelect(room ? (room.label ? { kind: "label", key: room.label._key } : { kind: "room", id: room.id }) : null);
-    dragRef.current = pan();
+    return pan();
+  };
+
+  const onPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (!view) return;
+    const p = toMm(e.clientX, e.clientY);
+    if (!p) return;
+    (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
+    pointers.current.set(e.pointerId, [e.clientX, e.clientY]);
+    if (pointers.current.size === 2) {
+      const [a, b] = [...pointers.current.values()];
+      pinch.current = { dist: Math.hypot(a[0] - b[0], a[1] - b[1]), view, mid: [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2] };
+      // A second finger zooms: whatever the first one was moving goes back as it was.
+      if (dragRef.current && dragRef.current.kind !== "pan") onPreview(null);
+      dragRef.current = null;
+      setGrabbing(false);
+      setHint("");
+      return;
+    }
+    dragRef.current = press(e, p, view);
+    setGrabbing(Boolean(dragRef.current));
   };
 
   const onPointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
@@ -443,8 +477,15 @@ export function PlanCanvas(props: Props) {
     setHover(p);
     const drag = dragRef.current;
     if (!drag) {
-      if (tool === "wall" && !start) setHint(snapPoint(floor, lines, p, reach).hint);
-      else if (tool === "wall" && start) setHint(wallEndFor(p)?.hint ?? "");
+      if (tool === "wall" && !start) setHint(lined(snapPoint(floor, lines, p, reach).hint));
+      else if (tool === "wall" && start) setHint(lined(wallEndFor(p)?.hint ?? ""));
+      else {
+        // What a press here would pick up: anything movable (Move), a door or window (Door, Window).
+        const within = 8 / view.k;
+        const o = tool === "door" || tool === "window" ? openingAt(p, within) : null;
+        const it: Sel = tool === "select" ? itemAt(p, within) : o ? { kind: "opening", key: o._key } : null;
+        if (selId(it) !== selId(hoverItem)) setHoverItem(it);
+      }
       return;
     }
     if (drag.kind === "pan") {
@@ -464,8 +505,9 @@ export function PlanCanvas(props: Props) {
       const sn = snapCentre(drag.lines, drag.along, raw, reach, w.t);
       const baseWall = drag.base.walls.find((x) => x._key === drag.key)!;
       const anchor = sn ? sn.anchor : reanchor(floor, drag.along, drag.along === "x" ? baseWall.a.x : baseWall.a.y, r1(raw));
-      setHint(sn?.what ?? "");
-      onPreview(moveWall(drag.base, floor, drag.key, anchor, drag.attached));
+      setHint([`moved ${fmt(Math.abs((sn ? sn.v : r1(raw)) - w.c))} mm`, lined(sn?.what ?? "")].filter(Boolean).join(" · "));
+      drag.last = moveWall(drag.base, floor, drag.key, anchor, drag.attached);
+      onPreview(drag.last);
       return;
     }
     if (drag.kind === "end") {
@@ -477,23 +519,45 @@ export function PlanCanvas(props: Props) {
       const sn = snapTo(drag.lines, axis, v, reach);
       const baseWall = drag.base.walls.find((x) => x._key === drag.key)!;
       const anchor = sn ? sn.anchor : reanchor(floor, axis, baseWall[drag.end][axis], r1(v));
-      setHint(sn?.what ?? "");
-      onPreview(moveEnd(drag.base, floor, drag.key, drag.end, anchor));
+      setHint(lined(sn?.what ?? ""));
+      drag.last = moveEnd(drag.base, floor, drag.key, drag.end, anchor);
+      onPreview(drag.last);
       return;
     }
     if (drag.kind === "opening") {
       const o = drag.base.openings.find((x) => x._key === drag.key);
-      const w = o ? wallsByKey.get(o.wall) : undefined;
-      if (!o || !w) return;
-      const along = w.dir === "h" ? p[0] : p[1];
-      const centre = clamp(along, w.s0 + o.w / 2, w.s1 - o.w / 2);
+      if (!o) return;
+      if (!drag.moved && Math.hypot(p[0] - drag.start[0], p[1] - drag.start[1]) < 4 / view.k) return;
       drag.moved = true;
-      onPreview(updateOpening(drag.base, drag.key, { at: r1(Math.round((w.aFirst ? centre - w.s0 : w.s1 - centre) / 10) * 10) }));
+      // Along its wall, or onto another wall once the pointer is clearly nearer that one (if it fits).
+      let w = wallsByKey.get(drag.wall);
+      const other = nearestWall(p, 24 / view.k);
+      if (other && other.key !== drag.wall && other.s1 - other.s0 >= o.w && (!w || distToWall(other, p) + 6 / view.k < distToWall(w, p))) {
+        w = other;
+        drag.wall = other.key;
+        drag.grab = 0;
+      }
+      if (!w) return;
+      const mid = (w.s0 + w.s1) / 2;
+      let centre = clamp((w.dir === "h" ? p[0] : p[1]) - drag.grab, w.s0 + o.w / 2, w.s1 - o.w / 2);
+      // The middle of the wall holds it, as a grid line holds a wall.
+      const centred = Math.abs(centre - mid) <= reach;
+      if (centred) centre = mid;
+      const fromA = w.aFirst ? centre - w.s0 : w.s1 - centre;
+      setHint(centred ? "centred on the wall" : "");
+      drag.last = updateOpening(drag.base, drag.key, { wall: w.key, at: centred ? r1(fromA) : r1(Math.round(fromA / 10) * 10) });
+      onPreview(drag.last);
       return;
     }
     if (drag.kind === "label") {
+      if (!drag.moved && Math.hypot(p[0] - drag.start[0], p[1] - drag.start[1]) < 4 / view.k) return;
       drag.moved = true;
-      onPreview(updateLabel(drag.base, drag.key, { at: pointAt(floor, p) }));
+      // It keeps the spot it was taken hold of by, rather than jumping to the pointer.
+      const l = drag.base.labels.find((x) => x._key === drag.key);
+      const at0 = l ? pointPos(floor, l.at) : null;
+      const to: P = at0 ? [at0[0] + p[0] - drag.start[0], at0[1] + p[1] - drag.start[1]] : p;
+      drag.last = updateLabel(drag.base, drag.key, { at: pointAt(floor, to) });
+      onPreview(drag.last);
     }
   };
 
@@ -502,15 +566,16 @@ export function PlanCanvas(props: Props) {
     if (pointers.current.size < 2) pinch.current = null;
     const drag = dragRef.current;
     dragRef.current = null;
+    setGrabbing(false);
     if (!drag || drag.kind === "pan") return;
     setHint("");
-    if (!drag.moved) {
-      onPreview(null);
-      return;
-    }
     // The preview becomes the change.
     onPreview(null);
-    onCommit(plan, drag.kind === "wall" ? "Wall moved" : drag.kind === "end" ? "Wall lengthened" : drag.kind === "opening" ? "Door moved" : "Room name moved");
+    if (drag.kind === "opening" && drag.added) onCommit(drag.last ?? plan, drag.added);
+    else if (drag.moved && drag.last) {
+      const what = drag.base.openings.find((o) => drag.kind === "opening" && o._key === drag.key)?.kind === "window" ? "Window moved" : "Door moved";
+      onCommit(drag.last, drag.kind === "wall" ? "Wall moved" : drag.kind === "end" ? "Wall lengthened" : drag.kind === "opening" ? what : "Room name moved");
+    }
   };
 
   // ---- drawing ----------------------------------------------------------------------------------
@@ -538,6 +603,10 @@ export function PlanCanvas(props: Props) {
       })()
     : null;
   const selWall = selection?.kind === "wall" ? wallsByKey.get(selection.key) : undefined;
+  const selOpening = selection?.kind === "opening" ? plan.openings.find((o) => o._key === selection.key) : undefined;
+  const selOpeningWall = selOpening ? wallsByKey.get(selOpening.wall) : undefined;
+  // What would be picked up (not while something is already being moved).
+  const hoverId = grabbing ? "" : selId(hoverItem);
   const selRoomId =
     selection?.kind === "room" ? selection.id : selection?.kind === "label" ? analysis.rooms.find((r) => r.label?._key === selection.key)?.id : undefined;
 
@@ -547,12 +616,15 @@ export function PlanCanvas(props: Props) {
   return (
     <div
       ref={wrapRef}
-      className={`${s.canvas} ${tool === "wall" ? s.drawing : ""}`}
+      className={`${s.canvas} ${grabbing ? s.grabbing : tool === "wall" ? s.drawing : hoverId ? s.grab : ""}`}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
-      onPointerLeave={() => setHover(null)}
+      onPointerLeave={() => {
+        setHover(null);
+        setHoverItem(null);
+      }}
       onContextMenu={(e) => e.preventDefault()}
       onDoubleClick={() => {
         if (tool === "wall") {
@@ -644,6 +716,7 @@ export function PlanCanvas(props: Props) {
           {/* Walls. */}
           {analysis.walls.map((w) => {
             const b = wallRect(w, analysis.walls);
+            const lit = selWall?.key !== w.key && hoverId === `wall:${w.key}`;
             return (
               <rect
                 key={`w${w.key}`}
@@ -651,8 +724,8 @@ export function PlanCanvas(props: Props) {
                 y={b.y0}
                 width={b.x1 - b.x0}
                 height={b.y1 - b.y0}
-                className={`${s[`wall_${w.kind}`]} ${selWall?.key === w.key ? s.wallOn : ""}`}
-                strokeWidth={stroke}
+                className={`${s[`wall_${w.kind}`]} ${selWall?.key === w.key ? s.wallOn : lit ? s.wallHover : ""}`}
+                strokeWidth={lit ? stroke * 3 : stroke}
               />
             );
           })}
@@ -678,7 +751,7 @@ export function PlanCanvas(props: Props) {
             const leafLine = (h: number) =>
               w.dir === "h" ? { x1: h, y1: faceC, x2: h, y2: faceC + side * leaf } : { x1: faceC, y1: h, x2: faceC + side * leaf, y2: h };
             return (
-              <g key={`o${o._key}`} className={on ? s.openingOn : s.opening}>
+              <g key={`o${o._key}`} className={on ? s.openingOn : hoverId === `opening:${o._key}` ? s.openingHover : s.opening}>
                 <rect {...cut} className={s.cut} />
                 {o.kind === "window" || o.kind === "slider" ? (
                   w.dir === "h" ? (
@@ -758,7 +831,7 @@ export function PlanCanvas(props: Props) {
                   {h.unit} · {h.nia.toFixed(1)} m²
                 </text>
               )}
-              <text x={sx(at[0])} y={sy(at[1]) - 6} className={l ? s.roomName : s.roomNameless}>
+              <text x={sx(at[0])} y={sy(at[1]) - 6} className={l ? (hoverId === `label:${l._key}` ? s.roomNameHover : s.roomName) : s.roomNameless}>
                 {l ? l.name : "Unnamed"}
               </text>
               <text x={sx(at[0])} y={sy(at[1]) + 10} className={s.roomArea}>
@@ -785,6 +858,37 @@ export function PlanCanvas(props: Props) {
           </>
         )}
 
+        {/* A door or window picked up: how far it is from each end of its wall (as in the panel). */}
+        {selOpening &&
+          selOpeningWall &&
+          (() => {
+            const w = selOpeningWall;
+            const centre = w.aFirst ? w.s0 + selOpening.at : w.s1 - selOpening.at;
+            const gaps = [
+              [w.s0, centre - selOpening.w / 2],
+              [centre + selOpening.w / 2, w.s1],
+            ].filter(([g0, g1]) => g1 - g0 > 0.5);
+            // Just off the wall: above one across the page, right of one down it.
+            const off = (w.t / 2) * k + 10;
+            return gaps.map(([g0, g1], i) =>
+              w.dir === "h" ? (
+                <g key={`gap${i}`} className={s.gap}>
+                  <line x1={sx(g0)} x2={sx(g1)} y1={sy(w.c) - off} y2={sy(w.c) - off} />
+                  <text x={sx((g0 + g1) / 2)} y={sy(w.c) - off - 10} className={s.dimText}>
+                    {fmt(g1 - g0)}
+                  </text>
+                </g>
+              ) : (
+                <g key={`gap${i}`} className={s.gap}>
+                  <line x1={sx(w.c) + off} x2={sx(w.c) + off} y1={sy(g0)} y2={sy(g1)} />
+                  <text x={sx(w.c) + off + 24} y={sy((g0 + g1) / 2)} className={s.dimText}>
+                    {fmt(g1 - g0)}
+                  </text>
+                </g>
+              ),
+            );
+          })()}
+
         {tool === "wall" && start && (
           <circle cx={sx(start.pos[0])} cy={sy(start.pos[1])} r={4} className={s.handle} />
         )}
@@ -794,7 +898,7 @@ export function PlanCanvas(props: Props) {
           </text>
         )}
       </svg>
-      {hint && hover && <div className={s.hint}>lined up on {hint}</div>}
+      {hint && hover && <div className={s.hint}>{hint}</div>}
       <div className={s.zoom}>
         <button type="button" onClick={() => wrapRef.current && zoomAt(1.4, wrapRef.current.getBoundingClientRect().left + W / 2, wrapRef.current.getBoundingClientRect().top + H / 2)} aria-label="Zoom in">
           +

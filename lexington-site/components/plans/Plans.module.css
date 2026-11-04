@@ -238,6 +238,15 @@
   cursor: crosshair;
 }
 
+/* The Move tool: an open hand over what can be picked up, a closed one while it moves. */
+.grab {
+  cursor: grab;
+}
+
+.grabbing {
+  cursor: grabbing;
+}
+
 .svg {
   display: block;
 }
@@ -322,6 +331,10 @@
   fill: #b5583a;
 }
 
+.wallHover {
+  stroke: var(--clay);
+}
+
 .wallPreview {
   fill: rgba(181, 88, 58, 0.45);
   stroke: var(--clay);
@@ -338,6 +351,12 @@
 .openingOn line,
 .openingOn path {
   stroke: var(--clay);
+}
+
+.openingHover line,
+.openingHover path {
+  stroke: var(--clay);
+  stroke-opacity: 0.6;
 }
 
 .cut {
@@ -381,6 +400,12 @@
   fill: #2a2f31;
 }
 
+.roomNameHover {
+  font-size: 11.5px;
+  font-weight: 600;
+  fill: var(--clay);
+}
+
 .roomNameless {
   font-size: 11px;
   font-style: italic;
@@ -409,6 +434,13 @@
   paint-order: stroke;
   stroke: var(--plan-board);
   stroke-width: 3px;
+}
+
+/* How far a door or window is from each end of its wall. */
+.gap line {
+  stroke: var(--clay);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
 }
 
 .hint {
@@ -522,6 +554,18 @@
   background: var(--ink);
   color: var(--paper);
   font-weight: 600;
+}
+
+/* A chip with a picture before its word (the Move tool's hand): kept on one line. */
+.withIcon {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.chipIcon {
+  flex: none;
 }
 
 .field {
