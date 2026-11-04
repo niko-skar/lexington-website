@@ -1,3 +1,4 @@
+import { splitUnits, unitsText } from "@/lib/format";
 import type { SiteSettings } from "@/lib/sanity/types";
 
 // Table-based layout, inline styles only — Outlook (Word rendering engine)
@@ -147,13 +148,16 @@ export function receiptEmail({
   portalUrl: string;
   siteSettings: SiteSettings;
 }) {
-  const firstName = name.trim().split(/\s+/)[0] || name;
+  // "Thank you, Rhoda." -- but a title goes with the surname: "Dr. Michael E. Gyasi" is "Dr. Gyasi", not "Dr.".
+  const words = name.trim().split(/\s+/);
+  const titled = words.length > 1 && /^(dr|mr|mrs|ms|miss|prof|rev|hon)\.?$/i.test(words[0]);
+  const firstName = (titled ? `${words[0]} ${words[words.length - 1]}` : words[0]) || name;
   const rows: Array<[string, string]> = [
     ["Receipt number", receiptNumber],
     ["Amount received", amountText],
     ["Date received", dateText],
     ["Method", methodText],
-    ["Residence", `Unit ${unitNumber}`],
+    [splitUnits(unitNumber).length > 1 ? "Residences" : "Residence", unitsText(unitNumber)],
   ];
   if (balanceText) rows.push(["Balance remaining", balanceText]);
 
@@ -164,7 +168,7 @@ export function receiptEmail({
           Thank you, ${escapeHtml(firstName)}.
         </div>
         <p style="font-family:${FONT_SANS}; font-size:15px; line-height:1.7; color:#3a3a36; margin:0 0 28px;">
-          We've received your payment towards Unit ${escapeHtml(unitNumber)}. Your receipt is attached to this
+          We've received your payment towards ${escapeHtml(unitsText(unitNumber))}. Your receipt is attached to this
           email as a PDF, and you can download it again any time from your account.
         </p>
       </td>

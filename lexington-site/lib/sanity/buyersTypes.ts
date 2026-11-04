@@ -26,7 +26,7 @@ export interface BuyerAccount {
   /** Absent means an ordinary buyer. "admin" accounts sign in at /login but land in /admin;
    *  "site" accounts (the foreman) land on the site to-do list at /todo and can open nothing else. */
   role?: "buyer" | "admin" | "site";
-  /** Admin accounts have no unit or contract price. */
+  /** Admin accounts have no unit or contract price. Two homes on one account: "Studio 1, 204B". */
   unitNumber: string;
   contractPriceUSD: number;
   /** The price before this buyer's discount; the dashboard shows the saving when it is above the contract price. */
@@ -35,6 +35,19 @@ export interface BuyerAccount {
   signedAgreements?: SignedAgreement[];
   contractDraft?: ContractDraft;
   buyerDetails?: BuyerDetails;
+  /** Steps written for this buyer: when there are any, the dashboard shows them instead of the standard ones. */
+  nextSteps?: NextStep[];
+}
+
+export interface NextStep {
+  _key?: string;
+  title: string;
+  text?: string;
+  /** Ticks itself once the buyer's payments come to this many US dollars (e.g. a deposit). */
+  donePaidUSD?: number;
+  done?: boolean;
+  /** A button under the step: the draft agreement, or the details form. */
+  link?: "draft" | "details";
 }
 
 /** The draft agreement on the buyer's dashboard, with the next steps (only the account query projects the urls). */

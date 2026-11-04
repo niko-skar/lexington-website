@@ -2,7 +2,8 @@ import "server-only";
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 
 import { notifyOwner } from "@/lib/alerts/notify";
-import { buyerPaymentFor } from "@/lib/buyers/payments";
+import { buyerNamedIn, buyerPaymentFor } from "@/lib/buyers/payments";
+import { BUYER_MARK } from "@/lib/buyers/shared";
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
 import { BANK_TEXT_PREFIX, BANK_TEXT_SETTINGS_ID, EXPENSE_PREFIX } from "@/lib/site/ids";
 import { receiveDebit } from "./bankDebit";
@@ -211,23 +212,33 @@ export async function receiveBankText(raw: string, { dryRun = false } = {}): Pro
     }
     if (accounts.length === 0) await saveSettings({ accounts: [c.account] });
 
-    // A buyer's payment in cedis logged for this day and amount (lib/buyers): the text is that payment, not Leo's money.
+    const note: BankNote = { at: `${c.date}${c.time ? ` ${c.time}` : ""}`, account: c.account, balance: c.balance, matched: false };
+    const said = c.narration ? `: ${c.narration.charAt(0)}${c.narration.slice(1).toLowerCase()}` : "";
+    const moneyIn = (supplier: string) =>
+      createExpense(
+        BANK_ME,
+        { kind: "inflow", forWho: "Site", date: c.date, amount: c.amount, method: "Bank transfer", supplier, description: `From the bank's text${c.time ? ` (${c.time})` : ""}${said}` },
+        { bank: note }
+      );
+
+    // A buyer's payment in cedis logged for this day and amount (lib/buyers): the text is that payment, not Leo's money,
+    // and it goes into the books as theirs (Customer Deposits, lib/quickbooks/feed.ts).
     const fromBuyer = await buyerPaymentFor(c.date, c.amount);
     if (fromBuyer) {
-      await client.patch(textId).set({ result: "buyer", buyerId: fromBuyer.buyerId, buyerPaymentKey: fromBuyer.key }).commit();
+      const expense = await moneyIn(`${fromBuyer.name} ${BUYER_MARK}`);
+      await client.patch(textId).set({ result: "buyer", buyerId: fromBuyer.buyerId, buyerPaymentKey: fromBuyer.key, expenseId: expense.id }).commit();
       await remember({ result: "buyer", ref: fromBuyer.receipt, amount: c.amount });
       await notifyOwner({
         kind: "bank",
         title: `${money(c.amount)} in: ${fromBuyer.name}'s payment`,
         lines: [
-          `Your bank's text of ${whenText(c)} matches the payment you logged for ${fromBuyer.name}${fromBuyer.receipt ? ` (receipt ${fromBuyer.receipt})` : ""}, so it wasn't added as money from Leo.`,
+          `Your bank's text of ${whenText(c)} matches the payment you logged for ${fromBuyer.name}${fromBuyer.receipt ? ` (receipt ${fromBuyer.receipt})` : ""}, so ${expense.ref ?? "it"} went into the books as their payment (Customer Deposits), not as money from Leo.`,
         ],
         links: [{ label: "Open the buyers", url: "/todo/buyers" }],
       });
-      return outcome("buyer", fromBuyer.receipt);
+      return outcome("buyer", fromBuyer.receipt, expense.id, [expense.id]);
     }
 
-    const note: BankNote = { at: `${c.date}${c.time ? ` ${c.time}` : ""}`, account: c.account, balance: c.balance, matched: false };
     const twin = await typedTwin(c);
     if (twin) {
       // Typed already: the text confirms it, and nothing in the books changes.
@@ -237,20 +248,32 @@ export async function receiveBankText(raw: string, { dryRun = false } = {}): Pro
       return outcome("matched", twin.ref, twin.id);
     }
 
-    const said = c.narration ? `: ${c.narration.charAt(0)}${c.narration.slice(1).toLowerCase()}` : "";
-    const expense = await createExpense(
-      BANK_ME,
-      {
-        kind: "inflow",
-        forWho: "Site",
-        date: c.date,
-        amount: c.amount,
-        method: "Bank transfer",
-        supplier: "Leo",
-        description: `From the bank's text${c.time ? ` (${c.time})` : ""}${said}`,
-      },
-      { bank: note }
-    );
+    // The bank's words name a buyer ("... BY MICHAEL EKUOBA-GYASI", Dr Gyasi's deposit of 4 Nov 2026): their payment,
+    // not logged on their page yet, so it goes into the books as theirs and Niko is asked to log it for the receipt.
+    const named = await buyerNamedIn(c.narration);
+    if (named) {
+      const expense = await moneyIn(`${named.name} ${BUYER_MARK}`);
+      await client.patch(textId).set({ result: "added", expenseId: expense.id, buyerId: named.buyerId }).commit();
+      await remember({ result: "added", ref: expense.ref, amount: c.amount });
+      await notifyOwner({
+        kind: "bank",
+        title: `${money(c.amount)} in from ${named.name}`,
+        lines: [
+          `Your bank's text of ${whenText(c)} names ${named.name}, so ${expense.ref ?? "it"} went into the books as their payment (Customer Deposits), not as money from Leo.`,
+          "Log it on their page in Buyers to send them the receipt and update their portal.",
+        ],
+        links: [
+          { label: "Open the buyers", url: "/todo/buyers" },
+          { label: `Open ${expense.ref ?? "the entry"}`, url: `/todo/expenses?open=${expense.id}` },
+        ],
+        urgent: true,
+        open: "/todo/buyers",
+        tag: `bank-${expense.id}`,
+      });
+      return outcome("added", expense.ref, expense.id, [expense.id]);
+    }
+
+    const expense = await moneyIn("Leo");
     await client.patch(textId).set({ result: "added", expenseId: expense.id }).commit();
     await remember({ result: "added", ref: expense.ref, amount: c.amount });
     const open = `/todo/expenses?open=${expense.id}`;

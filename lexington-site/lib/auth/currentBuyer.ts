@@ -9,11 +9,12 @@ import { client } from "@/lib/sanity/client";
 import { unitByNumberQuery } from "@/lib/sanity/queries";
 import type { Unit } from "@/lib/sanity/types";
 import { usdEquivalent } from "@/lib/currency";
+import { splitUnits } from "@/lib/format";
 
 // Defense in depth alongside middleware.ts -- cheap, and protects against
 // any future matcher misconfiguration. Redirects (rather than returning
 // null) so every /account page can call this without its own guard.
-export async function requireCurrentBuyer(): Promise<{ buyer: BuyerAccount; unit: Unit | null }> {
+export async function requireCurrentBuyer(): Promise<{ buyer: BuyerAccount; unit: Unit | null; units: Unit[] }> {
   const session = await getBuyerSession();
   if (!session) {
     redirect("/login");
@@ -41,9 +42,11 @@ export async function requireCurrentBuyer(): Promise<{ buyer: BuyerAccount; unit
     redirect("/todo");
   }
 
-  const unit = await client.fetch<Unit | null>(unitByNumberQuery, { unitNumber: buyer.unitNumber });
+  // One home, or several on one account ("Studio 1, 204B"): each looked up, in the account's order.
+  const found = await Promise.all(splitUnits(buyer.unitNumber).map((unitNumber) => client.fetch<Unit | null>(unitByNumberQuery, { unitNumber })));
+  const units = found.filter((u): u is Unit => !!u);
 
-  return { buyer, unit };
+  return { buyer, unit: units[0] ?? null, units };
 }
 
 export function balanceFor(buyer: BuyerAccount) {

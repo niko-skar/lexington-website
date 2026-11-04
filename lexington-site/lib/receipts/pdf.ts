@@ -1,6 +1,8 @@
 import "server-only";
 import { PDFDocument, StandardFonts, rgb, type PDFFont } from "pdf-lib";
 
+import { unitsText } from "@/lib/format";
+
 // Same colours as the site.
 const NAVY = rgb(62 / 255, 89 / 255, 108 / 255);
 const PAPER = rgb(247 / 255, 244 / 255, 236 / 255);
@@ -56,7 +58,7 @@ export async function buildReceiptPdf(data: ReceiptData): Promise<Uint8Array> {
   const pdf = await PDFDocument.create();
   pdf.setTitle(`Payment receipt ${data.receiptNumber}`);
   pdf.setAuthor("The Lexington");
-  pdf.setSubject(`Receipt for a payment towards Unit ${data.unitNumber}`);
+  pdf.setSubject(`Receipt for a payment towards ${unitsText(data.unitNumber)}`);
   pdf.setCreationDate(new Date());
 
   const page = pdf.addPage([PAGE_W, PAGE_H]);
@@ -136,7 +138,7 @@ export async function buildReceiptPdf(data: ReceiptData): Promise<Uint8Array> {
   y -= 34;
   label("Received from", MARGIN, y);
   draw(data.buyerName, MARGIN, y - 28, serifBold, 22);
-  const unitLine = [`Unit ${data.unitNumber}`, data.unitDescription, "The Lexington, Shiashie, East Legon, Accra"]
+  const unitLine = [unitsText(data.unitNumber), data.unitDescription, "The Lexington, Shiashie, East Legon, Accra"]
     .filter(Boolean)
     .join("  ·  ");
   draw(unitLine, MARGIN, y - 48, sans, 10, GREY);
@@ -168,7 +170,7 @@ export async function buildReceiptPdf(data: ReceiptData): Promise<Uint8Array> {
   const rows: [string, string][] = [
     ["Payment method", data.payment.methodLabel],
     ["Payment date", longDate(data.payment.date)],
-    ["Received towards", `Purchase of Unit ${data.unitNumber}, The Lexington`],
+    ["Received towards", `Purchase of ${unitsText(data.unitNumber)}, The Lexington`],
   ];
   if (data.payment.note?.trim()) rows.push(["Note", data.payment.note.trim().slice(0, 160)]);
   for (const [name, value] of rows) {
@@ -214,7 +216,7 @@ export async function buildReceiptPdf(data: ReceiptData): Promise<Uint8Array> {
     color: BRASS,
   });
   const statement = wrap(
-    `This receipt confirms that the payment above was received towards the purchase of Unit ${data.unitNumber} at The Lexington. It was issued electronically from the payment record on the buyer's account and is valid without a signature.`,
+    `This receipt confirms that the payment above was received towards the purchase of ${unitsText(data.unitNumber)} at The Lexington. It was issued electronically from the payment record on the buyer's account and is valid without a signature.`,
     sans,
     8.5,
     CONTENT_W

@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { requireCurrentBuyer, balanceFor } from "@/lib/auth/currentBuyer";
-import { formatUSD, formatFloor } from "@/lib/format";
+import { formatUSD, formatFloor, splitUnits } from "@/lib/format";
 import { formatGHS, formatMethod, usdEquivalent } from "@/lib/currency";
 import styles from "@/components/Portal.module.css";
 
@@ -10,8 +10,9 @@ export const metadata = {
 };
 
 export default async function AccountOverviewPage() {
-  const { buyer, unit } = await requireCurrentBuyer();
-  const { balance, hasMissingRates } = balanceFor(buyer);
+  const { buyer, unit, units } = await requireCurrentBuyer();
+  const { balance, hasMissingRates, totalPaidUSD } = balanceFor(buyer);
+  const homes = splitUnits(buyer.unitNumber);
   const payments = buyer.payments ?? [];
   const mostRecent = [...payments].sort((a, b) => (b.date ?? "").localeCompare(a.date ?? ""))[0];
   const mostRecentUSD = mostRecent ? usdEquivalent(mostRecent) : null;
@@ -22,13 +23,47 @@ export default async function AccountOverviewPage() {
   // Next steps show while a draft agreement is on the account (the buyer's details go into it).
   const draft = buyer.contractDraft;
   const detailsSent = buyer.buyerDetails?.submittedAt;
+  // Steps written for this buyer replace the standard ones; a step with an amount ticks itself once the payments reach it.
+  const ownSteps = (buyer.nextSteps ?? []).filter((s) => s?.title);
 
   return (
     <main className={styles.page}>
       <div className={styles.eyebrow}>Welcome back</div>
       <h1 className={styles.title}>{buyer.name}</h1>
 
-      {draft && (draft.fileUrl || draft.fillBaseUrl) && (
+      {ownSteps.length > 0 && (
+        <section className={styles.section} aria-labelledby="next-steps">
+          <h2 id="next-steps" className={styles.sectionTitle}>
+            Next Steps
+          </h2>
+          <ol className={styles.stepList}>
+            {ownSteps.map((s, i) => {
+              const done = s.done === true || (!!s.donePaidUSD && totalPaidUSD >= s.donePaidUSD - 0.5);
+              return (
+                <li key={s._key ?? i} className={done ? styles.stepDone : styles.step}>
+                  <span className={styles.stepMark}>{done ? "✓" : i + 1}</span>
+                  <div>
+                    <div className={styles.stepTitle}>{s.title}</div>
+                    {s.text && <div className={styles.stepText}>{s.text}</div>}
+                    {s.link === "draft" && draft?.fileUrl && (
+                      <a href={draft.fileUrl} target="_blank" rel="noreferrer" className={styles.stepLink}>
+                        Download the draft
+                      </a>
+                    )}
+                    {s.link === "details" && draft?.fillBaseUrl && (
+                      <Link href="/account/details" className={styles.stepLink}>
+                        {detailsSent ? "Check or change them" : "Add your details"}
+                      </Link>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+        </section>
+      )}
+
+      {ownSteps.length === 0 && draft && (draft.fileUrl || draft.fillBaseUrl) && (
         <section className={styles.section} aria-labelledby="next-steps">
           <h2 id="next-steps" className={styles.sectionTitle}>
             Next Steps
@@ -86,16 +121,22 @@ export default async function AccountOverviewPage() {
 
       <div className={styles.grid}>
         <div className={styles.card}>
-          <div className={styles.cardLabel}>Residence</div>
+          <div className={styles.cardLabel}>{homes.length > 1 ? "Residences" : "Residence"}</div>
           <div className={styles.cardValue}>
-            {buyer.unitNumber}
-            {unit && ` · ${unit.bedroomType}`}
+            {homes.length > 1 ? homes.join(" & ") : buyer.unitNumber}
+            {homes.length < 2 && unit && ` · ${unit.bedroomType}`}
           </div>
-          {unit && (
-            <div className={styles.empty} style={{ marginTop: 8 }}>
-              Floor {formatFloor(unit.floor)} · {unit.areaSqm} sqm
-            </div>
-          )}
+          {homes.length > 1
+            ? units.map((u) => (
+                <div key={u.unitNumber} className={styles.empty} style={{ marginTop: 8 }}>
+                  {u.unitNumber}: {u.bedroomType} · Floor {formatFloor(u.floor)} · {u.areaSqm} sqm
+                </div>
+              ))
+            : unit && (
+                <div className={styles.empty} style={{ marginTop: 8 }}>
+                  Floor {formatFloor(unit.floor)} · {unit.areaSqm} sqm
+                </div>
+              )}
         </div>
         {discount > 0 && (
           <>

@@ -8,6 +8,18 @@ export function formatFloor(floor: number) {
   return floor === 0 ? "Ground" : String(floor);
 }
 
+// A buyer's account can hold more than one home: its unit number is then a list ("Studio 1, 204B").
+export function splitUnits(unitNumber: string | null | undefined): string[] {
+  return (unitNumber ?? "").split(",").map((u) => u.trim()).filter(Boolean);
+}
+
+/** "Unit 203B", or "Units Studio 1 and 204B" for an account with two homes. */
+export function unitsText(unitNumber: string | null | undefined): string {
+  const units = splitUnits(unitNumber);
+  if (units.length < 2) return `Unit ${units[0] ?? "—"}`;
+  return `Units ${units.slice(0, -1).join(", ")} and ${units[units.length - 1]}`;
+}
+
 // Converts a display phone number like "+233 (0)244 30 5262" into a dialable
 // "tel:" value — the "(0)" trunk prefix is dropped, not just de-punctuated,
 // since it's only meaningful for in-country dialing, not the +233 form.

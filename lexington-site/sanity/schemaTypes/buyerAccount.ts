@@ -75,6 +75,41 @@ const signedAgreement = {
   },
 };
 
+const nextStep = {
+  name: "nextStep",
+  title: "Step",
+  type: "object",
+  fields: [
+    defineField({ name: "title", title: "Step", type: "string", validation: (Rule) => Rule.required() }),
+    defineField({ name: "text", title: "What the buyer reads", type: "text", rows: 2 }),
+    defineField({
+      name: "donePaidUSD",
+      title: "Done once paid (US$)",
+      description: "Optional. The step ticks itself when the buyer's payments add up to this, e.g. 20000 for a US$20,000 deposit.",
+      type: "number",
+      validation: (Rule) => Rule.positive(),
+    }),
+    defineField({ name: "done", title: "Done", type: "boolean", description: "Tick it when it's done (not needed with an amount above)." }),
+    defineField({
+      name: "link",
+      title: "Button",
+      type: "string",
+      options: {
+        list: [
+          { title: "Download the draft agreement", value: "draft" },
+          { title: "Add their details", value: "details" },
+        ],
+      },
+    }),
+  ],
+  preview: {
+    select: { title: "title", done: "done" },
+    prepare({ title, done }: { title?: string; done?: boolean }) {
+      return { title: `${done ? "✓ " : ""}${title ?? "Step"}` };
+    },
+  },
+};
+
 export const buyerAccount = defineType({
   name: "buyerAccount",
   title: "Buyer account",
@@ -134,7 +169,8 @@ export const buyerAccount = defineType({
       name: "unitNumber",
       title: "Unit number",
       type: "string",
-      description: 'Must match a real unit\'s "Unit number" exactly, e.g. "302A". Not a reference — units live in a different dataset.',
+      description:
+        'Must match a real unit\'s "Unit number" exactly, e.g. "302A". Two or more homes on one account: separate them with commas, e.g. "Studio 1, 204B". Not a reference — units live in a different dataset.',
       hidden: ({ document }) => document?.role === "admin" || document?.role === "site",
       validation: (Rule) =>
         Rule.custom((value, context) =>
@@ -188,6 +224,14 @@ export const buyerAccount = defineType({
         defineField({ name: "paymentStep", title: "Last step: payment (text shown to the buyer)", type: "string" }),
         defineField({ name: "detailsAddedAt", title: "Buyer's details added", type: "datetime", readOnly: true }),
       ],
+    }),
+    defineField({
+      name: "nextSteps",
+      title: "Next steps written for this buyer",
+      description: "Optional. When there are steps here, the buyer's dashboard shows them instead of the standard next steps.",
+      type: "array",
+      of: [defineArrayMember(nextStep)],
+      hidden: ({ document }) => document?.role === "admin" || document?.role === "site",
     }),
     defineField({
       name: "buyerDetails",

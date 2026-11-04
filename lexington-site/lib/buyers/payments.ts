@@ -8,7 +8,7 @@ import { byDateThenKey, ensureReceiptNumbers } from "@/lib/receipts/issue";
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
 import type { BuyerAccount, Payment } from "@/lib/sanity/buyersTypes";
 import { cleanText, TodoError } from "@/lib/todo/server";
-import { BUYER_METHODS, MAX_NOTE, paymentText, type BuyerPaymentRow, type BuyerRow, type BuyersData } from "./shared";
+import { BUYER_METHODS, MAX_NOTE, namesBuyer, paymentText, type BuyerPaymentRow, type BuyerRow, type BuyersData } from "./shared";
 
 // Buyer payments logged in the site app (lib/buyers/shared.ts says what and why). The payment is written onto the
 // buyer's account exactly as one typed in Studio (so the portal, the receipts and the admin pages all see it the
@@ -169,4 +169,15 @@ export async function buyerPaymentFor(date: string, amount: number): Promise<{ b
     }
   }
   return null;
+}
+
+/**
+ * The buyer a bank credit's narration names (namesBuyer in lib/buyers/shared.ts), among the accounts with a contract
+ * price. Two buyers named: it can't tell which, so neither.
+ */
+export async function buyerNamedIn(narration: string | null | undefined): Promise<{ buyerId: string; name: string } | null> {
+  if (!narration?.trim()) return null;
+  const rows = await getBuyersClient().fetch<Array<{ id: string; name: string }>>(`${BUYERS}[contractPriceUSD > 0 && defined(name)]{ "id": _id, name }`);
+  const hits = rows.filter((r) => namesBuyer(narration, r.name));
+  return hits.length === 1 ? { buyerId: hits[0].id, name: hits[0].name.trim() } : null;
 }

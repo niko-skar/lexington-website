@@ -1,6 +1,7 @@
 import "server-only";
 import { createHash, randomBytes } from "node:crypto";
 
+import { BUYER_MARK } from "@/lib/buyers/shared";
 import { FIELDS } from "@/lib/expenses/server";
 import { CATEGORIES, materialWords, METHODS, receiptFileName, todayISO, vatParts, type Expense } from "@/lib/expenses/shared";
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
@@ -824,6 +825,51 @@ async function loadEntries(ids: string[] | null, startDate: string | null): Prom
   );
 }
 
+/* ---------- money from buyers ---------- */
+
+// A buyer's money is held towards their home until handover: never Leo's loan, and not income yet (Niko, 4 Nov 2026,
+// on Dr Gyasi's deposit). Money in from a buyer ("Dr. Michael E. Gyasi (buyer)", as the bank texts write it) goes to
+// the "Customer Deposits" liability account, made in QuickBooks the first time some is due.
+const BUYER_ACCOUNT = "Customer Deposits";
+
+const fromBuyer = (x: FeedDoc) => x.kind === "inflow" && x.supplier.toLowerCase().includes(BUYER_MARK);
+
+/** The settings with the buyers' rule in them: made (with its account) when buyer money is waiting and the rule isn't there yet. */
+async function withBuyerRule(s: FeedSettings, lists: Lists, entries: FeedDoc[]): Promise<FeedSettings> {
+  if (s.inflowRules.some((r) => r.match.trim().toLowerCase() === BUYER_MARK) || !entries.some(fromBuyer)) return s;
+  try {
+    const wanted = BUYER_ACCOUNT.toLowerCase();
+    let account = lists.accounts.find((a) => a.name.toLowerCase() === wanted || a.name.toLowerCase().endsWith(`:${wanted}`));
+    if (!account) {
+      const made = (
+        await qboApi<{ Account: { Id: string; Name: string; FullyQualifiedName?: string; AccountType: string } }>("account", {
+          method: "POST",
+          body: {
+            Name: BUYER_ACCOUNT,
+            AccountType: "Other Current Liability",
+            AccountSubType: "OtherCurrentLiabilities",
+            Description: "Buyers' payments towards their homes, held until handover (from the site app).",
+          },
+        })
+      ).Account;
+      account = { id: made.Id, name: made.FullyQualifiedName || made.Name, type: made.AccountType };
+      lists.accounts.push(account);
+      await writeLog({ action: "feed", ok: true, httpStatus: 200, intuitTid: null, message: `Made the account "${BUYER_ACCOUNT}" in QuickBooks for buyers' money.` });
+    }
+    // Only the rules change, the buyers' first (so a buyer called Leonard isn't taken for Leo); the rest stays as Niko saved it.
+    await getBuyersClient()
+      .patch(QBO_FEED_ID)
+      .setIfMissing({ inflowRules: [] })
+      .prepend("inflowRules", [{ _key: randomBytes(4).toString("hex"), match: BUYER_MARK, account: account.id }])
+      .commit();
+    return { ...s, inflowRules: [{ match: BUYER_MARK, account: account.id }, ...s.inflowRules] };
+  } catch (error) {
+    // The entry then waits on the QuickBooks page ("choose where money from them goes").
+    console.error("[quickbooks feed] the buyers' account", error instanceof Error ? error.message : error);
+    return s;
+  }
+}
+
 interface Ready {
   settings: FeedSettings;
   conn: QboConnection;
@@ -846,10 +892,12 @@ export async function feedExpense(id: string): Promise<void> {
     const lists = { ...(await qboLists()), bills: await billLinks() };
     // Saved twice within seconds: the first save's run may still be adding it. Wait for that run
     // to finish, then send this version (rather than leaving it for the catch-up).
+    let settings = r.settings;
     for (let attempt = 0; attempt < 8; attempt++) {
       const [x] = await loadEntries([id], null);
       if (!x) return;
-      if ((await sendOne(x, r.settings, lists, r.conn, new Map())) !== "busy") return;
+      settings = await withBuyerRule(settings, lists, [x]);
+      if ((await sendOne(x, settings, lists, r.conn, new Map())) !== "busy") return;
       await new Promise((resolve) => setTimeout(resolve, 3000));
     }
   } catch (error) {
@@ -866,8 +914,9 @@ export async function feedPending(limit = 25): Promise<{ sent: number; failed: n
   const bills = await sendBills(r, qbo);
   const all = await loadEntries(null, r.settings.startDate);
   const lists = { ...qbo, bills: await billLinks() };
+  const settings = await withBuyerRule(r.settings, lists, all);
   const due = all.filter((x) => {
-    const plan = planFor(x, r.settings, lists, r.conn);
+    const plan = planFor(x, settings, lists, r.conn);
     const state = x.qbo?.realmId === r.conn.realmId ? (x.qbo ?? {}) : {};
     if (!plan.send) return !!state.txnId && !forCompany(x);
     return state.error || state.hash !== plan.hash || state.txnType !== plan.type;
@@ -878,7 +927,7 @@ export async function feedPending(limit = 25): Promise<{ sent: number; failed: n
   const started = Date.now();
   for (const x of due.slice(0, limit)) {
     if (Date.now() - started > 240_000) break;
-    const outcome = await sendOne(x, r.settings, lists, r.conn, vendors);
+    const outcome = await sendOne(x, settings, lists, r.conn, vendors);
     if (outcome === "sent") sent++;
     if (outcome === "failed") failed++;
   }
