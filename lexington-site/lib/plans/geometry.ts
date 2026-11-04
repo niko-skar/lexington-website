@@ -232,10 +232,11 @@ function buildGrid(slab: P[] | null, solids: Solid[]): Grid {
     }
   }
   for (const s of solids) {
-    const i0 = cellIndex(gx, s.box.x0 + 0.01);
-    const i1 = cellIndex(gx, s.box.x1 - 0.01);
-    const j0 = cellIndex(gy, s.box.y0 + 0.01);
-    const j1 = cellIndex(gy, s.box.y1 - 0.01);
+    // Its edges as the grid holds them (to 0.1 mm): an edge a hair off would fill the next rectangle too.
+    const i0 = cellIndex(gx, r1(s.box.x0) + 0.01);
+    const i1 = cellIndex(gx, r1(s.box.x1) - 0.01);
+    const j0 = cellIndex(gy, r1(s.box.y0) + 0.01);
+    const j1 = cellIndex(gy, r1(s.box.y1) - 0.01);
     if (i0 < 0 || i1 < 0 || j0 < 0 || j1 < 0) continue;
     for (let j = j0; j <= j1; j += 1)
       for (let i = i0; i <= i1; i += 1) {
