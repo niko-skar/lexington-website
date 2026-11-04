@@ -42,7 +42,8 @@ function tiles(d: DashboardData, unread: number): Tile[] {
   const out: Tile[] = [];
   if (d.rollcallMoving) out.push({ section: "rollcall", name: "Roll call", big: "Moving in", small: "on Sunday morning; until then, the Site Roll Call page" });
   if (d.rollcall) out.push(rollcallTile(d.rollcall));
-  if (d.payday) {
+  // Payday and Workers open from the roll call's own tabs: a tile only for a login without the roll call.
+  if (d.payday && !d.rollcall) {
     const p = d.payday;
     out.push(
       p.worked
@@ -52,7 +53,13 @@ function tiles(d: DashboardData, unread: number): Tile[] {
   }
   if (d.todo) {
     const t = d.todo;
-    out.push({ section: "todo", name: "To-do", big: `${t.open} to do`, small: `${t.urgent} urgent · ${t.doneToday} done today`, tone: t.urgent ? "warn" : undefined });
+    out.push({
+      section: "todo",
+      name: "To-do",
+      big: `${t.open} to do`,
+      small: [`${t.urgent} urgent · ${t.doneToday} done today`, t.house ? `${t.house} on the house list` : ""].filter(Boolean).join(" · "),
+      tone: t.urgent ? "warn" : undefined,
+    });
   }
   if (d.store) {
     const s = d.store;
@@ -72,7 +79,7 @@ function tiles(d: DashboardData, unread: number): Tile[] {
       tone: s.toCheck || s.reorders || s.toFix ? "warn" : undefined,
     });
   }
-  if (d.workers) out.push({ section: "workers", name: "Workers", big: `${d.workers.active} on the books`, small: "names, numbers, ID photos" });
+  if (d.workers && !d.rollcall) out.push({ section: "workers", name: "Workers", big: `${d.workers.active} on the books`, small: "names, numbers, ID photos" });
   if (d.concrete) {
     const c = d.concrete;
     const load = `${c.trucks} ${c.trucks === 1 ? "truck" : "trucks"} · ${Math.round(c.volume * 10) / 10} m³`;
@@ -82,14 +89,16 @@ function tiles(d: DashboardData, unread: number): Tile[] {
         : { section: "concrete", name: "Concrete", big: "No trucks today", small: c.day ? `last pour ${shortDay(c.day)}: ${load}` : "photo each waybill on pour days" }
     );
   }
-  if (d.expenses) {
+  // What's spent is the Spending tile's (and Expenses is on the bar): this one only while the bank's payments wait to be
+  // completed there.
+  if (d.expenses && d.expenses.fromBank > 0) {
     const x = d.expenses;
     out.push({
       section: "expenses",
       name: "Expenses",
-      big: money(x.monthOut),
-      small: `on site this month · ${x.monthCount} ${x.monthCount === 1 ? "entry" : "entries"}${x.fromBank ? ` · ${x.fromBank} from the bank to complete` : ""}`,
-      tone: x.fromBank ? "warn" : undefined,
+      big: `${x.fromBank} from the bank to complete`,
+      small: `${money(x.monthOut)} logged on site this month · ${x.monthCount} ${x.monthCount === 1 ? "entry" : "entries"}`,
+      tone: "warn",
     });
   }
   if (d.steel) {

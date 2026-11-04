@@ -25,7 +25,8 @@ export interface SlotCount {
 export interface DashboardData {
   /** Today in Ghana, YYYY-MM-DD. */
   today: string;
-  todo?: { open: number; urgent: number; doneToday: number };
+  /** The site list's jobs (the to-do opens on it); the office's house list counted apart. */
+  todo?: { open: number; urgent: number; doneToday: number; house: number };
   store?: { reorders: number; toolsOut: number; opened: string | null; closed: string | null; toCheck?: number; toFix: number; atRepairer: number };
   /** Spent on site this month, and the bank's debits waiting to be completed. */
   expenses?: { monthOut: number; monthCount: number; fromBank: number };
@@ -63,8 +64,14 @@ const settle = async <T>(work: Promise<T>): Promise<T | undefined> => {
 
 async function todoPart(me: TodoMe, today: string) {
   const tasks = await listTasks(me);
-  const open = tasks.filter((t) => t.status !== "done");
-  return { open: open.length, urgent: open.filter((t) => t.urgent).length, doneToday: tasks.filter((t) => t.doneAt && ghanaDay(t.doneAt) === today).length };
+  const site = tasks.filter((t) => (t.list ?? "site") === "site");
+  const open = site.filter((t) => t.status !== "done");
+  return {
+    open: open.length,
+    urgent: open.filter((t) => t.urgent).length,
+    doneToday: site.filter((t) => t.doneAt && ghanaDay(t.doneAt) === today).length,
+    house: tasks.filter((t) => t.list === "house" && t.status !== "done").length,
+  };
 }
 
 async function storePart(me: TodoMe, today: string) {
