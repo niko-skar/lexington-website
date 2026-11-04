@@ -14,6 +14,7 @@
  * - a grid line id ("K", "7")
  * - "e:<edge key>": a slab edge
  * - "c:<columns|cores>:<key>:<l|r|t|b>": a face of a column, wall or lift core
+ * - "c:columns:<key>:m": the middle of a column, where a wall built onto it is centred
  */
 export interface Anchor {
   ref: string;
@@ -139,8 +140,9 @@ export interface PlanOption {
 }
 
 /**
- * An architect's floor plan to trace over: a picture of the drawing, and where its grid lines are on
- * the page (PDF points from the top-left corner), so it can be laid on the as-built grid.
+ * An architect's floor plan to trace over: a picture of the drawing, and where its grid lines and
+ * columns are on the page (PDF points from the top-left corner), so it can be laid on the as-built
+ * columns (or, without them, on the as-built grid).
  */
 export interface PlanReference {
   floorKey: string;
@@ -152,6 +154,8 @@ export interface PlanReference {
   pxPerPt: number;
   xs: { line: string; pt: number }[];
   ys: { line: string; pt: number }[];
+  /** The middle of each column as the drawing has it, by its grid lines ("N/7"). */
+  cols?: { at: string; x: number; y: number }[] | null;
 }
 
 /** What a save sends: the drawing itself. */

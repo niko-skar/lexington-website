@@ -34,7 +34,8 @@ export interface SavePlanInput {
 
 const OPTION_RE = /^[a-z0-9]{1,8}$/;
 const KEY_RE = /^[A-Za-z0-9_-]{1,40}$/;
-const REF_RE = /^(?:[A-Za-z0-9]{1,6}|e:[A-Za-z0-9_-]{1,40}|c:(?:columns|cores):[A-Za-z0-9_-]{1,40}:[lrtb])$/;
+// A grid line, a slab edge, a face of a column or core, the middle of a column.
+const REF_RE = /^(?:[A-Za-z0-9]{1,6}|e:[A-Za-z0-9_-]{1,40}|c:(?:columns|cores):[A-Za-z0-9_-]{1,40}:[lrtb]|c:columns:[A-Za-z0-9_-]{1,40}:m)$/;
 const OPENING_KINDS: OpeningKind[] = ["door", "double", "slider", "window"];
 const MAX = { walls: 800, openings: 800, labels: 400, targets: 120 };
 

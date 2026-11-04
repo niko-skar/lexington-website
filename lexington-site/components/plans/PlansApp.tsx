@@ -270,11 +270,12 @@ export function PlansApp({ floors, plans: initialPlans, units, references, realR
         else if (selection.kind === "opening") commit(removeOpening(draft, selection.key));
         else if (selection.kind === "label") commit(removeLabel(draft, selection.key));
         setSelection(null);
-      } else if (!mod && tool !== "wall") {
+      } else if (!mod && !e.altKey) {
+        // A tool's key works from any tool, the Wall tool too (a length is typed in figures there).
         const k = e.key.toLowerCase();
-        const map: Record<string, Tool> = { v: "select", w: "wall", d: "door", n: "window", r: "label" };
+        const map: Record<string, Tool> = { m: "select", w: "wall", d: "door", n: "window", r: "label" };
         if (map[k]) setTool(map[k]);
-        if (e.key === "Escape") setSelection(null);
+        else if (e.key === "Escape" && tool !== "wall") setSelection(null);
       }
     };
     window.addEventListener("keydown", onKey);

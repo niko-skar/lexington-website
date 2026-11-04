@@ -5,7 +5,7 @@ import { useState } from "react";
 import type { Axis, BoxEl, Floor } from "@/lib/asbuilt/types";
 import { boxOf, gridLines, linePos, resolveFloor } from "@/lib/asbuilt/geometry";
 import { moveWall, attachedEnds, setLength, setTarget, updateLabel, updateOpening, updateWall, removeWall, removeOpening, removeLabel, wallLength } from "@/lib/plans/edit";
-import { againstStated, refName, refPos, toleranceBand, type P, type PlanAnalysis } from "@/lib/plans/geometry";
+import { againstStated, columnSpots, referenceFit, refName, refPos, toleranceBand, wallLines, type P, type PlanAnalysis } from "@/lib/plans/geometry";
 import {
   SPACE_TYPES,
   WALL_KINDS,
@@ -48,7 +48,7 @@ interface Props {
 
 const TOOLS: { tool: Tool; label: string; key: string }[] = [
   // Picks things up as well as choosing them (the hand).
-  { tool: "select", label: "Move", key: "V" },
+  { tool: "select", label: "Move", key: "M" },
   { tool: "wall", label: "Wall", key: "W" },
   { tool: "door", label: "Door", key: "D" },
   { tool: "window", label: "Window", key: "N" },
@@ -114,8 +114,11 @@ function MmInput({ value, onSave, label, min = 0, blankZero = false }: { value: 
   );
 }
 
-/** What a wall's line can be measured from: the grid lines, column faces and slab edges near it. */
-function refsNear(floor: Floor, axis: Axis, v: number, current: string): { ref: string; name: string; d: number }[] {
+/**
+ * What a wall's line can be measured from: the grid lines, column middles and faces, and slab edges
+ * near it; of columns as near, the ones along the wall (from s0 to s1) first.
+ */
+function refsNear(floor: Floor, axis: Axis, v: number, current: string, span: [number, number]): { ref: string; name: string; d: number }[] {
   const out: { ref: string; name: string; d: number }[] = [];
   const add = (ref: string) => {
     const at = refPos(floor, axis, ref);
@@ -127,19 +130,31 @@ function refsNear(floor: Floor, axis: Axis, v: number, current: string): { ref: 
     .sort((a, b) => a.d - b.d)
     .slice(0, 2);
   for (const g of grid) add(g.id);
+  // How far along the wall a column is from it (0 when the wall reaches it).
+  const gap = (b: { x0: number; x1: number; y0: number; y1: number }) =>
+    axis === "x" ? Math.max(0, b.y0 - span[1], span[0] - b.y1) : Math.max(0, b.x0 - span[1], span[0] - b.x1);
+  const nearer = (p: { d: number; gap: number }, q: { d: number; gap: number }) => Math.round(p.d) - Math.round(q.d) || p.gap - q.gap;
+  const middles = columnSpots(floor)
+    .flatMap((c) => {
+      const at = c.mid[axis];
+      return at !== null && Math.abs(at - v) < 3000 ? [{ ref: `c:columns:${c.key}:m`, d: Math.abs(at - v), gap: gap(c.box) }] : [];
+    })
+    .sort(nearer)
+    .slice(0, 2);
+  for (const m of middles) add(m.ref);
   const faces = axis === "x" ? (["l", "r"] as const) : (["t", "b"] as const);
-  const near: { ref: string; d: number }[] = [];
+  const near: { ref: string; d: number; gap: number }[] = [];
   for (const list of ["columns", "cores"] as const) {
     for (const el of floor[list] as BoxEl[]) {
       const b = boxOf(floor, el, "actual");
       if (!b) continue;
       for (const f of faces) {
         const at = f === "l" ? b.x0 : f === "r" ? b.x1 : f === "t" ? b.y0 : b.y1;
-        if (Math.abs(at - v) < 3000) near.push({ ref: `c:${list}:${el._key}:${f}`, d: Math.abs(at - v) });
+        if (Math.abs(at - v) < 3000) near.push({ ref: `c:${list}:${el._key}:${f}`, d: Math.abs(at - v), gap: gap(b) });
       }
     }
   }
-  for (const n of near.sort((a, b) => a.d - b.d).slice(0, 4)) add(n.ref);
+  for (const n of near.sort(nearer).slice(0, 4)) add(n.ref);
   for (const e of floor.slab?.edges ?? []) {
     if (e.axis !== axis) continue;
     const at = resolveFloor(floor).edges.get(e._key);
@@ -174,13 +189,16 @@ export function PlanPanel(props: Props) {
             <button key={t.tool} type="button" className={`${tool === t.tool ? s.chipOn : s.chip} ${t.tool === "select" ? s.withIcon : ""}`} aria-pressed={tool === t.tool} onClick={() => onTool(t.tool)} title={`${t.label} (${t.key})`}>
               {t.tool === "select" && <HandIcon />}
               {t.label}
+              <kbd className={s.keyHint} aria-hidden="true">
+                {t.key}
+              </kbd>
             </button>
           ))}
         </div>
         {tool === "select" && (
           <p className={s.hint}>
-            Drag a wall, door, window or room name to move it; a door or window can go onto another wall. Click a wall to drag its round ends. Drag an
-            empty spot to look around.
+            Drag a wall, door, window or room name to move it. A door or window can go onto another wall; a wall dragged onto a column is centred on it
+            (hold Shift to place it off centre). Click a wall to drag its round ends. Drag an empty spot to look around.
           </p>
         )}
         {tool === "wall" && (
@@ -196,7 +214,10 @@ export function PlanPanel(props: Props) {
               <span>Thickness, mm</span>
               <MmInput value={wallT} min={10} label="Wall thickness" onSave={(v) => onWall(wallKind, v)} />
             </label>
-            <p className={s.hint}>Walls line up on grid lines, column faces, slab edges and other walls, centred or face to face.</p>
+            <p className={s.hint}>
+              Start or end a wall in a column and it is centred on the column and stops at its face. Walls also line up on grid lines, slab edges and
+              other walls, centred or face to face.
+            </p>
           </div>
         )}
         {(tool === "door" || tool === "window") && (
@@ -220,6 +241,7 @@ export function PlanPanel(props: Props) {
           <label className={s.field}>
             <span>
               Architect&rsquo;s plan underneath{referenceShade === 0 ? " (hidden)" : ""} · {reference.title}
+              {referenceFit(floor, reference)?.on === "columns" ? " · laid on your as-built columns" : ""}
             </span>
             <input
               type="range"
@@ -477,7 +499,8 @@ function WallPosition({
 }) {
   const wall = plan.walls.find((w) => w._key === wallKey)!;
   const anchor = axis === "x" ? wall.a.x : wall.a.y;
-  const refs = refsNear(floor, axis, centre, anchor.ref);
+  const line = wallLines(floor, { walls: [wall] })[0];
+  const refs = refsNear(floor, axis, centre, anchor.ref, line ? [line.s0, line.s1] : [-Infinity, Infinity]);
   const [face, setFace] = useState<"centre" | "minus" | "plus">("centre");
   const off = face === "centre" ? 0 : face === "minus" ? -wall.t / 2 : wall.t / 2;
   const moveTo = (a: Anchor, what: string) => onCommit(moveWall(plan, floor, wallKey, a, attachedEnds(floor, plan, wallKey)), what);

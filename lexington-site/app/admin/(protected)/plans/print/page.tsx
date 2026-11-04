@@ -71,12 +71,6 @@ export default async function PrintHomePage({ searchParams }: { searchParams: Pr
       </div>
       <div className={s.sheet}>
         <svg viewBox={`${view.x} ${view.y} ${view.w} ${view.h}`} className={s.plan} role="img" aria-label={`Plan of ${unit}`}>
-          {(["columns", "cores"] as const).map((list) =>
-            (floor[list] as BoxEl[]).map((el) => {
-              const b = boxOf(floor, el, "actual");
-              return b && near(b) ? <rect key={`${list}${el._key}`} x={b.x0} y={b.y0} width={b.x1 - b.x0} height={b.y1 - b.y0} className={s.structure} /> : null;
-            }),
-          )}
           {home.rooms.map((r) => (
             <path key={r.id} d={path(r.loops)} className={isOutdoor(r.label?.type) ? s.outdoor : s.room} fillRule="evenodd" />
           ))}
@@ -85,6 +79,13 @@ export default async function PrintHomePage({ searchParams }: { searchParams: Pr
             const b = wallRect(w, a.walls);
             return near(b) ? <rect key={w.key} x={b.x0} y={b.y0} width={b.x1 - b.x0} height={b.y1 - b.y0} className={s[`wall_${w.kind}`]} /> : null;
           })}
+          {/* Columns over the walls, as in the editor: a wall built onto a column stops at it. */}
+          {(["columns", "cores"] as const).map((list) =>
+            (floor[list] as BoxEl[]).map((el) => {
+              const b = boxOf(floor, el, "actual");
+              return b && near(b) ? <rect key={`${list}${el._key}`} x={b.x0} y={b.y0} width={b.x1 - b.x0} height={b.y1 - b.y0} className={s.structure} /> : null;
+            }),
+          )}
           {(plan.openings ?? []).map((o) => {
             const w = a.walls.find((x) => x.key === o.wall);
             if (!w) return null;

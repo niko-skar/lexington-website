@@ -6,6 +6,11 @@ import { boxOf, extentsOf, gridLines, linePos, slabCorners, type Box } from "@/l
 import type { Axis, BoxEl, Floor } from "@/lib/asbuilt/types";
 import { attachedEnds, makeWall, moveEnd, moveWall, newKey, pointAt, updateLabel, updateOpening } from "@/lib/plans/edit";
 import {
+  columnAnchor,
+  columnAt,
+  columnFace,
+  columnSpots,
+  columnUnder,
   isCommon,
   isOutdoor,
   pointPos,
@@ -15,6 +20,7 @@ import {
   snapTo,
   wallLines,
   wallRect,
+  type ColumnSpot,
   type P,
   type PlanAnalysis,
   type SnapLine,
@@ -98,6 +104,22 @@ function snapPoint(floor: Floor, lines: SnapLine[], p: P, reach: number): { pos:
   };
 }
 
+/** Where a wall starts. `col`: it starts in this column, centred on it, and leaves from the face it heads out of. */
+interface WallStart {
+  pos: P;
+  pt: PlanPoint;
+  col?: ColumnSpot;
+}
+
+/** A wall that carries on from a column is centred on it (a wall of the structure: where the last one met it). */
+function centredOn(c: ColumnSpot, at: { pos: P; pt: PlanPoint }): WallStart {
+  return {
+    pos: [c.mid.x ?? at.pos[0], c.mid.y ?? at.pos[1]],
+    pt: { x: c.mid.x !== null ? columnAnchor(c, "m") : at.pt.x, y: c.mid.y !== null ? columnAnchor(c, "m") : at.pt.y },
+    col: c,
+  };
+}
+
 // `last`: the plan as the drag has left it so far (saved when it is let go).
 type Drag =
   | { kind: "pan"; startX: number; startY: number; view: View; moved: boolean }
@@ -116,7 +138,7 @@ export function PlanCanvas(props: Props) {
   const [userView, setUserView] = useState<View | null>(null);
   const [hover, setHover] = useState<P | null>(null);
   // The wall being drawn: where it started (the chain carries on from each end).
-  const [start, setStart] = useState<{ pos: P; pt: PlanPoint } | null>(null);
+  const [start, setStart] = useState<WallStart | null>(null);
   const [typed, setTyped] = useState("");
   const [hint, setHint] = useState("");
   // The hand: what the pointer is over that can be picked up, and whether something is being moved.
@@ -191,48 +213,86 @@ export function PlanCanvas(props: Props) {
   }, [zoomAt]);
 
   const lines = useMemo(() => snapLines(floor, plan), [floor, plan]);
+  const cols = useMemo(() => columnSpots(floor), [floor]);
   const reach = view ? SNAP_PX / view.k : 100;
+  // A press this close to a column is in it.
+  const touch = view ? 4 / view.k : 40;
 
   // ---- drawing walls ----------------------------------------------------------------------------
+  /** Where a wall starts from a press here: in a column, centred on it; else on whatever it lines up on. */
+  const startAt = useCallback(
+    (p: P): WallStart & { hint: string } => {
+      const sp = snapPoint(floor, lines, p, reach);
+      const c = columnAt(cols, p, touch);
+      if (!c) return { pos: sp.pos, pt: sp.pt, hint: lined(sp.hint) };
+      return { ...centredOn(c, sp), hint: `centred on ${c.name}` };
+    },
+    [floor, lines, reach, cols, touch],
+  );
+
+  /** The wall that a press here would finish: `a` where it starts, `pos`/`pt` where it ends, `col` the column it goes into. */
   const wallEndFor = useCallback(
-    (raw: P): { pos: P; pt: PlanPoint; hint: string } | null => {
+    (raw: P): { a: { pos: P; pt: PlanPoint }; pos: P; pt: PlanPoint; hint: string; col?: ColumnSpot } | null => {
       if (!start) return null;
+      const sc = start.col;
+      // Still in the column it starts from: no wall yet.
+      if (sc && columnAt([sc], raw, 0)) return null;
       const across = Math.abs(raw[0] - start.pos[0]) >= Math.abs(raw[1] - start.pos[1]);
       const axis: Axis = across ? "x" : "y";
       const i = across ? 0 : 1;
+      // From a column it leaves from the face it heads out of, on the column's middle.
+      let a: { pos: P; pt: PlanPoint } = { pos: start.pos, pt: start.pt };
+      if (sc) {
+        const f = columnFace(sc, axis, raw[i]);
+        a = across ? { pos: [f.v, start.pos[1]], pt: { x: f.anchor, y: start.pt.y } } : { pos: [start.pos[0], f.v], pt: { x: start.pt.x, y: f.anchor } };
+      }
       let v = raw[i];
       let anchor: Anchor | null = null;
-      let what = "";
+      let hint = "";
+      let col: ColumnSpot | undefined;
       const len = Number(typed.replace(/[^\d.]/g, ""));
       if (typed && len > 0) {
-        v = start.pos[i] + Math.sign(raw[i] - start.pos[i] || 1) * len;
+        v = a.pos[i] + Math.sign(raw[i] - a.pos[i] || 1) * len;
       } else {
-        const sn = snapTo(lines, axis, v, reach);
-        if (sn) {
-          v = sn.v;
-          anchor = sn.anchor;
-          what = sn.what;
-        } else v = r1(v);
+        // Into a column that its centre line meets: it stops at the column's face.
+        const c = columnAt(cols, raw, touch);
+        const centre = across ? a.pos[1] : a.pos[0];
+        const [lo, hi] = c ? (across ? [c.box.y0, c.box.y1] : [c.box.x0, c.box.x1]) : [0, 0];
+        if (c && c.key !== sc?.key && centre >= lo - wallT / 2 && centre <= hi + wallT / 2) {
+          const f = columnFace(c, axis, a.pos[i]);
+          v = f.v;
+          anchor = f.anchor;
+          hint = `to ${c.name}`;
+          col = c;
+        } else {
+          const sn = snapTo(lines, axis, v, reach);
+          if (sn) {
+            v = sn.v;
+            anchor = sn.anchor;
+            hint = lined(sn.what);
+          } else v = r1(v);
+        }
       }
-      const pos: P = across ? [v, start.pos[1]] : [start.pos[0], v];
+      const pos: P = across ? [v, a.pos[1]] : [a.pos[0], v];
       const pt: PlanPoint = across
-        ? { x: anchor ?? reanchor(floor, "x", start.pt.x, v), y: start.pt.y }
-        : { x: start.pt.x, y: anchor ?? reanchor(floor, "y", start.pt.y, v) };
-      return { pos, pt, hint: what };
+        ? { x: anchor ?? reanchor(floor, "x", a.pt.x, v), y: a.pt.y }
+        : { x: a.pt.x, y: anchor ?? reanchor(floor, "y", a.pt.y, v) };
+      return { a, pos, pt, hint: hint || (sc ? `centred on ${sc.name}` : ""), col };
     },
-    [start, typed, lines, reach, floor],
+    [start, typed, lines, reach, floor, cols, touch, wallT],
   );
 
   const finishWall = useCallback(
-    (end: { pos: P; pt: PlanPoint }) => {
+    (end: { a: { pos: P; pt: PlanPoint }; pos: P; pt: PlanPoint; col?: ColumnSpot }) => {
       if (!start) return;
-      if (Math.hypot(end.pos[0] - start.pos[0], end.pos[1] - start.pos[1]) < 20) {
+      if (Math.hypot(end.pos[0] - end.a.pos[0], end.pos[1] - end.a.pos[1]) < 20) {
         setStart(null);
         return;
       }
-      const wall = makeWall(start.pt, end.pt, start.pos, end.pos, wallKind, wallT);
+      const wall = makeWall(end.a.pt, end.pt, end.a.pos, end.pos, wallKind, wallT);
       onCommit({ ...plan, walls: [...plan.walls, wall] }, "Wall drawn");
-      setStart({ pos: end.pos, pt: end.pt });
+      // The next wall carries on from this end; from a column it went into, centred on that column.
+      setStart(end.col ? centredOn(end.col, end) : { pos: end.pos, pt: end.pt });
       setTyped("");
     },
     [start, wallKind, wallT, plan, onCommit],
@@ -365,8 +425,12 @@ export function PlanCanvas(props: Props) {
     if (e.button === 1 || e.button === 2) return pan();
     if (tool === "wall") {
       if (!start) {
-        const sp = snapPoint(floor, lines, p, reach);
-        setStart({ pos: sp.pos, pt: sp.pt });
+        const st = startAt(p);
+        setStart({ pos: st.pos, pt: st.pt, col: st.col });
+      } else if (start.col && columnAt([start.col], p, 0)) {
+        // A click in the column it started from: no wall, the chain stops.
+        setStart(null);
+        setTyped("");
       } else {
         const end = wallEndFor(p);
         if (end) finishWall(end);
@@ -477,8 +541,8 @@ export function PlanCanvas(props: Props) {
     setHover(p);
     const drag = dragRef.current;
     if (!drag) {
-      if (tool === "wall" && !start) setHint(lined(snapPoint(floor, lines, p, reach).hint));
-      else if (tool === "wall" && start) setHint(lined(wallEndFor(p)?.hint ?? ""));
+      if (tool === "wall" && !start) setHint(startAt(p).hint);
+      else if (tool === "wall" && start) setHint(wallEndFor(p)?.hint ?? (start.col ? `centred on ${start.col.name}` : ""));
       else {
         // What a press here would pick up: anything movable (Move), a door or window (Door, Window).
         const within = 8 / view.k;
@@ -502,10 +566,14 @@ export function PlanCanvas(props: Props) {
       const raw = w.c + (p[i] - drag.start[i]);
       if (!drag.moved && Math.abs(p[i] - drag.start[i]) < 4 / view.k) return;
       drag.moved = true;
-      const sn = snapCentre(drag.lines, drag.along, raw, reach, w.t);
+      // Over a column it runs into: centred on the column (Shift: lined up on anything else).
+      const c = e.shiftKey ? null : columnUnder(cols, drag.along, raw, w.s0, w.s1);
+      const mid = c ? c.mid[drag.along] : null;
+      const sn: SnapLine | null =
+        c && mid !== null ? { axis: drag.along, v: mid, anchor: columnAnchor(c, "m"), what: "", rank: 4 } : snapCentre(drag.lines, drag.along, raw, reach, w.t);
       const baseWall = drag.base.walls.find((x) => x._key === drag.key)!;
       const anchor = sn ? sn.anchor : reanchor(floor, drag.along, drag.along === "x" ? baseWall.a.x : baseWall.a.y, r1(raw));
-      setHint([`moved ${fmt(Math.abs((sn ? sn.v : r1(raw)) - w.c))} mm`, lined(sn?.what ?? "")].filter(Boolean).join(" · "));
+      setHint([`moved ${fmt(Math.abs((sn ? sn.v : r1(raw)) - w.c))} mm`, c ? `centred on ${c.name}` : lined(sn?.what ?? "")].filter(Boolean).join(" · "));
       drag.last = moveWall(drag.base, floor, drag.key, anchor, drag.attached);
       onPreview(drag.last);
       return;
@@ -516,10 +584,13 @@ export function PlanCanvas(props: Props) {
       const axis: Axis = w.dir === "h" ? "x" : "y";
       const v = axis === "x" ? p[0] : p[1];
       drag.moved = true;
-      const sn = snapTo(drag.lines, axis, v, reach);
+      // Into a column on its line: it stops at the column's face, the side its other end is on (Shift: anywhere).
+      const c = e.shiftKey ? null : columnAt(cols, axis === "x" ? [v, w.c] : [w.c, v], touch);
+      const face = c ? columnFace(c, axis, (drag.end === "a") === w.aFirst ? w.s1 : w.s0) : null;
+      const sn = face ? null : snapTo(drag.lines, axis, v, reach);
       const baseWall = drag.base.walls.find((x) => x._key === drag.key)!;
-      const anchor = sn ? sn.anchor : reanchor(floor, axis, baseWall[drag.end][axis], r1(v));
-      setHint(lined(sn?.what ?? ""));
+      const anchor = face ? face.anchor : sn ? sn.anchor : reanchor(floor, axis, baseWall[drag.end][axis], r1(v));
+      setHint(c ? `to ${c.name}` : lined(sn?.what ?? ""));
       drag.last = moveEnd(drag.base, floor, drag.key, drag.end, anchor);
       onPreview(drag.last);
       return;
@@ -592,16 +663,22 @@ export function PlanCanvas(props: Props) {
   const xLines = gridLines(floor, "x");
   const yLines = gridLines(floor, "y");
   const preview = tool === "wall" && start && hover ? wallEndFor(hover) : null;
-  const previewRect: Box | null = preview && start
+  const previewRect: Box | null = preview
     ? (() => {
-        const across = Math.abs(preview.pos[0] - start.pos[0]) >= Math.abs(preview.pos[1] - start.pos[1]);
-        const [a, b] = across ? [start.pos[0], preview.pos[0]] : [start.pos[1], preview.pos[1]];
-        const c = across ? start.pos[1] : start.pos[0];
+        const from = preview.a.pos;
+        const across = Math.abs(preview.pos[0] - from[0]) >= Math.abs(preview.pos[1] - from[1]);
+        const [a, b] = across ? [from[0], preview.pos[0]] : [from[1], preview.pos[1]];
+        const c = across ? from[1] : from[0];
         return across
           ? { x0: Math.min(a, b), x1: Math.max(a, b), y0: c - wallT / 2, y1: c + wallT / 2 }
           : { x0: c - wallT / 2, x1: c + wallT / 2, y0: Math.min(a, b), y1: Math.max(a, b) };
       })()
     : null;
+  // The columns the wall being drawn is built onto: the one it starts in, and the one under the pointer.
+  const litColumns =
+    tool === "wall" && hover
+      ? [start?.col, start ? preview?.col : columnAt(cols, hover, touch)].filter((c, i, all): c is ColumnSpot => Boolean(c) && all.findIndex((x) => x?.key === c?.key) === i)
+      : [];
   const selWall = selection?.kind === "wall" ? wallsByKey.get(selection.key) : undefined;
   const selOpening = selection?.kind === "opening" ? plan.openings.find((o) => o._key === selection.key) : undefined;
   const selOpeningWall = selOpening ? wallsByKey.get(selOpening.wall) : undefined;
@@ -704,14 +781,6 @@ export function PlanCanvas(props: Props) {
                 </g>
               ) : null;
             })}
-          {(["cores", "columns"] as const).map((list) =>
-            (floor[list] as BoxEl[]).map((el) => {
-              const b = boxOf(floor, el, "actual");
-              return b ? (
-                <rect key={`${list}${el._key}`} x={b.x0} y={b.y0} width={b.x1 - b.x0} height={b.y1 - b.y0} className={list === "cores" ? s.core : s.column} strokeWidth={stroke} />
-              ) : null;
-            }),
-          )}
 
           {/* Walls. */}
           {analysis.walls.map((w) => {
@@ -729,6 +798,19 @@ export function PlanCanvas(props: Props) {
               />
             );
           })}
+
+          {/* Columns and lift cores over the walls: a wall built onto a column stops at it. */}
+          {(["cores", "columns"] as const).map((list) =>
+            (floor[list] as BoxEl[]).map((el) => {
+              const b = boxOf(floor, el, "actual");
+              return b ? (
+                <rect key={`${list}${el._key}`} x={b.x0} y={b.y0} width={b.x1 - b.x0} height={b.y1 - b.y0} className={list === "cores" ? s.core : s.column} strokeWidth={stroke} />
+              ) : null;
+            }),
+          )}
+          {litColumns.map((c) => (
+            <rect key={`lit${c.key}`} x={c.box.x0} y={c.box.y0} width={c.box.x1 - c.box.x0} height={c.box.y1 - c.box.y0} className={s.columnOn} strokeWidth={stroke * 2} />
+          ))}
 
           {/* Doors and windows. */}
           {plan.openings.map((o) => {
@@ -892,9 +974,9 @@ export function PlanCanvas(props: Props) {
         {tool === "wall" && start && (
           <circle cx={sx(start.pos[0])} cy={sy(start.pos[1])} r={4} className={s.handle} />
         )}
-        {preview && start && (
-          <text x={sx((start.pos[0] + preview.pos[0]) / 2)} y={sy((start.pos[1] + preview.pos[1]) / 2) - 14} className={s.dimText}>
-            {typed ? `${typed} ⏎` : fmt(Math.hypot(preview.pos[0] - start.pos[0], preview.pos[1] - start.pos[1]))}
+        {preview && (
+          <text x={sx((preview.a.pos[0] + preview.pos[0]) / 2)} y={sy((preview.a.pos[1] + preview.pos[1]) / 2) - 14} className={s.dimText}>
+            {typed ? `${typed} ⏎` : fmt(Math.hypot(preview.pos[0] - preview.a.pos[0], preview.pos[1] - preview.a.pos[1]))}
           </text>
         )}
       </svg>
@@ -912,7 +994,9 @@ export function PlanCanvas(props: Props) {
       </div>
       {tool === "wall" && (
         <div className={s.toolTip}>
-          {start ? "Click where the wall ends · type a length and press Enter · Esc or double-click to stop" : "Click where the wall starts"}
+          {start
+            ? "Click where the wall ends · type a length and press Enter · Esc or double-click to stop"
+            : "Click where the wall starts · in a column, the wall is centred on it"}
         </div>
       )}
     </div>

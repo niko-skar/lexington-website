@@ -45,6 +45,8 @@ export function refPos(floor: Floor, axis: Axis, ref: string): number | null {
     const el = (floor[list] as BoxEl[]).find((e) => e._key === key);
     const b = el ? boxOf(floor, el, "actual") : null;
     if (!b) return null;
+    // The middle: where a wall built onto the column is centred (it stays centred as the column is taped).
+    if (face === "m") return axis === "x" ? (b.x0 + b.x1) / 2 : (b.y0 + b.y1) / 2;
     if (axis === "x") return face === "l" ? b.x0 : face === "r" ? b.x1 : null;
     return face === "t" ? b.y0 : face === "b" ? b.y1 : null;
   }
@@ -85,7 +87,7 @@ export function refName(floor: Floor, ref: string): string {
   if (ref.startsWith("c:")) {
     const [, list, key, face] = ref.split(":");
     const el = list === "columns" || list === "cores" ? (floor[list] as BoxEl[]).find((e) => e._key === key) : undefined;
-    const faceWord = { l: "left face", r: "right face", t: "top face", b: "bottom face" }[face] ?? "face";
+    const faceWord = { l: "left face", r: "right face", t: "top face", b: "bottom face", m: "middle" }[face] ?? "face";
     if (!el) return "a column";
     return list === "cores" ? `${el.name}, ${faceWord}` : `${el.name} at ${el.x}/${el.y}, ${faceWord}`;
   }
@@ -150,6 +152,87 @@ export function wallRect(w: WallLine, all: WallLine[]): Box {
   return w.dir === "h"
     ? { x0: w.s0 - e0, x1: w.s1 + e1, y0: w.c - h, y1: w.c + h }
     : { x0: w.c - h, x1: w.c + h, y0: w.s0 - e0, y1: w.s1 + e1 };
+}
+
+// ---- columns a wall is built onto --------------------------------------------------------------------
+
+/**
+ * A column a wall can be built onto (Niko, 4 Nov 2026: "have the walls snap to the obvious place to
+ * connect to the column, in the middle of the column, so if the column is 30cm, and the wall will be
+ * 15cm or 20cm, it will snap to the center of the column"): where it stands as built, and its middle
+ * each way. A wall of the structure has no middle along its length: a wall meets its side where drawn.
+ */
+export interface ColumnSpot {
+  key: string;
+  /** "C1b M/7". */
+  name: string;
+  box: Box;
+  mid: { x: number | null; y: number | null };
+}
+
+/** Longer than this one way, a column is a wall of the structure that way. */
+const MIDDLE_MAX = 900;
+
+export function columnSpots(floor: Floor): ColumnSpot[] {
+  const out: ColumnSpot[] = [];
+  for (const el of floor.columns) {
+    const b = boxOf(floor, el, "actual");
+    if (!b) continue;
+    out.push({
+      key: el._key,
+      name: `${el.name} ${el.x}/${el.y}`,
+      box: b,
+      mid: { x: b.x1 - b.x0 <= MIDDLE_MAX ? (b.x0 + b.x1) / 2 : null, y: b.y1 - b.y0 <= MIDDLE_MAX ? (b.y0 + b.y1) / 2 : null },
+    });
+  }
+  return out;
+}
+
+/** The column under a point, or within `within` mm of it (the one whose middle is nearest). */
+export function columnAt(spots: ColumnSpot[], p: P, within: number): ColumnSpot | null {
+  let best: ColumnSpot | null = null;
+  let bestD = Infinity;
+  for (const c of spots) {
+    const { x0, x1, y0, y1 } = c.box;
+    if (p[0] < x0 - within || p[0] > x1 + within || p[1] < y0 - within || p[1] > y1 + within) continue;
+    const d = Math.hypot(p[0] - (x0 + x1) / 2, p[1] - (y0 + y1) / 2);
+    if (d < bestD) {
+      best = c;
+      bestD = d;
+    }
+  }
+  return best;
+}
+
+export const columnAnchor = (c: ColumnSpot, face: "l" | "r" | "t" | "b" | "m"): Anchor => ({ ref: `c:columns:${c.key}:${face}`, d: 0 });
+
+/** A column's face on one side, along `axis`: the side `towards` is on (where the wall goes or comes from). */
+export function columnFace(c: ColumnSpot, axis: Axis, towards: number): { v: number; anchor: Anchor } {
+  const [lo, hi] = axis === "x" ? [c.box.x0, c.box.x1] : [c.box.y0, c.box.y1];
+  const far = towards >= (lo + hi) / 2;
+  return { v: far ? hi : lo, anchor: columnAnchor(c, axis === "x" ? (far ? "r" : "l") : far ? "b" : "t") };
+}
+
+/**
+ * The column a wall's centre line falls on, to centre it there: `axis` is the axis of the centre
+ * line (x for a wall down the page), `v` where it is now, s0 to s1 the wall's length, which must
+ * reach the column.
+ */
+export function columnUnder(spots: ColumnSpot[], axis: Axis, v: number, s0: number, s1: number): ColumnSpot | null {
+  let best: ColumnSpot | null = null;
+  let bestD = Infinity;
+  for (const c of spots) {
+    const mid = c.mid[axis];
+    if (mid === null) continue;
+    const [lo, hi] = axis === "x" ? [c.box.x0, c.box.x1] : [c.box.y0, c.box.y1];
+    const [alo, ahi] = axis === "x" ? [c.box.y0, c.box.y1] : [c.box.x0, c.box.x1];
+    if (v < lo || v > hi || s1 < alo - EPS || s0 > ahi + EPS) continue;
+    if (Math.abs(v - mid) < bestD) {
+      best = c;
+      bestD = Math.abs(v - mid);
+    }
+  }
+  return best;
 }
 
 // ---- the floor cut into rectangles ------------------------------------------------------------------
@@ -605,26 +688,105 @@ export interface ReferenceStrip {
   image: { x: number; y: number; w: number; h: number };
 }
 
+/** How the picture is laid: across, mm = a·pt + b; down, where it is pinned (true scale beyond). */
+export interface ReferenceFit {
+  /** On the as-built columns (its own columns matched to them), or on the grid lines. */
+  on: "columns" | "grid";
+  a: number;
+  b: number;
+  ys: { pt: number; mm: number }[];
+}
+
+type Pair = { pt: number; mm: number };
+
+/** Least squares, mm = a·pt + b. */
+function fitLine(pairs: Pair[]): { a: number; b: number } | null {
+  const n = pairs.length;
+  if (n < 2) return null;
+  const mx = pairs.reduce((s, p) => s + p.pt, 0) / n;
+  const my = pairs.reduce((s, p) => s + p.mm, 0) / n;
+  const sxx = pairs.reduce((s, p) => s + (p.pt - mx) ** 2, 0);
+  if (sxx < 1e-9) return null;
+  const a = pairs.reduce((s, p) => s + (p.pt - mx) * (p.mm - my), 0) / sxx;
+  return { a, b: my - a * mx };
+}
+
+/** The same, leaving out what sits well off the rest (a column the drawing has somewhere else). */
+function fitKeeping(pairs: Pair[]): { a: number; b: number; keep: boolean[] } | null {
+  let keep = pairs.map(() => true);
+  let fit = fitLine(pairs);
+  for (const tol of [150, 80]) {
+    const f = fit;
+    if (!f) return null;
+    const next = pairs.map((p) => Math.abs(f.a * p.pt + f.b - p.mm) <= tol);
+    if (next.filter(Boolean).length < Math.max(3, pairs.length / 2)) break;
+    keep = next;
+    fit = fitLine(pairs.filter((_, i) => next[i]));
+  }
+  return fit ? { ...fit, keep } : null;
+}
+
+const meanPair = (list: Pair[]): Pair => ({ pt: list.reduce((s, q) => s + q.pt, 0) / list.length, mm: list.reduce((s, q) => s + q.mm, 0) / list.length });
+
 /**
- * Lays an architect's plan on the as-built grid. Across the page one scale fits all the lettered
- * lines; down the page each band between two numbered lines is stretched to fit the as-built rows
- * (the architect's row spacings differ from the structural drawings'), true scale beyond the last.
+ * Where an architect's plan goes on the as-built floor. On the columns where the drawing's own
+ * columns are known (Niko, 4 Nov 2026: "Fix the columns from the as built measurements"): its
+ * columns land on the columns as built, across with one scale for all of them, down with each row of
+ * columns pinned where that row stands (the drawing's columns are not where its grid lines would put
+ * them: laid on the grid lines, its row 7 columns came out 28 cm low). Otherwise on the grid lines:
+ * across one scale fits all the lettered lines, down each band between two numbered lines is
+ * stretched to fit the as-built rows. True scale beyond the last row.
  */
-export function referenceStrips(floor: Floor, ref: PlanReference): ReferenceStrip[] {
+export function referenceFit(floor: Floor, ref: PlanReference): ReferenceFit | null {
+  const pairs = (ref.cols ?? []).flatMap((c) => {
+    const el = floor.columns.find((k) => `${k.x}/${k.y}` === c.at);
+    const b = el ? boxOf(floor, el, "actual") : null;
+    return el && b ? [{ row: el.y, x: { pt: c.x, mm: (b.x0 + b.x1) / 2 }, y: { pt: c.y, mm: (b.y0 + b.y1) / 2 } }] : [];
+  });
+  if (pairs.length >= 4) {
+    const fx = fitKeeping(pairs.map((p) => p.x));
+    const fy = fitKeeping(pairs.map((p) => p.y));
+    if (fx && fy && fx.a > 0 && fy.a > 0) {
+      // Each row of three or more columns is pinned where it stands, less any column of it the
+      // drawing has somewhere else (well off the others in its row).
+      const rows = new Map<string, Pair[]>();
+      for (const p of pairs) rows.set(p.row, [...(rows.get(p.row) ?? []), p.y]);
+      let ys = [...rows.values()]
+        .filter((list) => list.length >= 3)
+        .map((list) => {
+          const off = list.map((q) => q.mm - fy.a * q.pt);
+          const mid = [...off].sort((u, v) => u - v)[Math.floor(off.length / 2)];
+          return list.filter((_, i) => Math.abs(off[i] - mid) <= 80);
+        })
+        .filter((list) => list.length >= 2)
+        .map(meanPair)
+        .sort((p, q) => p.pt - q.pt);
+      // Rows that would fold the picture over give way to the one fit through all the columns.
+      if (ys.length < 2 || ys.some((p, i) => i > 0 && (p.pt - ys[i - 1].pt < 1 || p.mm <= ys[i - 1].mm))) {
+        const kept = pairs.filter((_, i) => fy.keep[i]).map((p) => p.y.pt);
+        const lo = Math.min(...kept);
+        const hi = Math.max(...kept);
+        ys = (hi - lo >= 1 ? [lo, hi] : [lo]).map((pt) => ({ pt, mm: fy.a * pt + fy.b }));
+      }
+      return { on: "columns", a: fx.a, b: fx.b, ys };
+    }
+  }
   const xs = ref.xs
     .map((p) => ({ pt: p.pt, mm: linePos(floor, "x", p.line, "actual") }))
-    .filter((p): p is { pt: number; mm: number } => p.mm !== null);
+    .filter((p): p is Pair => p.mm !== null);
   const ys = ref.ys
     .map((p) => ({ pt: p.pt, mm: linePos(floor, "y", p.line, "actual") }))
-    .filter((p): p is { pt: number; mm: number } => p.mm !== null)
+    .filter((p): p is Pair => p.mm !== null)
     .sort((a, b) => a.pt - b.pt);
-  if (xs.length < 2 || ys.length < 1) return [];
-  // Across: least squares, mm = a·pt + b.
-  const n = xs.length;
-  const mx = xs.reduce((s, p) => s + p.pt, 0) / n;
-  const my = xs.reduce((s, p) => s + p.mm, 0) / n;
-  const a = xs.reduce((s, p) => s + (p.pt - mx) * (p.mm - my), 0) / xs.reduce((s, p) => s + (p.pt - mx) ** 2, 0);
-  const b = my - a * mx;
+  const fx = fitLine(xs);
+  return fx && ys.length ? { on: "grid", a: fx.a, b: fx.b, ys } : null;
+}
+
+/** The architect's plan cut into bands down the page, each drawn at its own scale (see referenceFit). */
+export function referenceStrips(floor: Floor, ref: PlanReference): ReferenceStrip[] {
+  const fit = referenceFit(floor, ref);
+  if (!fit) return [];
+  const { a, b, ys } = fit;
   const pageW = ref.w / ref.pxPerPt;
   const pageH = ref.h / ref.pxPerPt;
   const left = b;
@@ -658,7 +820,7 @@ export interface SnapLine {
   rank: number;
 }
 
-/** Every line a wall can be lined up on: grid lines, slab edges, column and core faces, other walls. */
+/** Every line a wall can be lined up on: grid lines, slab edges, column and core faces, column middles, other walls. */
 export function snapLines(floor: Floor, plan: Pick<PlanContent, "walls">, except?: string): SnapLine[] {
   const out: SnapLine[] = [];
   for (const axis of ["x", "y"] as const) {
@@ -682,6 +844,13 @@ export function snapLines(floor: Floor, plan: Pick<PlanContent, "walls">, except
         { axis: "y", v: b.y0, anchor: { ref: `c:${list}:${el._key}:t`, d: 0 }, what: `${name} face`, rank: 3 },
         { axis: "y", v: b.y1, anchor: { ref: `c:${list}:${el._key}:b`, d: 0 }, what: `${name} face`, rank: 3 },
       );
+    }
+  }
+  // The middle of each column, where a wall built onto it is centred.
+  for (const c of columnSpots(floor)) {
+    for (const axis of ["x", "y"] as const) {
+      const v = c.mid[axis];
+      if (v !== null) out.push({ axis, v, anchor: columnAnchor(c, "m"), what: `the middle of ${c.name}`, rank: 4 });
     }
   }
   // Other walls: their centre lines and faces, hung on whatever their centre line hangs on.

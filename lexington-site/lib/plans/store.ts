@@ -33,7 +33,7 @@ export async function readPlans(): Promise<PlanOption[]> {
 /** The architects' plans to trace over, one per floor where there is one. */
 export async function readReferences(): Promise<PlanReference[]> {
   return getBuyersClient().fetch<PlanReference[]>(
-    `*[_type == "floorPlanReference"]{ floorKey, title, "url": image.asset->url, w, h, pxPerPt, xs[]{ line, pt }, ys[]{ line, pt } }`,
+    `*[_type == "floorPlanReference"]{ floorKey, title, "url": image.asset->url, w, h, pxPerPt, xs[]{ line, pt }, ys[]{ line, pt }, cols[]{ at, x, y } }`,
   );
 }
 

@@ -271,6 +271,12 @@
   stroke: #8d9496;
 }
 
+/* A column the wall being drawn is built onto. */
+.columnOn {
+  fill: none;
+  stroke: var(--clay);
+}
+
 .void rect,
 .void line {
   fill: #ffffff;
@@ -566,6 +572,27 @@
 
 .chipIcon {
   flex: none;
+}
+
+/* The key that picks a tool, after its name (not where there is no keyboard). */
+.keyHint {
+  margin-left: 6px;
+  padding: 0 4px;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  font-size: 10.5px;
+  font-weight: 500;
+  opacity: 0.55;
+}
+
+.withIcon .keyHint {
+  margin-left: 1px;
+}
+
+@media (hover: none) {
+  .keyHint {
+    display: none;
+  }
 }
 
 .field {
