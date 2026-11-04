@@ -39,6 +39,8 @@ export interface Bill {
   photoUrl: string | null;
   /** The photo's id in the image store (it becomes the receipt of the payment that pays it). */
   photoId: string | null;
+  /** "application/pdf" when the bill is a PDF, else the photo's type. */
+  photoType: string | null;
   createdAt: string;
   createdBy: string;
   /** In QuickBooks: its bill there, or why not yet. */

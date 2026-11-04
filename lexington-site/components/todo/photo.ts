@@ -3,7 +3,10 @@
 // fast in my phone and upload in the background": the store's and the jobs' photos are smaller now, and a form can
 // be saved while its photo is still on its way (photoQueue.ts).
 
-/** Where photos go: the to-do list's, the store room's, the waybills', the suppliers' bills. */
+/** A PDF (a supplier's bill or an expense's receipt can be one): sent as it is. */
+export const isPdf = (file: File) => file.type === "application/pdf" || /\.pdf$/i.test(file.name);
+
+/** Where photos go: the to-do list's, the store room's, the waybills', the suppliers' bills (a PDF will do there). */
 export type PhotoEndpoint = "/api/todo/photo" | "/api/store/photo" | "/api/concrete/photo" | "/api/suppliers/photo";
 
 /** Longest side and JPEG quality for each: papers (waybills, bills) stay sharp enough to read. */
@@ -52,8 +55,9 @@ export async function shrinkSized(file: Blob, side: number, quality: number): Pr
   return { blob, width, height };
 }
 
-/** The photo as small as its use allows; as it is when the phone can't read it (the server still checks it). */
+/** The photo as small as its use allows; as it is when the phone can't read it, or a PDF (the server still checks it). */
 export async function shrinkFor(file: Blob, endpoint: PhotoEndpoint): Promise<Blob> {
+  if (file instanceof File && isPdf(file)) return new Blob([file], { type: "application/pdf" });
   const { side, quality } = SIZES[endpoint];
   try {
     return await shrink(file, side, quality);
@@ -75,7 +79,7 @@ export class PhotoError extends Error {
 /** Sends one (already shrunk) photo, with the ticket the server knows it by; resolves to its id and address. */
 export async function sendPhoto(blob: Blob, endpoint: PhotoEndpoint, ticket?: string): Promise<{ id: string; url: string }> {
   const form = new FormData();
-  form.append("photo", blob, "photo.jpg");
+  form.append("photo", blob, blob.type === "application/pdf" ? "bill.pdf" : "photo.jpg");
   if (ticket) form.append("ticket", ticket);
   let response: Response;
   try {

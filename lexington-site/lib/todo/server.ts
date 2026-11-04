@@ -30,6 +30,8 @@ const PREFIX = LIVE ? "sitetask-live-" : "sitetask-dev-";
 const ID_RE = LIVE ? /^sitetask-live-[a-f0-9]{12}$/ : /^sitetask-dev-[a-f0-9]{12}$/;
 // Sanity image asset ids: image-<sha1>-<width>x<height>-<format>
 const PHOTO_ID_RE = /^image-[a-f0-9]{40}-\d+x\d+-(jpg|png|webp)$/;
+// A supplier's bill can be a PDF too (Niko, 4 Nov 2026: "i need to be able to upload pdfs"): file-<sha1>-pdf.
+const PDF_ID_RE = /^file-[a-f0-9]{40}-pdf$/;
 // A photo still uploading when its record was saved: "pending:" and the phone's ticket for it (components/todo/photoQueue.ts).
 const TICKET_RE = /^[a-f0-9]{24}$/;
 const PENDING_RE = /^pending:([a-f0-9]{24})$/;
@@ -134,7 +136,7 @@ async function getTask(id: string): Promise<TodoTask | null> {
  */
 export const photoRef = (assetId: string) => {
   const pending = PENDING_RE.exec(assetId);
-  if (!pending) return { _type: "image", asset: { _type: "reference", _ref: assetId } };
+  if (!pending) return { _type: PDF_ID_RE.test(assetId) ? "file" : "image", asset: { _type: "reference", _ref: assetId } };
   try {
     // It may have landed while this record was being written: look again once it's saved.
     after(() => attachPending(pending[1]));
@@ -361,12 +363,14 @@ export async function storePhoto(file: File, kind: "todo" | "store" | "rollcall"
     await attachPending(ticket);
     return landed;
   }
-  if (!TYPES.includes(file.type)) throw new TodoError(415, "That file is not a JPEG, PNG or WebP photo.");
+  // A bill can be a PDF (sent as it is): it goes into QuickBooks with the bill, and onto the payment that pays it.
+  const pdf = kind === "bill" && file.type === "application/pdf";
+  if (!pdf && !TYPES.includes(file.type)) throw new TodoError(415, kind === "bill" ? "That file can't be attached. Use a photo or a PDF." : "That file is not a JPEG, PNG or WebP photo.");
   if (file.size === 0) throw new TodoError(400, "No photo was sent.");
-  if (file.size > MAX_BYTES) throw new TodoError(413, "That photo is too big (over 4 MB).");
-  const ext = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
+  if (file.size > MAX_BYTES) throw new TodoError(413, pdf ? "That PDF is too big (over 4 MB). Take a photo of it instead." : "That photo is too big (over 4 MB).");
+  const ext = pdf ? "pdf" : file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
   const client = getBuyersClient();
-  const asset = await client.assets.upload("image", Buffer.from(await file.arrayBuffer()), {
+  const asset = await client.assets.upload(pdf ? "file" : "image", Buffer.from(await file.arrayBuffer()), {
     filename: `${kind}-${new Date().toISOString().slice(0, 10)}-${randomBytes(3).toString("hex")}.${ext}`,
     contentType: file.type,
   });
@@ -415,7 +419,7 @@ export async function attachPending(ticket: string): Promise<void> {
 
 /** Deletes a to-do (or store, or roll call) photo nothing points at any more (a retake, a removed or deleted item). */
 export async function dropPhoto(assetId: string, kind: "todo" | "store" | "rollcall" | "concrete" | "bill" = "todo"): Promise<void> {
-  if (!PHOTO_ID_RE.test(assetId)) return;
+  if (!(PHOTO_ID_RE.test(assetId) || (kind === "bill" && PDF_ID_RE.test(assetId)))) return;
   const client = getBuyersClient();
   try {
     const info = await client.fetch<{ name?: string; refs: number } | null>(
@@ -433,6 +437,11 @@ export function cleanPhotoRef(value: unknown): string | null {
   if (value === null || value === undefined || value === "") return null;
   if (typeof value !== "string" || !(PHOTO_ID_RE.test(value) || PENDING_RE.test(value))) throw new TodoError(400, "That photo didn't upload properly. Take it again.");
   return value;
+}
+
+/** As cleanPhotoRef, for a supplier's bill: its PDF will do too. */
+export function cleanBillPhotoRef(value: unknown): string | null {
+  return typeof value === "string" && PDF_ID_RE.test(value) ? value : cleanPhotoRef(value);
 }
 
 /* ---------- site logins (the foreman, a storekeeper) ---------- */

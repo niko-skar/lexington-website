@@ -11,7 +11,7 @@ import { addVendor, cachedVendors, refreshVendors } from "@/lib/quickbooks/vendo
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
 import { BILL_COUNTER_ID, BILL_PREFIX, isId, newId } from "@/lib/site/ids";
 import { ghanaDay } from "@/lib/store/shared";
-import { cleanPhotoRef, cleanText, dropPhoto, photoRef, TodoError } from "@/lib/todo/server";
+import { cleanBillPhotoRef, cleanText, dropPhoto, photoRef, TodoError } from "@/lib/todo/server";
 import type { TodoMe } from "@/lib/todo/shared";
 import { suppliersFrom, type Bill, type QboVendor, type SuppliersPage } from "./shared";
 
@@ -35,6 +35,7 @@ const BILL_FIELDS = `{
   "costClass": costClass{ id, name },
   "photoUrl": photo.asset->url,
   "photoId": photo.asset._ref,
+  "photoType": photo.asset->mimeType,
   createdAt,
   "createdBy": coalesce(createdBy, ""),
   "qboTxnId": qbo.txnId,
@@ -123,7 +124,7 @@ export async function saveBill(me: TodoMe, body: Data): Promise<string> {
   const floor = body.floor ? (typeof body.floor === "string" && areas.includes(body.floor) ? body.floor : null) : null;
   if (body.floor && !floor) throw new TodoError(400, "Pick the floor or stage again.");
   const costClass = cleanClass(body.costClass);
-  const photoId = body.photoId === undefined ? undefined : cleanPhotoRef(body.photoId);
+  const photoId = body.photoId === undefined ? undefined : cleanBillPhotoRef(body.photoId);
   const client = getBuyersClient();
   const now = new Date().toISOString();
   const fields = { vendorId: vendor.id, supplier: vendor.name, date, due, amount, description, ref, floor, costClass, updatedAt: now, updatedBy: me.name };

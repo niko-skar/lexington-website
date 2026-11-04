@@ -6,10 +6,11 @@ import { money, type Expense } from "@/lib/expenses/shared";
 import { isCost, total, type SpendEntry } from "@/lib/spending/shared";
 import { ghanaDay } from "@/lib/store/shared";
 import { paymentsTo, type BillState, type OpenBill, type QboVendor, type SupplierRow, type SuppliersPage } from "@/lib/suppliers/shared";
-import type { TodoMe } from "@/lib/todo/shared";
+import { photoAt, type TodoMe } from "@/lib/todo/shared";
 import { AccessSheet } from "./AccessSheet";
 import { errorText, send, startPolling } from "./api";
 import { niceDate } from "./ExpenseForm";
+import site from "./Site.module.css";
 import { SiteHeader, SiteMenu } from "./SiteChrome";
 import { Entries } from "./SpendingApp";
 import { PhotoField } from "./StoreBits";
@@ -166,7 +167,7 @@ export function SuppliersApp({
                 description: `Pays ${b.appRef ?? "the bill"}${b.ref ? ` (their ${b.ref})` : ""}: ${b.description}`.slice(0, 200),
                 bill: { id: b.id, appRef: b.appRef, supplier: b.supplier, description: b.description, amount: b.amount, left: b.left, due: b.due },
                 // Niko, 3 Nov 2026: "when i add a bill for a supplier and attach a photo, that photo should also carry over to the expense when it's paid".
-                receipt: b.photoId && b.photoUrl ? { id: b.photoId, url: b.photoUrl, type: "image/jpeg" } : null,
+                receipt: b.photoId && b.photoUrl ? { id: b.photoId, url: b.photoUrl, type: b.photoType ?? "image/jpeg" } : null,
               })
             }
           />
@@ -478,7 +479,7 @@ function BillSheet({
     let photoId: string | null | undefined = undefined;
     if (slot) {
       const photo = await settled();
-      if (!photo) return setError("The photo didn't upload. Take it again, or remove it.");
+      if (!photo) return setError(slot.pdf ? "The PDF didn't upload. Pick it again, or remove it." : "The photo didn't upload. Take it again, or remove it.");
       photoId = photo.id;
     }
     const c = data.classes.find((x) => x.id === cls);
@@ -584,7 +585,30 @@ function BillSheet({
             </select>
           </>
         )}
-        <PhotoField idBase="bill" slot={slot} onPick={start} onClear={() => clear()} label={bill?.photoUrl ? "A new photo of the bill (optional)" : "Photo of the bill (optional)"} />
+        {bill?.photoUrl && !slot && (
+          <>
+            <span className={styles.label}>{bill.photoType === "application/pdf" ? "The bill's PDF" : "The bill's photo"}</span>
+            <div className={site.preview}>
+              {bill.photoType === "application/pdf" ? (
+                <span className={site.pdf}>PDF</span>
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element -- a resized copy from the image store
+                <img src={photoAt(bill.photoUrl, 160)} alt="" />
+              )}
+              <a className={site.previewOpen} href={bill.photoUrl} target="_blank" rel="noopener noreferrer">
+                {bill.photoType === "application/pdf" ? "Open the PDF" : "Open the photo"}
+              </a>
+            </div>
+          </>
+        )}
+        <PhotoField
+          idBase="bill"
+          pdf
+          slot={slot}
+          onPick={start}
+          onClear={() => clear()}
+          label={bill?.photoUrl ? "A new photo or PDF of the bill (optional)" : "Photo or PDF of the bill (optional)"}
+        />
         {error && (
           <p className={styles.sheetError} role="alert">
             {error}

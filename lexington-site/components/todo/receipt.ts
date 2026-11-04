@@ -1,7 +1,7 @@
 // Receipts for the expenses: a photo (shrunk on the phone first, like the to-do photos) or a PDF.
-import { shrink } from "./photo";
+import { isPdf, shrink } from "./photo";
 
-export const isPdf = (file: File) => file.type === "application/pdf" || /\.pdf$/i.test(file.name);
+export { isPdf };
 
 /** Uploads one receipt; resolves to the stored file's id, address and type. */
 export async function uploadReceipt(file: File): Promise<{ id: string; url: string; type: string }> {

@@ -803,6 +803,14 @@
   text-align: left;
   text-decoration: underline;
 }
+/* A PDF picked for a bill: its name beside the PDF mark. */
+.pdfName {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
 .receiptNeeded {
   margin: 0;
   font-size: 14px;

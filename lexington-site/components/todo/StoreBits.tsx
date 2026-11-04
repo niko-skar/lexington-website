@@ -47,6 +47,7 @@ export function PhotoField({
   onClear,
   required,
   cameraOnly,
+  pdf,
   label,
   need = "A photo of the stock going out is needed.",
 }: {
@@ -56,6 +57,8 @@ export function PhotoField({
   onClear: () => void;
   required?: boolean;
   cameraOnly?: boolean;
+  /** A PDF will do too (a supplier's bill). */
+  pdf?: boolean;
   label: string;
   /** What a required photo is for. */
   need?: string;
@@ -70,18 +73,25 @@ export function PhotoField({
       <span className={styles.label}>{label}</span>
       {slot ? (
         <>
-          <span className={site.photoPreview}>
-            {/* eslint-disable-next-line @next/next/no-img-element -- the phone's own preview of the photo */}
-            <img src={slot.preview} alt="" />
-          </span>
+          {slot.pdf ? (
+            <span className={site.preview}>
+              <span className={site.pdf}>PDF</span>
+              <span className={site.pdfName}>{slot.name || "The PDF"}</span>
+            </span>
+          ) : (
+            <span className={site.photoPreview}>
+              {/* eslint-disable-next-line @next/next/no-img-element -- the phone's own preview of the photo */}
+              <img src={slot.preview} alt="" />
+            </span>
+          )}
           <p className={slot.state === "error" && slot.final ? styles.slotError : site.photoState}>{slotWords(slot)}</p>
           <div className={styles.slotButtons}>
-            <label htmlFor={`${idBase}-camera`} role="button" tabIndex={0}>
-              Retake
+            <label htmlFor={`${idBase}-${slot.pdf && !cameraOnly ? "gallery" : "camera"}`} role="button" tabIndex={0}>
+              {slot.pdf ? "Pick another" : "Retake"}
             </label>
             {!required && (
               <button type="button" onClick={onClear}>
-                Remove photo
+                {slot.pdf ? "Remove PDF" : "Remove photo"}
               </button>
             )}
           </div>
@@ -95,14 +105,16 @@ export function PhotoField({
             </label>
             {!cameraOnly && (
               <label htmlFor={`${idBase}-gallery`} role="button" tabIndex={0}>
-                From the gallery
+                {pdf ? "Upload photo or PDF" : "From the gallery"}
               </label>
             )}
           </div>
         </>
       )}
       <input id={`${idBase}-camera`} data-picker={`${idBase}-camera`} className={styles.hiddenInput} type="file" accept="image/*" capture="environment" onChange={pick} />
-      {!cameraOnly && <input id={`${idBase}-gallery`} data-picker={`${idBase}-gallery`} className={styles.hiddenInput} type="file" accept="image/*" onChange={pick} />}
+      {!cameraOnly && (
+        <input id={`${idBase}-gallery`} data-picker={`${idBase}-gallery`} className={styles.hiddenInput} type="file" accept={pdf ? "image/*,application/pdf" : "image/*"} onChange={pick} />
+      )}
     </div>
   );
 }

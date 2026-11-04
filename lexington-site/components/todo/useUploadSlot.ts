@@ -2,24 +2,29 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import type { PhotoEndpoint } from "./photo";
+import { isPdf, type PhotoEndpoint } from "./photo";
 import { dropUpload, keepUpload, onUploads, startUpload, uploadOf } from "./photoQueue";
 
 // One photo being added in a sheet: it starts uploading the moment it's taken and shows itself at once. The sheet can
 // be saved while it's still on its way (3 Nov 2026, photoQueue.ts): it goes on uploading, and onto the record, by
 // itself. A replaced photo, or a cancelled sheet's, is tidied away.
 
-/** final: refused for good (not a photo, too big): take it again. Otherwise an error is no signal yet, and it goes on trying. */
-export type Slot = { preview: string; state: "uploading" | "ready" | "error"; id?: string; url?: string; error?: string; final?: boolean; ticket: string };
+/**
+ * final: refused for good (not a photo, too big): take it again. Otherwise an error is no signal yet, and it goes on
+ * trying. pdf: a PDF (a bill's), shown by its name.
+ */
+export type Slot = { preview: string; pdf: boolean; name: string; state: "uploading" | "ready" | "error"; id?: string; url?: string; error?: string; final?: boolean; ticket: string };
 
 /** The line under a photo in a sheet. */
-export const slotWords = (s: Pick<Slot, "state" | "error" | "final">) =>
+export const slotWords = (s: Pick<Slot, "state" | "error" | "final"> & { pdf?: boolean }) =>
   s.state === "ready"
-    ? "Photo ready"
+    ? s.pdf
+      ? "PDF ready"
+      : "Photo ready"
     : s.state === "uploading"
       ? "Uploading… you can save now: it carries on by itself"
       : s.final
-        ? (s.error ?? "That photo can't be used: take it again.")
+        ? (s.error ?? (s.pdf ? "That PDF can't be used: pick another." : "That photo can't be used: take it again."))
         : "No signal yet: it uploads by itself when there is. You can save now.";
 
 export function useUploadSlot(endpoint: PhotoEndpoint = "/api/todo/photo") {
@@ -53,7 +58,7 @@ export function useUploadSlot(endpoint: PhotoEndpoint = "/api/todo/photo") {
         URL.revokeObjectURL(old.preview);
         dropUpload(old.ticket);
       }
-      show({ preview: URL.createObjectURL(file), state: "uploading", ticket: startUpload(file, endpoint) });
+      show({ preview: URL.createObjectURL(file), pdf: isPdf(file), name: file.name, state: "uploading", ticket: startUpload(file, endpoint) });
     },
     [endpoint, show]
   );
