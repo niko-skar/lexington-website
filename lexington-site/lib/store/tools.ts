@@ -8,6 +8,7 @@ import { isId, newId, TOOL_OUT_PREFIX, TOOL_PREFIX, TOOL_REPAIR_PREFIX } from "@
 import { cleanPhotoRef, cleanText, dropPhoto, photoRef, TodoError } from "@/lib/todo/server";
 import type { TodoMe } from "@/lib/todo/shared";
 import { guessToolTrade } from "./categories";
+import { newReview } from "./doublesCheck";
 import {
   CONDITION_NAMES,
   conditionAfter,
@@ -35,6 +36,9 @@ import {
 // "still out" can never disagree with the returns. Tools taken together share one photo. A tool's
 // number is how many we have: the office keeps it right, and marking one lost takes it off.
 
+/** An item's or a tool's "To check" (only the office gets it). */
+export const REVIEW_FIELDS = `review{ by, at, what, said, "doubles": doubles[]{ kind, id, why, "sure": coalesce(sure, false) }, counted{ by, at, count, was }, "looked": defined(looked) }`;
+
 export const TOOL_FIELDS = `{
   "id": _id,
   "name": coalesce(name, ""),
@@ -43,7 +47,7 @@ export const TOOL_FIELDS = `{
   "photoUrl": photo.asset->url,
   "trade": trade,
   "condition": condition,
-  "review": review{ by, at }
+  "review": ${REVIEW_FIELDS}
 }`;
 export const OUT_FIELDS = `{
   "id": _id, toolId, qty, "person": coalesce(person, ""), "note": coalesce(note, ""), "photoUrl": photo.asset->url,
@@ -101,7 +105,7 @@ function cleanCondition(value: unknown): Condition | null {
 /** Two people saving the same take-out at the same moment: the second looks again. */
 const isClash = (error: unknown) => (error as { statusCode?: number })?.statusCode === 409;
 
-async function findTool(name: string): Promise<string | null> {
+export async function findTool(name: string): Promise<string | null> {
   return getBuyersClient().fetch(`*[_type == "storeTool" && string::startsWith(_id, $prefix) && lower(name) == $key][0]._id`, {
     prefix: TOOL_PREFIX,
     key: key(name),
@@ -113,7 +117,7 @@ export async function getTool(id: string): Promise<StoreTool | null> {
 }
 
 /** How many of a tool are out now (taken, not back yet). */
-async function outNow(id: string): Promise<number> {
+export async function outNow(id: string): Promise<number> {
   return getBuyersClient().fetch<number>(
     `coalesce(math::sum(*[_type == "toolOut" && toolId == $id && !defined(closedAt)].qty), 0) - coalesce(math::sum(*[_type == "toolOut" && toolId == $id && !defined(closedAt)].returns[].qty), 0)`,
     { id }
@@ -135,6 +139,8 @@ export async function createTool(me: TodoMe, body: Record<string, unknown>): Pro
   const trade = cleanTrade(body.trade) ?? guessToolTrade(name);
   const condition = cleanCondition(body.condition);
   if (await findTool(name)) throw new TodoError(409, `"${name}" is already on the tool list.`);
+  // A site login's new tool waits for the office's check, with what it might be a double of.
+  const review = await newReview(me, body.doubles);
   const id = newId(TOOL_PREFIX);
   await getBuyersClient().create({
     _id: id,
@@ -143,8 +149,7 @@ export async function createTool(me: TodoMe, body: Record<string, unknown>): Pro
     count,
     trade,
     ...(condition ? { condition } : {}),
-    // A site login's new tool waits for the office's check.
-    ...(me.kind !== "admin" ? { review: { by: me.name, byId: me.id, at: new Date().toISOString() } } : {}),
+    ...(review ? { review } : {}),
     ...(photoId ? { photo: photoRef(photoId) } : {}),
     createdAt: new Date().toISOString(),
     createdBy: me.name,

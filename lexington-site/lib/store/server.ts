@@ -7,6 +7,7 @@ import { cleanPhotoRef, cleanText, dropPhoto, photoRef, TodoError } from "@/lib/
 import type { TodoMe } from "@/lib/todo/shared";
 import { guessCategory, guessItemTrade, isStoreCategory, type StoreCategory } from "./categories";
 import { CHECK_FIELDS, toCheck, type RawCheck } from "./checks";
+import { newReview } from "./doublesCheck";
 import {
   MAX_ITEM_NAME,
   MAX_MOVE_NOTE,
@@ -21,7 +22,7 @@ import {
   type StoreTool,
   type Trade,
 } from "./shared";
-import { OUT_FIELDS, REPAIR_FIELDS, TOOL_FIELDS, toOut, toRepair, type RawOut, type RawRepair } from "./tools";
+import { OUT_FIELDS, REPAIR_FIELDS, REVIEW_FIELDS, TOOL_FIELDS, toOut, toRepair, type RawOut, type RawRepair } from "./tools";
 
 // The stock is never stored: it is always added up from what moved, so correcting or deleting a
 // purchase (in the expenses) or a wrong take-out puts the number right by itself.
@@ -46,7 +47,7 @@ const ITEM_FIELDS = `{
   "photoUrl": photo.asset->url,
   "category": category,
   "trade": trade,
-  "review": review{ by, at },
+  "review": ${REVIEW_FIELDS},
   "bought": coalesce(math::sum(*[_type == "siteExpense" && string::startsWith(_id, $expensePrefix) && itemId == ^._id && toStore == true].qty), 0)
     + coalesce(math::sum(*[_type == "siteExpense" && string::startsWith(_id, $expensePrefix) && ^._id in moreLines[toStore == true].itemId]{ "q": math::sum(moreLines[itemId == ^.^._id && toStore == true].qty) }.q), 0),
   "added": coalesce(math::sum(*[_type == "storeMove" && itemId == ^._id && kind == "in"].qty), 0),
@@ -183,7 +184,7 @@ export async function getStore(me: TodoMe): Promise<StoreData> {
   };
 }
 
-async function getItem(id: string): Promise<StoreItem | null> {
+export async function getItem(id: string): Promise<StoreItem | null> {
   const raw = await getBuyersClient().fetch<RawItem | null>(`*[_id == $id && _type == "storeItem"][0] ${ITEM_FIELDS}`, { ...params, id });
   return raw ? withLevel(raw) : null;
 }
@@ -207,7 +208,7 @@ export async function itemHistory(me: TodoMe, id: string): Promise<{ item: Store
 
 /* ---------- items ---------- */
 
-const key = (name: string) => name.trim().replace(/\s+/g, " ").toLowerCase();
+export const key = (name: string) => name.trim().replace(/\s+/g, " ").toLowerCase();
 
 function cleanName(value: unknown) {
   const name = cleanText(value, MAX_ITEM_NAME, "name").replace(/\s+/g, " ");
@@ -234,7 +235,7 @@ function cleanFloor(value: unknown) {
 }
 
 /** An item by its name or a name it had before (so old names still find it). */
-async function findItem(name: string): Promise<{ id: string; stocked: boolean } | null> {
+export async function findItem(name: string): Promise<{ id: string; stocked: boolean } | null> {
   return getBuyersClient().fetch(
     `*[_type == "storeItem" && string::startsWith(_id, $prefix) && (lower(name) == $key || $key in aliases)][0]{ "id": _id, "stocked": coalesce(stocked, true) }`,
     { prefix: ITEM_PREFIX, key: key(name) }
@@ -248,7 +249,7 @@ async function createItemDoc(
   photoId: string | null = null,
   category: StoreCategory = guessCategory(name),
   trade: Trade = guessItemTrade(name, category),
-  review = false
+  review: Record<string, unknown> | null = null
 ): Promise<string> {
   const id = newId(ITEM_PREFIX);
   await getBuyersClient().create({
@@ -258,7 +259,7 @@ async function createItemDoc(
     unit,
     category,
     trade,
-    ...(review ? { review: { by: me.name, byId: me.id, at: new Date().toISOString() } } : {}),
+    ...(review ? { review } : {}),
     stocked: true,
     ...(photoId ? { photo: photoRef(photoId) } : {}),
     createdAt: new Date().toISOString(),
@@ -281,7 +282,7 @@ export async function itemForPurchase(me: TodoMe, material: string, unit: unknow
   }
   const name = cleanName(material);
   // New in the store from a site login's purchase: on the office's "To check" too.
-  return { id: await createItemDoc(me, name, cleanUnit(unit), null, undefined, undefined, me.kind !== "admin"), name };
+  return { id: await createItemDoc(me, name, cleanUnit(unit), null, undefined, undefined, me.kind !== "admin" ? { by: me.name, byId: me.id, at: new Date().toISOString() } : null), name };
 }
 
 /** A new item, with what is on the shelf now (its starting count) and a photo of it. Anyone who uses the store. */
@@ -294,8 +295,9 @@ export async function createItem(me: TodoMe, body: Record<string, unknown>): Pro
   const category = isStoreCategory(body.category) ? body.category : guessCategory(name);
   const trade = cleanTrade(body.trade) ?? guessItemTrade(name, category);
   if (await findItem(name)) throw new TodoError(409, `"${name}" is already in the store. Find it in the list and count it there.`);
-  // A site login's new item waits for the office's check (the storekeeper's names aren't always right).
-  const id = await createItemDoc(me, name, unit, photoId, category, trade, me.kind !== "admin");
+  // A site login's new item waits for the office's check (the storekeeper's names aren't always right), with what it
+  // might be a double of.
+  const id = await createItemDoc(me, name, unit, photoId, category, trade, await newReview(me, body.doubles));
   if (count !== null) {
     await getBuyersClient().create({
       _id: newId(MOVE_PREFIX),

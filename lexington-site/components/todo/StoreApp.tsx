@@ -30,6 +30,7 @@ import {
 } from "@/lib/store/shared";
 import { photoAt, type TodoMe } from "@/lib/todo/shared";
 import { categoryOf, guessCategory, guessItemTrade, STORE_CATEGORIES, tradeOfItem, type StoreCategory } from "@/lib/store/categories";
+import type { StoreDouble } from "@/lib/store/doubles";
 import { AccessSheet } from "./AccessSheet";
 import { dayName, errorText, send, startPolling, when } from "./api";
 import { QtyPicker } from "./QtyPicker";
@@ -38,7 +39,8 @@ import { SiteHeader, SiteMenu } from "./SiteChrome";
 import { CameraIcon, EntryPhoto, minutesSince, PhotoField, time, TradeChips, TradeFilter } from "./StoreBits";
 import { CheckSheet, CheckStrip, DaysSheet } from "./StoreChecks";
 import { RepairSheet, repairListText, ReportSheet } from "./StoreRepairs";
-import { ToCheckSheet, toCheckOf } from "./StoreToCheck";
+import { DoubleAsk, findEntry, sameWords, TogetherSheet, useDoubleCheck, type ListEntry, type SameAnswer } from "./StoreDoubles";
+import { maybeDoubles, ToCheckSheet, toCheckOf } from "./StoreToCheck";
 import { EditToolSheet, isLate, NewToolSheet, outByTool, ReturnSheet, TakeOutSheet, ToolSheet, ToolsTab } from "./StoreTools";
 import styles from "./Todo.module.css";
 import { useUploadSlot } from "./useUploadSlot";
@@ -58,7 +60,8 @@ type Sheet =
   | { kind: "repair"; id: string; back?: string }
   | { kind: "report"; toolId: string }
   | { kind: "check"; check: CheckKind }
-  | { kind: "days" };
+  | { kind: "days" }
+  | { kind: "together"; from: StoreDouble["kind"]; fromId: string; into: StoreDouble["kind"]; intoId: string };
 type ToastData = { text: string; tone?: "error"; onUndo?: () => void };
 
 const MOVE_TITLE: Record<MoveKind, string> = { out: "Take out", back: "Brought back", in: "Add stock", count: "Count" };
@@ -446,6 +449,24 @@ export function StoreApp({
 
   // The office's check of what the site logins added (only the office's data carries the mark).
   const toCheck = useMemo(() => (isAdmin ? toCheckOf(items, tools) : []), [isAdmin, items, tools]);
+  const doublesToCheck = useMemo(() => maybeDoubles(toCheck, items, tools), [toCheck, items, tools]);
+  const togetherFrom: ListEntry | null = sheet?.kind === "together" ? findEntry({ kind: sheet.from, id: sheet.fromId }, items, tools) : null;
+  const togetherInto: ListEntry | null = sheet?.kind === "together" ? findEntry({ kind: sheet.into, id: sheet.intoId }, items, tools) : null;
+
+  /** "Yes, it's this one" when adding: the one on the list as it is now, and what became of the count. */
+  const sameDone = useCallback(
+    (answer: SameAnswer, adding: "item" | "tool", n: number) => {
+      if (answer.item) applyItem(answer.item, answer.entry);
+      if (answer.tool) applyTool(answer.tool);
+      // A material counted in another unit: open it, to count it there.
+      const openIt = answer.item && adding === "item" && answer.counted !== "recorded";
+      setSheet(openIt ? { kind: "item", id: answer.item!.id } : null);
+      if (answer.item && adding === "tool") setTab("stock");
+      if (answer.tool && adding === "item") setTab("tools");
+      showToast({ text: sameWords(answer, adding, n) });
+    },
+    [applyItem, applyTool, showToast]
+  );
 
   const canUndo = (e: StoreEntry) => e.kind !== "bought" && (isAdmin || (e.mine && minutesSince(e.at) < UNDO_MINUTES));
   const current = sheet && (sheet.kind === "item" || sheet.kind === "move" || sheet.kind === "edit") ? byId.get(sheet.id) : undefined;
@@ -554,7 +575,10 @@ export function StoreApp({
             <b>
               {toCheck.length} new {toCheck.length === 1 ? "thing" : "things"} to check
             </b>
-            <span>added by {[...new Set(toCheck.map((e) => (e.type === "item" ? e.item.review!.by : e.tool.review!.by)))].join(", ")}: check the names and how many</span>
+            <span>
+              added by {[...new Set(toCheck.map((e) => (e.type === "item" ? e.item.review!.by : e.tool.review!.by)))].join(", ")}: check the names and how many
+              {doublesToCheck ? ` · ${doublesToCheck} might be ${doublesToCheck === 1 ? "a double" : "doubles"}` : ""}
+            </span>
           </button>
         )}
 
@@ -780,6 +804,7 @@ export function StoreApp({
       {sheet?.kind === "new" && (
         <NewItemSheet
           items={items}
+          tools={tools}
           onClose={() => setSheet(null)}
           onSaved={(item) => {
             applyItem(item);
@@ -787,6 +812,7 @@ export function StoreApp({
             setSearch("");
             showToast({ text: `Added ${item.name}: ${qtyUnit(item.level, item.unit)}` });
           }}
+          onSame={(answer, n) => sameDone(answer, "item", n)}
         />
       )}
       {sheet?.kind === "edit" && current && isAdmin && (
@@ -885,12 +911,14 @@ export function StoreApp({
       {sheet?.kind === "newTool" && (
         <NewToolSheet
           tools={tools}
+          items={items}
           onClose={() => setSheet(null)}
           onSaved={(tool) => {
             applyTool(tool);
             setSheet(null);
             showToast({ text: `Added ${tool.name}: ${tool.count}` });
           }}
+          onSame={(answer, n) => sameDone(answer, "tool", n)}
         />
       )}
       {sheet?.kind === "editTool" && currentTool && isAdmin && (
@@ -968,6 +996,34 @@ export function StoreApp({
           onDeletedTool={(tool) => {
             removeTool(tool);
             setSheet({ kind: "toCheck" });
+          }}
+          onTogether={(from, into) =>
+            setSheet({ kind: "together", from: from.type, fromId: from.type === "item" ? from.item.id : from.tool.id, into: into.type, intoId: into.type === "item" ? into.item.id : into.tool.id })
+          }
+        />
+      )}
+      {sheet?.kind === "together" && isAdmin && togetherFrom && togetherInto && (
+        <TogetherSheet
+          key={`${sheet.fromId}:${sheet.intoId}`}
+          from={togetherFrom}
+          into={togetherInto}
+          onClose={() => setSheet({ kind: "toCheck" })}
+          onDone={(kept) => {
+            localAt.current = Date.now();
+            const fromId = sheet.fromId;
+            if (kept.type === "item") {
+              setItems((list) => list.filter((i) => i.id !== fromId));
+              setHistory((list) => list.map((e) => (e.itemId === fromId ? { ...e, itemId: kept.item.id } : e)));
+              applyItem(kept.item);
+            } else {
+              setTools((list) => list.filter((t) => t.id !== fromId));
+              setToolOuts((list) => list.map((o) => (o.toolId === fromId ? { ...o, toolId: kept.tool.id } : o)));
+              setRepairs((list) => list.map((r) => (r.toolId === fromId ? { ...r, toolId: kept.tool.id } : r)));
+              applyTool(kept.tool);
+            }
+            setSheet({ kind: "toCheck" });
+            showToast({ text: `Put together: ${kept.type === "item" ? `${kept.item.name}, ${qtyUnit(kept.item.level, kept.item.unit)}` : `${kept.tool.name}, ${kept.tool.count}`}` });
+            void refresh();
           }}
         />
       )}
@@ -1451,43 +1507,132 @@ function UnitPicker({ value, onChange, id }: { value: string; onChange: (unit: s
   );
 }
 
-function NewItemSheet({ items, onClose, onSaved }: { items: StoreItem[]; onClose: () => void; onSaved: (item: StoreItem) => void }) {
+function NewItemSheet({
+  items,
+  tools,
+  onClose,
+  onSaved,
+  onSame,
+}: {
+  items: StoreItem[];
+  tools: StoreTool[];
+  onClose: () => void;
+  onSaved: (item: StoreItem) => void;
+  /** "Yes, it's this one" (it was on the list already): nothing new added. */
+  onSame: (answer: SameAnswer, count: number) => void;
+}) {
   const [name, setName] = useState("");
   const [unit, setUnit] = useState("pcs");
   const [count, setCount] = useState("");
-  const [saving, setSaving] = useState(false);
+  const [stage, setStage] = useState<"checking" | "saving" | null>(null);
   const [error, setError] = useState("");
-  const { slot, start, clear, settled } = useUploadSlot("/api/store/photo");
+  const { slot, start, clear, settled, landed } = useUploadSlot("/api/store/photo");
   const clash = items.find((i) => i.name.toLowerCase() === name.trim().replace(/\s+/g, " ").toLowerCase());
   const [picked, setPicked] = useState<StoreCategory | null>(null);
   const category = picked ?? guessCategory(name);
   const [pickedTrade, setPickedTrade] = useState<Trade | null>(null);
   const trade = pickedTrade ?? guessItemTrade(name, category);
+  // The double check (StoreDoubles.tsx): asked as soon as there's a name and the photo is in, so it's ready by "Add".
+  const look = useDoubleCheck("item");
+  const typed = useRef("");
+  const photoIn = slot?.state === "ready" ? (slot.id ?? null) : null;
+  useEffect(() => {
+    if (photoIn && typed.current.trim().length >= 2) void look(typed.current, photoIn);
+  }, [photoIn, look]);
+  const [ask, setAsk] = useState<StoreDouble[] | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+
+  const add = async (doubles: StoreDouble[] | undefined) => {
+    const photo = slot ? await settled() : null;
+    if (slot && !photo) throw new Error("The photo didn't upload. Take it again, or remove it.");
+    const { item } = await send<{ item: StoreItem }>("/api/store/items", "POST", {
+      name: name.trim(),
+      unit: unit.trim() || "pcs",
+      count: Number(count),
+      photoId: photo?.id ?? null,
+      category,
+      trade,
+      ...(doubles ? { doubles } : {}),
+    });
+    clear(true);
+    onSaved(item);
+  };
 
   const save = async () => {
     setError("");
     if (!name.trim()) return setError("Type what it is, e.g. Cement 50kg.");
     if (count.trim() === "" || !(Number(count) >= 0)) return setError("Type how many are there now (0 if none).");
-    setSaving(true);
+    setStage("checking");
     try {
-      const photo = slot ? await settled() : null;
-      if (slot && !photo) return setError("The photo didn't upload. Take it again, or remove it.");
-      const { item } = await send<{ item: StoreItem }>("/api/store/items", "POST", {
-        name: name.trim(),
-        unit: unit.trim() || "pcs",
-        count: Number(count),
-        photoId: photo?.id ?? null,
-        category,
-        trade,
-      });
-      clear(true);
-      onSaved(item);
+      // Is it on the list already? With the photo once it's in (a short wait for it), else by the name.
+      const photoId = slot ? ((await Promise.race([landed(), new Promise<null>((r) => setTimeout(() => r(null), 12_000))]))?.id ?? null) : null;
+      const doubles = await look(name, photoId);
+      const shown = (doubles ?? []).filter((d) => findEntry(d, items, tools));
+      if (shown.length) return setAsk(shown);
+      setStage("saving");
+      // No look (no signal for it, an error): added without; the office's look does it later.
+      await add(doubles === null ? undefined : []);
     } catch (e) {
       setError(errorText(e));
     } finally {
-      setSaving(false);
+      setStage(null);
     }
   };
+  const addAnyway = async () => {
+    setBusy("new");
+    setError("");
+    try {
+      await add(ask ?? []);
+    } catch (e) {
+      setError(errorText(e));
+    } finally {
+      setBusy(null);
+    }
+  };
+  const same = async (d: StoreDouble) => {
+    setBusy(d.id);
+    setError("");
+    try {
+      const photo = slot ? await settled() : null;
+      const answer = await send<SameAnswer>("/api/store/doubles/same", "POST", {
+        into: { kind: d.kind, id: d.id },
+        kind: "item",
+        name: name.trim(),
+        count: Number(count),
+        unit: unit.trim() || "pcs",
+        photoId: photo?.id ?? null,
+      });
+      clear(answer.photoUsed);
+      onSame(answer, Number(count));
+    } catch (e) {
+      setError(errorText(e));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  if (ask) {
+    return (
+      <div className={styles.sheetBackdrop}>
+        <div className={styles.sheet} role="dialog" aria-label="New item in the store">
+          <DoubleAsk
+            adding={{ name: name.trim(), detail: `${qtyUnit(Number(count), unit.trim() || "pcs")} · material`, photo: slot?.url ?? slot?.preview ?? null }}
+            doubles={ask}
+            items={items}
+            tools={tools}
+            busy={busy}
+            error={error}
+            onSame={(d) => void same(d)}
+            onNew={() => void addAnyway()}
+            onBack={() => {
+              setAsk(null);
+              setError("");
+            }}
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.sheetBackdrop}>
@@ -1500,7 +1645,14 @@ function NewItemSheet({ items, onClose, onSaved }: { items: StoreItem[]; onClose
           id="store-new-name"
           className={styles.input}
           value={name}
-          onChange={(e) => setName(e.target.value)}
+          onChange={(e) => {
+            setName(e.target.value);
+            typed.current = e.target.value;
+          }}
+          onBlur={() => {
+            // A photo on its way: the look waits for it (above).
+            if (name.trim().length >= 2 && slot?.state !== "uploading") void look(name, photoIn);
+          }}
           maxLength={MAX_ITEM_NAME}
           autoComplete="off"
           autoCapitalize="sentences"
@@ -1535,12 +1687,12 @@ function NewItemSheet({ items, onClose, onSaved }: { items: StoreItem[]; onClose
               clear();
               onClose();
             }}
-            disabled={saving}
+            disabled={!!stage}
           >
             Cancel
           </button>
-          <button type="button" className={styles.sheetSave} onClick={() => void save()} disabled={saving || !!clash}>
-            {saving ? "Saving…" : "Add to the store"}
+          <button type="button" className={styles.sheetSave} onClick={() => void save()} disabled={!!stage || !!clash}>
+            {stage === "checking" ? "Checking the list…" : stage === "saving" ? "Saving…" : "Add to the store"}
           </button>
         </div>
       </div>

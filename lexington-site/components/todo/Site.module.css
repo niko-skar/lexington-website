@@ -1742,3 +1742,53 @@
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   }
 }
+
+/* Doubles (4 Nov 2026): "Is it on the list already?" when adding, and on To check what a new thing might be a double of. */
+.doubleList {
+  display: grid;
+  gap: 8px;
+}
+.doubleCard {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--x-amber);
+  border-radius: 10px;
+  background: var(--x-amber-soft);
+}
+.doubleWhy {
+  margin: 0;
+  font-size: 14px;
+  color: var(--x-ink);
+}
+.doubleHead {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--x-amber);
+}
+.doubleSaid {
+  margin: 0;
+  font-size: 13px;
+  color: var(--x-muted);
+}
+.doubleYes {
+  min-height: 48px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--x-accent);
+  color: var(--x-accent-ink);
+  font-weight: 600;
+  font-size: 16px;
+}
+.doubleYes:disabled {
+  opacity: 0.5;
+}
+.doubleCard .reorderButtons button {
+  background: var(--x-surface);
+}
+/* A To check card with something to look at first (a likely double, a count that isn't the list's). */
+.checkFlag {
+  border-color: var(--x-amber);
+  box-shadow: inset 4px 0 0 var(--x-amber);
+}

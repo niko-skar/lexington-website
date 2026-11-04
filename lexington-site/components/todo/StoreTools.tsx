@@ -1,8 +1,9 @@
 "use client";
 
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 
 import { guessToolTrade, tradeOfTool } from "@/lib/store/categories";
+import type { StoreDouble } from "@/lib/store/doubles";
 import {
   CONDITION_NAMES,
   ghanaDay,
@@ -18,6 +19,7 @@ import {
   TRADE_NAMES,
   UNDO_MINUTES,
   type Condition,
+  type StoreItem,
   type StoreTool,
   type ToolOut,
   type ToolRepair,
@@ -28,6 +30,7 @@ import { photoAt, type TodoMe } from "@/lib/todo/shared";
 import { errorText, send } from "./api";
 import site from "./Site.module.css";
 import { CameraIcon, ConditionChips, dayLabel, EntryPhoto, ghanaTime, minutesSince, PhotoField, Stepper, TradeChips, TradeFilter } from "./StoreBits";
+import { DoubleAsk, findEntry, useDoubleCheck, type SameAnswer } from "./StoreDoubles";
 import { RepairsSection } from "./StoreRepairs";
 import styles from "./Todo.module.css";
 import { useUploadSlot } from "./useUploadSlot";
@@ -966,41 +969,129 @@ function CountField({ id, value, onChange, placeholder }: { id: string; value: s
 }
 const wholeOk = (v: string) => v.trim() !== "" && Number.isInteger(Number(v)) && Number(v) >= 0 && Number(v) <= MAX_TOOL_COUNT;
 
-export function NewToolSheet({ tools, onClose, onSaved }: { tools: StoreTool[]; onClose: () => void; onSaved: (tool: StoreTool) => void }) {
+export function NewToolSheet({
+  tools,
+  items,
+  onClose,
+  onSaved,
+  onSame,
+}: {
+  tools: StoreTool[];
+  items: StoreItem[];
+  onClose: () => void;
+  onSaved: (tool: StoreTool) => void;
+  /** "Yes, it's this one" (it was on the list already): nothing new added. */
+  onSame: (answer: SameAnswer, count: number) => void;
+}) {
   const [name, setName] = useState("");
   const [count, setCount] = useState("");
   const [pickedTrade, setPickedTrade] = useState<Trade | null>(null);
   const [condition, setCondition] = useState<Condition | null>(null);
-  const [saving, setSaving] = useState(false);
+  const [stage, setStage] = useState<"checking" | "saving" | null>(null);
   const [error, setError] = useState("");
-  const { slot, start, clear, settled } = useUploadSlot("/api/store/photo");
+  const { slot, start, clear, settled, landed } = useUploadSlot("/api/store/photo");
   const clash = tools.find((t) => t.name.toLowerCase() === name.trim().replace(/\s+/g, " ").toLowerCase());
   const trade = pickedTrade ?? guessToolTrade(name);
+  // The double check (StoreDoubles.tsx): asked as soon as there's a name and the photo is in, so it's ready by "Add".
+  const look = useDoubleCheck("tool");
+  const typed = useRef("");
+  const photoIn = slot?.state === "ready" ? (slot.id ?? null) : null;
+  useEffect(() => {
+    if (photoIn && typed.current.trim().length >= 2) void look(typed.current, photoIn);
+  }, [photoIn, look]);
+  const [ask, setAsk] = useState<StoreDouble[] | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+
+  const add = async (doubles: StoreDouble[] | undefined) => {
+    const photo = slot ? await settled() : null;
+    if (slot && !photo) throw new Error("The photo didn't upload. Take it again, or remove it.");
+    const { tool } = await send<{ tool: StoreTool }>("/api/store/tools", "POST", {
+      name: name.trim(),
+      count: Number(count),
+      photoId: photo?.id ?? null,
+      trade,
+      condition,
+      ...(doubles ? { doubles } : {}),
+    });
+    clear(true);
+    onSaved(tool);
+  };
 
   const save = async () => {
     setError("");
     if (!name.trim()) return setError("Type what the tool is, e.g. Angle grinder.");
     if (!wholeOk(count)) return setError("Type how many we have (0 if none).");
     if (!condition) return setError("Pick the state it's in.");
-    setSaving(true);
+    setStage("checking");
     try {
-      const photo = slot ? await settled() : null;
-      if (slot && !photo) return setError("The photo didn't upload. Take it again, or remove it.");
-      const { tool } = await send<{ tool: StoreTool }>("/api/store/tools", "POST", {
-        name: name.trim(),
-        count: Number(count),
-        photoId: photo?.id ?? null,
-        trade,
-        condition,
-      });
-      clear(true);
-      onSaved(tool);
+      // Is it on the list already? With the photo once it's in (a short wait for it), else by the name.
+      const photoId = slot ? ((await Promise.race([landed(), new Promise<null>((r) => setTimeout(() => r(null), 12_000))]))?.id ?? null) : null;
+      const doubles = await look(name, photoId);
+      const shown = (doubles ?? []).filter((d) => findEntry(d, items, tools));
+      if (shown.length) return setAsk(shown);
+      setStage("saving");
+      // No look (no signal for it, an error): added without; the office's look does it later.
+      await add(doubles === null ? undefined : []);
     } catch (e) {
       setError(errorText(e));
     } finally {
-      setSaving(false);
+      setStage(null);
     }
   };
+  const addAnyway = async () => {
+    setBusy("new");
+    setError("");
+    try {
+      await add(ask ?? []);
+    } catch (e) {
+      setError(errorText(e));
+    } finally {
+      setBusy(null);
+    }
+  };
+  const same = async (d: StoreDouble) => {
+    setBusy(d.id);
+    setError("");
+    try {
+      const photo = slot ? await settled() : null;
+      const answer = await send<SameAnswer>("/api/store/doubles/same", "POST", {
+        into: { kind: d.kind, id: d.id },
+        kind: "tool",
+        name: name.trim(),
+        count: Number(count),
+        photoId: photo?.id ?? null,
+      });
+      clear(answer.photoUsed);
+      onSame(answer, Number(count));
+    } catch (e) {
+      setError(errorText(e));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  if (ask) {
+    return (
+      <div className={styles.sheetBackdrop}>
+        <div className={styles.sheet} role="dialog" aria-label="New tool">
+          <DoubleAsk
+            adding={{ name: name.trim(), detail: `${Number(count)} · tool`, photo: slot?.url ?? slot?.preview ?? null }}
+            doubles={ask}
+            items={items}
+            tools={tools}
+            busy={busy}
+            error={error}
+            onSame={(d) => void same(d)}
+            onNew={() => void addAnyway()}
+            onBack={() => {
+              setAsk(null);
+              setError("");
+            }}
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.sheetBackdrop}>
@@ -1013,7 +1104,14 @@ export function NewToolSheet({ tools, onClose, onSaved }: { tools: StoreTool[]; 
           id="tool-new-name"
           className={styles.input}
           value={name}
-          onChange={(e) => setName(e.target.value)}
+          onChange={(e) => {
+            setName(e.target.value);
+            typed.current = e.target.value;
+          }}
+          onBlur={() => {
+            // A photo on its way: the look waits for it (above).
+            if (name.trim().length >= 2 && slot?.state !== "uploading") void look(name, photoIn);
+          }}
           maxLength={MAX_TOOL_NAME}
           autoComplete="off"
           autoCapitalize="sentences"
@@ -1036,12 +1134,12 @@ export function NewToolSheet({ tools, onClose, onSaved }: { tools: StoreTool[]; 
               clear();
               onClose();
             }}
-            disabled={saving}
+            disabled={!!stage}
           >
             Cancel
           </button>
-          <button type="button" className={styles.sheetSave} onClick={() => void save()} disabled={saving || !!clash || !condition}>
-            {saving ? "Saving…" : !condition ? "Pick its state" : "Add to the tools"}
+          <button type="button" className={styles.sheetSave} onClick={() => void save()} disabled={!!stage || !!clash || !condition}>
+            {stage === "checking" ? "Checking the list…" : stage === "saving" ? "Saving…" : !condition ? "Pick its state" : "Add to the tools"}
           </button>
         </div>
       </div>

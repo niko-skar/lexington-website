@@ -5,6 +5,8 @@
 // 23 Oct 2026: photos of the stock (required for anything going out), reorder points with an
 // optional reorder quantity, and a reorder list the office can dismiss items from.
 
+import type { StoreDouble } from "./doubles";
+
 export const MAX_ITEM_NAME = 60;
 export const MAX_UNIT = 20;
 export const MAX_PERSON = 60;
@@ -149,6 +151,16 @@ export interface StoreTool {
 export interface StoreReview {
   by: string;
   at: string;
+  /** "counted": on the list from before, here for a count a site login gave that isn't the list's (a tool). */
+  what?: "added" | "counted" | null;
+  /** It might be a double of these (lib/store/doubles.ts): the check when it was added, or the office's look after. */
+  doubles?: StoreDouble[] | null;
+  /** Whoever added it was asked about those and said it's something new. */
+  said?: "new" | null;
+  /** A site login said a tool on the list is the one they were adding, and counted a different number of it. */
+  counted?: { by: string; at: string; count: number; was: number } | null;
+  /** The double check has looked at it. */
+  looked?: boolean;
 }
 
 export interface ToolReturn {
