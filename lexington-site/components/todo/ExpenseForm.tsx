@@ -766,22 +766,8 @@ export function ExpenseForm({
     }
   };
 
-  const pickFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
-    if (!isPdf(file) && !file.type.startsWith("image/")) {
-      setError("That file can't be attached. Use a photo or a PDF.");
-      return;
-    }
-    setError("");
-    setKept(null);
-    receipt.start(file);
-  };
-
-  const pickMore = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = [...(e.target.files ?? [])];
-    e.target.value = "";
+  /** More photos with the receipt, as many as there's room for. */
+  const addMore = (files: File[]) => {
     const room = MAX_RECEIPTS - 1 - more.list.length;
     for (const file of files.slice(0, Math.max(0, room))) {
       if (!isPdf(file) && !file.type.startsWith("image/")) {
@@ -791,6 +777,30 @@ export function ExpenseForm({
       more.add(file);
     }
     if (files.length > room) setError(`${MAX_RECEIPTS} photos at most on one entry.`);
+  };
+
+  // Several picked at once from the phone's photos (Niko, 5 Nov 2026: "have it allow me to select multiple photos from
+  // my photo library"): the first is the receipt (the one that's read), the others go with it.
+  const pickFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = [...(e.target.files ?? [])];
+    e.target.value = "";
+    if (!files.length) return;
+    const usable = files.filter((f) => isPdf(f) || f.type.startsWith("image/"));
+    const [file, ...others] = usable;
+    if (!file) {
+      setError("That file can't be attached. Use a photo or a PDF.");
+      return;
+    }
+    setError(usable.length < files.length ? "That file can't be attached. Use a photo or a PDF." : "");
+    setKept(null);
+    receipt.start(file);
+    if (others.length) addMore(others);
+  };
+
+  const pickMore = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = [...(e.target.files ?? [])];
+    e.target.value = "";
+    addMore(files);
   };
 
   // Wages from Payday are kept by the roll call: shown here, changed there.
@@ -1292,7 +1302,7 @@ export function ExpenseForm({
           </>
         )}
         <input id={RECEIPT_CAMERA} data-picker="receipt-camera" className={styles.hiddenInput} type="file" accept="image/*" capture="environment" onChange={pickFile} />
-        <input id={RECEIPT_FILE} data-picker="receipt-file" className={styles.hiddenInput} type="file" accept="image/*,application/pdf" onChange={pickFile} />
+        <input id={RECEIPT_FILE} data-picker="receipt-file" className={styles.hiddenInput} type="file" accept="image/*,application/pdf" multiple onChange={pickFile} />
         <input id={MORE_CAMERA} data-picker="receipt-more-camera" className={styles.hiddenInput} type="file" accept="image/*" capture="environment" onChange={pickMore} />
         <input id={MORE_FILE} data-picker="receipt-more-file" className={styles.hiddenInput} type="file" accept="image/*,application/pdf" multiple onChange={pickMore} />
 
