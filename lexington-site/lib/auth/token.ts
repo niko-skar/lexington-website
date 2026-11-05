@@ -34,7 +34,8 @@ export async function signSessionToken(payload: SessionPayload, expiresIn: strin
     .sign(getSecretKey());
 }
 
-export async function verifySessionToken(token: string): Promise<SessionPayload | null> {
+/** The session's claims, and when it was signed (seconds since 1970; null if it doesn't say). */
+export async function verifySessionToken(token: string): Promise<(SessionPayload & { issuedAt: number | null }) | null> {
   try {
     const { payload } = await jwtVerify(token, getSecretKey());
     if (payload.role !== "buyer" && payload.role !== "admin") return null;
@@ -43,6 +44,7 @@ export async function verifySessionToken(token: string): Promise<SessionPayload 
       email: typeof payload.email === "string" ? payload.email : undefined,
       isAdmin: payload.isAdmin === true,
       site: payload.site === true,
+      issuedAt: typeof payload.iat === "number" ? payload.iat : null,
     };
   } catch {
     // Expired, tampered, or malformed -- treat exactly like "not logged in"

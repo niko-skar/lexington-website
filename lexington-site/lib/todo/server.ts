@@ -4,7 +4,7 @@ import { after } from "next/server";
 
 import { clip, notifyOwner, pushToPeople } from "@/lib/alerts/notify";
 import { hashPassword } from "@/lib/auth/password";
-import { getAdminSession, getBuyerSession } from "@/lib/auth/session";
+import { getAdminSession, getBuyerSession, renewAppSession } from "@/lib/auth/session";
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
 import { PHOTO_TICKET_PREFIX } from "@/lib/site/ids";
 import {
@@ -71,8 +71,17 @@ function siteSections(value: unknown): SiteSection[] {
   return SITE_SECTIONS.filter((s) => value.includes(s));
 }
 
-/** Admins (Niko's account, or the office password) and "site" accounts (the foreman, a storekeeper). */
+/**
+ * Admins (Niko's account, or the office password) and "site" accounts (the foreman, a storekeeper). Using the app keeps
+ * them signed in (keepSignedIn; a page being drawn can't, the app's next request does).
+ */
 export async function getTodoUser(): Promise<TodoMe | null> {
+  const me = await signedIn();
+  if (me) await keepSignedIn();
+  return me;
+}
+
+async function signedIn(): Promise<TodoMe | null> {
   const buyer = await getBuyerSession();
   if (buyer?.isAdmin) {
     const account = await accountFor(buyer.email);
@@ -95,6 +104,17 @@ export async function requireTodoUser(adminOnly = false, section: Section = "tod
   if (adminOnly && me.kind !== "admin") throw new TodoError(403, "Only the office can do that.");
   if (!me.sections.includes(section)) throw new TodoError(403, "This login can't open that part of the app. Ask the office.");
   return me;
+}
+
+/**
+ * Using the app keeps them signed in: 30 days from now again (5 Nov 2026). An account's login only while the account is
+ * still what the login says (an admin's, a site login's): one the office changed runs out instead.
+ */
+async function keepSignedIn(): Promise<void> {
+  const buyer = await getBuyerSession();
+  const account = buyer ? await accountFor(buyer.email) : null;
+  const still = !!buyer && !!account && ((buyer.isAdmin && account.role === "admin") || (buyer.site && account.role === "site"));
+  await renewAppSession({ buyer: still });
 }
 
 /* ---------- the list ---------- */
