@@ -7,6 +7,7 @@ import {
   lineTotal,
   linesText,
   MAX_ORDER_LINES,
+  monthEnd,
   ORDER_CATEGORIES,
   orderDescription,
   orderStage,
@@ -36,7 +37,8 @@ import styles from "./Todo.module.css";
 type ToastData = { text: string; tone?: "error" };
 const addDays = (day: string, n: number) => new Date(Date.parse(`${day}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
 const neededWords = (o: OrderView, today: string) =>
-  o.done ? `needed ${niceDate(o.neededBy)}` : o.late ? `was needed ${niceDate(o.neededBy)}` : o.neededBy === today ? "needed today" : `needed by ${niceDate(o.neededBy)}`;
+  (o.done ? `needed ${niceDate(o.neededBy)}` : o.late ? `was needed ${niceDate(o.neededBy)}` : o.neededBy === today ? "needed today" : `needed by ${niceDate(o.neededBy)}`) +
+  (o.payBy && !o.done ? ` · paid ${o.payBy < today ? "since" : "by"} ${niceDate(o.payBy)}` : "");
 
 /** What "Make it a bill" hands the bill form: what's left of the order, its words, floor and cost type. */
 export function billFromOrder(o: OrderView, areas: readonly string[]): BillPrefill | null {
@@ -44,6 +46,8 @@ export function billFromOrder(o: OrderView, areas: readonly string[]): BillPrefi
   return {
     poId: o.id,
     vendorId: o.vendorId,
+    // Bought on credit: the bill is due when the order said it's paid.
+    due: o.payBy,
     amount: o.left,
     description: orderDescription(o, 160),
     floor: o.floor && o.floor !== "Whole building" && areas.includes(o.floor) ? o.floor : null,
@@ -425,6 +429,8 @@ function OrderSheet({
   const [lines, setLines] = useState<LineDraft[]>(() => (order ? order.lines.map(draftOf) : [emptyLine("first")]));
   const [estimate, setEstimate] = useState(order?.estimate ? String(order.estimate) : "");
   const [neededBy, setNeededBy] = useState(order?.neededBy ?? addDays(today, 7));
+  // When it's paid: "" = when it comes.
+  const [payBy, setPayBy] = useState(order?.payBy ?? "");
   const [floor, setFloor] = useState(order?.floor ?? "");
   const [cls, setCls] = useState(order?.costClass?.id ?? "");
   const [note, setNote] = useState(order?.note ?? "");
@@ -474,6 +480,7 @@ function OrderSheet({
         })),
         estimate: priced.length ? null : estimate.trim() || null,
         neededBy,
+        payBy: payBy || null,
         note: note.trim(),
         floor: floor || null,
         costClass: c ? { id: c.id, name: c.name } : null,
@@ -636,6 +643,25 @@ function OrderSheet({
             </button>
           ))}
         </div>
+
+        <label className={styles.label} htmlFor="order-pay">
+          When it&rsquo;s paid
+        </label>
+        <div className={styles.chips}>
+          {(
+            [
+              ["When it comes", ""],
+              ["End of the month", monthEnd(neededBy)],
+              ["30 days after", addDays(neededBy, 30)],
+            ] as const
+          ).map(([label, day]) => (
+            <button key={label} type="button" className={payBy === day ? styles.chipOn : styles.chip} aria-pressed={payBy === day} onClick={() => setPayBy(day)} disabled={saving || closed}>
+              {label}
+            </button>
+          ))}
+        </div>
+        <input id="order-pay" className={styles.input} type="date" value={payBy || neededBy} onChange={(e) => setPayBy(e.target.value && e.target.value !== neededBy ? e.target.value : "")} disabled={saving || closed} />
+        <p className={fin.small}>The cash flow counts it {payBy ? `on ${niceDate(payBy)}` : "the day it comes"}; a bill made from it is due then.</p>
 
         {data.areas.length > 0 && (
           <>
