@@ -15,6 +15,8 @@ export const TOOL_OUT_PREFIX = `toolout-${TAG}-`;
 export const CHECK_PREFIX = `storecheck-${TAG}-`;
 /** A tool (or some of one) broken or needing repair: to send out, at the repairer, then fixed or written off (3 Nov 2026). */
 export const TOOL_REPAIR_PREFIX = `toolrepair-${TAG}-`;
+/** Something on the shopping list that isn't a store item at its reorder point (5 Nov 2026): one document each. */
+export const BUY_PREFIX = `storebuy-${TAG}-`;
 /** The running numbers behind the expense refs (EXP-0001, IN-0001). */
 export const EXPENSE_COUNTER_ID = `expensecounter-${TAG}`;
 /** Deleted entries still to be marked "Deleted" on the Google Sheet. */

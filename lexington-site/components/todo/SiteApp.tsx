@@ -11,7 +11,8 @@ import type { SpendingData } from "@/lib/spending/shared";
 import type { OpenBill, SuppliersPage } from "@/lib/suppliers/shared";
 import type { BookLists } from "@/lib/quickbooks/books";
 import { opensRollcall } from "@/lib/rollcall/shared";
-import { needsReorder, type StoreData, type StoreItem } from "@/lib/store/shared";
+import type { StoreData, StoreItem } from "@/lib/store/shared";
+import { toBuyCount } from "@/lib/store/shopping";
 import { PAGE_SECTIONS, sectionHref, type PageSection, type TodoList, type TodoMe, type TodoTask } from "@/lib/todo/shared";
 import { AlertsApp } from "./AlertsApp";
 import { send, startPolling } from "./api";
@@ -208,7 +209,10 @@ export function SiteApp({
   const [section, setSection] = useState<View>(first);
   const [opened, setOpened] = useState<View[]>([first]);
   const [data, setData] = useState<SiteData>(initial);
-  const [reorders, setReorders] = useState(() => (initial.store ? initial.store.items.filter(needsReorder).length : 0));
+  // The store's badge: how many lines are on its shopping list.
+  const [reorders, setReorders] = useState(() => (initial.store ? toBuyCount(initial.store.items, initial.store.buys ?? []) : 0));
+  // The store's tab asked for (the home page's To buy tile, the back button to #buy; it reads #buy itself on opening).
+  const [storeAsk, setStoreAsk] = useState<{ tab: "buy"; at: number } | null>(null);
   const [unread, setUnread] = useState(() => initial.alerts?.unread ?? 0);
   const current = useRef(first);
   const scrollAt = useRef<Partial<Record<View, number>>>({});
@@ -251,7 +255,7 @@ export function SiteApp({
           const loaded = await load(s);
           if (!live) return;
           setData((d) => ({ ...loaded, ...d }));
-          if (loaded.store) setReorders(loaded.store.items.filter(needsReorder).length);
+          if (loaded.store) setReorders(toBuyCount(loaded.store.items, loaded.store.buys ?? []));
           if (loaded.alerts) setUnread(loaded.alerts.unread);
         } catch {
           /* it loads when opened instead */
@@ -294,6 +298,7 @@ export function SiteApp({
       if (s) go(s, false);
       const tab = s === "rollcall" ? rollcallTabOf(window.location.hash) : null;
       if (tab) setRcAsk({ tab, at: Date.now() });
+      if (s === "store" && window.location.hash === "#buy") setStoreAsk({ tab: "buy", at: Date.now() });
     };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
@@ -350,6 +355,7 @@ export function SiteApp({
               setRcAsk({ tab, at: Date.now() });
               go("rollcall");
             }}
+            onStoreTab={(tab) => setStoreAsk({ tab, at: Date.now() })}
             unread={unread}
           />
         </div>
@@ -376,6 +382,7 @@ export function SiteApp({
             initial={data.store ?? null}
             startedOffline={startedOffline && first === "store"}
             onReorders={setReorders}
+            ask={storeAsk}
             fresh={first === "store"}
           />
         </div>

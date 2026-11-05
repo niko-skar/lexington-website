@@ -9,14 +9,11 @@ import {
   MAX_ITEM_NAME,
   MAX_MOVE_NOTE,
   MAX_PERSON,
-  MAX_UNIT,
-  needsReorder,
   qtyUnit,
   stillOut,
   toolWord,
   TRADE_NAMES,
   UNDO_MINUTES,
-  UNITS,
   type CheckKind,
   type MoveKind,
   type StoreCheck,
@@ -31,21 +28,23 @@ import {
 import { photoAt, type TodoMe } from "@/lib/todo/shared";
 import { categoryOf, guessCategory, guessItemTrade, STORE_CATEGORIES, tradeOfItem, type StoreCategory } from "@/lib/store/categories";
 import type { StoreDouble } from "@/lib/store/doubles";
+import { buyListText, buyQty, gotLines, lineName, toBuyLines, type BuyLine, type StoreBuy } from "@/lib/store/shopping";
 import { AccessSheet } from "./AccessSheet";
 import { dayName, errorText, send, startPolling, when } from "./api";
 import { QtyPicker } from "./QtyPicker";
 import site from "./Site.module.css";
 import { SiteHeader, SiteMenu } from "./SiteChrome";
-import { CameraIcon, EntryPhoto, minutesSince, PhotoField, time, TradeChips, TradeFilter } from "./StoreBits";
+import { CameraIcon, EntryPhoto, minutesSince, PhotoField, time, TradeChips, TradeFilter, UnitPicker } from "./StoreBits";
 import { CheckSheet, CheckStrip, DaysSheet } from "./StoreChecks";
 import { RepairSheet, repairListText, ReportSheet } from "./StoreRepairs";
 import { DoubleAsk, findEntry, sameWords, TogetherSheet, useDoubleCheck, type ListEntry, type SameAnswer } from "./StoreDoubles";
+import { AddBuySheet, BuySheet, ShopButton, ShoppingTab } from "./StoreShopping";
 import { maybeDoubles, ToCheckSheet, toCheckOf } from "./StoreToCheck";
 import { EditToolSheet, isLate, NewToolSheet, outByTool, ReturnSheet, TakeOutSheet, ToolSheet, ToolsTab } from "./StoreTools";
 import styles from "./Todo.module.css";
 import { useUploadSlot } from "./useUploadSlot";
 
-type Tab = "stock" | "tools" | "reorder" | "history";
+type Tab = "stock" | "tools" | "buy" | "history";
 type Sheet =
   | { kind: "item"; id: string }
   | { kind: "move"; id: string; move: MoveKind }
@@ -61,7 +60,12 @@ type Sheet =
   | { kind: "report"; toolId: string }
   | { kind: "check"; check: CheckKind }
   | { kind: "days" }
-  | { kind: "together"; from: StoreDouble["kind"]; fromId: string; into: StoreDouble["kind"]; intoId: string };
+  | { kind: "together"; from: StoreDouble["kind"]; fromId: string; into: StoreDouble["kind"]; intoId: string }
+  // The shopping list: one line (a store item at its reorder point by the item's id, something added by its own),
+  // adding to it (more of a store item or a tool, from its page), changing what was added.
+  | { kind: "buy"; key: string }
+  | { kind: "addBuy"; itemId?: string; toolId?: string }
+  | { kind: "editBuy"; id: string };
 type ToastData = { text: string; tone?: "error"; onUndo?: () => void };
 
 const MOVE_TITLE: Record<MoveKind, string> = { out: "Take out", back: "Brought back", in: "Add stock", count: "Count" };
@@ -131,6 +135,7 @@ export function StoreApp({
   initial,
   startedOffline,
   onReorders,
+  ask,
   fresh,
 }: {
   me: TodoMe;
@@ -139,8 +144,10 @@ export function StoreApp({
   /** Null when the app opened on another part and the store hasn't arrived yet. */
   initial: StoreData | null;
   startedOffline: boolean;
-  /** How many items are on the reorder list (for the badge on the bar). */
+  /** How many lines are on the shopping list (for the badge on the bar). */
   onReorders: (count: number) => void;
+  /** A tab asked for from outside (the home page's To buy tile, the address's #buy). */
+  ask: { tab: "buy"; at: number } | null;
   /** The page came with this part's data just now (it's the part the app opened on). */
   fresh: boolean;
 }) {
@@ -151,6 +158,9 @@ export function StoreApp({
   const [toolOuts, setToolOuts] = useState<ToolOut[]>(initial?.toolOuts ?? []);
   const [repairs, setRepairs] = useState<ToolRepair[]>(initial?.repairs ?? []);
   const [checks, setChecks] = useState<StoreCheck[]>(initial?.checks ?? []);
+  const [buys, setBuys] = useState<StoreBuy[]>(initial?.buys ?? []);
+  // The shopping list's line being ticked (or put back) just now.
+  const [buyBusy, setBuyBusy] = useState<string | null>(null);
   // Opening and closing photos from before the month the page keeps fresh (asked for in the days list).
   const [olderChecks, setOlderChecks] = useState<StoreCheck[]>([]);
   const [olderState, setOlderState] = useState<"more" | "loading" | "end">("more");
@@ -161,7 +171,6 @@ export function StoreApp({
   const [cat, setCat] = useState<StoreCategory | "all">("all");
   const [trade, setTrade] = useState<Trade | "any">("any");
   const [showHidden, setShowHidden] = useState(false);
-  const [showDismissed, setShowDismissed] = useState(false);
   const [sheet, setSheet] = useState<Sheet | null>(null);
   const [offline, setOffline] = useState(startedOffline);
   const [signedOut, setSignedOut] = useState(false);
@@ -210,6 +219,7 @@ export function StoreApp({
       setToolOuts(data.toolOuts ?? []);
       setRepairs(data.repairs ?? []);
       setChecks(data.checks ?? []);
+      setBuys(data.buys ?? []);
     } catch {
       setOffline(true);
     } finally {
@@ -227,8 +237,31 @@ export function StoreApp({
     return startPolling(refresh, 10_000, 60_000);
   }, [active, refresh]);
 
-  const reorderCount = useMemo(() => items.filter(needsReorder).length, [items]);
-  useEffect(() => onReorders(reorderCount), [reorderCount, onReorders]);
+  // The shopping list: what's to buy (added, and the store's items at their reorder point), and what was got lately.
+  const lines = useMemo(() => toBuyLines(items, tools, buys), [items, tools, buys]);
+  const got = useMemo(() => gotLines(items, tools, buys), [items, tools, buys]);
+  useEffect(() => onReorders(lines.length), [lines.length, onReorders]);
+
+  // Opened on the list: the address's #buy (a phone alert, the home page's tile), or asked for by the app.
+  const hashRead = useRef(false);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (window.location.pathname.startsWith("/todo/store") && window.location.hash === "#buy") setTab("buy");
+      hashRead.current = true;
+    }, 0);
+    return () => clearTimeout(timer);
+  }, []);
+  useEffect(() => {
+    if (!ask) return;
+    const timer = setTimeout(() => setTab(ask.tab), 0);
+    return () => clearTimeout(timer);
+  }, [ask]);
+  // The address follows the list while the store is on screen (so the phone's reload stays on it).
+  useEffect(() => {
+    if (!active || !hashRead.current || !window.location.pathname.startsWith("/todo/store")) return;
+    const want = tab === "buy" ? "#buy" : "";
+    if (window.location.hash !== want) window.history.replaceState(null, "", `/todo/store${want}`);
+  }, [active, tab]);
 
   const applyItem = useCallback((item: StoreItem | null, entry?: StoreEntry, removed?: string) => {
     localAt.current = Date.now();
@@ -322,6 +355,15 @@ export function StoreApp({
     [applyOuts, applyTool, showToast, failed, undoReturn]
   );
 
+  /** A line of the shopping list as the server has it now (new or changed), or gone. */
+  const applyBuy = useCallback((buy: StoreBuy | null, removed?: string) => {
+    localAt.current = Date.now();
+    setBuys((list) => {
+      const kept = list.filter((b) => b.id !== removed && b.id !== buy?.id);
+      return buy ? [buy, ...kept] : kept;
+    });
+  }, []);
+
   const applyCheck = useCallback((check: StoreCheck | null, removed?: string) => {
     localAt.current = Date.now();
     const drop = (list: StoreCheck[]) => list.filter((c) => c.id !== removed && c.id !== check?.id);
@@ -407,6 +449,31 @@ export function StoreApp({
     [applyItem, showToast]
   );
 
+  /** Ticked at the shop (got), or not got after all (back on the list). Answers whether it saved. */
+  const setLineGot = useCallback(
+    async function save(target: { kind: "buy" | "reorder"; key: string; name: string }, isGot: boolean): Promise<boolean> {
+      setBuyBusy(target.key);
+      try {
+        if (target.kind === "buy") {
+          const { buy, item } = await send<{ buy: StoreBuy; item?: StoreItem }>(`/api/store/buys/${target.key}`, "PATCH", { action: isGot ? "got" : "back" });
+          applyBuy(buy);
+          if (item) applyItem(item);
+        } else {
+          const { item } = await send<{ item: StoreItem }>("/api/store/buys/reorder", "POST", { itemId: target.key, got: isGot });
+          applyItem(item);
+        }
+        showToast(isGot ? { text: `Got: ${target.name}`, onUndo: () => void save(target, false) } : { text: `${target.name}: back on the list` });
+        return true;
+      } catch (e) {
+        failed(e);
+        return false;
+      } finally {
+        setBuyBusy(null);
+      }
+    },
+    [applyBuy, applyItem, showToast, failed]
+  );
+
   /* ---------- what to show ---------- */
 
   const byId = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
@@ -421,7 +488,6 @@ export function StoreApp({
     for (const i of stocked) counts.set(tradeOfItem(i), (counts.get(tradeOfItem(i)) ?? 0) + 1);
     return counts;
   }, [stocked]);
-  const toReorder = useMemo(() => stocked.filter(needsReorder), [stocked]);
   const shownGroups = useMemo(() => byCategory(shown).filter(([c]) => cat === "all" || c === cat), [shown, cat]);
   const chips = useMemo(() => byCategory(stocked).map(([c, l]) => [c, l.length] as const), [stocked]);
   const dismissed = useMemo(() => stocked.filter((i) => atReorderPoint(i) && i.reorderDismissed), [stocked]);
@@ -474,16 +540,14 @@ export function StoreApp({
   const currentRepair = sheet?.kind === "repair" ? repairs.find((r) => r.id === sheet.id) : undefined;
   const reportTool = sheet?.kind === "report" ? toolById.get(sheet.toolId) : undefined;
   const repairBack = sheet?.kind === "repair" && sheet.back ? sheet.back : null;
+  // The shopping list's line open (it may have moved to "got" meanwhile), and what's being changed.
+  const buyLine = sheet?.kind === "buy" ? (lines.find((l) => l.key === sheet.key) ?? got.find((l) => l.key === sheet.key) ?? null) : null;
+  const editBuy = sheet?.kind === "editBuy" ? (buys.find((b) => b.id === sheet.id) ?? null) : null;
+  /** The shopping list's line for a store item or a tool, if it's on it. */
+  const lineFor = (kind: "item" | "tool", id: string): BuyLine | undefined =>
+    lines.find((l) => (kind === "item" ? l.item?.id === id : l.kind === "buy" && l.buy.toolId === id));
 
-  const orderText = () =>
-    [
-      `Lexington site: to order (${new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short" })})`,
-      ...byCategory(toReorder).flatMap(([c, list]) => [
-        "",
-        `*${c}*`,
-        ...list.map((i) => `• ${i.name}: ${i.reorderQty ? qtyUnit(i.reorderQty, i.unit) : "how many?"} (${qtyUnit(Math.max(0, i.level), i.unit)} left)`),
-      ]),
-    ].join("\n");
+  const orderText = () => buyListText(lines);
   const copyRepairs = async () => {
     try {
       await navigator.clipboard.writeText(repairListText(repairs, toolName));
@@ -495,7 +559,7 @@ export function StoreApp({
   const copyOrder = async () => {
     try {
       await navigator.clipboard.writeText(orderText());
-      showToast({ text: "Order list copied: paste it in WhatsApp" });
+      showToast({ text: "Shopping list copied: paste it in WhatsApp" });
     } catch {
       showToast({ text: "Couldn't copy here. Long-press the list instead.", tone: "error" });
     }
@@ -531,7 +595,7 @@ export function StoreApp({
     <>
       <SiteHeader
         title="Store room"
-        sub={`${stocked.length} item${stocked.length === 1 ? "" : "s"} · ${toReorder.length} to reorder${toolsOut ? ` · ${toolsOut} ${toolWord(toolsOut)} out` : ""}`}
+        sub={`${stocked.length} item${stocked.length === 1 ? "" : "s"} · ${lines.length} to buy${toolsOut ? ` · ${toolsOut} ${toolWord(toolsOut)} out` : ""}`}
         onMenu={() => setMenuOpen(true)}
       >
         <div className={`${styles.tabs} ${styles.tabs4}`} role="tablist">
@@ -546,9 +610,9 @@ export function StoreApp({
               </span>
             )}
           </button>
-          <button type="button" role="tab" aria-selected={tab === "reorder"} className={tab === "reorder" ? styles.tabOn : styles.tab} onClick={() => setTab("reorder")}>
-            Reorder
-            {toReorder.length > 0 && <span className={styles.tabCount}>{toReorder.length}</span>}
+          <button type="button" role="tab" aria-selected={tab === "buy"} className={tab === "buy" ? styles.tabOn : styles.tab} onClick={() => setTab("buy")}>
+            To buy
+            {lines.length > 0 && <span className={styles.tabCount}>{lines.length}</span>}
           </button>
           <button type="button" role="tab" aria-selected={tab === "history"} className={tab === "history" ? styles.tabOn : styles.tab} onClick={() => setTab("history")}>
             Moved
@@ -656,84 +720,21 @@ export function StoreApp({
           </>
         )}
 
-        {loaded && tab === "reorder" && (
-          <>
-            {toReorder.length === 0 ? (
-              <p className={styles.empty}>
-                Nothing to reorder. Items come here when they&rsquo;re down to their reorder point
-                {isAdmin ? ": set one on the item (tap it, then Change)." : "."}
-              </p>
-            ) : (
-              <>
-                <button type="button" className={site.copyList} onClick={() => void copyOrder()}>
-                  Copy the order list for WhatsApp
-                </button>
-                {byCategory(toReorder).flatMap(([c, list]) => [
-                  <h2 key={c} className={styles.groupTitle}>
-                    {c} <span>{list.length}</span>
-                  </h2>,
-                  ...list.map((item) => (
-                  <article key={item.id} className={`${site.reorderCard} ${item.level <= 0 ? site.reorderCardOut : ""}`}>
-                    <div className={site.reorderTop}>
-                      {item.photoUrl && (
-                        // eslint-disable-next-line @next/next/no-img-element -- a resized copy from the image store
-                        <img className={site.itemThumb} src={photoAt(item.photoUrl, 120)} alt="" loading="lazy" />
-                      )}
-                      <button type="button" className={site.reorderName} onClick={() => setSheet({ kind: "item", id: item.id })}>
-                        {item.name}
-                      </button>
-                      <span className={item.level <= 0 ? site.levelBad : site.levelLow}>
-                        {fmtQty(item.level)} <small>{item.unit}</small>
-                      </span>
-                    </div>
-                    <p className={site.reorderLine}>
-                      {item.level <= 0 ? "None left" : `${qtyUnit(item.level, item.unit)} left`} · reorder at {qtyUnit(item.low ?? 0, item.unit)}
-                    </p>
-                    <p className={site.reorderOrder}>{item.reorderQty ? `Order ${qtyUnit(item.reorderQty, item.unit)}` : "Order quantity not set"}</p>
-                    {isAdmin && (
-                      <div className={site.reorderButtons}>
-                        <button type="button" onClick={() => void changeItem(item, { reorderDismissed: true }, `${item.name}: no reorder this time`)}>
-                          No need to reorder
-                        </button>
-                        <button type="button" onClick={() => setSheet({ kind: "edit", id: item.id })}>
-                          Change
-                        </button>
-                      </div>
-                    )}
-                  </article>
-                  )),
-                ])}
-              </>
-            )}
-            {dismissed.length > 0 && (
-              <section className={styles.group}>
-                <button type="button" className={styles.linkButton} onClick={() => setShowDismissed(!showDismissed)}>
-                  {showDismissed ? "Hide" : "Show"} {dismissed.length} marked &ldquo;no need to reorder&rdquo;
-                </button>
-                {showDismissed &&
-                  dismissed.map((item) => (
-                    <article key={item.id} className={site.reorderCard}>
-                      <div className={site.reorderTop}>
-                        <button type="button" className={site.reorderName} onClick={() => setSheet({ kind: "item", id: item.id })}>
-                          {item.name}
-                        </button>
-                        <span className={site.levelLow}>
-                          {fmtQty(item.level)} <small>{item.unit}</small>
-                        </span>
-                      </div>
-                      <p className={site.reorderLine}>Comes back by itself once it&rsquo;s restocked and runs low again.</p>
-                      {isAdmin && (
-                        <div className={site.reorderButtons}>
-                          <button type="button" onClick={() => void changeItem(item, { reorderDismissed: false }, `${item.name} is back on the reorder list`)}>
-                            Put back on the list
-                          </button>
-                        </div>
-                      )}
-                    </article>
-                  ))}
-              </section>
-            )}
-          </>
+        {loaded && tab === "buy" && (
+          <ShoppingTab
+            me={me}
+            lines={lines}
+            got={got}
+            dismissed={dismissed}
+            busy={buyBusy}
+            onAdd={() => setSheet({ kind: "addBuy" })}
+            onCopy={() => void copyOrder()}
+            onOpen={(key) => setSheet({ kind: "buy", key })}
+            onGot={(line) => void setLineGot({ kind: line.kind, key: line.key, name: lineName(line) }, true)}
+            onBack={(line) => void setLineGot({ kind: line.kind, key: line.key, name: lineName(line) }, false)}
+            onOpenItem={(id) => setSheet({ kind: "item", id })}
+            onUndismiss={(item) => void changeItem(item, { reorderDismissed: false }, `${item.name} is back on the list`)}
+          />
         )}
 
         {loaded &&
@@ -781,6 +782,11 @@ export function StoreApp({
             showToast({ text: "Photo saved" });
           }}
           onOpenPhoto={setLightbox}
+          shopLine={lineFor("item", current.id)}
+          onShop={() => {
+            const line = lineFor("item", current.id);
+            setSheet(line ? { kind: "buy", key: line.key } : { kind: "addBuy", itemId: current.id });
+          }}
         />
       )}
       {sheet?.kind === "move" && current && (
@@ -858,6 +864,11 @@ export function StoreApp({
           onOpenPhoto={setLightbox}
           onUndoOut={(out) => void undoOut(out)}
           onUndoReturn={(out, key) => void undoReturn(out, key)}
+          shopLine={lineFor("tool", currentTool.id)}
+          onShop={() => {
+            const line = lineFor("tool", currentTool.id);
+            setSheet(line ? { kind: "buy", key: line.key } : { kind: "addBuy", toolId: currentTool.id });
+          }}
         />
       )}
       {sheet?.kind === "takeOut" && (
@@ -1014,17 +1025,67 @@ export function StoreApp({
             if (kept.type === "item") {
               setItems((list) => list.filter((i) => i.id !== fromId));
               setHistory((list) => list.map((e) => (e.itemId === fromId ? { ...e, itemId: kept.item.id } : e)));
+              setBuys((list) => list.map((b) => (b.itemId === fromId ? { ...b, itemId: kept.item.id } : b)));
               applyItem(kept.item);
             } else {
               setTools((list) => list.filter((t) => t.id !== fromId));
               setToolOuts((list) => list.map((o) => (o.toolId === fromId ? { ...o, toolId: kept.tool.id } : o)));
               setRepairs((list) => list.map((r) => (r.toolId === fromId ? { ...r, toolId: kept.tool.id } : r)));
+              setBuys((list) => list.map((b) => (b.toolId === fromId ? { ...b, toolId: kept.tool.id } : b)));
               applyTool(kept.tool);
             }
             setSheet({ kind: "toCheck" });
             showToast({ text: `Put together: ${kept.type === "item" ? `${kept.item.name}, ${qtyUnit(kept.item.level, kept.item.unit)}` : `${kept.tool.name}, ${kept.tool.count}`}` });
             void refresh();
           }}
+        />
+      )}
+      {buyLine && (
+        <BuySheet
+          key={buyLine.key}
+          me={me}
+          line={buyLine}
+          busy={buyBusy === buyLine.key}
+          onClose={() => setSheet(null)}
+          onGot={async () => {
+            if (await setLineGot({ kind: buyLine.kind, key: buyLine.key, name: lineName(buyLine) }, true)) setSheet(null);
+          }}
+          onBack={() => void setLineGot({ kind: buyLine.kind, key: buyLine.key, name: lineName(buyLine) }, false)}
+          onChange={() => setSheet({ kind: "editBuy", id: buyLine.key })}
+          onDeleted={(id) => {
+            applyBuy(null, id);
+            setSheet(null);
+            showToast({ text: `Taken off the list: ${lineName(buyLine)}` });
+          }}
+          onDismiss={(item) => {
+            setSheet(null);
+            void changeItem(item, { reorderDismissed: true }, `${item.name}: no reorder this time`);
+          }}
+          onEditItem={(id) => setSheet({ kind: "edit", id })}
+          onOpenItem={(id) => setSheet({ kind: "item", id })}
+          onOpenTool={(toolId) => setSheet({ kind: "tool", toolId })}
+          onOpenPhoto={setLightbox}
+        />
+      )}
+      {(sheet?.kind === "addBuy" || editBuy) && (
+        <AddBuySheet
+          key={editBuy ? editBuy.id : "new"}
+          me={me}
+          items={items}
+          tools={tools}
+          lines={lines}
+          editing={editBuy ?? undefined}
+          firstItem={sheet?.kind === "addBuy" && sheet.itemId ? byId.get(sheet.itemId) : undefined}
+          firstTool={sheet?.kind === "addBuy" && sheet.toolId ? toolById.get(sheet.toolId) : undefined}
+          onClose={() => setSheet(editBuy ? { kind: "buy", key: editBuy.id } : null)}
+          onSaved={(buy) => {
+            applyBuy(buy);
+            setSheet(null);
+            setTab("buy");
+            const qty = buyQty(buy.qty, buy.unit);
+            showToast({ text: editBuy ? `Saved: ${buy.name}` : `On the list: ${qty ? `${qty} ` : ""}${buy.name}` });
+          }}
+          onOpenLine={(key) => setSheet({ kind: "buy", key })}
         />
       )}
       {sheet?.kind === "check" && (
@@ -1106,6 +1167,8 @@ function ItemSheet({
   onUndo,
   onPhoto,
   onOpenPhoto,
+  shopLine,
+  onShop,
 }: {
   item: StoreItem;
   me: TodoMe;
@@ -1117,6 +1180,10 @@ function ItemSheet({
   onUndo: (id: string) => Promise<void>;
   onPhoto: (item: StoreItem) => void;
   onOpenPhoto: (url: string) => void;
+  /** Its line on the shopping list, if it's on it. */
+  shopLine: BuyLine | undefined;
+  /** Onto the shopping list (or its line there). */
+  onShop: () => void;
 }) {
   const isAdmin = me.kind === "admin";
   const [full, setFull] = useState<StoreEntry[] | null>(null);
@@ -1249,6 +1316,7 @@ function ItemSheet({
             </button>
           )}
         </div>
+        <ShopButton line={shopLine} onShop={onShop} />
 
         <p className={styles.label}>What moved</p>
         {error && <p className={styles.sheetError}>{error}</p>}
@@ -1481,31 +1549,6 @@ function MoveSheet({
 }
 
 /* ---------- something new on the shelves ---------- */
-
-function UnitPicker({ value, onChange, id }: { value: string; onChange: (unit: string) => void; id: string }) {
-  const custom = !(UNITS as readonly string[]).includes(value);
-  return (
-    <>
-      <div className={styles.chips}>
-        {UNITS.map((u) => (
-          <button key={u} type="button" className={value === u ? styles.chipOn : styles.chip} aria-pressed={value === u} onClick={() => onChange(u)}>
-            {u}
-          </button>
-        ))}
-      </div>
-      <input
-        id={id}
-        className={styles.input}
-        value={custom ? value : ""}
-        onChange={(e) => onChange(e.target.value.toLowerCase())}
-        maxLength={MAX_UNIT}
-        autoComplete="off"
-        placeholder="Or type one, e.g. bundles"
-        aria-label="Another unit"
-      />
-    </>
-  );
-}
 
 function NewItemSheet({
   items,

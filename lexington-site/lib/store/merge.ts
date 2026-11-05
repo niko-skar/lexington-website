@@ -102,13 +102,14 @@ export async function putTogether(me: TodoMe, body: Record<string, unknown>): Pr
 async function putItems(me: TodoMe, fromId: string, intoId: string, keepFrom: boolean, countValue: unknown): Promise<{ item: StoreItem }> {
   const client = getBuyersClient();
   type Doc = { name: string; aliases?: string[]; unit?: string; photo?: string };
-  const found = await client.fetch<{ from: Doc | null; into: Doc | null; moves: string[]; bought: string[]; boughtMore: string[] }>(
+  const found = await client.fetch<{ from: Doc | null; into: Doc | null; moves: string[]; bought: string[]; boughtMore: string[]; buys: string[] }>(
     `{
       "from": *[_id == $from && _type == "storeItem"][0]{ name, aliases, unit, "photo": photo.asset._ref },
       "into": *[_id == $into && _type == "storeItem"][0]{ name, aliases, unit, "photo": photo.asset._ref },
       "moves": *[_type == "storeMove" && itemId == $from]._id,
       "bought": *[_type == "siteExpense" && itemId == $from]._id,
-      "boughtMore": *[_type == "siteExpense" && $from in moreLines[].itemId]._id
+      "boughtMore": *[_type == "siteExpense" && $from in moreLines[].itemId]._id,
+      "buys": *[_type == "storeBuy" && itemId == $from]._id
     }`,
     { from: fromId, into: intoId }
   );
@@ -129,6 +130,8 @@ async function putItems(me: TodoMe, fromId: string, intoId: string, keepFrom: bo
   for (const id of found.bought) tx.patch(id, (p) => p.set({ itemId: intoId }));
   const line = `moreLines[itemId == "${fromId}"]`;
   for (const id of found.boughtMore) tx.patch(id, (p) => p.set({ [`${line}.itemId`]: intoId }));
+  // On the shopping list as more of it: more of the one kept.
+  for (const id of found.buys) tx.patch(id, (p) => p.set({ itemId: intoId }));
   tx.patch(intoId, (p) =>
     p.set({ name, aliases: [...aliases], ...(!found.into!.photo && found.from!.photo ? { photo: photoRef(found.from!.photo) } : {}) }).unset(["review"])
   );
@@ -148,12 +151,13 @@ async function putItems(me: TodoMe, fromId: string, intoId: string, keepFrom: bo
 async function putTools(me: TodoMe, fromId: string, intoId: string, keepFrom: boolean, countValue: unknown): Promise<{ tool: StoreTool }> {
   const client = getBuyersClient();
   type Doc = { name: string; count?: number; condition?: string; photo?: string };
-  const found = await client.fetch<{ from: Doc | null; into: Doc | null; outs: string[]; repairs: string[] }>(
+  const found = await client.fetch<{ from: Doc | null; into: Doc | null; outs: string[]; repairs: string[]; buys: string[] }>(
     `{
       "from": *[_id == $from && _type == "storeTool"][0]{ name, count, condition, "photo": photo.asset._ref },
       "into": *[_id == $into && _type == "storeTool"][0]{ name, count, condition, "photo": photo.asset._ref },
       "outs": *[_type == "toolOut" && toolId == $from]._id,
-      "repairs": *[_type == "toolRepair" && toolId == $from]._id
+      "repairs": *[_type == "toolRepair" && toolId == $from]._id,
+      "buys": *[_type == "storeBuy" && toolId == $from]._id
     }`,
     { from: fromId, into: intoId }
   );
@@ -170,6 +174,7 @@ async function putTools(me: TodoMe, fromId: string, intoId: string, keepFrom: bo
   const tx = client.transaction();
   for (const id of found.outs) tx.patch(id, (p) => p.set({ toolId: intoId }));
   for (const id of found.repairs) tx.patch(id, (p) => p.set({ toolId: intoId }));
+  for (const id of found.buys) tx.patch(id, (p) => p.set({ toolId: intoId }));
   tx.patch(intoId, (p) =>
     p
       .set({

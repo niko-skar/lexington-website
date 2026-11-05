@@ -19,7 +19,7 @@ export default async function StorePage() {
   if (!me) return <TodoSignIn next="/todo/store" />;
   if (!me.sections.includes("store")) redirect("/todo");
 
-  let store: StoreData = { items: [], history: [], tools: [], toolOuts: [], repairs: [], checks: [] };
+  let store: StoreData = { items: [], history: [], tools: [], toolOuts: [], repairs: [], checks: [], buys: [] };
   let failed = false;
   try {
     store = await getStore(me);

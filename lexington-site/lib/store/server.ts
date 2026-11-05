@@ -2,7 +2,7 @@ import "server-only";
 
 import { FLOORS } from "@/lib/expenses/shared";
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
-import { CHECK_PREFIX, EXPENSE_PREFIX, isId, ITEM_PREFIX, MOVE_PREFIX, newId, TOOL_OUT_PREFIX, TOOL_PREFIX, TOOL_REPAIR_PREFIX } from "@/lib/site/ids";
+import { BUY_PREFIX, CHECK_PREFIX, EXPENSE_PREFIX, isId, ITEM_PREFIX, MOVE_PREFIX, newId, TOOL_OUT_PREFIX, TOOL_PREFIX, TOOL_REPAIR_PREFIX } from "@/lib/site/ids";
 import { cleanPhotoRef, cleanText, dropPhoto, photoRef, TodoError } from "@/lib/todo/server";
 import type { TodoMe } from "@/lib/todo/shared";
 import { guessCategory, guessItemTrade, isStoreCategory, type StoreCategory } from "./categories";
@@ -22,6 +22,8 @@ import {
   type StoreTool,
   type Trade,
 } from "./shared";
+import { GOT_DAYS } from "./shopping";
+import { BUY_FIELDS, toBuy, type RawBuy } from "./shoppingServer";
 import { OUT_FIELDS, REPAIR_FIELDS, REVIEW_FIELDS, TOOL_FIELDS, toOut, toRepair, type RawOut, type RawRepair } from "./tools";
 
 // The stock is never stored: it is always added up from what moved, so correcting or deleting a
@@ -44,6 +46,7 @@ const ITEM_FIELDS = `{
   "low": low,
   "reorderQty": reorderQty,
   "reorderDismissed": coalesce(reorderDismissed, false),
+  "reorderGot": reorderGot{ at, by },
   "photoUrl": photo.asset->url,
   "category": category,
   "trade": trade,
@@ -106,15 +109,18 @@ function history(me: TodoMe, moves: RawMove[], bought: RawMove[], moveCap: numbe
     .map((e) => toEntry(me, e));
 }
 
-/** "No need to reorder" lasts until the item is restocked above its reorder point. */
+/** "No need to reorder", and "got" on the shopping list, last until the item is restocked above its reorder point. */
 async function clearStaleDismissals(items: StoreItem[]): Promise<void> {
-  const stale = items.filter((i) => i.reorderDismissed && (i.low === null || i.level > i.low));
+  const stale = items.filter((i) => (i.reorderDismissed || i.reorderGot) && (i.low === null || i.level > i.low));
   if (!stale.length) return;
   const tx = getBuyersClient().transaction();
-  for (const i of stale) tx.patch(i.id, (p) => p.set({ reorderDismissed: false }));
+  for (const i of stale) tx.patch(i.id, (p) => p.set({ reorderDismissed: false }).unset(["reorderGot"]));
   try {
     await tx.commit();
-    for (const i of stale) i.reorderDismissed = false;
+    for (const i of stale) {
+      i.reorderDismissed = false;
+      i.reorderGot = null;
+    }
   } catch (error) {
     console.error("[store] clearing reorder dismissals failed:", error instanceof Error ? error.message : error);
   }
@@ -138,9 +144,11 @@ export async function getStore(me: TodoMe): Promise<StoreData> {
     outsDone: RawOut[];
     repairs: RawRepair[];
     checks: RawCheck[];
+    buys: RawBuy[];
   }>(
     `{
       "items": *[_type == "storeItem" && string::startsWith(_id, $itemPrefix)] | order(lower(name) asc) ${ITEM_FIELDS},
+      "buys": *[_type == "storeBuy" && string::startsWith(_id, $buyPrefix) && (!defined(gotAt) || gotAt >= $gotSince)] | order(at desc)[0...300] ${BUY_FIELDS},
       "moves": *[_type == "storeMove" && string::startsWith(_id, $movePrefix)] | order(at desc)[0...200] ${MOVE_FIELDS},
       "bought": *[_type == "siteExpense" && string::startsWith(_id, $expensePrefix) && toStore == true && defined(itemId)] | order(createdAt desc)[0...100] ${BOUGHT_FIELDS},
       "boughtMore": *[_type == "siteExpense" && string::startsWith(_id, $expensePrefix) && count(moreLines[toStore == true]) > 0] | order(createdAt desc)[0...100] ${MORE_BOUGHT_FIELDS},
@@ -156,6 +164,8 @@ export async function getStore(me: TodoMe): Promise<StoreData> {
       outPrefix: TOOL_OUT_PREFIX,
       repairPrefix: TOOL_REPAIR_PREFIX,
       checkPrefix: CHECK_PREFIX,
+      buyPrefix: BUY_PREFIX,
+      gotSince: new Date(Date.now() - GOT_DAYS * day).toISOString(),
       weekAgo: new Date(Date.now() - 8 * day).toISOString(),
       monthAgo: new Date(Date.now() - 31 * day).toISOString(),
     }
@@ -181,6 +191,7 @@ export async function getStore(me: TodoMe): Promise<StoreData> {
     toolOuts: outs.sort((a, b) => b.at.localeCompare(a.at)).map((o) => toOut(me, o)),
     repairs: data.repairs.map((r) => toRepair(me, r)),
     checks: data.checks.map((c) => toCheck(me, c)),
+    buys: data.buys.map((b) => toBuy(me, b)),
   };
 }
 

@@ -26,12 +26,14 @@ import {
   type ToolReturn,
   type Trade,
 } from "@/lib/store/shared";
+import type { BuyLine } from "@/lib/store/shopping";
 import { photoAt, type TodoMe } from "@/lib/todo/shared";
 import { errorText, send } from "./api";
 import site from "./Site.module.css";
 import { CameraIcon, ConditionChips, dayLabel, EntryPhoto, ghanaTime, minutesSince, PhotoField, Stepper, TradeChips, TradeFilter } from "./StoreBits";
 import { DoubleAsk, findEntry, useDoubleCheck, type SameAnswer } from "./StoreDoubles";
 import { RepairsSection } from "./StoreRepairs";
+import { ShopButton } from "./StoreShopping";
 import styles from "./Todo.module.css";
 import { useUploadSlot } from "./useUploadSlot";
 
@@ -391,6 +393,8 @@ export function ToolSheet({
   onOpenPhoto,
   onUndoOut,
   onUndoReturn,
+  shopLine,
+  onShop,
 }: {
   tool: StoreTool;
   me: TodoMe;
@@ -411,6 +415,10 @@ export function ToolSheet({
   onOpenPhoto: (url: string) => void;
   onUndoOut: (out: ToolOut) => void;
   onUndoReturn: (out: ToolOut, key: string) => void;
+  /** Its line on the shopping list, if it's on it. */
+  shopLine: BuyLine | undefined;
+  /** Onto the shopping list (or its line there): more of it, or one to replace a broken one. */
+  onShop: () => void;
 }) {
   const isAdmin = me.kind === "admin";
   const [older, setOlder] = useState<ToolOut[] | null>(null);
@@ -550,6 +558,7 @@ export function ToolSheet({
         <button type="button" className={site.bigAction} onClick={onTakeOut} disabled={tool.retired}>
           Take out
         </button>
+        {!tool.retired && <ShopButton line={shopLine} onShop={onShop} />}
 
         {open.length > 0 && (
           <>

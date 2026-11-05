@@ -6,6 +6,7 @@
 // optional reorder quantity, and a reorder list the office can dismiss items from.
 
 import type { StoreDouble } from "./doubles";
+import type { StoreBuy } from "./shopping";
 
 export const MAX_ITEM_NAME = 60;
 export const MAX_UNIT = 20;
@@ -52,6 +53,8 @@ export interface StoreItem {
   reorderQty: number | null;
   /** The office said no need to reorder this time; cleared by itself once it's restocked. */
   reorderDismissed: boolean;
+  /** Ticked as bought on the shopping list while at its reorder point; cleared by itself once it's restocked. */
+  reorderGot?: { at: string; by: string } | null;
   /** A photo of the stock as it is (anyone using the store can add one). */
   photoUrl: string | null;
   /** Its category (lib/store/categories.ts), or null: then it goes by its name. */
@@ -114,8 +117,8 @@ export const qtyUnit = (n: number, unit: string) => `${fmtQty(n)} ${Math.abs(n) 
 
 /** Down to its reorder point (and still kept in the store). */
 export const atReorderPoint = (item: StoreItem) => item.stocked && item.low !== null && item.level <= item.low;
-/** On the reorder list: at its reorder point and not dismissed by the office. */
-export const needsReorder = (item: StoreItem) => atReorderPoint(item) && !item.reorderDismissed;
+/** On the shopping list: at its reorder point, not dismissed by the office, not bought already (lib/store/shopping.ts). */
+export const needsReorder = (item: StoreItem) => atReorderPoint(item) && !item.reorderDismissed && !item.reorderGot;
 
 /** Items people can undo for a short while after recording (a wrong tap). */
 export const UNDO_MINUTES = 15;
@@ -268,5 +271,5 @@ export interface StoreCheck {
   mine: boolean;
 }
 
-/** The whole store room as the page gets it. */
-export type StoreData = { items: StoreItem[]; history: StoreEntry[]; tools: StoreTool[]; toolOuts: ToolOut[]; repairs: ToolRepair[]; checks: StoreCheck[] };
+/** The whole store room as the page gets it. buys: what's been added to the shopping list (to buy, and got lately). */
+export type StoreData = { items: StoreItem[]; history: StoreEntry[]; tools: StoreTool[]; toolOuts: ToolOut[]; repairs: ToolRepair[]; checks: StoreCheck[]; buys: StoreBuy[] };

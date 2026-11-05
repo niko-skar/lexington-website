@@ -1,6 +1,6 @@
 "use client";
 
-import { CONDITION_NAMES, CONDITIONS, ghanaDay, needsFixing, TRADE_NAMES, TRADES, type Condition, type Trade } from "@/lib/store/shared";
+import { CONDITION_NAMES, CONDITIONS, ghanaDay, MAX_UNIT, needsFixing, TRADE_NAMES, TRADES, UNITS, type Condition, type Trade } from "@/lib/store/shared";
 import { photoAt } from "@/lib/todo/shared";
 import site from "./Site.module.css";
 import styles from "./Todo.module.css";
@@ -201,5 +201,31 @@ export function Stepper({ value, min = 1, max, onChange, label }: { value: numbe
         +
       </button>
     </span>
+  );
+}
+
+/** The units as buttons, or another one typed (a new item, something on the shopping list). */
+export function UnitPicker({ value, onChange, id }: { value: string; onChange: (unit: string) => void; id: string }) {
+  const custom = !(UNITS as readonly string[]).includes(value);
+  return (
+    <>
+      <div className={styles.chips}>
+        {UNITS.map((u) => (
+          <button key={u} type="button" className={value === u ? styles.chipOn : styles.chip} aria-pressed={value === u} onClick={() => onChange(u)}>
+            {u}
+          </button>
+        ))}
+      </div>
+      <input
+        id={id}
+        className={styles.input}
+        value={custom ? value : ""}
+        onChange={(e) => onChange(e.target.value.toLowerCase())}
+        maxLength={MAX_UNIT}
+        autoComplete="off"
+        placeholder="Or type one, e.g. bundles"
+        aria-label="Another unit"
+      />
+    </>
   );
 }

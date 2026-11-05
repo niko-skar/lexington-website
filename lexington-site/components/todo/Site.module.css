@@ -1792,3 +1792,233 @@
   border-color: var(--x-amber);
   box-shadow: inset 4px 0 0 var(--x-amber);
 }
+
+/* ---------- store: the shopping list (5 Nov 2026) ---------- */
+/* Ticked off at the hardware store: a round tick on the left of each line, how many on the right. */
+.buyBar {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+.buyCopy {
+  min-height: 48px;
+  padding: 0 14px;
+  border: 1px solid var(--x-line);
+  border-radius: 8px;
+  background: var(--x-surface);
+  color: var(--x-ink);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.buySummary {
+  margin: 8px 0 0;
+  font-size: 14px;
+  color: var(--x-muted);
+}
+.buyList {
+  display: grid;
+  overflow: hidden;
+  border: 1px solid var(--x-line);
+  border-radius: 10px;
+  background: var(--x-surface);
+}
+.buyRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 64px;
+  padding-left: 8px;
+  border-top: 1px solid var(--x-line);
+}
+.buyRow:first-child {
+  border-top: 0;
+}
+.buyRowBusy {
+  opacity: 0.5;
+}
+.buyTick,
+.buyTickOn {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--x-on-color);
+}
+.buyTick::before {
+  content: "";
+  width: 28px;
+  height: 28px;
+  border: 2px solid var(--x-muted);
+  border-radius: 50%;
+}
+.buyTickOn svg {
+  width: 28px;
+  height: 28px;
+  padding: 5px;
+  border-radius: 50%;
+  background: var(--x-ok);
+}
+.buyMain {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  min-height: 64px;
+  padding: 8px 14px 8px 4px;
+  border: 0;
+  background: transparent;
+  color: var(--x-ink);
+  text-align: left;
+}
+.buyText {
+  flex: 1;
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.buyText small {
+  font-size: 13px;
+  color: var(--x-muted);
+  overflow-wrap: anywhere;
+}
+.buyText small.flagBad {
+  color: var(--x-warn);
+  font-weight: 600;
+}
+.buyName {
+  font-size: 17px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.buyToday {
+  display: inline-block;
+  justify-self: start;
+  margin-right: 6px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--x-warn);
+  color: var(--x-on-color);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  vertical-align: 2px;
+}
+.buyThumb {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+  object-fit: cover;
+  background: var(--x-bg);
+}
+.buyQty,
+.buyQtyNone,
+.buyQtyGot {
+  flex: none;
+  max-width: 40%;
+  text-align: right;
+  font-family: var(--x-num);
+  font-size: 18px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.buyQtyNone {
+  font-family: var(--x-body);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--x-amber);
+}
+.buyQtyGot {
+  font-size: 15px;
+  color: var(--x-muted);
+}
+.buyRowGot .buyName {
+  color: var(--x-muted);
+  text-decoration: line-through;
+}
+.buyNote {
+  margin: 6px 0 0;
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+/* Adding: what's in the store already that it could be more of. */
+.buyMatches {
+  display: grid;
+  gap: 6px;
+}
+.buyMatches p {
+  margin: 0;
+}
+.buyMatch {
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--x-line);
+  border-radius: 8px;
+  background: var(--x-bg);
+  color: var(--x-ink);
+  text-align: left;
+}
+.buyMatch span {
+  font-size: 13px;
+  color: var(--x-muted);
+}
+.buyLinked {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--x-bg);
+  font-size: 14px;
+}
+.buyLinked button {
+  margin-left: 8px;
+}
+.bigActionQuiet {
+  min-height: 52px;
+  border: 1px solid var(--x-line);
+  border-radius: 8px;
+  background: var(--x-bg);
+  color: var(--x-ink);
+  font-size: 16px;
+  font-weight: 600;
+}
+/* "+ Add to the shopping list" on an item's or a tool's page. */
+.shopButton,
+.shopButtonOn {
+  min-height: 48px;
+  border-radius: 8px;
+  font-weight: 600;
+}
+.shopButton {
+  border: 1px dashed var(--x-accent);
+  background: transparent;
+  color: var(--x-accent);
+}
+.shopButtonOn {
+  border: 0;
+  background: var(--x-ok-soft);
+  color: var(--x-ok);
+}
+@media (min-width: 1280px) {
+  .buyList {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .buyRow:nth-child(2) {
+    border-top: 0;
+  }
+  .buyRow:nth-child(odd) {
+    border-right: 1px solid var(--x-line);
+  }
+}
+@media (hover: hover) and (pointer: fine) {
+  .buyMain:hover {
+    background: var(--x-bg);
+  }
+}

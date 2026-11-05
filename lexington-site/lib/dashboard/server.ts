@@ -9,7 +9,8 @@ import { getBuyersClient } from "@/lib/sanity/buyersClient";
 import { BANK_TEXT_PREFIX, BILL_PREFIX, EXPENSE_PREFIX, QBO_HISTORY_ID, QBO_TXN_MONTH_PREFIX, ROLLCALL_PREFIX } from "@/lib/site/ids";
 import { steelData } from "@/lib/steel/server";
 import { getStore } from "@/lib/store/server";
-import { ghanaDay, needsReorder, stillOut } from "@/lib/store/shared";
+import { ghanaDay, stillOut } from "@/lib/store/shared";
+import { lineName, toBuyLines } from "@/lib/store/shopping";
 import { suppliersOwed } from "@/lib/suppliers/server";
 import { listTasks } from "@/lib/todo/server";
 import type { TodoMe } from "@/lib/todo/shared";
@@ -27,7 +28,8 @@ export interface DashboardData {
   today: string;
   /** The site list's jobs (the to-do opens on it); the office's house list counted apart. */
   todo?: { open: number; urgent: number; doneToday: number; house: number };
-  store?: { reorders: number; toolsOut: number; opened: string | null; closed: string | null; toCheck?: number; toFix: number; atRepairer: number };
+  /** The store room; and its shopping list (its own tile): how many lines to buy, how many needed today, the first few. */
+  store?: { toolsOut: number; opened: string | null; closed: string | null; toCheck?: number; toFix: number; atRepairer: number; toBuy: number; buyToday: number; buyNames: string[] };
   /** Spent on site this month, and the bank's debits waiting to be completed. */
   expenses?: { monthOut: number; monthCount: number; fromBank: number };
   alerts?: { unread: number };
@@ -78,8 +80,11 @@ async function storePart(me: TodoMe, today: string) {
   const store = await getStore(me);
   const checksToday = store.checks.filter((c) => ghanaDay(c.at) === today);
   const at = (kind: string) => checksToday.filter((c) => c.kind === kind).sort((a, b) => a.at.localeCompare(b.at))[0]?.at ?? null;
+  const toBuy = toBuyLines(store.items, store.tools, store.buys);
   return {
-    reorders: store.items.filter(needsReorder).length,
+    toBuy: toBuy.length,
+    buyToday: toBuy.filter((l) => l.kind === "buy" && l.buy.urgent).length,
+    buyNames: toBuy.slice(0, 4).map(lineName),
     // The office: new things the site logins added, to check.
     ...(me.kind === "admin" ? { toCheck: [...store.items, ...store.tools].filter((x) => x.review).length } : {}),
     toolsOut: store.toolOuts.reduce((n, o) => n + stillOut(o), 0),

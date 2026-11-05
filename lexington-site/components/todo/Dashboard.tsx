@@ -15,7 +15,8 @@ import styles from "./Todo.module.css";
 // click into what information I want to put in"): one tile per part this login opens, saying how it stands
 // today. A tap opens the part; the roll call's tiles open its own page on the right tab.
 
-type Tile = { section: Section; name: string; big: string; small?: string; tone?: "warn" | "ok" };
+// key: when a part has two tiles (the store and its shopping list); tab: the part's tab the tile opens.
+type Tile = { section: Section; key?: string; tab?: "buy"; name: string; big: string; small?: string; tone?: "warn" | "ok" };
 
 const money = (n: number) => `GH₵ ${Math.round(n).toLocaleString("en-GH")}`;
 const clock = (iso: string) => new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
@@ -63,20 +64,34 @@ function tiles(d: DashboardData, unread: number): Tile[] {
   }
   if (d.store) {
     const s = d.store;
+    const outNow = `${s.toolsOut} ${s.toolsOut === 1 ? "tool" : "tools"} out`;
     out.push({
       section: "store",
       name: "Store",
-      big: s.toCheck ? `${s.toCheck} new to check` : s.reorders ? `${s.reorders} to reorder` : s.toFix ? `${s.toFix} ${s.toFix === 1 ? "tool" : "tools"} to fix` : "Stock fine",
+      big: s.toCheck ? `${s.toCheck} new to check` : s.toFix ? `${s.toFix} ${s.toFix === 1 ? "tool" : "tools"} to fix` : outNow,
       small: [
-        s.toCheck && s.reorders ? `${s.reorders} to reorder` : "",
-        (s.toCheck || s.reorders) && s.toFix ? `${s.toFix} to fix` : "",
+        s.toCheck && s.toFix ? `${s.toFix} to fix` : "",
         s.atRepairer ? `${s.atRepairer} at the repairer` : "",
-        `${s.toolsOut} ${s.toolsOut === 1 ? "tool" : "tools"} out`,
+        s.toCheck || s.toFix ? outNow : "",
         s.opened ? `opened ${clock(s.opened)}${s.closed ? `, closed ${clock(s.closed)}` : ""}` : "not opened today",
       ]
         .filter(Boolean)
         .join(" · "),
-      tone: s.toCheck || s.reorders || s.toFix ? "warn" : undefined,
+      tone: s.toCheck || s.toFix ? "warn" : undefined,
+    });
+    // The shopping list (Niko, 5 Nov 2026: "whenever I'm at the hardware store I can see what's required"): its own
+    // tile, straight onto the list.
+    const more = s.toBuy > s.buyNames.length ? "…" : "";
+    out.push({
+      key: "shopping",
+      section: "store",
+      tab: "buy",
+      name: "To buy",
+      big: s.toBuy ? `${s.toBuy} to buy` : "Nothing to buy",
+      small: s.toBuy
+        ? [s.buyToday ? `${s.buyToday} needed today` : "", `${s.buyNames.join(", ")}${more}`].filter(Boolean).join(" · ")
+        : "add what's needed in the store room: it shows here for the shop",
+      tone: s.buyToday ? "warn" : undefined,
     });
   }
   if (d.workers && !d.rollcall) out.push({ section: "workers", name: "Workers", big: `${d.workers.active} on the books`, small: "names, numbers, ID photos" });
@@ -159,6 +174,7 @@ export function Dashboard({
   active,
   onGo,
   onRollcall,
+  onStoreTab,
   unread,
 }: {
   me: TodoMe;
@@ -166,6 +182,8 @@ export function Dashboard({
   onGo: (view: View) => void;
   /** The roll call's tiles open it in the app, on their tab. */
   onRollcall: (tab: RollcallTab) => void;
+  /** The shopping list's tile opens the store on its list. */
+  onStoreTab: (tab: "buy") => void;
   unread: number;
 }) {
   const [data, setData] = useState<DashboardData | null>(null);
@@ -216,8 +234,8 @@ export function Dashboard({
             {/* Every part opens here at once; the roll call's tiles on their tab. */}
             {list.map((t) => (
               <a
-                key={t.section}
-                href={sectionHref(t.section)}
+                key={t.key ?? t.section}
+                href={`${sectionHref(t.section)}${t.tab ? `#${t.tab}` : ""}`}
                 className={`${home.tile} ${t.tone === "warn" ? home.warn : t.tone === "ok" ? home.ok : ""}`}
                 onClick={(e) => {
                   if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
@@ -229,6 +247,7 @@ export function Dashboard({
                   }
                   if (!isPageSection(t.section)) return;
                   e.preventDefault();
+                  if (t.tab) onStoreTab(t.tab);
                   onGo(t.section);
                 }}
               >

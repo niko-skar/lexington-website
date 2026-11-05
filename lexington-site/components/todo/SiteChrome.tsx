@@ -88,7 +88,7 @@ const ICONS: Record<NavItem, React.ReactNode> = {
 };
 
 // What a badge on the bar counts, for a screen reader.
-const BADGE_WORDS: Partial<Record<NavItem, string>> = { store: "to reorder", alerts: "new" };
+const BADGE_WORDS: Partial<Record<NavItem, string>> = { store: "to buy", alerts: "new" };
 
 /**
  * Used now and then (Concrete on pour days, Buyers on a payment, Steel as it goes in): on a phone's bar when there's
