@@ -370,7 +370,9 @@ export function factPackText(pack: FactPack): string {
 /** Every dollar amount the pack holds or makes: prices, offer prices, fees, rates. */
 export function allowedAmounts(pack: FactPack): Set<number> {
   const amounts = new Set<number>([pack.reservationFeeUSD]);
-  for (const u of pack.units) {
+  // Only the homes still for sale: a sold or reserved home's price is no longer one to quote (Niko, 5 Nov 2026: "the two
+  // studios are sold so we can't advertise more"; ads kept saying "from $86,400" because the sold studio's price still counted).
+  for (const u of pack.units.filter((x) => x.status === "available")) {
     amounts.add(u.priceUSD);
     if (u.fullPaymentPriceUSD != null) amounts.add(u.fullPaymentPriceUSD);
     if (u.planPriceUSD != null) amounts.add(u.planPriceUSD);
@@ -379,6 +381,20 @@ export function allowedAmounts(pack: FactPack): Set<number> {
   for (const e of pack.extras) for (const m of e.matchAll(/\$([\d,]+)/g)) amounts.add(Number(m[1].replace(/,/g, "")));
   for (const step of pack.mortgage?.steps ?? []) for (const m of step.matchAll(/\$([\d,]+)/g)) amounts.add(Number(m[1].replace(/,/g, "")));
   return amounts;
+}
+
+/**
+ * The kinds of home none of which is still for sale, as the words an ad would use ("studio" once both studios were sold,
+ * 4 Nov 2026). The ads may not offer them until there are new ones.
+ */
+export function soldOutWords(pack: FactPack): string[] {
+  const kinds: Array<[RegExp, string]> = [
+    [/studio/i, "studio"],
+    [/penthouse/i, "penthouse"],
+  ];
+  return kinds
+    .filter(([kind]) => pack.units.some((u) => kind.test(u.type)) && !pack.units.some((u) => kind.test(u.type) && u.status === "available"))
+    .map(([, word]) => word);
 }
 
 /** Every percentage the pack holds: the offer's, and the mortgage terms'. */
@@ -397,7 +413,7 @@ export function allowedPercents(pack: FactPack): Set<number> {
 export function allowedAreas(pack: FactPack): { sqm: Set<number>; sqft: Set<number> } {
   const sqm = new Set<number>();
   const sqftSet = new Set<number>();
-  for (const u of pack.units) {
+  for (const u of pack.units.filter((x) => x.status === "available")) {
     sqm.add(u.areaSqm);
     sqftSet.add(u.areaSqft);
   }

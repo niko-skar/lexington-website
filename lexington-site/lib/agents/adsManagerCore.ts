@@ -120,6 +120,12 @@ export function quotesOffer(text: string): boolean {
  * added everywhere we show a price"): "+ VAT" after it, or a figure that is not one of today's prices,
  * which all have the VAT in them. The $10,000 reservation fee (VAT included) and small amounts aside.
  */
+/** The first sold-out kind of home ("studio") the text offers, or null. */
+export function mentionsSoldOut(text: string, words: readonly string[]): string | null {
+  for (const word of words) if (new RegExp(`\\b${word}s?\\b`, "i").test(text)) return word;
+  return null;
+}
+
 export function quotesOldPrice(text: string, prices: ReadonlySet<number>): boolean {
   if (VAT_ON_TOP.test(text)) return true;
   for (const m of text.matchAll(/(?:US)?\$\s?(\d{1,3}(?:,\d{3})+|\d+(?:\.\d+)?)(\s?k\b)?/gi)) {
@@ -171,6 +177,8 @@ export interface ManagerInput {
   marketsTried: Market[];
   /** While VAT is on: today's prices (all with the VAT in them). An ad quoting another figure, or "+ VAT", is replaced. */
   prices?: number[];
+  /** Kinds of home that are sold out ("studio"): an ad offering one is replaced. */
+  soldOut?: string[];
   /** Ad sets the manager switched off because Meta kept rejecting their ads, with the day. One switched back on starts afresh. */
   stoppedOn?: Record<string, string>;
 }
@@ -186,7 +194,7 @@ export interface NewAd {
 }
 
 export interface ManagerPlan {
-  pause: Array<{ adId: string; adsetId: string; name: string; cause: "offer" | "results" | "rejected" | "vat"; reason: string }>;
+  pause: Array<{ adId: string; adsetId: string; name: string; cause: "offer" | "results" | "rejected" | "vat" | "sold"; reason: string }>;
   create: NewAd[];
   /** Ad sets whose end date is taken off, so they keep running. */
   ongoing: Array<{ adsetId: string; name: string; reason: string }>;
@@ -280,9 +288,15 @@ export function planManager(input: ManagerInput): ManagerPlan {
     // switched off, and a new ad takes its place below.
     const noVat = prices ? live.filter((a) => !expired.includes(a) && quotesOldPrice(a.text, prices)) : [];
     for (const a of noVat) {
-      plan.pause.push({ adId: a.id, adsetId: set.id, name: a.name, cause: "vat", reason: "It quotes a price without the VAT in it." });
+      plan.pause.push({ adId: a.id, adsetId: set.id, name: a.name, cause: "vat", reason: "It quotes a price the website doesn't show for a home for sale." });
     }
-    let keep = live.filter((a) => !expired.includes(a) && !noVat.includes(a));
+    // It offers a kind of home that is sold out (Niko, 5 Nov 2026: "the two studios are sold so we can't advertise more
+    // until we make new ones"): switched off too, and a new ad takes its place.
+    const soldOut = live.filter((a) => !expired.includes(a) && !noVat.includes(a) && mentionsSoldOut(a.text, input.soldOut ?? []));
+    for (const a of soldOut) {
+      plan.pause.push({ adId: a.id, adsetId: set.id, name: a.name, cause: "sold", reason: `It offers ${mentionsSoldOut(a.text, input.soldOut ?? [])}s, and none is left for sale.` });
+    }
+    let keep = live.filter((a) => !expired.includes(a) && !noVat.includes(a) && !soldOut.includes(a));
 
     // Spending without real leads, while another ad in the set brings them.
     const spend = keep.reduce((s, a) => s + a.last14.spend, 0);
@@ -465,7 +479,7 @@ const PERSONAL = /\b(you'?re|you are|as an?|for)\s+(an?\s+|the\s+|all\s+)?(ghana
 const BANNED_AD = /\b(guarantee\w*|risk[- ]free|roi\b|returns?\b|yield|rental income|passive income|only \d+ (left|remaining)|selling fast|last chance|diaspora|yenfie|skarlatos|olympian)\b/i;
 
 /** What is wrong with an ad's words, beyond the fact check: lengths, personal attributes, banned claims, shouting. */
-export function adCopyProblems(copy: AdCopy, opts: { withOffer: boolean }): string[] {
+export function adCopyProblems(copy: AdCopy, opts: { withOffer: boolean; soldOut?: readonly string[] }): string[] {
   const out: string[] = [];
   const all = `${copy.primary_text}\n${copy.headline}\n${copy.description}`;
   if (!copy.primary_text.trim() || !copy.headline.trim()) out.push("The text or headline is empty.");
@@ -478,5 +492,7 @@ export function adCopyProblems(copy: AdCopy, opts: { withOffer: boolean }): stri
   if (/\b[A-Z]{4,}\b/.test(all.replace(/\b(LED|CCTV|USD|GHS)\b/g, ""))) out.push("It has a word in capitals.");
   if (/!!|[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(all)) out.push("It has emojis or repeated exclamation marks.");
   if (!opts.withOffer && quotesOffer(all)) out.push("It mentions an offer or discount, which this ad may not.");
+  const sold = mentionsSoldOut(all, opts.soldOut ?? []);
+  if (sold) out.push(`It offers ${sold}s, and none is left for sale.`);
   return out;
 }

@@ -33,7 +33,7 @@ import { pilotSettings, readPilotSwitch, realShares } from "./adsPilot";
 import { dayIn, type Holder } from "./adsPilotCore";
 import { factCheck } from "./factcheck";
 import { loadFactPack } from "./facts";
-import { allowedAmounts, factPackText, type FactPack } from "./factsCore";
+import { allowedAmounts, factPackText, soldOutWords, type FactPack } from "./factsCore";
 import { listLeadForms } from "./metaLeads";
 
 /**
@@ -326,7 +326,7 @@ async function writeAd(
   learnings: string[]
 ): Promise<{ copy: AdCopy; writer: "claude" | "template" } | { error: string }> {
   const check = (copy: AdCopy) => [
-    ...adCopyProblems(copy, { withOffer: item.withOffer }),
+    ...adCopyProblems(copy, { withOffer: item.withOffer, soldOut: soldOutWords(pack) }),
     ...factCheck(`${copy.primary_text}\n${copy.headline}\n${copy.description}`, pack),
   ];
   if (claudeConfigured()) {
@@ -595,12 +595,13 @@ export async function runAdsManager(opts: { mode?: "full" | "guard"; nowMs?: num
       markets: ["ghana", "us", "uk", "canada"],
       marketsTried: keep.marketsTried as Market[],
       prices: pack.vat.on ? [...allowedAmounts(pack)] : undefined,
+      soldOut: soldOutWords(pack),
       stoppedOn: keep.stopped,
     });
     if (mode === "guard") {
       plan = {
         ...plan,
-        pause: plan.pause.filter((p) => p.cause === "offer" || p.cause === "vat"),
+        pause: plan.pause.filter((p) => p.cause === "offer" || p.cause === "vat" || p.cause === "sold"),
         create: plan.create.filter((c) => c.kind !== "challenger"),
         markets: [],
       };
