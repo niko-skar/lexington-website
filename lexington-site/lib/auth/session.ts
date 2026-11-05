@@ -11,8 +11,11 @@ const BUYER_SESSION_LIFETIME = "30d";
 // a day"; he said yes to 30 days, renewed each time.
 const APP_SESSION_DAYS = 30;
 const APP_SESSION_LIFETIME = `${APP_SESSION_DAYS}d`;
-/** A session signed longer ago than this is signed again when it's used (so a phone isn't sent a cookie every few seconds). */
-const RENEW_AFTER_SECONDS = 24 * 60 * 60;
+/**
+ * A session with less than this left is signed again when it's used: so a day after it was signed (a phone isn't sent a
+ * cookie every few seconds), and at once for one signed before 5 Nov 2026 (12 hours, 7 days).
+ */
+const RENEW_BELOW_SECONDS = (APP_SESSION_DAYS - 1) * 24 * 60 * 60;
 
 const cookieOptions = (maxAgeSeconds: number) => ({
   httpOnly: true,
@@ -59,16 +62,16 @@ export async function renewAppSession({ buyer: buyerToo }: { buyer: boolean }): 
   try {
     const jar = await cookies();
     const now = Math.floor(Date.now() / 1000);
-    const stale = (issuedAt: number | null) => issuedAt === null || now - issuedAt > RENEW_AFTER_SECONDS;
+    const stale = (expiresAt: number | null) => expiresAt === null || expiresAt - now < RENEW_BELOW_SECONDS;
     const keep = cookieOptions(60 * 60 * 24 * APP_SESSION_DAYS);
 
     const adminToken = jar.get(ADMIN_COOKIE)?.value;
     const admin = adminToken ? await verifySessionToken(adminToken) : null;
-    if (admin?.role === "admin" && stale(admin.issuedAt)) jar.set(ADMIN_COOKIE, await signSessionToken({ role: "admin" }, APP_SESSION_LIFETIME), keep);
+    if (admin?.role === "admin" && stale(admin.expiresAt)) jar.set(ADMIN_COOKIE, await signSessionToken({ role: "admin" }, APP_SESSION_LIFETIME), keep);
 
     const buyerToken = jar.get(BUYER_COOKIE)?.value;
     const buyer = buyerToken ? await verifySessionToken(buyerToken) : null;
-    if (buyerToo && buyer?.role === "buyer" && buyer.email && (buyer.isAdmin || buyer.site) && stale(buyer.issuedAt)) {
+    if (buyerToo && buyer?.role === "buyer" && buyer.email && (buyer.isAdmin || buyer.site) && stale(buyer.expiresAt)) {
       const claims = { role: "buyer" as const, email: buyer.email, isAdmin: buyer.isAdmin === true, ...(buyer.site && !buyer.isAdmin ? { site: true } : {}) };
       jar.set(BUYER_COOKIE, await signSessionToken(claims, APP_SESSION_LIFETIME), keep);
     }
