@@ -42,14 +42,16 @@ export function ago(iso: string) {
 /** The photo a line shows: its own, else the store item's or the tool's. */
 const linePhoto = (line: BuyLine | GotLine) => (line.kind === "reorder" ? line.item.photoUrl : (line.buy.photoUrl ?? line.item?.photoUrl ?? line.tool?.photoUrl ?? null));
 
-/** The small line under a line's name, to buy. */
-function lineWords(line: BuyLine): string {
+/** The small line under a line's name, to buy (and the order it's on, still to place). */
+function lineWords(line: BuyLine, order?: string): string {
+  const onOrder = order ? `on order ${order}, not placed yet` : "";
   if (line.kind === "reorder") {
     const i = line.item;
-    return `${lineStock(line)} · reorder at ${qtyUnit(i.low ?? 0, i.unit)}`;
+    return [`${lineStock(line)} · reorder at ${qtyUnit(i.low ?? 0, i.unit)}`, onOrder].filter(Boolean).join(" · ");
   }
   const b = line.buy;
   return [
+    onOrder,
     b.note ? `“${b.note}”` : "",
     lineStock(line) ? `store: ${lineStock(line).toLowerCase()}` : "",
     line.tool ? `tool: ${line.tool.count} in all` : "",
@@ -72,6 +74,7 @@ export function ShoppingTab({
   lines,
   got,
   dismissed,
+  onOrder = {},
   busy,
   onAdd,
   onCopy,
@@ -86,6 +89,8 @@ export function ShoppingTab({
   got: GotLine[];
   /** Store items at their reorder point the office said no need to reorder. */
   dismissed: StoreItem[];
+  /** Lines on an order still to place: the order's number. */
+  onOrder?: Record<string, string>;
   /** The line being ticked or put back just now. */
   busy: string | null;
   onAdd: () => void;
@@ -144,7 +149,7 @@ export function ShoppingTab({
                             {urgent && <span className={site.buyToday}>Needed today</span>}
                             {lineName(line)}
                           </span>
-                          <small className={out ? site.flagBad : undefined}>{lineWords(line)}</small>
+                          <small className={out ? site.flagBad : undefined}>{lineWords(line, onOrder[line.key])}</small>
                         </span>
                         {photo && (
                           // eslint-disable-next-line @next/next/no-img-element -- a resized copy from the image store

@@ -54,6 +54,12 @@ export const POUR_PHOTO_PREFIX = `pourphoto-${TAG}-`;
 export const POUR_CUBES_PREFIX = `pourcubes-${TAG}-`;
 /** A photo that landed after its record was saved (3 Nov 2026): which stored photo a phone's ticket became. */
 export const PHOTO_TICKET_PREFIX = `phototicket-${TAG}-`;
+/** Purchase orders (lib/orders, 5 Nov 2026): one document each, and the running number behind PO-0001. */
+export const ORDER_PREFIX = `po-${TAG}-`;
+export const ORDER_COUNTER_ID = `pocounter-${TAG}`;
+/** The cash flow (lib/cashflow, 5 Nov 2026): the money as last typed and the weekly wages figure, and each plan typed. */
+export const CASHFLOW_ID = `cashflow-${TAG}`;
+export const CASH_PLAN_PREFIX = `cashplan-${TAG}-`;
 
 export const newId = (prefix: string) => prefix + randomBytes(6).toString("hex");
 

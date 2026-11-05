@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { debitGuess, debitWords, isInflow, money, shopOf, todayISO, type BankDebit, type Expense } from "@/lib/expenses/shared";
 import type { BookLists } from "@/lib/quickbooks/books";
+import type { OpenArrival } from "@/lib/store/deliveries";
 import type { StoreItem } from "@/lib/store/shared";
 import { photoAt, type TodoMe } from "@/lib/todo/shared";
 import type { OpenBill } from "@/lib/suppliers/shared";
@@ -28,7 +29,7 @@ function showForm() {
   if (side && getComputedStyle(side).position === "sticky") side.scrollTo({ top: 0, behavior: "smooth" });
   else document.getElementById("exp-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
-type ExpensesData = { expenses: Expense[]; items: StoreItem[]; pending?: BankDebit[]; books?: BookLists; bills?: OpenBill[]; vendors?: string[] };
+type ExpensesData = { expenses: Expense[]; items: StoreItem[]; arrivals?: OpenArrival[]; pending?: BankDebit[]; books?: BookLists; bills?: OpenBill[]; vendors?: string[] };
 type SheetState = { configured: boolean; waiting: number; failed: number; lastSyncedAt: string | null; sheetUrl: string | null };
 
 const sortExpenses = (list: Expense[]) =>
@@ -214,6 +215,8 @@ export function ExpensesApp({
   openDebit,
   onSteel,
   payBill,
+  payOrder,
+  tabs,
   startedOffline,
   fresh,
 }: {
@@ -230,12 +233,18 @@ export function ExpensesApp({
   onSteel: () => void;
   /** "Pay" on a supplier's bill (lib/suppliers): the form starts filled in for it. "at" makes the same one count again. */
   payBill?: { payment: { billId: string; supplier: string; amount: number; description: string; bill: OpenBill; receipt?: { id: string; url: string; type: string } | null }; at: number } | null;
+  /** "Pay it now" on a purchase order (lib/orders): the form starts filled in for it. */
+  payOrder?: { prefill: ExpensePrefill; at: number } | null;
+  /** Finance's tabs, under the header. */
+  tabs?: React.ReactNode;
   startedOffline: boolean;
   /** The page came with this part's data just now (it's the part the app opened on). */
   fresh: boolean;
 }) {
   const [expenses, setExpenses] = useState(initial?.expenses ?? []);
   const [items, setItems] = useState(initial?.items ?? []);
+  // Goods checked in at the store and not paid for yet (the form asks "Already in the store?").
+  const [arrivals, setArrivals] = useState<OpenArrival[]>(initial?.arrivals ?? []);
   // The bank's debits waiting to be completed, and the one in the form now.
   const [pending, setPending] = useState<BankDebit[]>(initial?.pending ?? []);
   // The QuickBooks classes and locations for the form (kept in the website, read again now and then).
@@ -290,8 +299,9 @@ export function ExpensesApp({
       setLoaded(true);
       setOffline(false);
       // Unchanged (the store's history may move; only its items matter here): leave the screen alone.
-      const items = (JSON.parse(y) as { items: StoreItem[] }).items;
-      const sig = x + JSON.stringify(items);
+      const store = JSON.parse(y) as { items: StoreItem[]; arrivals?: OpenArrival[] };
+      const items = store.items;
+      const sig = x + JSON.stringify(items) + JSON.stringify(store.arrivals ?? []);
       if (sig === lastServer.current || startedAt < localAt.current) return;
       lastServer.current = sig;
       const got = JSON.parse(x) as { expenses: Expense[]; pending?: BankDebit[]; books?: BookLists; bills?: OpenBill[]; vendors?: string[] };
@@ -301,6 +311,7 @@ export function ExpensesApp({
       if (got.bills) setBills(got.bills);
       if (got.vendors) setVendors(got.vendors);
       setItems(items);
+      setArrivals(store.arrivals ?? []);
     } catch {
       setOffline(true);
     } finally {
@@ -442,6 +453,20 @@ export function ExpensesApp({
     return () => clearTimeout(timer);
   }, [payBill]);
 
+  // "Pay it now" on a purchase order: a new expense for what's left of it, with its materials, floor and cost type.
+  useEffect(() => {
+    if (!payOrder) return;
+    const timer = setTimeout(() => {
+      if (saving.current) return;
+      setEditing(null);
+      setPrefill(payOrder.prefill);
+      setJustSaved(false);
+      setFormKey((k) => k + 1);
+      showForm();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [payOrder]);
+
   const onDismiss = useCallback(
     async (d: BankDebit) => {
       try {
@@ -510,7 +535,14 @@ export function ExpensesApp({
 
   return (
     <>
-      <SiteHeader title="Expenses" sub={`Spent this month ${money(month.out)}${month.inn ? ` · In ${money(month.inn)}` : ""}`} onMenu={() => setMenuOpen(true)} />
+      <SiteHeader
+        eyebrow={tabs ? "Finance" : undefined}
+        title="Expenses"
+        sub={`Spent this month ${money(month.out)}${month.inn ? ` · In ${money(month.inn)}` : ""}`}
+        onMenu={() => setMenuOpen(true)}
+      >
+        {tabs}
+      </SiteHeader>
 
       {signedOut && (
         <div className={styles.banner} role="alert">
@@ -532,7 +564,7 @@ export function ExpensesApp({
             <div id="exp-side" className={site.deskSide}>
             <BankDebits pending={pending} completing={prefill?.debitId ?? null} onComplete={onComplete} onDismiss={(d) => void onDismiss(d)} />
             <ExpenseForm
-              key={`${editing?.id ?? prefill?.debitId ?? prefill?.billId ?? "new"}-${formKey}`}
+              key={`${editing?.id ?? prefill?.debitId ?? prefill?.billId ?? prefill?.poId ?? "new"}-${formKey}`}
               editing={editing}
               prefill={prefill}
               books={books}
@@ -540,6 +572,7 @@ export function ExpensesApp({
               vendors={vendors}
               expenses={expenses}
               items={items}
+              arrivals={arrivals}
               onSaved={onSaved}
               onDeleted={onDeleted}
               onCancel={onCancel}

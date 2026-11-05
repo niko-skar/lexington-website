@@ -2,7 +2,7 @@ import "server-only";
 
 import { FLOORS } from "@/lib/expenses/shared";
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
-import { BUY_PREFIX, CHECK_PREFIX, EXPENSE_PREFIX, isId, ITEM_PREFIX, MOVE_PREFIX, newId, TOOL_OUT_PREFIX, TOOL_PREFIX, TOOL_REPAIR_PREFIX } from "@/lib/site/ids";
+import { BUY_PREFIX, CHECK_PREFIX, EXPENSE_PREFIX, isId, ITEM_PREFIX, MOVE_PREFIX, newId, ORDER_PREFIX, TOOL_OUT_PREFIX, TOOL_PREFIX, TOOL_REPAIR_PREFIX } from "@/lib/site/ids";
 import { cleanPhotoRef, cleanText, dropPhoto, photoRef, TodoError } from "@/lib/todo/server";
 import type { TodoMe } from "@/lib/todo/shared";
 import { guessCategory, guessItemTrade, isStoreCategory, type StoreCategory } from "./categories";
@@ -22,17 +22,20 @@ import {
   type StoreTool,
   type Trade,
 } from "./shared";
+import { expectedLines, openArrivals, untie } from "./deliveriesServer";
 import { GOT_DAYS } from "./shopping";
 import { BUY_FIELDS, toBuy, type RawBuy } from "./shoppingServer";
 import { OUT_FIELDS, REPAIR_FIELDS, REVIEW_FIELDS, TOOL_FIELDS, toOut, toRepair, type RawOut, type RawRepair } from "./tools";
 
 // The stock is never stored: it is always added up from what moved, so correcting or deleting a
 // purchase (in the expenses) or a wrong take-out puts the number right by itself.
-//   bought   -- paid Material expenses marked "into the store room"
+//   bought   -- paid Material expenses marked "into the store room" (not the lines paying for a check-in below)
 //   in       -- stock the office adds by hand (e.g. bought before the store existed)
 //   back     -- brought back to the store
 //   out      -- taken out (always with a photo of what went)
 //   count    -- a count: the difference between the shelf and the record at that moment
+//   arrived  -- a delivery checked in at the store door (lib/store/deliveries.ts): its diff (nothing more when what
+//               was paid for came, less when some didn't, all of it when nobody has paid for it yet)
 
 type Totals = { bought: number; added: number; back: number; taken: number; adjusted: number };
 type RawItem = Omit<StoreItem, "level"> & Totals;
@@ -51,33 +54,33 @@ const ITEM_FIELDS = `{
   "category": category,
   "trade": trade,
   "review": ${REVIEW_FIELDS},
-  "bought": coalesce(math::sum(*[_type == "siteExpense" && string::startsWith(_id, $expensePrefix) && itemId == ^._id && toStore == true].qty), 0)
-    + coalesce(math::sum(*[_type == "siteExpense" && string::startsWith(_id, $expensePrefix) && ^._id in moreLines[toStore == true].itemId]{ "q": math::sum(moreLines[itemId == ^.^._id && toStore == true].qty) }.q), 0),
+  "bought": coalesce(math::sum(*[_type == "siteExpense" && string::startsWith(_id, $expensePrefix) && itemId == ^._id && toStore == true && !defined(alreadyIn)].qty), 0)
+    + coalesce(math::sum(*[_type == "siteExpense" && string::startsWith(_id, $expensePrefix) && ^._id in moreLines[toStore == true && !defined(alreadyIn)].itemId]{ "q": math::sum(moreLines[itemId == ^.^._id && toStore == true && !defined(alreadyIn)].qty) }.q), 0),
   "added": coalesce(math::sum(*[_type == "storeMove" && itemId == ^._id && kind == "in"].qty), 0),
   "back": coalesce(math::sum(*[_type == "storeMove" && itemId == ^._id && kind == "back"].qty), 0),
   "taken": coalesce(math::sum(*[_type == "storeMove" && itemId == ^._id && kind == "out"].qty), 0),
-  "adjusted": coalesce(math::sum(*[_type == "storeMove" && itemId == ^._id && kind == "count"].diff), 0),
+  "adjusted": coalesce(math::sum(*[_type == "storeMove" && itemId == ^._id && kind in ["count", "arrived"]].diff), 0),
   "lastCountAt": *[_type == "storeMove" && itemId == ^._id && kind == "count"] | order(at desc)[0].at
 }`;
 const MOVE_FIELDS = `{
   "id": _id, kind, itemId, qty, "diff": diff, "opening": coalesce(opening, false), "floor": floor, "person": person,
-  "note": coalesce(note, ""), "photoUrl": photo.asset->url, at, "by": coalesce(by, ""), byId
+  "note": coalesce(note, ""), "photoUrl": photo.asset->url, at, "by": coalesce(by, ""), byId, "expected": expected, "ref": ref
 }`;
 const BOUGHT_FIELDS = `{
   "id": _id, "kind": "bought", itemId, qty, "diff": null, "floor": floor, "person": null, "note": "", "photoUrl": null, date,
-  "at": createdAt, "by": coalesce(createdBy, ""), supplier, amount
+  "at": createdAt, "by": coalesce(createdBy, ""), supplier, amount, "paidOnly": defined(alreadyIn)
 }`;
 // An entry's more materials into the store room, each as its own "bought" line (the receipt's total is the entry's).
 const MORE_BOUGHT_FIELDS = `{
   "id": _id, floor, date, "at": createdAt, "by": coalesce(createdBy, ""), supplier,
-  "lines": moreLines[toStore == true]{ _key, itemId, qty }
+  "lines": moreLines[toStore == true]{ _key, itemId, qty, "paidOnly": defined(alreadyIn) }
 }`;
-type RawMoreBought = { id: string; floor: string | null; date: string; at: string; by: string; supplier?: string; lines: { _key: string; itemId: string; qty: number }[] | null };
+type RawMoreBought = { id: string; floor: string | null; date: string; at: string; by: string; supplier?: string; lines: { _key: string; itemId: string; qty: number; paidOnly?: boolean }[] | null };
 const moreBought = (rows: RawMoreBought[], itemId?: string): RawMove[] =>
   rows.flatMap((r) =>
     (r.lines ?? [])
       .filter((l) => !itemId || l.itemId === itemId)
-      .map((l) => ({ id: `${r.id}:${l._key}`, kind: "bought" as const, itemId: l.itemId, qty: l.qty, diff: null, floor: r.floor, person: null, note: "", photoUrl: null, date: r.date, at: r.at, by: r.by, supplier: r.supplier }))
+      .map((l) => ({ id: `${r.id}:${l._key}`, kind: "bought" as const, itemId: l.itemId, qty: l.qty, diff: null, floor: r.floor, person: null, note: "", photoUrl: null, date: r.date, at: r.at, by: r.by, supplier: r.supplier, paidOnly: !!l.paidOnly }))
   );
 const params = { itemPrefix: ITEM_PREFIX, movePrefix: MOVE_PREFIX, expensePrefix: EXPENSE_PREFIX };
 
@@ -145,6 +148,7 @@ export async function getStore(me: TodoMe): Promise<StoreData> {
     repairs: RawRepair[];
     checks: RawCheck[];
     buys: RawBuy[];
+    orders: Array<{ number: string; lines: Array<{ buyId?: string | null; itemId?: string | null }> | null }>;
   }>(
     `{
       "items": *[_type == "storeItem" && string::startsWith(_id, $itemPrefix)] | order(lower(name) asc) ${ITEM_FIELDS},
@@ -156,7 +160,8 @@ export async function getStore(me: TodoMe): Promise<StoreData> {
       "outsOpen": *[_type == "toolOut" && string::startsWith(_id, $outPrefix) && !defined(closedAt)] | order(at desc)[0...500] ${OUT_FIELDS},
       "outsDone": *[_type == "toolOut" && string::startsWith(_id, $outPrefix) && defined(closedAt) && at >= $weekAgo] | order(at desc)[0...300] ${OUT_FIELDS},
       "repairs": *[_type == "toolRepair" && string::startsWith(_id, $repairPrefix) && (state in ["waiting", "away"] || closedAt >= $monthAgo)] | order(at desc)[0...300] ${REPAIR_FIELDS},
-      "checks": *[_type == "storeCheck" && string::startsWith(_id, $checkPrefix) && at >= $monthAgo] | order(at desc)[0...200] ${CHECK_FIELDS}
+      "checks": *[_type == "storeCheck" && string::startsWith(_id, $checkPrefix) && at >= $monthAgo] | order(at desc)[0...200] ${CHECK_FIELDS},
+      "orders": *[_type == "purchaseOrder" && string::startsWith(_id, $orderPrefix) && status == "planned"][0...200]{ number, "lines": lines[]{ buyId, itemId } }
     }`,
     {
       ...params,
@@ -165,6 +170,7 @@ export async function getStore(me: TodoMe): Promise<StoreData> {
       repairPrefix: TOOL_REPAIR_PREFIX,
       checkPrefix: CHECK_PREFIX,
       buyPrefix: BUY_PREFIX,
+      orderPrefix: ORDER_PREFIX,
       gotSince: new Date(Date.now() - GOT_DAYS * day).toISOString(),
       weekAgo: new Date(Date.now() - 8 * day).toISOString(),
       monthAgo: new Date(Date.now() - 31 * day).toISOString(),
@@ -178,6 +184,8 @@ export async function getStore(me: TodoMe): Promise<StoreData> {
   // A take-out closed (or opened again) while this was read can show up in both halves: once only.
   const seen = new Set<string>();
   const outs = [...data.outsOpen, ...data.outsDone].filter((o) => !seen.has(o.id) && !!seen.add(o.id));
+  // What's to come in at the store door, and (the office's expense form) what came in not paid for yet.
+  const [expected, arrivals] = await Promise.all([expectedLines(me, items), me.kind === "admin" ? openArrivals() : Promise.resolve(undefined)]);
   return {
     items,
     history: history(
@@ -192,6 +200,10 @@ export async function getStore(me: TodoMe): Promise<StoreData> {
     repairs: data.repairs.map((r) => toRepair(me, r)),
     checks: data.checks.map((c) => toCheck(me, c)),
     buys: data.buys.map((b) => toBuy(me, b)),
+    // The shopping list's lines on an order still to place (lib/orders): "on PO-0004", so nobody buys them at the shop too.
+    onOrder: Object.fromEntries(data.orders.flatMap((o) => (o.lines ?? []).map((l) => [l.buyId ?? l.itemId ?? "", o.number])).filter(([k]) => k)),
+    expected,
+    ...(arrivals ? { arrivals } : {}),
   };
 }
 
@@ -482,6 +494,8 @@ export async function deleteMove(me: TodoMe, id: string): Promise<StoreItem | nu
     }
   }
   await client.delete(id);
+  // A check-in (or a count) a payment was tied to: that payment adds its stock itself again.
+  await untie(id);
   if (move.photo) await dropPhoto(move.photo, "store");
   return getItem(move.itemId);
 }

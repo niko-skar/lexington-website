@@ -1,21 +1,29 @@
 "use client";
 
 import Link from "next/link";
+import { useLayoutEffect, useRef } from "react";
 
 import { todoSignOutAction } from "@/lib/actions/todo";
 import { opensRollcall } from "@/lib/rollcall/shared";
-import { PAGE_SECTIONS, sectionHref, sectionName, type PageSection, type TodoMe } from "@/lib/todo/shared";
+import { FINANCE_SECTIONS, isFinance, PAGE_SECTIONS, sectionHref, sectionName, type FinanceSection, type PageSection, type TodoMe } from "@/lib/todo/shared";
 import styles from "./Todo.module.css";
 
 // What every part of the site app shares: its header, the bar at the bottom (Home, then the parts this
-// login opens: To-do · Store · Expenses · Concrete · Buyers · Steel · Roll call, Alerts last; on a laptop a rail
-// down the left with every part, Alerts at its bottom) and the ☰ menu.
+// login opens: To-do · Store · Finance · Concrete · Steel · Roll call, Alerts last; on a laptop a rail
+// down the left with every part, Alerts at its bottom), Finance's tabs and the ☰ menu.
 
 /** Where the bar can go: the home page, a part drawn in this page, or the roll call (its page in the app's frame). */
 export type View = PageSection | "home" | "rollcall";
-type NavItem = View;
+/** Finance is one place on the bar for its parts (5 Nov 2026): it opens the one used last. */
+export type NavItem = View | "finance";
 
 const ICONS: Record<NavItem, React.ReactNode> = {
+  finance: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M4 7.5h14.5a1.5 1.5 0 0 1 1.5 1.5v9.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5V6A1.5 1.5 0 0 1 5.5 4.5H16v3" />
+      <path d="M20 12h-3.5a1.75 1.75 0 0 0 0 3.5H20" />
+    </svg>
+  ),
   home: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M3.5 11L12 4l8.5 7" />
@@ -78,6 +86,19 @@ const ICONS: Record<NavItem, React.ReactNode> = {
       <path d="M5 9.5V19h14V9.5M9 19v-5h6v5" />
     </svg>
   ),
+  // Orders and the cash flow are Finance's tabs, never on the bar themselves; their marks for completeness.
+  orders: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M6 3h12v18H6z" />
+      <path d="M9 8h6M9 12h6M9 16h4" />
+    </svg>
+  ),
+  cashflow: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M3 17l5-5 4 3 8-8" />
+      <path d="M15 7h5v5" />
+    </svg>
+  ),
   rollcall: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M8 4h8v3H8z" />
@@ -94,23 +115,59 @@ const BADGE_WORDS: Partial<Record<NavItem, string>> = { store: "to buy", alerts:
  * Used now and then (Concrete on pour days, Buyers on a payment, Steel as it goes in): on a phone's bar when there's
  * room, else from the home page's tile. A laptop's rail has room for every part (2 Nov 2026).
  */
-const NOW_AND_THEN: readonly NavItem[] = ["concrete", "buyers", "steel", "suppliers", "spending"];
+const NOW_AND_THEN: readonly NavItem[] = ["concrete", "steel"];
 type NavEntry = { item: NavItem; laptopOnly: boolean };
 const navItems = (me: TodoMe): NavEntry[] => {
-  // Alerts last: the end of a phone's bar, the very bottom of a laptop's rail (Niko, 2 Nov 2026).
-  const parts: NavItem[] = [
-    ...PAGE_SECTIONS.filter((s) => s !== "alerts" && me.sections.includes(s)),
-    ...(opensRollcall(me.sections) ? (["rollcall"] as const) : []),
-    ...(me.sections.includes("alerts") ? (["alerts"] as const) : []),
-  ];
+  // Alerts last: the end of a phone's bar, the very bottom of a laptop's rail (Niko, 2 Nov 2026). The money parts
+  // are one item, Finance, where Expenses was (5 Nov 2026).
+  const parts: NavItem[] = [];
+  for (const s of PAGE_SECTIONS) {
+    if (s === "alerts" || !me.sections.includes(s)) continue;
+    if (isFinance(s)) {
+      if (!parts.includes("finance")) parts.push("finance");
+    } else parts.push(s);
+  }
+  if (opensRollcall(me.sections)) parts.push("rollcall");
+  if (me.sections.includes("alerts")) parts.push("alerts");
   // A login that opens one part only (a storekeeper) has no home page to go back to, so no bar at all.
   if (parts.length < 2) return parts.map((item) => ({ item, laptopOnly: false }));
   const all: NavItem[] = ["home", ...parts];
   const crowded = all.length > 6;
   return all.map((item) => ({ item, laptopOnly: crowded && NOW_AND_THEN.includes(item) }));
 };
-const navName = (item: NavItem) => (item === "home" ? "Home" : item === "rollcall" ? "Roll call" : sectionName(item));
-const navHref = (item: NavItem) => (item === "home" ? "/todo" : item === "rollcall" ? "/todo/rollcall" : sectionHref(item));
+const firstFinance = (me: TodoMe): FinanceSection => FINANCE_SECTIONS.find((s) => me.sections.includes(s)) ?? "expenses";
+const navName = (item: NavItem) => (item === "home" ? "Home" : item === "rollcall" ? "Roll call" : item === "finance" ? "Finance" : sectionName(item));
+const navHref = (item: NavItem, me: TodoMe) =>
+  item === "home" ? "/todo" : item === "rollcall" ? "/todo/rollcall" : item === "finance" ? sectionHref(firstFinance(me)) : sectionHref(item);
+
+/** Finance's tabs, under its header: one row that slides sideways on a phone, the tab on screen kept in view. */
+export function FinanceTabs({ me, current, onGo }: { me: TodoMe; current: FinanceSection; onGo: (view: View) => void }) {
+  const row = useRef<HTMLElement>(null);
+  useLayoutEffect(() => {
+    const nav = row.current;
+    const on = nav?.querySelector<HTMLElement>('[aria-current="page"]');
+    if (nav && on) nav.scrollLeft = Math.max(0, on.offsetLeft - (nav.clientWidth - on.clientWidth) / 2);
+  }, [current]);
+  return (
+    <nav ref={row} className={styles.finTabs} aria-label="Finance">
+      {FINANCE_SECTIONS.filter((s) => me.sections.includes(s)).map((s) => (
+        <a
+          key={s}
+          href={sectionHref(s)}
+          className={s === current ? styles.finTabOn : styles.finTab}
+          aria-current={s === current ? "page" : undefined}
+          onClick={(e) => {
+            if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+            e.preventDefault();
+            onGo(s);
+          }}
+        >
+          {sectionName(s)}
+        </a>
+      ))}
+    </nav>
+  );
+}
 
 /** The class for the app's outer box: room at the bottom for the bar when there is one. */
 export const appClass = (me: TodoMe) => (navItems(me).length > 1 ? `${styles.app} ${styles.withNav}` : styles.app);
@@ -158,12 +215,13 @@ export function SiteNav({
 }: {
   me: TodoMe;
   current: View;
-  onGo: (view: View) => void;
+  onGo: (item: NavItem) => void;
   badges?: Partial<Record<NavItem, number>>;
 }) {
   const items = navItems(me);
   if (items.length < 2) return null;
   const onPhone = items.filter((x) => !x.laptopOnly).length;
+  const on = (item: NavItem) => item === current || (item === "finance" && isFinance(current));
   return (
     <nav className={`${styles.nav} ${onPhone > 5 ? styles.navMany : ""}`} aria-label="Parts of the app">
       <p className={styles.navBrand}>
@@ -174,9 +232,9 @@ export function SiteNav({
         return (
           <a
             key={item}
-            href={navHref(item)}
-            className={`${item === current ? styles.navOn : styles.navItem}${laptopOnly ? ` ${styles.navExtra}` : ""}${item === "alerts" ? ` ${styles.navLast}` : ""}`}
-            aria-current={item === current ? "page" : undefined}
+            href={navHref(item, me)}
+            className={`${on(item) ? styles.navOn : styles.navItem}${laptopOnly ? ` ${styles.navExtra}` : ""}${item === "alerts" ? ` ${styles.navLast}` : ""}`}
+            aria-current={on(item) ? "page" : undefined}
             onClick={(e) => {
               if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
               e.preventDefault();

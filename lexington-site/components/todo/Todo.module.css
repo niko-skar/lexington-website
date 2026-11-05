@@ -225,6 +225,50 @@
   padding: 0 5px;
 }
 
+/* Finance's parts (5 Nov 2026): one row of tabs under its header, sliding sideways on a phone. */
+.finTabs {
+  display: flex;
+  gap: 6px;
+  max-width: var(--x-page);
+  margin: 10px auto 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.finTabs::-webkit-scrollbar {
+  display: none;
+}
+.finTab,
+.finTabOn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--x-line);
+  border-radius: 99px;
+  background: var(--x-surface);
+  color: var(--x-muted);
+  font-family: var(--x-display);
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.finTabOn {
+  border-color: var(--x-accent);
+  background: var(--x-accent);
+  color: var(--x-accent-ink);
+}
+@media (hover: hover) {
+  .finTab:hover {
+    border-color: var(--x-muted);
+    color: var(--x-ink);
+  }
+}
+
 /* ---------- notes under the header ---------- */
 .banner,
 .hint {

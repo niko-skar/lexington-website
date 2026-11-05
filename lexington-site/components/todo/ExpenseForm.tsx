@@ -27,12 +27,14 @@ import {
 import type { ReceiptReading } from "@/lib/expenses/readReceipt";
 import { areasWith, guessClass, type BookLists, type BookNamed } from "@/lib/quickbooks/books";
 import { WAGES_FROM_WEEK } from "@/lib/rollcall/payday";
+import { arrivalsFor, mustAsk, qtyWords, type OpenArrival } from "@/lib/store/deliveries";
 import { MAX_UNIT, qtyUnit, UNITS, type StoreItem } from "@/lib/store/shared";
 import { photoAt } from "@/lib/todo/shared";
 import { supplierKey, type OpenBill } from "@/lib/suppliers/shared";
 import { errorText, send } from "./api";
 import { QtyPicker } from "./QtyPicker";
 import { forgetReceipt, isPdf, uploadReceipt } from "./receipt";
+import dl from "./Deliveries.module.css";
 import site from "./Site.module.css";
 import styles from "./Todo.module.css";
 
@@ -42,10 +44,15 @@ import styles from "./Todo.module.css";
 
 export type Receipt = { id: string; url: string; type: string };
 /** A new expense started from the bank's debit text (lib/expenses/bankDebit.ts): what the text gives, and a line saying so. */
-/** A new one started for the user: from a bank debit waiting in the app (debitId), or paying a supplier's bill (billId, with the bill's photo as its receipt). */
+/**
+ * A new one started for the user: from a bank debit waiting in the app (debitId), paying a supplier's bill (billId,
+ * with the bill's photo as its receipt), or paying a purchase order there and then (poId, with its lines, floor and
+ * cost type, lib/orders).
+ */
 export type ExpensePrefill = {
   debitId?: string;
   billId?: string;
+  poId?: string;
   receipt?: Receipt | null;
   date: string;
   amount: number;
@@ -53,6 +60,11 @@ export type ExpensePrefill = {
   supplier: string;
   description: string;
   note: string;
+  category?: string | null;
+  /** The materials: the first is the entry's own, the rest its more lines. */
+  lines?: { material: string; qty: number; unit: string }[];
+  floor?: string | null;
+  costClass?: { id: string; name: string } | null;
 };
 const RECEIPT_CAMERA = "exp-receipt-camera";
 const RECEIPT_FILE = "exp-receipt-file";
@@ -187,7 +199,64 @@ function useMorePhotos(initial: readonly Receipt[]) {
 
 /* ---------- more materials on one entry ---------- */
 
-type LineDraft = { key: number; material: string; qty: number; unit: string; toStore: boolean | null };
+type LineDraft = { key: number; material: string; qty: number; unit: string; toStore: boolean | null; alreadyIn?: string | null; answered?: boolean };
+
+/**
+ * "Already in the store?": the material was checked in at the store (a delivery, or a count that found more) and nobody
+ * has paid for it yet. Yes ties this line to it, so the stock isn't added twice (lib/store/deliveries.ts).
+ */
+function AlreadyIn({
+  open,
+  unit,
+  tied,
+  answered,
+  onAnswer,
+}: {
+  open: OpenArrival[];
+  unit: string;
+  tied: string | null;
+  answered: boolean;
+  onAnswer: (moveId: string | null) => void;
+}) {
+  if (!open.length && !tied) return null;
+  const shown = open.slice(0, 3);
+  const day = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  const words = (a: OpenArrival) =>
+    a.kind === "count"
+      ? `${a.by}'s count on ${day(a.at)} found ${qtyWords(a.qty, unit)} more than the record`
+      : a.kind === "added"
+        ? `${a.by} added it to the store with ${qtyWords(a.qty, unit)} on ${day(a.at)}`
+        : `${a.by} checked in ${qtyWords(a.qty, unit)} on ${day(a.at)}`;
+  if (tied && !shown.some((a) => a.moveId === tied)) {
+    return (
+      <div className={dl.ask} role="group" aria-label="Already in the store?">
+        <p>Paying for goods checked in at the store already: the stock had them then.</p>
+        <div className={dl.askButtons}>
+          <button type="button" onClick={() => onAnswer(null)}>
+            Not those: add them to the stock
+          </button>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className={dl.ask} role="group" aria-label="Already in the store?">
+      <p>
+        <b>Already in the store?</b> {shown.length === 1 ? `${words(shown[0])}.` : "Checked in, not paid for yet:"}
+      </p>
+      <div className={dl.askButtons}>
+        {shown.map((a) => (
+          <button key={a.moveId} type="button" className={tied === a.moveId ? dl.on : undefined} aria-pressed={tied === a.moveId} onClick={() => onAnswer(a.moveId)}>
+            {shown.length === 1 ? "Yes, it's these" : `Yes: ${words(a)}`}
+          </button>
+        ))}
+        <button type="button" className={answered && !tied ? dl.on : undefined} aria-pressed={answered && !tied} onClick={() => onAnswer(null)}>
+          No, these are more
+        </button>
+      </div>
+    </div>
+  );
+}
 /** Another cost on the same receipt (transport): saved as its own entry. */
 type ExtraDraft = { key: number; description: string; amount: string; category: ExtraCategory; classPick: string | null; classTouched: boolean };
 const toAmount = (text: string) => {
@@ -272,6 +341,7 @@ function MaterialLine({
   n,
   line,
   items,
+  arrivals,
   forWho,
   onChange,
   onRemove,
@@ -279,12 +349,14 @@ function MaterialLine({
   n: number;
   line: LineDraft;
   items: StoreItem[];
+  arrivals: OpenArrival[];
   forWho: ForWho;
   onChange: (line: LineDraft) => void;
   onRemove: () => void;
 }) {
   const match = line.material.trim() ? items.find((i) => key(i.name) === key(line.material)) : undefined;
   const toStore = line.toStore ?? (forWho === "Site" && (match ? match.stocked : true));
+  const open = toStore ? arrivalsFor(match?.id ?? null, line.qty, arrivals) : [];
   return (
     <div className={site.matBox} role="group" aria-label={`Material ${n}`}>
       <div className={site.lineHead}>
@@ -310,10 +382,13 @@ function MaterialLine({
       <button type="button" className={toStore ? site.storeOn : site.storeOff} aria-pressed={toStore} onClick={() => onChange({ ...line, toStore: !toStore })}>
         {toStore ? "✓ Into the store room" : "Not into the store room"}
       </button>
+      {toStore && (
+        <AlreadyIn open={open} unit={match?.unit ?? ""} tied={line.alreadyIn ?? null} answered={!!line.answered} onAnswer={(moveId) => onChange({ ...line, alreadyIn: moveId, answered: true })} />
+      )}
       {toStore &&
         (match ? (
           <p className={site.storeNote}>
-            In the store now: {qtyUnit(match.level, match.unit)}. This adds {qtyUnit(line.qty, match.unit)}.
+            In the store now: {qtyUnit(match.level, match.unit)}. {line.alreadyIn ? "This pays for what's there already." : `This adds ${qtyUnit(line.qty, match.unit)}.`}
           </p>
         ) : line.material.trim() ? (
           <>
@@ -380,6 +455,7 @@ export function ExpenseForm({
   books,
   bills,
   vendors,
+  arrivals = [],
 }: {
   /** The entry being changed; null for a new one. */
   editing: Expense | null;
@@ -391,6 +467,8 @@ export function ExpenseForm({
   bills?: OpenBill[];
   /** QuickBooks' supplier names, offered as the supplier is typed (so the names match). */
   vendors?: string[];
+  /** Goods checked in at the store and not paid for yet ("Already in the store?", lib/store/deliveries.ts). */
+  arrivals?: OpenArrival[];
   expenses: Expense[];
   items: StoreItem[];
   /** Saved, with the other costs that went in with it as entries of their own. */
@@ -412,25 +490,34 @@ export function ExpenseForm({
   const [amount, setAmount] = useState(x ? (x.amount || 0).toFixed(2) : p ? p.amount.toFixed(2) : "");
   const [vat, setVat] = useState(x?.vat ?? false);
   const [vatRate, setVatRate] = useState(String(x?.vatRate ?? VAT_RATE));
-  const [category, setCategory] = useState<string | null>(x?.category ?? null);
-  const [material, setMaterial] = useState(x?.material ?? "");
-  const [qty, setQty] = useState(x?.qty || 1);
+  // Paying a purchase order: what it was for, its materials, floor and cost type as the order had them.
+  const firstLine = p?.lines?.[0];
+  const [category, setCategory] = useState<string | null>(x?.category ?? p?.category ?? null);
+  const [material, setMaterial] = useState(x?.material ?? firstLine?.material ?? "");
+  const [qty, setQty] = useState(x?.qty || firstLine?.qty || 1);
   const [toStoreChoice, setToStoreChoice] = useState<boolean | null>(x?.category === "Material" ? x.toStore : null);
-  const [unit, setUnit] = useState("pcs");
+  const [unit, setUnit] = useState(firstLine?.unit || "pcs");
+  // Paying for goods checked in already (and whether "Already in the store?" was answered).
+  const [alreadyMain, setAlreadyMain] = useState<string | null>(x?.alreadyIn ?? null);
+  const [answeredMain, setAnsweredMain] = useState(!!x?.alreadyIn);
   const [supplier, setSupplier] = useState(x?.supplier ?? p?.supplier ?? "");
   // The supplier's bill this pays (lib/suppliers), if any.
   const [billId, setBillId] = useState<string | null>(x?.billId ?? p?.billId ?? null);
   const [description, setDescription] = useState(x?.description ?? p?.description ?? "");
-  const [floor, setFloor] = useState<string | null>(x?.floor ?? null);
+  const [floor, setFloor] = useState<string | null>(x?.floor ?? p?.floor ?? null);
   const [method, setMethod] = useState<string | null>(x?.method ?? p?.method ?? null);
   // The QuickBooks class: suggested from what it is until one is picked by hand.
-  const [classPick, setClassPick] = useState<string | null>(x?.costClass?.id ?? null);
-  const [classTouched, setClassTouched] = useState(!!x?.costClass);
+  const [classPick, setClassPick] = useState<string | null>(x?.costClass?.id ?? p?.costClass?.id ?? null);
+  const [classTouched, setClassTouched] = useState(!!x?.costClass || !!p?.costClass);
   // Paying a supplier's bill: the bill's photo is the receipt from the start (it stays the bill's too).
   const [kept, setKept] = useState<Receipt | null>(x?.receiptId && x.receiptUrl ? { id: x.receiptId, url: x.receiptUrl, type: x.receiptType ?? "image/jpeg" } : (p?.receipt ?? null));
   const more = useMorePhotos(x?.moreReceipts ?? []);
   // More materials on this entry (the first is the one above).
-  const [lines, setLines] = useState<LineDraft[]>(() => (x?.moreLines ?? []).map((l, i) => ({ key: i + 1, material: l.material, qty: l.qty, unit: "pcs", toStore: l.toStore })));
+  const [lines, setLines] = useState<LineDraft[]>(() =>
+    x
+      ? (x.moreLines ?? []).map((l, i) => ({ key: i + 1, material: l.material, qty: l.qty, unit: "pcs", toStore: l.toStore, alreadyIn: l.alreadyIn ?? null, answered: !!l.alreadyIn }))
+      : (p?.lines ?? []).slice(1).map((l, i) => ({ key: i + 1, material: l.material, qty: l.qty, unit: l.unit || "pcs", toStore: null }))
+  );
   const nextLine = useRef(lines.length);
   // Other costs on this receipt (a new entry only): each saved as its own entry.
   const [extras, setExtras] = useState<ExtraDraft[]>([]);
@@ -667,6 +754,15 @@ export function ExpenseForm({
     if (!inflow && !category) return setError("Pick Material, Service or Other.");
     if (isMaterial && !material.trim()) return setError("Write which material you bought.");
     if (isMaterial && lines.some((l) => !l.material.trim())) return setError("Write which material each line is, or take the empty line off.");
+    if (toStore && !answeredMain && mustAsk(match?.id ?? null, qty, arrivals)) return setError(`Already in the store? ${material.trim()} was checked in at the store: tap Yes or No.`);
+    const unanswered = isMaterial
+      ? lines.find((l) => {
+          const m = items.find((i) => key(i.name) === key(l.material));
+          const into = l.toStore ?? (forWho === "Site" && (m ? m.stocked : true));
+          return into && !l.answered && mustAsk(m?.id ?? null, l.qty, arrivals);
+        })
+      : undefined;
+    if (unanswered) return setError(`Already in the store? ${unanswered.material.trim()} was checked in at the store: tap Yes or No.`);
     if (!method) return setError(inflow ? "Pick how the money came in." : "Pick how it was paid.");
     if (vat && !hasReceipt) return setError("With VAT, the receipt is a must: take a photo of it or upload it.");
     for (const l of extras) {
@@ -708,13 +804,15 @@ export function ExpenseForm({
         material: isMaterial ? material.trim() : null,
         qty: isMaterial ? qty : null,
         toStore,
+        alreadyIn: toStore ? alreadyMain : null,
         unit: unit.trim() || "pcs",
         receiptId,
         moreReceiptIds: moreIds,
         moreLines: isMaterial
           ? lines.map((l) => {
               const m = items.find((i) => key(i.name) === key(l.material));
-              return { material: l.material.trim(), qty: l.qty, unit: l.unit.trim() || "pcs", toStore: l.toStore ?? (forWho === "Site" && (m ? m.stocked : true)) };
+              const into = l.toStore ?? (forWho === "Site" && (m ? m.stocked : true));
+              return { material: l.material.trim(), qty: l.qty, unit: l.unit.trim() || "pcs", toStore: into, alreadyIn: into ? (l.alreadyIn ?? null) : null };
             })
           : [],
         // The QuickBooks class (site expenses); without the lists here, an entry keeps the one it had.
@@ -723,6 +821,8 @@ export function ExpenseForm({
         ...(p?.debitId ? { bankDebitId: p.debitId } : {}),
         // The supplier's bill it pays (money out only).
         billId: inflow || !billKept ? null : billId,
+        // Paying a purchase order there and then (a new entry only): the order is paid, or part of it.
+        ...(!x && !inflow && p?.poId ? { poId: p.poId } : {}),
         // Other costs on the same receipt: each its own entry (a new one only).
         ...(!x && !inflow && extras.length
           ? {
@@ -1009,10 +1109,22 @@ export function ExpenseForm({
             <button type="button" className={toStore ? site.storeOn : site.storeOff} aria-pressed={toStore} onClick={() => setToStoreChoice(!toStore)}>
               {toStore ? "✓ Into the store room" : "Not into the store room"}
             </button>
+            {toStore && (
+              <AlreadyIn
+                open={arrivalsFor(match?.id ?? null, qty, arrivals)}
+                unit={match?.unit ?? ""}
+                tied={alreadyMain}
+                answered={answeredMain}
+                onAnswer={(moveId) => {
+                  setAlreadyMain(moveId);
+                  setAnsweredMain(true);
+                }}
+              />
+            )}
             {toStore &&
               (match ? (
                 <p className={site.storeNote}>
-                  In the store now: {qtyUnit(match.level, match.unit)}. This adds {qtyUnit(qty, match.unit)}.
+                  In the store now: {qtyUnit(match.level, match.unit)}. {alreadyMain ? "This pays for what's there already." : `This adds ${qtyUnit(qty, match.unit)}.`}
                 </p>
               ) : material.trim() ? (
                 <>
@@ -1044,6 +1156,7 @@ export function ExpenseForm({
               n={i + 2}
               line={l}
               items={items}
+              arrivals={arrivals}
               forWho={forWho}
               onChange={(next) => setLines((ls) => ls.map((x2) => (x2.key === l.key ? next : x2)))}
               onRemove={() => setLines((ls) => ls.filter((x2) => x2.key !== l.key))}

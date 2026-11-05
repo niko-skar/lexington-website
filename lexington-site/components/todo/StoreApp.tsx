@@ -9,6 +9,7 @@ import {
   MAX_ITEM_NAME,
   MAX_MOVE_NOTE,
   MAX_PERSON,
+  ghanaDay,
   qtyUnit,
   stillOut,
   toolWord,
@@ -36,6 +37,7 @@ import site from "./Site.module.css";
 import { SiteHeader, SiteMenu } from "./SiteChrome";
 import { CameraIcon, EntryPhoto, minutesSince, PhotoField, time, TradeChips, TradeFilter, UnitPicker } from "./StoreBits";
 import { CheckSheet, CheckStrip, DaysSheet } from "./StoreChecks";
+import { DeliveriesBar, DeliveriesSheet, WalkInSheet } from "./StoreDeliveries";
 import { RepairSheet, repairListText, ReportSheet } from "./StoreRepairs";
 import { DoubleAsk, findEntry, sameWords, TogetherSheet, useDoubleCheck, type ListEntry, type SameAnswer } from "./StoreDoubles";
 import { AddBuySheet, BuySheet, ShopButton, ShoppingTab } from "./StoreShopping";
@@ -65,7 +67,10 @@ type Sheet =
   // adding to it (more of a store item or a tool, from its page), changing what was added.
   | { kind: "buy"; key: string }
   | { kind: "addBuy"; itemId?: string; toolId?: string }
-  | { kind: "editBuy"; id: string };
+  | { kind: "editBuy"; id: string }
+  // Deliveries at the store door: what's expected, and something nobody said was coming.
+  | { kind: "deliveries" }
+  | { kind: "walkin" };
 type ToastData = { text: string; tone?: "error"; onUndo?: () => void };
 
 const MOVE_TITLE: Record<MoveKind, string> = { out: "Take out", back: "Brought back", in: "Add stock", count: "Count" };
@@ -83,7 +88,34 @@ function EntryLine({ entry, item, showName, isAdmin }: { entry: StoreEntry; item
   let head: React.ReactNode;
   let sub: string[] = [];
   let tone = "";
-  if (entry.kind === "count") {
+  if (entry.kind === "arrived") {
+    const confirming = entry.expected !== null && entry.expected !== undefined && entry.diff !== entry.qty;
+    head = (
+      <>
+        {confirming ? (
+          <>Arrived: {qtyUnit(entry.qty, unit)}</>
+        ) : (
+          <span className={site.plus}>+{qtyUnit(entry.qty, unit)}</span>
+        )}
+        {name}
+      </>
+    );
+    sub.push(confirming ? "Delivery checked in (it was paid for)" : "Delivery checked in");
+    if (confirming && entry.diff) sub.push(entry.diff < 0 ? `${qtyUnit(-entry.diff, unit)} short of the ${qtyUnit(entry.expected ?? 0, unit)} paid for` : `${qtyUnit(entry.diff, unit)} more than paid for`);
+    if (!confirming && entry.expected && entry.expected !== entry.qty) sub.push(`${qtyUnit(entry.expected, unit)} ordered`);
+    if (entry.ref) sub.push(entry.ref);
+    tone = entry.diff !== null && entry.diff < 0 && confirming ? site.entryBad : "";
+  } else if (entry.kind === "bought" && entry.paidOnly) {
+    head = (
+      <>
+        Paid for: {qtyUnit(entry.qty, unit)}
+        {name}
+      </>
+    );
+    sub.push("already in the store (checked in when it came)");
+    if (isAdmin && entry.amount !== undefined) sub.push(money(entry.amount));
+    if (isAdmin && entry.supplier) sub.push(entry.supplier);
+  } else if (entry.kind === "count") {
     head = (
       <>
         {entry.opening ? "Starting count" : "Count"}: {qtyUnit(entry.qty, unit)}
@@ -159,6 +191,10 @@ export function StoreApp({
   const [repairs, setRepairs] = useState<ToolRepair[]>(initial?.repairs ?? []);
   const [checks, setChecks] = useState<StoreCheck[]>(initial?.checks ?? []);
   const [buys, setBuys] = useState<StoreBuy[]>(initial?.buys ?? []);
+  // Its lines on an order still to place (lib/orders): their order's number.
+  const [onOrder, setOnOrder] = useState<Record<string, string>>(initial?.onOrder ?? {});
+  // What's to come in at the store door (lib/store/deliveries.ts).
+  const [expected, setExpected] = useState(initial?.expected ?? []);
   // The shopping list's line being ticked (or put back) just now.
   const [buyBusy, setBuyBusy] = useState<string | null>(null);
   // Opening and closing photos from before the month the page keeps fresh (asked for in the days list).
@@ -194,6 +230,20 @@ export function StoreApp({
     toastTimer.current = setTimeout(() => setToast(null), data.onUndo ? 7000 : 3500);
   }, []);
 
+  // The store as the server has it after a change made here (a delivery checked in).
+  const applyStore = useCallback((data: StoreData) => {
+    localAt.current = Date.now();
+    setItems(data.items);
+    setHistory(data.history);
+    setTools(data.tools ?? []);
+    setToolOuts(data.toolOuts ?? []);
+    setRepairs(data.repairs ?? []);
+    setChecks(data.checks ?? []);
+    setBuys(data.buys ?? []);
+    setOnOrder(data.onOrder ?? {});
+    setExpected(data.expected ?? []);
+  }, []);
+
   const refresh = useCallback(async () => {
     if (inFlight.current) return;
     inFlight.current = true;
@@ -220,6 +270,8 @@ export function StoreApp({
       setRepairs(data.repairs ?? []);
       setChecks(data.checks ?? []);
       setBuys(data.buys ?? []);
+      setOnOrder(data.onOrder ?? {});
+      setExpected(data.expected ?? []);
     } catch {
       setOffline(true);
     } finally {
@@ -666,6 +718,7 @@ export function StoreApp({
 
         {loaded && tab === "stock" && (
           <>
+            <DeliveriesBar expected={expected} onOpen={() => setSheet({ kind: "deliveries" })} />
             <div className={site.findBar}>
               <input
                 className={styles.input}
@@ -726,6 +779,7 @@ export function StoreApp({
             lines={lines}
             got={got}
             dismissed={dismissed}
+            onOrder={onOrder}
             busy={buyBusy}
             onAdd={() => setSheet({ kind: "addBuy" })}
             onCopy={() => void copyOrder()}
@@ -1086,6 +1140,30 @@ export function StoreApp({
             showToast({ text: editBuy ? `Saved: ${buy.name}` : `On the list: ${qty ? `${qty} ` : ""}${buy.name}` });
           }}
           onOpenLine={(key) => setSheet({ kind: "buy", key })}
+        />
+      )}
+      {sheet?.kind === "deliveries" && (
+        <DeliveriesSheet
+          expected={expected}
+          today={ghanaDay()}
+          onClose={() => setSheet(null)}
+          onOther={() => setSheet({ kind: "walkin" })}
+          onDone={(next, text) => {
+            applyStore(next);
+            showToast({ text });
+          }}
+        />
+      )}
+      {sheet?.kind === "walkin" && (
+        <WalkInSheet
+          me={me}
+          items={items}
+          onClose={() => setSheet(expected.length ? { kind: "deliveries" } : null)}
+          onDone={(next, text) => {
+            applyStore(next);
+            setSheet(null);
+            showToast({ text });
+          }}
         />
       )}
       {sheet?.kind === "check" && (

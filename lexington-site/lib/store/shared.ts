@@ -5,6 +5,7 @@
 // 23 Oct 2026: photos of the stock (required for anything going out), reorder points with an
 // optional reorder quantity, and a reorder list the office can dismiss items from.
 
+import type { ExpectedLine, OpenArrival } from "./deliveries";
 import type { StoreDouble } from "./doubles";
 import type { StoreBuy } from "./shopping";
 
@@ -72,7 +73,8 @@ export interface StoreItem {
 export type MoveKind = "out" | "back" | "in" | "count";
 export interface StoreEntry {
   id: string;
-  kind: MoveKind | "bought";
+  /** "arrived": a delivery checked in at the store door (lib/store/deliveries.ts). */
+  kind: MoveKind | "bought" | "arrived";
   itemId: string;
   /** For a count: the number counted. */
   qty: number;
@@ -94,6 +96,11 @@ export interface StoreEntry {
   supplier?: string;
   amount?: number;
   date?: string;
+  /** "bought": paid for goods checked in already (they were counted then, not again). */
+  paidOnly?: boolean;
+  /** "arrived": what was paid for or ordered, and the expense's or order's number. */
+  expected?: number | null;
+  ref?: string | null;
 }
 
 export const fmtQty = (n: number) => (Number(n) || 0).toLocaleString("en-GB", { maximumFractionDigits: 2 });
@@ -272,4 +279,17 @@ export interface StoreCheck {
 }
 
 /** The whole store room as the page gets it. buys: what's been added to the shopping list (to buy, and got lately). */
-export type StoreData = { items: StoreItem[]; history: StoreEntry[]; tools: StoreTool[]; toolOuts: ToolOut[]; repairs: ToolRepair[]; checks: StoreCheck[]; buys: StoreBuy[] };
+export type StoreData = {
+  items: StoreItem[];
+  history: StoreEntry[];
+  tools: StoreTool[];
+  toolOuts: ToolOut[];
+  repairs: ToolRepair[];
+  checks: StoreCheck[];
+  buys: StoreBuy[];
+  /** Shopping list lines (by their line's id, or a store item's at its reorder point) on an order still to place: its number. */
+  onOrder?: Record<string, string>;
+  /** What's to come in at the store door, and (the office) what came in that nobody has paid for yet. */
+  expected?: ExpectedLine[];
+  arrivals?: OpenArrival[];
+};

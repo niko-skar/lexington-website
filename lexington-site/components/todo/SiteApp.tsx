@@ -4,30 +4,36 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExter
 
 import type { AlertsData } from "@/lib/alerts/shared";
 import type { BuyersData } from "@/lib/buyers/shared";
+import type { CashflowPage } from "@/lib/cashflow/server";
 import type { ConcreteData } from "@/lib/concrete/shared";
 import type { BankDebit, Expense } from "@/lib/expenses/shared";
 import type { SteelData } from "@/lib/expenses/steel";
+import type { OrdersPage } from "@/lib/orders/shared";
 import type { SpendingData } from "@/lib/spending/shared";
 import type { OpenBill, SuppliersPage } from "@/lib/suppliers/shared";
 import type { BookLists } from "@/lib/quickbooks/books";
 import { opensRollcall } from "@/lib/rollcall/shared";
+import type { OpenArrival } from "@/lib/store/deliveries";
 import type { StoreData, StoreItem } from "@/lib/store/shared";
 import { toBuyCount } from "@/lib/store/shopping";
-import { PAGE_SECTIONS, sectionHref, type PageSection, type TodoList, type TodoMe, type TodoTask } from "@/lib/todo/shared";
+import { FINANCE_SECTIONS, isFinance, PAGE_SECTIONS, sectionHref, type FinanceSection, type PageSection, type TodoList, type TodoMe, type TodoTask } from "@/lib/todo/shared";
 import { AlertsApp } from "./AlertsApp";
 import { send, startPolling } from "./api";
 import { BuyersApp } from "./BuyersApp";
+import { CashflowApp } from "./CashflowApp";
 import { ConcreteApp } from "./ConcreteApp";
 import { Dashboard } from "./Dashboard";
+import type { ExpensePrefill } from "./ExpenseForm";
 import { ExpensesApp } from "./ExpensesApp";
+import { OrdersApp } from "./OrdersApp";
 import { usePhoneAlerts } from "./PhoneAlerts";
 import { onUploads, resumeUploads, waitingUploads } from "./photoQueue";
 import { RollcallPart, rollcallTabOf, type RollcallTab } from "./RollcallPart";
-import { appClass, SiteNav, type View } from "./SiteChrome";
+import { appClass, FinanceTabs, SiteNav, type NavItem, type View } from "./SiteChrome";
 import { SpendingApp } from "./SpendingApp";
 import { SteelApp } from "./SteelApp";
 import { StoreApp } from "./StoreApp";
-import { SuppliersApp, type BillPayment } from "./SuppliersApp";
+import { SuppliersApp, type BillPayment, type BillPrefill } from "./SuppliersApp";
 import { TodoApp } from "./TodoApp";
 import styles from "./Todo.module.css";
 import { useSheetGestures } from "./useSheetGestures";
@@ -38,8 +44,20 @@ import { useSheetGestures } from "./useSheetGestures";
 // after the app opens, so the first tap on them is instant too. The address bar follows along.
 
 export type { StoreData };
-export type ExpensesData = { expenses: Expense[]; items: StoreItem[]; pending?: BankDebit[]; books?: BookLists; bills?: OpenBill[]; vendors?: string[] };
-export type SiteData = { todo?: TodoTask[]; store?: StoreData; expenses?: ExpensesData; alerts?: AlertsData; concrete?: ConcreteData; buyers?: BuyersData; steel?: SteelData; suppliers?: SuppliersPage; spending?: SpendingData };
+export type ExpensesData = { expenses: Expense[]; items: StoreItem[]; arrivals?: OpenArrival[]; pending?: BankDebit[]; books?: BookLists; bills?: OpenBill[]; vendors?: string[] };
+export type SiteData = {
+  todo?: TodoTask[];
+  store?: StoreData;
+  expenses?: ExpensesData;
+  alerts?: AlertsData;
+  concrete?: ConcreteData;
+  buyers?: BuyersData;
+  steel?: SteelData;
+  suppliers?: SuppliersPage;
+  spending?: SpendingData;
+  orders?: OrdersPage;
+  cashflow?: CashflowPage;
+};
 
 // Since 30 Oct 2026 the app opens on its home page (/todo) and the to-do list is /todo/jobs.
 const sectionFrom = (path: string): View | null =>
@@ -61,6 +79,10 @@ const sectionFrom = (path: string): View | null =>
             ? "suppliers"
           : path.startsWith("/todo/spending")
             ? "spending"
+          : path.startsWith("/todo/orders")
+            ? "orders"
+          : path.startsWith("/todo/cashflow")
+            ? "cashflow"
           : path.startsWith("/todo/jobs")
           ? "todo"
           : path === "/todo" || path === "/todo/"
@@ -82,8 +104,10 @@ async function load(section: PageSection): Promise<SiteData> {
   if (section === "steel") return { steel: await get("/api/steel") };
   if (section === "suppliers") return { suppliers: await get("/api/suppliers") };
   if (section === "spending") return { spending: await get("/api/spending") };
+  if (section === "orders") return { orders: await get("/api/orders") };
+  if (section === "cashflow") return { cashflow: await get("/api/cashflow") };
   const [x, s] = await Promise.all([get("/api/expenses"), get("/api/store")]);
-  return { expenses: { expenses: x.expenses, items: s.items, pending: x.pending, books: x.books, bills: x.bills, vendors: x.vendors } };
+  return { expenses: { expenses: x.expenses, items: s.items, arrivals: s.arrivals, pending: x.pending, books: x.books, bills: x.bills, vendors: x.vendors } };
 }
 
 /* ---------- put it on the home screen ---------- */
@@ -219,6 +243,13 @@ export function SiteApp({
   const hasAlerts = me.sections.includes("alerts");
   // "Pay" on a supplier's bill: the expense form, filled in for it.
   const [payAsk, setPayAsk] = useState<{ payment: BillPayment; at: number } | null>(null);
+  // Finance's parts asked from each other (5 Nov 2026): "Pay it now" on an order (the expense form), "Make it a bill"
+  // (the supplier's bill form) or a bill on the cash flow (the supplier's page), an order on the cash flow.
+  const [orderPayAsk, setOrderPayAsk] = useState<{ prefill: ExpensePrefill; at: number } | null>(null);
+  const [supplierAsk, setSupplierAsk] = useState<{ vendorId: string; bill?: BillPrefill; at: number } | null>(null);
+  const [orderAsk, setOrderAsk] = useState<{ orderId: string; at: number } | null>(null);
+  // The Finance item on the bar opens the part of it used last.
+  const lastFinance = useRef<FinanceSection>(isFinance(first) ? first : (FINANCE_SECTIONS.find((s) => me.sections.includes(s)) ?? "expenses"));
   // The roll call's tab asked for (the address's #week, the home page's Payday tile).
   const [rcAsk, setRcAsk] = useState<{ tab: RollcallTab; at: number } | null>(null);
   useEffect(() => {
@@ -271,8 +302,10 @@ export function SiteApp({
   }, []);
 
   const go = useCallback(
-    (next: View, push = true) => {
+    (item: NavItem, push = true) => {
+      const next: View = item === "finance" ? lastFinance.current : item;
       if (next !== "home" && !(next === "rollcall" ? opensRollcall(me.sections) : me.sections.includes(next))) return;
+      if (isFinance(next)) lastFinance.current = next;
       if (next === current.current) {
         window.scrollTo({ top: 0, behavior: "smooth" });
         return;
@@ -336,6 +369,8 @@ export function SiteApp({
   const photosGoing = useSyncExternalStore(onUploads, waitingUploads, () => 0);
 
   const show = (s: View) => opened.includes(s) && (s === "home" || (s === "rollcall" ? opensRollcall(me.sections) : me.sections.includes(s)));
+  // Finance's tabs, in the header of each of its parts.
+  const tabs = (s: FinanceSection) => <FinanceTabs me={me} current={s} onGo={go} />;
 
   return (
     <div className={appClass(me)} data-app="site">
@@ -397,8 +432,51 @@ export function SiteApp({
             openDebit={openDebit}
             onSteel={() => go("steel")}
             payBill={payAsk}
+            payOrder={orderPayAsk}
+            tabs={tabs("expenses")}
             startedOffline={startedOffline && first === "expenses"}
             fresh={first === "expenses"}
+          />
+        </div>
+      )}
+      {show("orders") && (
+        <div hidden={section !== "orders"}>
+          <OrdersApp
+            me={me}
+            active={section === "orders"}
+            initial={data.orders ?? null}
+            startedOffline={startedOffline && first === "orders"}
+            fresh={first === "orders"}
+            tabs={tabs("orders")}
+            ask={orderAsk}
+            onBill={(bill) => {
+              setSupplierAsk({ vendorId: bill.vendorId, bill, at: Date.now() });
+              go("suppliers");
+            }}
+            onPay={(prefill) => {
+              setOrderPayAsk({ prefill, at: Date.now() });
+              go("expenses");
+            }}
+          />
+        </div>
+      )}
+      {show("cashflow") && (
+        <div hidden={section !== "cashflow"}>
+          <CashflowApp
+            me={me}
+            active={section === "cashflow"}
+            initial={data.cashflow ?? null}
+            startedOffline={startedOffline && first === "cashflow"}
+            fresh={first === "cashflow"}
+            tabs={tabs("cashflow")}
+            onBill={(vendorId) => {
+              setSupplierAsk({ vendorId, at: Date.now() });
+              go("suppliers");
+            }}
+            onOrder={(orderId) => {
+              setOrderAsk({ orderId, at: Date.now() });
+              go("orders");
+            }}
           />
         </div>
       )}
@@ -430,7 +508,14 @@ export function SiteApp({
       )}
       {show("buyers") && (
         <div hidden={section !== "buyers"}>
-          <BuyersApp me={me} active={section === "buyers"} initial={data.buyers ?? null} startedOffline={startedOffline && first === "buyers"} fresh={first === "buyers"} />
+          <BuyersApp
+            me={me}
+            active={section === "buyers"}
+            initial={data.buyers ?? null}
+            startedOffline={startedOffline && first === "buyers"}
+            fresh={first === "buyers"}
+            tabs={tabs("buyers")}
+          />
         </div>
       )}
       {show("steel") && (
@@ -446,6 +531,7 @@ export function SiteApp({
             initial={data.spending ?? null}
             startedOffline={startedOffline && first === "spending"}
             fresh={first === "spending"}
+            tabs={tabs("spending")}
           />
         </div>
       )}
@@ -461,6 +547,8 @@ export function SiteApp({
               setPayAsk({ payment, at: Date.now() });
               go("expenses");
             }}
+            ask={supplierAsk}
+            tabs={tabs("suppliers")}
           />
         </div>
       )}

@@ -43,6 +43,8 @@ export interface Bill {
   photoType: string | null;
   createdAt: string;
   createdBy: string;
+  /** The purchase order it was made from (lib/orders, 5 Nov 2026), or null. */
+  poId: string | null;
   /** In QuickBooks: its bill there, or why not yet. */
   qboTxnId: string | null;
   qboError: string | null;

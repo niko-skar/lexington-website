@@ -1,0 +1,154 @@
+/* Deliveries at the store door (5 Nov 2026). Colours come from .app in Todo.module.css. */
+
+.bar {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  margin: 0 0 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--x-accent);
+  border-radius: 10px;
+  background: var(--x-surface);
+  color: var(--x-ink);
+  text-align: left;
+  box-shadow: inset 4px 0 0 var(--x-accent);
+}
+.bar span {
+  font-size: 13px;
+  color: var(--x-muted);
+}
+.quiet {
+  composes: bar;
+  border-color: var(--x-line);
+  box-shadow: none;
+}
+.list {
+  display: grid;
+  gap: 10px;
+  margin: 8px 0 12px;
+}
+.row {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--x-line);
+  border-radius: 10px;
+  background: var(--x-bg);
+}
+.rowTop {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+.rowTop b {
+  font-size: 16px;
+}
+.qty {
+  flex: none;
+  font-family: var(--x-num);
+  font-size: 16px;
+  white-space: nowrap;
+}
+.sub {
+  margin: 0;
+  font-size: 13px;
+  color: var(--x-muted);
+}
+.late {
+  color: var(--x-warn);
+  font-weight: 600;
+}
+.buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.buttons button {
+  min-height: 46px;
+  border: 1px solid var(--x-line);
+  border-radius: 8px;
+  background: var(--x-surface);
+  color: var(--x-ink);
+  font-weight: 600;
+}
+.buttons .arrived {
+  border-color: var(--x-ok);
+  background: var(--x-ok);
+  color: var(--x-on-color);
+}
+.some {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: center;
+}
+.some button {
+  min-height: 46px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--x-accent);
+  color: var(--x-accent-ink);
+  font-weight: 700;
+}
+.other {
+  width: 100%;
+  min-height: 48px;
+  border: 1px dashed var(--x-accent);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--x-accent);
+  font-weight: 700;
+}
+.picked {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 48px;
+  padding: 0 12px;
+  border: 1px solid var(--x-line);
+  border-radius: 8px;
+  background: var(--x-bg);
+}
+.picked button {
+  min-height: 36px;
+  border: 0;
+  background: none;
+  color: var(--x-accent);
+  font-weight: 600;
+}
+/* The expense form's question: goods checked in already? */
+.ask {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--x-amber);
+  border-radius: 8px;
+  background: var(--x-amber-soft);
+  font-size: 14px;
+}
+.ask p {
+  margin: 0;
+}
+.askButtons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.askButtons button {
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--x-line);
+  border-radius: 8px;
+  background: var(--x-surface);
+  color: var(--x-ink);
+  font-weight: 600;
+}
+.askButtons .on {
+  border-color: var(--x-accent);
+  background: var(--x-accent);
+  color: var(--x-accent-ink);
+}

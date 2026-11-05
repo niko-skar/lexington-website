@@ -25,6 +25,16 @@ import { useUploadSlot } from "./useUploadSlot";
 type ToastData = { text: string; tone?: "error" };
 /** What "Pay" hands the expense form. */
 export type BillPayment = { billId: string; supplier: string; amount: number; description: string; bill: OpenBill; receipt: { id: string; url: string; type: string } | null };
+/** A new bill started for the user: "Make it a bill" on a purchase order (lib/orders), with a line saying so. */
+export type BillPrefill = {
+  poId: string;
+  vendorId: string;
+  amount: number;
+  description: string;
+  floor: string | null;
+  costClass: { id: string; name: string } | null;
+  note: string;
+};
 
 const addDays = (day: string, n: number) => new Date(Date.parse(`${day}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
 const dueWords = (b: Pick<BillState, "due" | "left" | "overdue">, today: string) =>
@@ -37,6 +47,8 @@ export function SuppliersApp({
   startedOffline,
   fresh,
   onPay,
+  ask,
+  tabs,
 }: {
   me: TodoMe;
   active: boolean;
@@ -45,13 +57,26 @@ export function SuppliersApp({
   fresh: boolean;
   /** "Pay" on a bill: the expense form, filled in for it. */
   onPay: (payment: BillPayment) => void;
+  /** Asked from elsewhere: a supplier's page open (a bill on the cash flow), or a new bill filled in (an order). */
+  ask?: { vendorId: string; bill?: BillPrefill; at: number } | null;
+  /** Finance's tabs, under the header. */
+  tabs?: React.ReactNode;
 }) {
   const [data, setData] = useState<SuppliersPage | null>(initial);
   const [offline, setOffline] = useState(startedOffline);
   const [signedOut, setSignedOut] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
   const [find, setFind] = useState("");
-  const [billSheet, setBillSheet] = useState<{ bill: BillState | null; vendorId: string | null } | null>(null);
+  const [billSheet, setBillSheet] = useState<{ bill: BillState | null; vendorId: string | null; prefill?: BillPrefill } | null>(null);
+  // Asked from elsewhere: that supplier's page, and the bill form when it's for an order.
+  useEffect(() => {
+    if (!ask) return;
+    const timer = setTimeout(() => {
+      setOpenId(ask.vendorId);
+      if (ask.bill) setBillSheet({ bill: null, vendorId: ask.vendorId, prefill: ask.bill });
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [ask]);
   const [supplierSheet, setSupplierSheet] = useState(false);
   const [toast, setToast] = useState<ToastData | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -124,6 +149,7 @@ export function SuppliersApp({
   return (
     <>
       <SiteHeader
+        eyebrow={tabs ? "Finance" : undefined}
         title={open ? open.vendor.name : "Suppliers"}
         sub={
           !data
@@ -137,7 +163,9 @@ export function SuppliersApp({
                 : "Nothing owed"
         }
         onMenu={() => setMenuOpen(true)}
-      />
+      >
+        {tabs}
+      </SiteHeader>
       {signedOut && (
         <div className={styles.banner} role="alert">
           You&rsquo;ve been signed out. <a href="/todo/suppliers">Sign in again</a>
@@ -218,6 +246,7 @@ export function SuppliersApp({
           data={data}
           bill={billSheet.bill}
           vendorId={billSheet.vendorId}
+          prefill={billSheet.prefill ?? null}
           onClose={() => setBillSheet(null)}
           onSaved={(next, text) => {
             put(next);
@@ -432,25 +461,29 @@ function BillSheet({
   data,
   bill,
   vendorId,
+  prefill,
   onClose,
   onSaved,
 }: {
   data: SuppliersPage;
   bill: BillState | null;
   vendorId: string | null;
+  /** A new bill made from a purchase order: filled in from it. */
+  prefill: BillPrefill | null;
   onClose: () => void;
   onSaved: (next: SuppliersPage, text: string) => void;
 }) {
   const today = data.today;
-  const [vendor, setVendor] = useState(bill?.vendorId ?? vendorId ?? "");
+  const p = bill ? null : prefill;
+  const [vendor, setVendor] = useState(bill?.vendorId ?? p?.vendorId ?? vendorId ?? "");
   const [find, setFind] = useState("");
   const [date, setDate] = useState(bill?.date ?? today);
   const [due, setDue] = useState(bill?.due ?? "");
-  const [amount, setAmount] = useState(bill ? String(bill.amount) : "");
-  const [description, setDescription] = useState(bill?.description ?? "");
+  const [amount, setAmount] = useState(bill ? String(bill.amount) : p ? String(p.amount) : "");
+  const [description, setDescription] = useState(bill?.description ?? p?.description ?? "");
   const [ref, setRef] = useState(bill?.ref ?? "");
-  const [floor, setFloor] = useState(bill?.floor ?? "");
-  const [cls, setCls] = useState(bill?.costClass?.id ?? "");
+  const [floor, setFloor] = useState(bill?.floor ?? p?.floor ?? "");
+  const [cls, setCls] = useState(bill?.costClass?.id ?? p?.costClass?.id ?? "");
   const [saving, setSaving] = useState(false);
   const [armed, setArmed] = useState(false);
   const [error, setError] = useState("");
@@ -496,6 +529,8 @@ function BillSheet({
         floor: floor || null,
         costClass: c ? { id: c.id, name: c.name } : null,
         ...(photoId !== undefined ? { photoId } : {}),
+        // Made from a purchase order: the order is billed (bought on credit).
+        ...(p ? { poId: p.poId } : {}),
       },
       bill ? "Bill changed" : `Bill from ${chosen.name}: ${money(Number(amount.replace(/,/g, "")))}`
     );
@@ -507,6 +542,7 @@ function BillSheet({
     <div className={styles.sheetBackdrop}>
       <div className={styles.sheet} role="dialog" aria-label={bill ? "Change the bill" : "New bill"}>
         <h2 className={styles.sheetTitle}>{bill ? `${bill.appRef ?? "Bill"}: change` : "New bill"}</h2>
+        {p && <p className={styles.sheetNote}>{p.note}</p>}
         <span className={styles.label}>Supplier</span>
         {chosen ? (
           <div className={sp.chosen}>

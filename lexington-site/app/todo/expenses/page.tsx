@@ -9,6 +9,7 @@ import type { BookLists } from "@/lib/quickbooks/books";
 import { cachedBookLists } from "@/lib/quickbooks/booksCache";
 import { cachedVendors } from "@/lib/quickbooks/vendors";
 import type { BankDebit, Expense } from "@/lib/expenses/shared";
+import type { OpenArrival } from "@/lib/store/deliveries";
 import { getStore } from "@/lib/store/server";
 import { ghanaDay } from "@/lib/store/shared";
 import { listBills } from "@/lib/suppliers/server";
@@ -33,6 +34,7 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
 
   let expenses: Expense[] = [];
   let items: StoreItem[] = [];
+  let arrivals: OpenArrival[] = [];
   let pending: BankDebit[] = [];
   let books: BookLists | undefined;
   let bills: OpenBill[] = [];
@@ -41,11 +43,12 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
   try {
     const [x, store, debits, lists, allBills, vendorList] = await Promise.all([listExpenses(), getStore(me), listPendingDebits(), cachedBookLists(), listBills(), cachedVendors()]);
     [expenses, items, pending, books] = [x, store.items, debits, lists];
+    arrivals = store.arrivals ?? [];
     bills = openBillsOf(allBills, x, ghanaDay());
     vendors = vendorList.vendors.map((v) => v.name);
   } catch (error) {
     console.error("[expenses] load failed:", error instanceof Error ? error.message : error);
     failed = true;
   }
-  return <SiteApp me={me} section="expenses" initial={{ expenses: { expenses, items, pending, books, bills, vendors } }} openEntry={openEntry} openDebit={openDebit} seenAlert={seenAlert} startedOffline={failed} />;
+  return <SiteApp me={me} section="expenses" initial={{ expenses: { expenses, items, arrivals, pending, books, bills, vendors } }} openEntry={openEntry} openDebit={openDebit} seenAlert={seenAlert} startedOffline={failed} />;
 }

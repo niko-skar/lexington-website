@@ -42,7 +42,22 @@ type ToastData = { text: string; tone?: "error" };
 const monthName = (m: string) => new Date(`${m}-15T12:00:00Z`).toLocaleDateString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" });
 const kindWord = (e: SpendEntry) => (e.kind === "payment" ? "paid a bill" : e.kind === "bill" ? "bill" : e.kind === "credit" ? "credit" : "expense");
 
-export function SpendingApp({ me, active, initial, startedOffline, fresh }: { me: TodoMe; active: boolean; initial: SpendingData | null; startedOffline: boolean; fresh: boolean }) {
+export function SpendingApp({
+  me,
+  active,
+  initial,
+  startedOffline,
+  fresh,
+  tabs,
+}: {
+  me: TodoMe;
+  active: boolean;
+  initial: SpendingData | null;
+  startedOffline: boolean;
+  fresh: boolean;
+  /** Finance's tabs, under the header. */
+  tabs?: React.ReactNode;
+}) {
   const [data, setData] = useState<SpendingData | null>(initial);
   const [offline, setOffline] = useState(startedOffline);
   const [signedOut, setSignedOut] = useState(false);
@@ -128,7 +143,9 @@ export function SpendingApp({ me, active, initial, startedOffline, fresh }: { me
 
   return (
     <>
-      <SiteHeader title="Spending" sub={sub} onMenu={() => setMenuOpen(true)} />
+      <SiteHeader eyebrow={tabs ? "Finance" : undefined} title="Spending" sub={sub} onMenu={() => setMenuOpen(true)}>
+        {tabs}
+      </SiteHeader>
       {signedOut && (
         <div className={styles.banner} role="alert">
           You&rsquo;ve been signed out. <a href="/todo/spending">Sign in again</a>

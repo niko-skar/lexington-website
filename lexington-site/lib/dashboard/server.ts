@@ -2,9 +2,11 @@ import "server-only";
 
 import { unreadCount } from "@/lib/alerts/notify";
 import { listBuyers } from "@/lib/buyers/payments";
+import { cashflowNow } from "@/lib/cashflow/server";
 import { listConcrete } from "@/lib/concrete/server";
 import { daySummary, truckFlags, trucksOn } from "@/lib/concrete/shared";
 import { rollcallAccess } from "@/lib/rollcall/shared";
+import { orderViews } from "@/lib/orders/server";
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
 import { BANK_TEXT_PREFIX, BILL_PREFIX, EXPENSE_PREFIX, QBO_HISTORY_ID, QBO_TXN_MONTH_PREFIX, ROLLCALL_PREFIX } from "@/lib/site/ids";
 import { steelData } from "@/lib/steel/server";
@@ -29,7 +31,7 @@ export interface DashboardData {
   /** The site list's jobs (the to-do opens on it); the office's house list counted apart. */
   todo?: { open: number; urgent: number; doneToday: number; house: number };
   /** The store room; and its shopping list (its own tile): how many lines to buy, how many needed today, the first few. */
-  store?: { toolsOut: number; opened: string | null; closed: string | null; toCheck?: number; toFix: number; atRepairer: number; toBuy: number; buyToday: number; buyNames: string[] };
+  store?: { toolsOut: number; opened: string | null; closed: string | null; toCheck?: number; toFix: number; atRepairer: number; toBuy: number; buyToday: number; buyNames: string[]; deliveries?: number };
   /** Spent on site this month, and the bank's debits waiting to be completed. */
   expenses?: { monthOut: number; monthCount: number; fromBank: number };
   alerts?: { unread: number };
@@ -48,6 +50,10 @@ export interface DashboardData {
   steel?: { bought: number; installed: number; stock: number; paid: number; owed: number; unknown: number };
   /** The roll call isn't moved in from its Claude page yet (one tile says so instead of three empty ones). */
   rollcallMoving?: boolean;
+  /** The cash flow (lib/cashflow): the money now (null: never typed), the lowest in the weeks ahead, the first day short, the weekly wages counted. */
+  cashflow?: { now: number | null; lowest: { amount: number; date: string } | null; short: { date: string; amount: number } | null; weekly: number | null };
+  /** Purchase orders still to buy (lib/orders): to order, ordered, their money left, how many late, the next one needed. */
+  orders?: { toOrder: number; ordered: number; left: number; late: number; next: { number: string; neededBy: string } | null };
 }
 
 type Obj = Record<string, unknown>;
@@ -83,6 +89,8 @@ async function storePart(me: TodoMe, today: string) {
   const toBuy = toBuyLines(store.items, store.tools, store.buys);
   return {
     toBuy: toBuy.length,
+    // Deliveries to tick at the store door (lib/store/deliveries.ts).
+    deliveries: (store.expected ?? []).length,
     buyToday: toBuy.filter((l) => l.kind === "buy" && l.buy.urgent).length,
     buyNames: toBuy.slice(0, 4).map(lineName),
     // The office: new things the site logins added, to check.
@@ -197,11 +205,28 @@ async function steelPart(me: TodoMe): Promise<NonNullable<DashboardData["steel"]
   return { bought: x.tons, installed: x.installed, stock: x.stock, paid: x.paid, owed: x.owed, unknown: x.unknown };
 }
 
+async function cashflowPart(): Promise<NonNullable<DashboardData["cashflow"]>> {
+  const { forecast: f } = await cashflowNow();
+  return { now: f.now, lowest: f.lowest, short: f.short, weekly: f.wages.weekly };
+}
+
+async function ordersPart(): Promise<NonNullable<DashboardData["orders"]>> {
+  const open = (await orderViews()).filter((o) => !o.done);
+  const next = open.filter((o) => o.status === "planned").sort((a, b) => a.neededBy.localeCompare(b.neededBy))[0] ?? null;
+  return {
+    toOrder: open.filter((o) => o.status === "planned").length,
+    ordered: open.filter((o) => o.status === "ordered").length,
+    left: Math.round(open.reduce((n, o) => n + o.left, 0) * 100) / 100,
+    late: open.filter((o) => o.late).length,
+    next: next ? { number: next.number, neededBy: next.neededBy } : null,
+  };
+}
+
 /** The home page's figures for this login: only the parts it opens. */
 export async function getDashboard(me: TodoMe): Promise<DashboardData> {
   const today = ghanaDay();
   const has = (s: string) => me.sections.includes(s as never);
-  const [todo, store, expenses, unread, rollcall, concrete, buyers, suppliers, steel, spending] = await Promise.all([
+  const [todo, store, expenses, unread, rollcall, concrete, buyers, suppliers, steel, spending, cashflow, orders] = await Promise.all([
     has("todo") ? settle(todoPart(me, today)) : undefined,
     has("store") ? settle(storePart(me, today)) : undefined,
     has("expenses") ? settle(expensesPart(today)) : undefined,
@@ -212,6 +237,8 @@ export async function getDashboard(me: TodoMe): Promise<DashboardData> {
     has("suppliers") ? settle(suppliersOwed()) : undefined,
     has("steel") ? settle(steelPart(me)) : undefined,
     has("spending") ? settle(spendingPart(today)) : undefined,
+    has("cashflow") ? settle(cashflowPart()) : undefined,
+    has("orders") ? settle(ordersPart()) : undefined,
   ]);
   return {
     today,
@@ -225,6 +252,8 @@ export async function getDashboard(me: TodoMe): Promise<DashboardData> {
     ...(steel ? { steel } : {}),
     ...(suppliers ? { suppliers } : {}),
     ...(spending ? { spending } : {}),
+    ...(cashflow ? { cashflow } : {}),
+    ...(orders ? { orders } : {}),
   };
 }
 

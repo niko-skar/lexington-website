@@ -46,19 +46,27 @@ export interface TodoTask {
  * messages). To-do, Store, Expenses and Alerts are drawn in the one page; the roll call's three parts
  * (Today, Payday, Workers) are its own page, /todo/rollcall (lib/rollcall).
  */
-export const SECTIONS = ["todo", "store", "expenses", "alerts", "rollcall", "payday", "workers", "concrete", "buyers", "steel", "suppliers", "spending"] as const;
+export const SECTIONS = ["todo", "store", "expenses", "alerts", "rollcall", "payday", "workers", "concrete", "buyers", "steel", "suppliers", "spending", "orders", "cashflow"] as const;
 export type Section = (typeof SECTIONS)[number];
 /**
  * Concrete (the trucks on pour days, lib/concrete, 30 Oct 2026), Buyers (their payments and receipts,
  * lib/buyers, the office only, 31 Oct 2026) and Steel (the tons bought and installed, and what the steel
  * benders are owed, lib/steel, the office only, 2 Nov 2026) and Suppliers (QuickBooks' suppliers and their bills,
  * lib/suppliers, the office only, 2 Nov 2026) and Spending (QuickBooks' transactions with the app's own, by cost type,
- * floor, supplier and month, lib/spending, the office only, 3 Nov 2026) are drawn in the one page too.
+ * floor, supplier and month, lib/spending, the office only, 3 Nov 2026) are drawn in the one page too, and so are the
+ * purchase orders (lib/orders) and the cash flow (lib/cashflow), the office only, 5 Nov 2026.
  */
-export const PAGE_SECTIONS = ["todo", "store", "expenses", "alerts", "concrete", "buyers", "steel", "suppliers", "spending"] as const;
+export const PAGE_SECTIONS = ["todo", "store", "expenses", "alerts", "concrete", "buyers", "steel", "suppliers", "spending", "orders", "cashflow"] as const;
 export type PageSection = (typeof PAGE_SECTIONS)[number];
 export const isPageSection = (section: string): section is PageSection => (PAGE_SECTIONS as readonly string[]).includes(section);
-export type SiteSection = Exclude<Section, "expenses" | "alerts" | "buyers" | "steel" | "suppliers" | "spending">;
+/**
+ * Finance (Niko, 5 Nov 2026: "turn expenses into finance and house everything finance related in there"): one place
+ * on the bar for the money parts, each a tab of it, in this order.
+ */
+export const FINANCE_SECTIONS = ["expenses", "orders", "suppliers", "cashflow", "spending", "buyers"] as const;
+export type FinanceSection = (typeof FINANCE_SECTIONS)[number];
+export const isFinance = (section: string): section is FinanceSection => (FINANCE_SECTIONS as readonly string[]).includes(section);
+export type SiteSection = Exclude<Section, "expenses" | "alerts" | "buyers" | "steel" | "suppliers" | "spending" | "orders" | "cashflow">;
 export const SITE_SECTIONS: readonly SiteSection[] = ["todo", "store", "rollcall", "payday", "workers", "concrete"];
 const HREF: Record<Section, string> = {
   todo: "/todo/jobs",
@@ -73,6 +81,8 @@ const HREF: Record<Section, string> = {
   steel: "/todo/steel",
   suppliers: "/todo/suppliers",
   spending: "/todo/spending",
+  orders: "/todo/orders",
+  cashflow: "/todo/cashflow",
 };
 export const sectionHref = (section: Section) => HREF[section];
 const SECTION_NAMES: Record<Section, string> = {
@@ -88,10 +98,26 @@ const SECTION_NAMES: Record<Section, string> = {
   steel: "Steel",
   suppliers: "Suppliers",
   spending: "Spending",
+  orders: "Orders",
+  cashflow: "Cash flow",
 };
 export const sectionName = (section: Section) => SECTION_NAMES[section];
 /** Where a sign-in from the app may send someone back to. */
-export const APP_PAGES: readonly string[] = ["/todo", "/todo/jobs", "/todo/store", "/todo/expenses", "/todo/alerts", "/todo/rollcall", "/todo/concrete", "/todo/buyers", "/todo/steel", "/todo/suppliers", "/todo/spending"];
+export const APP_PAGES: readonly string[] = [
+  "/todo",
+  "/todo/jobs",
+  "/todo/store",
+  "/todo/expenses",
+  "/todo/alerts",
+  "/todo/rollcall",
+  "/todo/concrete",
+  "/todo/buyers",
+  "/todo/steel",
+  "/todo/suppliers",
+  "/todo/spending",
+  "/todo/orders",
+  "/todo/cashflow",
+];
 
 /** Who is using the page: Niko and other admins add and delete; a "site" login (the foreman) ticks. */
 export interface TodoMe {

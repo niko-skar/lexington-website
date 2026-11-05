@@ -3,6 +3,7 @@ import { after } from "next/server";
 
 import { listExpenses } from "@/lib/expenses/server";
 import { FLOORS } from "@/lib/expenses/shared";
+import { cleanOrderLink, orderUsed } from "@/lib/orders/link";
 import { areasWith } from "@/lib/quickbooks/books";
 import { cachedBookLists } from "@/lib/quickbooks/booksCache";
 import { feedBill } from "@/lib/quickbooks/feed";
@@ -38,6 +39,7 @@ const BILL_FIELDS = `{
   "photoType": photo.asset->mimeType,
   createdAt,
   "createdBy": coalesce(createdBy, ""),
+  "poId": poId,
   "qboTxnId": qbo.txnId,
   "qboError": qbo.error
 }`;
@@ -141,8 +143,20 @@ export async function saveBill(me: TodoMe, body: Data): Promise<string> {
     await patch.commit();
     if (photoId !== undefined && before.photo && before.photo !== photoId) await dropPhoto(before.photo, "bill");
   } else {
+    // Made from a purchase order ("Make it a bill", lib/orders): bought on credit, so the order is placed.
+    const poId = await cleanOrderLink(body.poId);
     id = newId(BILL_PREFIX);
-    await client.create({ _id: id, _type: "supplierBill", appRef: await nextBillRef(), ...fields, ...(photoId ? { photo: photoRef(photoId) } : {}), createdAt: now, createdBy: me.name });
+    await client.create({
+      _id: id,
+      _type: "supplierBill",
+      appRef: await nextBillRef(),
+      ...fields,
+      ...(poId ? { poId } : {}),
+      ...(photoId ? { photo: photoRef(photoId) } : {}),
+      createdAt: now,
+      createdBy: me.name,
+    });
+    if (poId) await orderUsed(me, poId);
   }
   after(() => feedBill(id));
   return id;

@@ -19,7 +19,22 @@ type ToastData = { text: string; tone?: "error" };
 const todayGhana = () => new Date().toISOString().slice(0, 10);
 const methodLabel = (m: string | null) => BUYER_METHODS.find((x) => x.value === m)?.label ?? (m ? m : "—");
 
-export function BuyersApp({ me, active, initial, startedOffline, fresh }: { me: TodoMe; active: boolean; initial: BuyersData | null; startedOffline: boolean; fresh: boolean }) {
+export function BuyersApp({
+  me,
+  active,
+  initial,
+  startedOffline,
+  fresh,
+  tabs,
+}: {
+  me: TodoMe;
+  active: boolean;
+  initial: BuyersData | null;
+  startedOffline: boolean;
+  fresh: boolean;
+  /** Finance's tabs, under the header. */
+  tabs?: React.ReactNode;
+}) {
   const [data, setData] = useState<BuyersData>(initial ?? { buyers: [], lastRate: null });
   const [loaded, setLoaded] = useState(initial !== null);
   const [offline, setOffline] = useState(startedOffline);
@@ -76,10 +91,13 @@ export function BuyersApp({ me, active, initial, startedOffline, fresh }: { me: 
   return (
     <>
       <SiteHeader
+        eyebrow={tabs ? "Finance" : undefined}
         title="Buyers"
         sub={data.buyers.length ? `${data.buyers.length} ${data.buyers.length === 1 ? "buyer" : "buyers"} · ${usd(totals.paid)} paid of ${usd(totals.price)}` : "No buyers yet"}
         onMenu={() => setMenuOpen(true)}
-      />
+      >
+        {tabs}
+      </SiteHeader>
       {signedOut && (
         <div className={styles.banner} role="alert">
           You&rsquo;ve been signed out. <a href="/todo/buyers">Sign in again</a>

@@ -255,3 +255,43 @@ export async function setReorderGot(me: TodoMe, body: Record<string, unknown>): 
   if (!item) throw new TodoError(404, "That item isn't in the store any more.");
   return { item };
 }
+
+/* ---------- lines on a purchase order (lib/orders) ---------- */
+
+type OrderedLine = { buyId: string | null; itemId: string | null };
+const orderBy = (number: string) => `Order ${number}`;
+
+/**
+ * The order is placed (5 Nov 2026): its lines from the shopping list are bought, "by" the order, so nobody buys them
+ * again at the shop. A store item at its reorder point is ticked the same way.
+ */
+export async function gotByOrder(me: TodoMe, number: string, lines: readonly OrderedLine[]): Promise<void> {
+  const client = getBuyersClient();
+  const ids = [...new Set(lines.map((l) => l.buyId).filter((id): id is string => isId(BUY_PREFIX, id)))];
+  const open = ids.length ? await client.fetch<Array<{ id: string; itemId: string | null }>>(`*[_type == "storeBuy" && _id in $ids && !defined(gotAt)]{ "id": _id, itemId }`, { ids }) : [];
+  if (open.length) {
+    const at = new Date().toISOString();
+    const tx = client.transaction();
+    for (const b of open) tx.patch(b.id, (p) => p.set({ gotAt: at, gotBy: orderBy(number), gotById: me.id, gotOrder: number }));
+    await tx.commit();
+  }
+  const items = new Set([...open.map((b) => b.itemId), ...lines.filter((l) => !l.buyId).map((l) => l.itemId)].filter((id): id is string => isId(ITEM_PREFIX, id)));
+  for (const itemId of items) await markItem({ ...me, name: orderBy(number) }, itemId, true);
+}
+
+/** The order is back to "to order", or cancelled: what it had bought from the shopping list is to buy again. */
+export async function backFromOrder(number: string): Promise<void> {
+  const client = getBuyersClient();
+  const buys = await client.fetch<Array<{ id: string; itemId: string | null }>>(`*[_type == "storeBuy" && gotOrder == $number]{ "id": _id, itemId }`, { number });
+  if (buys.length) {
+    const tx = client.transaction();
+    for (const b of buys) tx.patch(b.id, (p) => p.unset(["gotAt", "gotBy", "gotById", "gotOrder"]));
+    await tx.commit();
+  }
+  const items = await client.fetch<string[]>(`*[_type == "storeItem" && string::startsWith(_id, $prefix) && reorderGot.by == $by]._id`, { prefix: ITEM_PREFIX, by: orderBy(number) });
+  if (items.length) {
+    const tx = client.transaction();
+    for (const id of items) tx.patch(id, (p) => p.unset(["reorderGot"]));
+    await tx.commit();
+  }
+}

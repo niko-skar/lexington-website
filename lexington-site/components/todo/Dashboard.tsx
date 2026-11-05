@@ -70,6 +70,7 @@ function tiles(d: DashboardData, unread: number): Tile[] {
       name: "Store",
       big: s.toCheck ? `${s.toCheck} new to check` : s.toFix ? `${s.toFix} ${s.toFix === 1 ? "tool" : "tools"} to fix` : outNow,
       small: [
+        s.deliveries ? `${s.deliveries} ${s.deliveries === 1 ? "delivery" : "deliveries"} to tick` : "",
         s.toCheck && s.toFix ? `${s.toFix} to fix` : "",
         s.atRepairer ? `${s.atRepairer} at the repairer` : "",
         s.toCheck || s.toFix ? outNow : "",
@@ -114,6 +115,47 @@ function tiles(d: DashboardData, unread: number): Tile[] {
       big: `${x.fromBank} from the bank to complete`,
       small: `${money(x.monthOut)} logged on site this month · ${x.monthCount} ${x.monthCount === 1 ? "entry" : "entries"}`,
       tone: "warn",
+    });
+  }
+  // The cash flow (5 Nov 2026): the money now and whether it runs short in the weeks ahead.
+  if (d.cashflow) {
+    const x = d.cashflow;
+    const wages = x.weekly ? `wages about ${money(x.weekly)} each Saturday` : "";
+    out.push(
+      x.now === null
+        ? { section: "cashflow", name: "Cash flow", big: "Type the money now", small: "then the weeks ahead: wages, bills, orders", tone: "warn" }
+        : x.short
+          ? {
+              section: "cashflow",
+              name: "Cash flow",
+              big: `Short ${money(-x.short.amount)} by ${shortDay(x.short.date)}`,
+              small: [`${money(x.now)} now`, wages].filter(Boolean).join(" · "),
+              tone: "warn",
+            }
+          : {
+              section: "cashflow",
+              name: "Cash flow",
+              big: `${money(x.now)} now`,
+              small: [`never below ${money(x.lowest?.amount ?? x.now)} in 8 weeks`, wages].filter(Boolean).join(" · "),
+              tone: "ok",
+            }
+    );
+  }
+  // Purchase orders: a tile only while something is on order.
+  if (d.orders && (d.orders.toOrder || d.orders.ordered)) {
+    const x = d.orders;
+    out.push({
+      section: "orders",
+      name: "Orders",
+      big: x.toOrder ? `${x.toOrder} to order` : `${x.ordered} ordered`,
+      small: [
+        x.late ? `${x.late} late` : x.next ? `next: ${x.next.number} by ${shortDay(x.next.neededBy)}` : "",
+        x.toOrder && x.ordered ? `${x.ordered} ordered` : "",
+        `${money(x.left)} still to buy`,
+      ]
+        .filter(Boolean)
+        .join(" · "),
+      tone: x.late ? "warn" : undefined,
     });
   }
   if (d.steel) {

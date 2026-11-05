@@ -2,6 +2,8 @@ import "server-only";
 import { createHash, randomBytes } from "node:crypto";
 
 import { areasWith } from "@/lib/quickbooks/books";
+import { cleanOrderLink, orderUsed } from "@/lib/orders/link";
+import { cleanAlreadyIn, orderCheckIns, orderOfPayment } from "@/lib/store/deliveriesServer";
 import { cachedBookLists } from "@/lib/quickbooks/booksCache";
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
 import { BILL_PREFIX, EXPENSE_COUNTER_ID, EXPENSE_PREFIX, EXPENSE_SETTINGS_ID, isId, newId, QBO_GONE_PREFIX, SHEET_DELETION_PREFIX } from "@/lib/site/ids";
@@ -49,6 +51,7 @@ export const FIELDS = `{
   "qty": qty,
   "itemId": itemId,
   "toStore": coalesce(toStore, false),
+  "alreadyIn": alreadyIn,
   "receiptId": receipt.asset._ref,
   "receiptUrl": receipt.asset->url,
   "receiptType": receipt.asset->mimeType,
@@ -58,9 +61,10 @@ export const FIELDS = `{
   "payday": payday{ week, kind, lines[]{ id, name, group, amount, at, ref } },
   "steelTons": steelTons,
   "billId": billId,
+  "poId": poId,
   "withId": withId,
   "moreReceipts": coalesce(moreReceipts[defined(asset)]{ "id": asset._ref, "url": asset->url, "type": asset->mimeType }, []),
-  "moreLines": coalesce(moreLines[]{ material, qty, itemId, "toStore": coalesce(toStore, false) }, []),
+  "moreLines": coalesce(moreLines[]{ material, qty, itemId, "toStore": coalesce(toStore, false), alreadyIn }, []),
   createdAt,
   "createdBy": coalesce(createdBy, ""),
   "updatedAt": coalesce(updatedAt, sourceUpdatedAt, createdAt)
@@ -174,6 +178,7 @@ async function fields(me: TodoMe, body: Record<string, unknown>, receiptId: stri
   let qty: number | null = null;
   let itemId: string | null = null;
   let toStore = false;
+  let alreadyIn: string | null = null;
   if (category === "Material") {
     material = cleanText(body.material, MAX_MATERIAL, "material").replace(/\s+/g, " ");
     if (!material) throw new TodoError(400, "Write which material you bought.");
@@ -183,6 +188,8 @@ async function fields(me: TodoMe, body: Record<string, unknown>, receiptId: stri
       itemId = item.id;
       material = item.name;
       toStore = true;
+      // Goods checked in at the store already ("Already in the store?" yes): the stock had them then.
+      alreadyIn = await cleanAlreadyIn(body.alreadyIn, itemId, self);
     }
   }
   return {
@@ -201,33 +208,40 @@ async function fields(me: TodoMe, body: Record<string, unknown>, receiptId: stri
     qty,
     itemId,
     toStore,
+    // A change from a page that doesn't know about deliveries leaves the tie as it was.
+    ...(self && body.alreadyIn === undefined ? {} : { alreadyIn }),
     // The QuickBooks class (cost type): site expenses only.
     costClass: inflow || forWho !== "Site" ? null : cleanClass(body.costClass),
     // The supplier's bill it pays (lib/suppliers): money out only.
     billId: inflow ? null : await cleanBillId(body.billId, amount, self),
-    moreLines: category === "Material" ? await cleanMoreLines(me, body.moreLines) : [],
+    // The purchase order it pays for (lib/orders): set when it's made from one ("Pay it now"); a change leaves it be.
+    ...(!self && !inflow && body.poId ? { poId: await cleanOrderLink(body.poId) } : {}),
+    moreLines: category === "Material" ? await cleanMoreLines(me, body.moreLines, self) : [],
   };
 }
 
 /** More materials on one entry (the first is the entry's own): each named, how many, and into the store room or not. */
-async function cleanMoreLines(me: TodoMe, value: unknown): Promise<Array<{ _key: string; material: string; qty: number; itemId: string | null; toStore: boolean }>> {
+type CleanLine = { _key: string; material: string; qty: number; itemId: string | null; toStore: boolean; alreadyIn: string | null };
+async function cleanMoreLines(me: TodoMe, value: unknown, self: string | null): Promise<CleanLine[]> {
   if (value === null || value === undefined) return [];
   if (!Array.isArray(value)) throw new TodoError(400, "The materials didn't come through: try again.");
   if (value.length > MAX_LINES - 1) throw new TodoError(400, `${MAX_LINES} materials at most on one entry.`);
-  const out: Array<{ _key: string; material: string; qty: number; itemId: string | null; toStore: boolean }> = [];
+  const out: CleanLine[] = [];
   for (const raw of value) {
     const line = (raw ?? {}) as Record<string, unknown>;
     let material = cleanText(line.material, MAX_MATERIAL, "material").replace(/\s+/g, " ");
     if (!material) throw new TodoError(400, "Write which material each line is, or take the empty line off.");
     const qty = Math.round(cleanNumber(line.qty ?? 1, "Pick how many of each.") * 1000) / 1000;
     let itemId: string | null = null;
+    let alreadyIn: string | null = null;
     const toStore = line.toStore === true;
     if (toStore) {
       const item = await itemForPurchase(me, material, line.unit);
       itemId = item.id;
       material = item.name;
+      alreadyIn = await cleanAlreadyIn(line.alreadyIn, itemId, self);
     }
-    out.push({ _key: randomBytes(4).toString("hex"), material, qty, itemId, toStore });
+    out.push({ _key: randomBytes(4).toString("hex"), material, qty, itemId, toStore, alreadyIn });
   }
   return out;
 }
@@ -291,6 +305,20 @@ export async function createExpense(me: TodoMe, body: Record<string, unknown>, e
   const more = cleanMoreReceipts(body.moreReceiptIds);
   if (more.length && !receiptId) throw new TodoError(400, "Add the receipt first, then the other photos.");
   const data = await fields(me, body, receiptId);
+  // Paying for an order (or its bill) whose goods were checked in already: those lines are tied to the check-ins.
+  const order = data.kind === "expense" ? await orderOfPayment("poId" in data ? data.poId : null, data.billId) : null;
+  if (order) {
+    const checkIns = await orderCheckIns(order);
+    const tie = (line: { itemId: string | null; toStore: boolean; alreadyIn?: string | null }) => {
+      const found = line.toStore && line.itemId && !line.alreadyIn ? checkIns.get(line.itemId) : undefined;
+      if (!found || !line.itemId) return null;
+      checkIns.delete(line.itemId);
+      return found;
+    };
+    const main = tie({ itemId: data.itemId, toStore: data.toStore, alreadyIn: "alreadyIn" in data ? data.alreadyIn : null });
+    if (main) Object.assign(data, { alreadyIn: main });
+    for (const l of data.moreLines) l.alreadyIn = tie(l) ?? l.alreadyIn;
+  }
   const id = newId(EXPENSE_PREFIX);
   const now = new Date().toISOString();
   await getBuyersClient().create({
@@ -305,6 +333,8 @@ export async function createExpense(me: TodoMe, body: Record<string, unknown>, e
     createdBy: me.name,
     updatedAt: now,
   });
+  // Paid for a purchase order: an order still to place is ordered now.
+  if ("poId" in data && data.poId) await orderUsed(me, data.poId);
   const expense = await getExpense(id);
   if (!expense) throw new TodoError(502, "It was saved but couldn't be read back. Refresh the page.");
   return expense;
@@ -353,6 +383,8 @@ export async function createWithExtras(me: TodoMe, body: Record<string, unknown>
           costClass: e.costClass,
           receiptId: body.receiptId,
           moreReceiptIds: body.moreReceiptIds,
+          // The transport on a purchase order's receipt is part of that order too.
+          poId: expense.poId,
         },
         { withId: expense.id }
       )

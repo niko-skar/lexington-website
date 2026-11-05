@@ -1,0 +1,412 @@
+/* Finance: the purchase orders and the cash flow (5 Nov 2026). Colours come from .app in Todo.module.css. */
+
+/* ---------- orders ---------- */
+.orders {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.order {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--x-line);
+  border-radius: 10px;
+  background: var(--x-surface);
+}
+.orderLate {
+  border-color: var(--x-warn);
+  box-shadow: inset 4px 0 0 var(--x-warn);
+}
+.orderMain {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  text-align: left;
+}
+.orderMain > span:first-child {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.orderMain small {
+  font-size: 13px;
+  color: var(--x-muted);
+}
+.orderMain b {
+  font-size: 16px;
+}
+.amounts {
+  display: grid;
+  justify-items: end;
+  align-content: start;
+  gap: 2px;
+  white-space: nowrap;
+}
+.amounts b {
+  font-family: var(--x-num);
+  font-weight: 500;
+}
+.late {
+  color: var(--x-warn) !important;
+  font-weight: 600;
+}
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.buttons button {
+  flex: 1 1 auto;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--x-line);
+  border-radius: 8px;
+  background: var(--x-bg);
+  color: var(--x-ink);
+  font-weight: 600;
+}
+.buttons .primary {
+  border-color: var(--x-accent);
+  background: var(--x-accent);
+  color: var(--x-accent-ink);
+}
+.small {
+  margin: 10px 2px 0;
+  font-size: 13px;
+  color: var(--x-muted);
+}
+
+/* The order form's lines: what, then how many, the unit and the price each. */
+.lines {
+  display: grid;
+  gap: 8px;
+  margin-top: 6px;
+}
+.lineBox {
+  display: grid;
+  gap: 6px;
+  padding: 10px;
+  border: 1px solid var(--x-line);
+  border-radius: 8px;
+  background: var(--x-bg);
+}
+.lineTop {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.lineTop input {
+  flex: 1;
+  min-width: 0;
+}
+.lineRemove {
+  flex: none;
+  width: 40px;
+  min-height: 40px;
+  border: 0;
+  background: none;
+  color: var(--x-muted);
+  font-size: 18px;
+}
+.lineNums {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.5fr;
+  gap: 6px;
+}
+.lineNums input {
+  min-width: 0;
+}
+.lineTotal {
+  margin: 0;
+  font-family: var(--x-num);
+  font-size: 13px;
+  color: var(--x-muted);
+  text-align: right;
+}
+.addLine {
+  min-height: 44px;
+  border: 1px dashed var(--x-accent);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--x-accent);
+  font-weight: 700;
+}
+.total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin: 12px 0 0;
+  font-weight: 700;
+}
+.total b {
+  font-family: var(--x-num);
+  font-size: 18px;
+  font-weight: 500;
+}
+.history {
+  display: grid;
+  gap: 6px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+}
+.history li {
+  padding: 8px 10px;
+  border: 1px solid var(--x-line);
+  border-radius: 8px;
+  background: var(--x-bg);
+}
+
+/* ---------- the cash flow ---------- */
+.money {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 14px;
+  padding: 14px;
+  border: 1px solid var(--x-line);
+  border-radius: 10px;
+  background: var(--x-surface);
+}
+.moneyLabel {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--x-muted);
+}
+.moneyBig {
+  margin: 0;
+  font-family: var(--x-num);
+  font-size: 28px;
+  font-weight: 500;
+}
+.moneyBig.below {
+  color: var(--x-warn);
+}
+.moneyLine {
+  margin: 0;
+  font-size: 14px;
+  color: var(--x-muted);
+}
+.moneyButton {
+  justify-self: start;
+  min-height: 44px;
+  margin-top: 6px;
+  padding: 0 16px;
+  border: 1px solid var(--x-accent);
+  border-radius: 8px;
+  background: var(--x-bg);
+  color: var(--x-accent);
+  font-weight: 700;
+}
+.moneyButton.primary {
+  background: var(--x-accent);
+  color: var(--x-accent-ink);
+}
+.verdict {
+  margin: 0 0 12px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 600;
+}
+.verdictShort {
+  background: var(--x-warn-soft);
+  color: var(--x-warn);
+}
+.verdictOk {
+  background: var(--x-ok-soft);
+  color: var(--x-ok);
+}
+.chart {
+  display: block;
+  width: 100%;
+  /* A phone's size on a laptop too: drawn bigger, its columns and words would only grow. */
+  max-width: 560px;
+  height: auto;
+  margin-bottom: 14px;
+  overflow: visible;
+}
+.chartBar {
+  fill: var(--x-accent);
+}
+.chartBarBelow {
+  fill: var(--x-warn);
+}
+.chartZero {
+  stroke: var(--x-muted);
+  stroke-width: 1;
+}
+.chartGrid {
+  stroke: var(--x-line);
+  stroke-width: 1;
+}
+.chartColumn {
+  cursor: pointer;
+}
+@media (hover: hover) {
+  .chartColumn:hover .chartBar,
+  .chartColumn:hover .chartBarBelow {
+    opacity: 0.8;
+  }
+}
+.chartLabel {
+  fill: var(--x-muted);
+  font-family: var(--x-body);
+  font-size: 11px;
+}
+.chartValue {
+  fill: var(--x-ink);
+  font-family: var(--x-num);
+  font-size: 10px;
+}
+.adds {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.adds button {
+  min-height: 46px;
+  border: 1px solid var(--x-line);
+  border-radius: 8px;
+  background: var(--x-surface);
+  color: var(--x-ink);
+  font-weight: 700;
+}
+.week {
+  margin-bottom: 12px;
+  border: 1px solid var(--x-line);
+  border-radius: 10px;
+  background: var(--x-surface);
+  overflow: hidden;
+}
+.weekHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--x-line);
+  background: var(--x-bg);
+}
+.weekHead h3 {
+  margin: 0;
+  font-family: var(--x-display);
+  font-size: 17px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.weekEnd {
+  display: grid;
+  justify-items: end;
+  flex: none;
+}
+.weekEnd b {
+  font-family: var(--x-num);
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.weekEnd small {
+  font-size: 12px;
+  color: var(--x-muted);
+}
+.weekEnd.below b {
+  color: var(--x-warn);
+  font-weight: 600;
+}
+.item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 52px;
+  padding: 8px 14px;
+  border: 0;
+  border-top: 1px solid var(--x-line);
+  background: transparent;
+  color: var(--x-ink);
+  text-align: left;
+}
+.item:first-of-type {
+  border-top: 0;
+}
+.itemText {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+.itemText b {
+  font-size: 15px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.itemText small {
+  font-size: 13px;
+  color: var(--x-muted);
+}
+.itemOut,
+.itemIn {
+  flex: none;
+  font-family: var(--x-num);
+  font-size: 15px;
+  white-space: nowrap;
+}
+.itemIn {
+  color: var(--x-ok);
+}
+.weekEmpty {
+  margin: 0;
+  padding: 12px 14px;
+  font-size: 14px;
+  color: var(--x-muted);
+}
+.notes {
+  display: grid;
+  gap: 6px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+  color: var(--x-muted);
+}
+.notes button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--x-accent);
+  font-weight: 600;
+}
+.past {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+/* A laptop: the orders two to a row; the cash flow's weeks two to a row. */
+@media (min-width: 1280px) {
+  .orders,
+  .weeks {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+  .weeks {
+    display: grid;
+    gap: 12px;
+  }
+  .weeks .week {
+    margin-bottom: 0;
+  }
+}
