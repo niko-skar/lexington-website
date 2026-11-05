@@ -40,6 +40,11 @@ function warmFor(u: Unit) {
 
 // The page address doesn't change while it is open, so there is nothing to listen to.
 const noSubscription = () => () => {};
+// Only the part after # can change (a link to #pricing on the page itself).
+const onHashChange = (onChange: () => void) => {
+  window.addEventListener("hashchange", onChange);
+  return () => window.removeEventListener("hashchange", onChange);
+};
 
 // Alphabetical order happens to already read available < reserved < sold,
 // but spelling it out keeps that from being an accident future edits break.
@@ -78,6 +83,14 @@ export function UnitFinder({ units, tiers, vat }: UnitFinderProps) {
   // units arrived in, unchanged until someone clicks a header.
   const [sortColumn, setSortColumn] = useState<SortColumn | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>("asc");
+  // A link to the prices (/residences#pricing, as ads and posts use) lists the homes cheapest first (Niko, 5 Nov 2026);
+  // a click on a heading still sorts by that column.
+  const fromPricingLink = useSyncExternalStore(
+    onHashChange,
+    () => window.location.hash.toLowerCase() === "#pricing",
+    () => false
+  );
+  const sortBy: SortColumn | null = sortColumn ?? (fromPricingLink ? "price" : null);
   const areaUnit = useAreaUnit();
 
   // A link can open one unit's pop-up straight away, e.g. /residences?unit=405B (to send someone a unit's floor plan or its 3D
@@ -117,10 +130,10 @@ export function UnitFinder({ units, tiers, vat }: UnitFinderProps) {
   );
 
   const sorted = useMemo(() => {
-    if (!sortColumn) return filtered;
+    if (!sortBy) return filtered;
     const dir = sortDir === "asc" ? 1 : -1;
     return [...filtered].sort((a, b) => {
-      switch (sortColumn) {
+      switch (sortBy) {
         case "floor":
           return (a.floor - b.floor) * dir;
         case "type":
@@ -133,23 +146,25 @@ export function UnitFinder({ units, tiers, vat }: UnitFinderProps) {
           return (STATUS_ORDER[a.status] - STATUS_ORDER[b.status]) * dir;
       }
     });
-  }, [filtered, sortColumn, sortDir, selectedTier, tiers]);
+  }, [filtered, sortBy, sortDir, selectedTier, tiers]);
 
   const availableInFiltered = filtered.filter((u) => u.status === "available").length;
 
   function handleSort(column: SortColumn) {
-    if (sortColumn === column) {
+    setSortColumn(column);
+    if (sortBy === column) {
       setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     } else {
-      setSortColumn(column);
       setSortDir("asc");
     }
   }
 
   function sortIndicator(column: SortColumn) {
-    if (sortColumn !== column) return null;
+    if (sortBy !== column) return null;
     return <span aria-hidden="true">{sortDir === "asc" ? " ▲" : " ▼"}</span>;
   }
+
+  const ariaSort = (column: SortColumn) => (sortBy === column ? (sortDir === "asc" ? "ascending" : "descending") : "none");
 
   function toggleCompare(id: string) {
     setCompareIds((prev) => {
@@ -256,27 +271,27 @@ export function UnitFinder({ units, tiers, vat }: UnitFinderProps) {
             <tr>
               <th className={styles.checkboxCol}>Compare</th>
               <th>Unit</th>
-              <th aria-sort={sortColumn === "floor" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}>
+              <th aria-sort={ariaSort("floor")}>
                 <button className={styles.sortButton} onClick={() => handleSort("floor")}>
                   Floor{sortIndicator("floor")}
                 </button>
               </th>
-              <th aria-sort={sortColumn === "type" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}>
+              <th aria-sort={ariaSort("type")}>
                 <button className={styles.sortButton} onClick={() => handleSort("type")}>
                   Type{sortIndicator("type")}
                 </button>
               </th>
-              <th aria-sort={sortColumn === "area" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}>
+              <th aria-sort={ariaSort("area")}>
                 <button className={styles.sortButton} onClick={() => handleSort("area")}>
                   Area{sortIndicator("area")}
                 </button>
               </th>
-              <th aria-sort={sortColumn === "price" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}>
+              <th aria-sort={ariaSort("price")}>
                 <button className={styles.sortButton} onClick={() => handleSort("price")}>
                   Price{sortIndicator("price")}
                 </button>
               </th>
-              <th aria-sort={sortColumn === "status" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}>
+              <th aria-sort={ariaSort("status")}>
                 <button className={styles.sortButton} onClick={() => handleSort("status")}>
                   Status{sortIndicator("status")}
                 </button>
