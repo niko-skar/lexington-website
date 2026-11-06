@@ -1560,6 +1560,40 @@
   color: var(--x-warn);
   font-weight: 600;
 }
+/* A material that's really a tool, or the other way round (6 Nov 2026): on the office's Change sheets. */
+.switchKind {
+  width: 100%;
+  min-height: 48px;
+  margin-top: 6px;
+  border: 1px solid var(--x-line);
+  border-radius: 8px;
+  background: var(--x-bg);
+  color: var(--x-ink);
+  font-weight: 600;
+}
+.switchBox {
+  display: grid;
+  gap: 8px;
+  margin-top: 6px;
+  padding: 12px;
+  border: 1px solid var(--x-line);
+  border-radius: 10px;
+  background: var(--x-bg);
+}
+.switchButtons {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px;
+}
+.switchButtons button:first-child {
+  min-height: 52px;
+  padding: 0 16px;
+  border: 1px solid var(--x-line);
+  border-radius: 8px;
+  background: var(--x-surface);
+  color: var(--x-ink);
+  font-weight: 600;
+}
 /* The state a returned tool came back in, under its line (3 Nov 2026). */
 .pickCond {
   padding: 0 4px 8px 12px;

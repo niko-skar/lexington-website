@@ -41,6 +41,7 @@ import { DeliveriesBar, DeliveriesSheet, WalkInSheet } from "./StoreDeliveries";
 import { RepairSheet, repairListText, ReportSheet } from "./StoreRepairs";
 import { DoubleAsk, findEntry, sameWords, TogetherSheet, useDoubleCheck, type ListEntry, type SameAnswer } from "./StoreDoubles";
 import { AddBuySheet, BuySheet, ShopButton, ShoppingTab } from "./StoreShopping";
+import { ToToolBox } from "./StoreSwitch";
 import { maybeDoubles, ToCheckSheet, toCheckOf } from "./StoreToCheck";
 import { EditToolSheet, isLate, NewToolSheet, outByTool, ReturnSheet, TakeOutSheet, ToolSheet, ToolsTab } from "./StoreTools";
 import styles from "./Todo.module.css";
@@ -885,6 +886,17 @@ export function StoreApp({
             setSheet(sheet.back ? { kind: "toCheck" } : item.stocked ? { kind: "item", id: item.id } : null);
             showToast({ text: sheet.back ? `${item.name}: checked` : item.stocked ? "Saved" : `${item.name} is no longer kept in the store` });
           }}
+          onSwitched={(tool) => {
+            localAt.current = Date.now();
+            setItems((list) => list.filter((i) => i.id !== current.id));
+            setHistory((list) => list.filter((e) => e.itemId !== current.id));
+            applyTool(tool);
+            setTab("tools");
+            setSheet(sheet.back ? { kind: "toCheck" } : { kind: "tool", toolId: tool.id });
+            showToast({ text: `${tool.name} is a tool now` });
+            // Its shopping lines, and what might be a double of it, as the server has them now.
+            void refresh();
+          }}
         />
       )}
 
@@ -996,6 +1008,17 @@ export function StoreApp({
             applyTool(tool);
             setSheet(sheet.back ? { kind: "toCheck" } : tool.retired ? null : { kind: "tool", toolId: tool.id });
             showToast({ text: sheet.back ? `${tool.name}: checked` : tool.retired ? `${tool.name}: not used any more` : "Saved" });
+          }}
+          onSwitched={(item) => {
+            localAt.current = Date.now();
+            setTools((list) => list.filter((t) => t.id !== currentTool.id));
+            setToolOuts((list) => list.filter((o) => o.toolId !== currentTool.id));
+            setRepairs((list) => list.filter((r) => r.toolId !== currentTool.id));
+            applyItem(item);
+            setTab("stock");
+            setSheet(sheet.back ? { kind: "toCheck" } : { kind: "item", id: item.id });
+            showToast({ text: `${item.name} is a material now` });
+            void refresh();
           }}
         />
       )}
@@ -1824,12 +1847,15 @@ function EditItemSheet({
   onClose,
   onSaved,
   onDeleted,
+  onSwitched,
 }: {
   item: StoreItem;
   onClose: () => void;
   onSaved: (item: StoreItem) => void;
   /** Deleted outright (Niko, 3 Nov 2026: "Let me delete things outright but only me as admin"). */
   onDeleted: (item: StoreItem) => void;
+  /** It's a tool, not a material: on the tool list now (6 Nov 2026, StoreSwitch.tsx). */
+  onSwitched: (tool: StoreTool) => void;
 }) {
   const [name, setName] = useState(item.name);
   const [unit, setUnit] = useState(item.unit);
@@ -1922,6 +1948,7 @@ function EditItemSheet({
           &ldquo;Not kept in the store&rdquo; is for things used straight away (ready-mix, sand): they leave the stock list, and buying them doesn&rsquo;t add stock
           unless you say so on the expense.
         </p>
+        <ToToolBox item={item} disabled={saving} onBusy={setSaving} onSwitched={onSwitched} />
         <button type="button" className={armed ? `${site.deleteItem} ${styles.dangerArmed}` : site.deleteItem} onClick={() => (armed ? void remove() : setArmed(true))} disabled={saving}>
           {armed ? `Tap again: delete ${item.name} and everything recorded for it` : "Delete this item"}
         </button>

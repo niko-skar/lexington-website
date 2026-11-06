@@ -34,6 +34,7 @@ import { CameraIcon, ConditionChips, dayLabel, EntryPhoto, ghanaTime, minutesSin
 import { DoubleAsk, findEntry, useDoubleCheck, type SameAnswer } from "./StoreDoubles";
 import { RepairsSection } from "./StoreRepairs";
 import { ShopButton } from "./StoreShopping";
+import { ToItemBox } from "./StoreSwitch";
 import styles from "./Todo.module.css";
 import { useUploadSlot } from "./useUploadSlot";
 
@@ -1163,6 +1164,7 @@ export function EditToolSheet({
   onClose,
   onSaved,
   onDeleted,
+  onSwitched,
 }: {
   tool: StoreTool;
   outNow: number;
@@ -1170,6 +1172,8 @@ export function EditToolSheet({
   onSaved: (tool: StoreTool) => void;
   /** Deleted outright (the office, 3 Nov 2026). */
   onDeleted: (tool: StoreTool) => void;
+  /** It's a material, not a tool: in the stock now (6 Nov 2026, StoreSwitch.tsx). */
+  onSwitched: (item: StoreItem) => void;
 }) {
   const [name, setName] = useState(tool.name);
   const [count, setCount] = useState(String(tool.count));
@@ -1232,6 +1236,7 @@ export function EditToolSheet({
         <button type="button" className={retired ? styles.chipOn : styles.chip} aria-pressed={retired} onClick={() => setRetired(!retired)}>
           {retired ? "Not used any more ✓" : "In use"}
         </button>
+        <ToItemBox tool={tool} outNow={outNow} disabled={saving} onBusy={setSaving} onSwitched={onSwitched} />
         <button type="button" className={armed ? `${site.deleteItem} ${styles.dangerArmed}` : site.deleteItem} onClick={() => (armed ? void remove() : setArmed(true))} disabled={saving}>
           {armed ? `Tap again: delete ${tool.name} and everything recorded for it` : "Delete this tool"}
         </button>
