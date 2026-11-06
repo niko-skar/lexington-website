@@ -1792,6 +1792,86 @@
   border-color: var(--x-amber);
   box-shadow: inset 4px 0 0 var(--x-amber);
 }
+/* A tap on a photo opens it large next to its look-alike (6 Nov 2026: "i need to be able to open these images to
+   compare them"): side by side on a screen wider than it's tall, one above the other on a phone held upright. */
+.thumbOpen {
+  flex: none;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  line-height: 0;
+}
+.checkTop .thumbOpen {
+  cursor: zoom-in;
+}
+.compareRow {
+  display: grid;
+  grid-auto-rows: minmax(0, 1fr);
+  gap: 14px;
+  min-height: 0;
+}
+@media (orientation: landscape) {
+  .compareRow {
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+  }
+}
+.comparePane {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 8px;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  color: #fff;
+}
+.comparePane figcaption {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.compareWords {
+  flex: 1;
+  display: grid;
+  min-width: 0;
+}
+.compareWords small {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.7);
+}
+.compareWords strong {
+  font-size: 17px;
+  overflow-wrap: anywhere;
+}
+.compareWords span {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.75);
+}
+.comparePane a {
+  flex: none;
+  min-height: 40px;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+  font-weight: 600;
+  text-decoration: none;
+}
+.compareNone {
+  display: grid;
+  place-items: center;
+  border: 1px dashed rgba(255, 255, 255, 0.35);
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 600;
+}
 
 /* ---------- store: the shopping list (5 Nov 2026) ---------- */
 /* Ticked off at the hardware store: a round tick on the left of each line, how many on the right. */

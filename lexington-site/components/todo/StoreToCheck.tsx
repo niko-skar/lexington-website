@@ -5,11 +5,9 @@ import { useState } from "react";
 import { tradeOfItem, tradeOfTool } from "@/lib/store/categories";
 import type { StoreDouble } from "@/lib/store/doubles";
 import { CONDITION_NAMES, qtyUnit, TRADE_NAMES, type StoreItem, type StoreReview, type StoreTool } from "@/lib/store/shared";
-import { photoAt } from "@/lib/todo/shared";
 import { errorText, send } from "./api";
 import site from "./Site.module.css";
-import { CameraIcon } from "./StoreBits";
-import { EntryTop, findEntry, type ListEntry } from "./StoreDoubles";
+import { compareOf, EntryTop, findEntry, PhotoCompare, Thumb, type ComparePhoto, type ListEntry } from "./StoreDoubles";
 import styles from "./Todo.module.css";
 
 // The office's "To check" (Niko, 3 Nov 2026: "put all the things that are entered not by myself into the store room as
@@ -18,6 +16,8 @@ import styles from "./Todo.module.css";
 // office sees it: for the site logins the store looks as it always does.
 // 4 Nov 2026 ("mark if it's similar for me as well"): what each might be a double of (StoreDoubles.tsx), with "Same
 // thing: put together"; and a tool on the list a site login counted differently. Those come first.
+// 6 Nov 2026 ("i need to be able to open these images to compare them"): a tap on a photo opens it large, next to
+// what it might be a double of.
 
 const when = (iso: string) =>
   new Date(iso).toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Africa/Accra" });
@@ -76,6 +76,7 @@ export function ToCheckSheet({
   const [busy, setBusy] = useState<string | null>(null);
   const [armed, setArmed] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [compare, setCompare] = useState<ComparePhoto[] | null>(null);
 
   const right = async (e: ListEntry, change: Record<string, unknown> = { reviewed: true }) => {
     const id = e.type === "item" ? e.item.id : e.tool.id;
@@ -128,17 +129,12 @@ export function ToCheckSheet({
               const doubles = doublesOf(e, items, tools);
               const counted = e.type === "tool" ? review.counted : null;
               const onlyCounted = review.what === "counted";
+              const mine = compareOf(e, onlyCounted ? "To check" : `Added by ${review.by}`);
+              const theirs = (entry: ListEntry) => compareOf(entry, "Already on the list");
               return (
                 <article key={id} className={`${site.checkCard} ${doubles.length || counted ? site.checkFlag : ""}`} aria-label={`To check: ${name}`}>
                   <div className={site.checkTop}>
-                    {photo ? (
-                      // eslint-disable-next-line @next/next/no-img-element -- a resized copy from the image store
-                      <img className={site.itemThumb} src={photoAt(photo, 120)} alt="" loading="lazy" />
-                    ) : (
-                      <span className={site.itemThumbEmpty} aria-hidden="true">
-                        <CameraIcon />
-                      </span>
-                    )}
+                    <Thumb photo={photo} onOpen={() => setCompare([mine, ...doubles.map(({ entry }) => theirs(entry))])} />
                     <span className={site.itemName}>
                       {name}
                       <small>
@@ -164,7 +160,7 @@ export function ToCheckSheet({
                       <p className={site.doubleHead}>{doubles.some((x) => x.d.sure) ? "Looks like a double of" : "Might be a double of"}</p>
                       {doubles.map(({ d, entry }) => (
                         <div key={d.id} className={site.doubleCard}>
-                          <EntryTop entry={entry}>
+                          <EntryTop entry={entry} onPhoto={() => setCompare([mine, theirs(entry)])}>
                             {(entry.type === "item" ? entry.item.review : entry.tool.review) && <small>On To check too</small>}
                           </EntryTop>
                           {d.why && <p className={site.doubleWhy}>{d.why}</p>}
@@ -211,6 +207,7 @@ export function ToCheckSheet({
           Close
         </button>
       </div>
+      {compare && <PhotoCompare photos={compare} onClose={() => setCompare(null)} />}
     </div>
   );
 }

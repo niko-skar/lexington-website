@@ -60,7 +60,8 @@ export function useSheetGestures(): void {
       if (e.touches.length !== 1) return;
       const target = e.target as HTMLElement | null;
       const sheet = target?.closest<HTMLElement>(`.${styles.sheet}`);
-      if (!sheet || !shadeOf(sheet.parentElement) || target?.closest("input, textarea, select, [contenteditable]")) return;
+      // Not on photos opened large over the sheet (PhotoCompare, 6 Nov 2026): they'd slide down with it.
+      if (!sheet || !shadeOf(sheet.parentElement) || target?.closest(`input, textarea, select, [contenteditable], .${styles.lightbox}`)) return;
       const t = e.touches[0];
       drag = { sheet, x0: t.clientX, y0: t.clientY, t0: performance.now(), dy: 0, on: false, off: false };
     };

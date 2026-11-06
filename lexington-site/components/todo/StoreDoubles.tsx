@@ -33,27 +33,83 @@ export function findEntry(d: Pick<StoreDouble, "kind" | "id">, items: readonly S
   return tool ? { type: "tool", tool } : null;
 }
 
-function Thumb({ photo }: { photo: string | null }) {
-  return photo ? (
-    // eslint-disable-next-line @next/next/no-img-element -- a resized copy from the image store (or the phone's own)
-    <img className={site.itemThumb} src={photoAt(photo, 120)} alt="" loading="lazy" />
+/** A photo, small; with onOpen, a tap opens it large (PhotoCompare). */
+export function Thumb({ photo, onOpen }: { photo: string | null; onOpen?: () => void }) {
+  if (!photo) {
+    return (
+      <span className={site.itemThumbEmpty} aria-hidden="true">
+        <CameraIcon />
+      </span>
+    );
+  }
+  // eslint-disable-next-line @next/next/no-img-element -- a resized copy from the image store (or the phone's own)
+  const img = <img className={site.itemThumb} src={photoAt(photo, 120)} alt="" loading="lazy" />;
+  return onOpen ? (
+    <button type="button" className={site.thumbOpen} onClick={onOpen} aria-label="Open the photo">
+      {img}
+    </button>
   ) : (
-    <span className={site.itemThumbEmpty} aria-hidden="true">
-      <CameraIcon />
-    </span>
+    img
   );
 }
 
 /** Its photo, its name, and how many of it there are. */
-export function EntryTop({ entry, children }: { entry: ListEntry; children?: ReactNode }) {
+export function EntryTop({ entry, onPhoto, children }: { entry: ListEntry; onPhoto?: () => void; children?: ReactNode }) {
   return (
     <div className={site.checkTop}>
-      <Thumb photo={entryPhoto(entry)} />
+      <Thumb photo={entryPhoto(entry)} onOpen={onPhoto} />
       <span className={site.itemName}>
         {entryName(entry)}
         <small>{entryDetail(entry)}</small>
         {children}
       </span>
+    </div>
+  );
+}
+
+/** One photo in PhotoCompare: whose it is ("Already on the list"), its name and how many. */
+export type ComparePhoto = { key: string; tag: string; name: string; detail: string; photo: string | null };
+
+export const compareOf = (e: ListEntry, tag: string): ComparePhoto => ({ key: entryId(e), tag, name: entryName(e), detail: entryDetail(e), photo: entryPhoto(e) });
+
+/**
+ * The photos large, side by side (one above the other on a phone held upright), each with its name: a new thing and
+ * what it might be a double of (Niko, 6 Nov 2026: "i need to be able to open these images to compare them"). A tap
+ * anywhere closes it, and Esc (useSheetGestures: the window on top, by its Close); "Full size" opens the original.
+ */
+export function PhotoCompare({ photos, onClose }: { photos: readonly ComparePhoto[]; onClose: () => void }) {
+  return (
+    <div className={styles.lightbox} onClick={onClose} role="dialog" aria-label={photos.length > 1 ? "Compare the photos" : "Photo"}>
+      <div className={site.compareRow}>
+        {photos.map((p) => (
+          <figure key={p.key} className={site.comparePane}>
+            <figcaption>
+              <span className={site.compareWords}>
+                <small>{p.tag}</small>
+                <strong>{p.name}</strong>
+                <span>{p.detail}</span>
+              </span>
+              {p.photo && !p.photo.startsWith("blob:") && (
+                <a href={p.photo} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>
+                  Full size
+                </a>
+              )}
+            </figcaption>
+            {p.photo ? (
+              // eslint-disable-next-line @next/next/no-img-element -- the image store's copy, large
+              <img src={photoAt(p.photo, 1600)} alt={`${p.name}: the photo`} />
+            ) : (
+              <span className={site.compareNone}>No photo</span>
+            )}
+          </figure>
+        ))}
+      </div>
+      <div className={styles.lightboxBar}>
+        <span />
+        <button type="button" onClick={onClose}>
+          Close
+        </button>
+      </div>
     </div>
   );
 }
@@ -122,15 +178,17 @@ export function DoubleAsk({
   onNew: () => void;
   onBack: () => void;
 }) {
+  const [compare, setCompare] = useState<ComparePhoto[] | null>(null);
   const shown = doubles.flatMap((d) => {
     const entry = findEntry(d, items, tools);
     return entry ? [{ d, entry }] : [];
   });
+  const mine: ComparePhoto = { key: "adding", tag: "What you’re adding", ...adding };
   return (
     <>
       <h2 className={styles.sheetTitle}>Is it on the list already?</h2>
       <div className={site.checkTop}>
-        <Thumb photo={adding.photo} />
+        <Thumb photo={adding.photo} onOpen={() => setCompare([mine, ...shown.map(({ entry }) => compareOf(entry, "Already on the list"))])} />
         <span className={site.itemName}>
           {adding.name}
           <small>{adding.detail}</small>
@@ -143,7 +201,7 @@ export function DoubleAsk({
       <div className={site.doubleList}>
         {shown.map(({ d, entry }) => (
           <div key={d.id} className={site.doubleCard}>
-            <EntryTop entry={entry} />
+            <EntryTop entry={entry} onPhoto={() => setCompare([mine, compareOf(entry, "Already on the list")])} />
             {d.why && <p className={site.doubleWhy}>{d.why}</p>}
             <button type="button" className={site.doubleYes} onClick={() => onSame(d)} disabled={!!busy}>
               {busy === d.id ? "Saving…" : "Yes, it's this one"}
@@ -160,6 +218,7 @@ export function DoubleAsk({
           {busy === "new" ? "Saving…" : "No, it's new: add it"}
         </button>
       </div>
+      {compare && <PhotoCompare photos={compare} onClose={() => setCompare(null)} />}
     </>
   );
 }
@@ -194,6 +253,7 @@ export function TogetherSheet({ from, into, onClose, onDone }: { from: ListEntry
   const [count, setCount] = useState(together === null ? "" : String(together));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [compare, setCompare] = useState(false);
   const unit = into.type === "item" ? into.item.unit : "";
 
   const save = async () => {
@@ -223,8 +283,8 @@ export function TogetherSheet({ from, into, onClose, onDone }: { from: ListEntry
       <div className={styles.sheet} role="dialog" aria-label="Put them together">
         <h2 className={styles.sheetTitle}>Put them together</h2>
         <div className={site.doubleList}>
-          <EntryTop entry={from} />
-          <EntryTop entry={into}>
+          <EntryTop entry={from} onPhoto={() => setCompare(true)} />
+          <EntryTop entry={into} onPhoto={() => setCompare(true)}>
             <small>Goes into this one</small>
           </EntryTop>
         </div>
@@ -268,6 +328,7 @@ export function TogetherSheet({ from, into, onClose, onDone }: { from: ListEntry
           </button>
         </div>
       </div>
+      {compare && <PhotoCompare photos={[compareOf(from, "Comes off the list"), compareOf(into, "Goes into this one")]} onClose={() => setCompare(false)} />}
     </div>
   );
 }
