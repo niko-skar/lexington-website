@@ -372,7 +372,7 @@ function main() {
 function adHealth() {
   var out = { clickTypes: [], links: [], ads: [], error: '' };
   var note = function (what, e) {
-    out.error = (out.error ? out.error + ' | ' : '') + what + ': ' + String(e).slice(0, 120);
+    out.error = (out.error ? out.error + ' | ' : '') + what + ': ' + String(e).slice(0, 300);
   };
   try {
     var types = AdsApp.search(
@@ -411,7 +411,7 @@ function adHealth() {
     'asset.type, asset.callout_asset.callout_text, asset.sitelink_asset.link_text, asset.sitelink_asset.description1, ' +
     'asset.sitelink_asset.description2, asset.structured_snippet_asset.header, asset.structured_snippet_asset.values';
   try {
-    var account = AdsApp.search('SELECT customer_asset.resource_name, customer_asset.field_type, ' + assetFields + " FROM customer_asset WHERE customer_asset.status = 'ENABLED'");
+    var account = AdsApp.search('SELECT customer_asset.resource_name, customer_asset.field_type, customer_asset.asset, asset.resource_name, ' + assetFields + " FROM customer_asset WHERE customer_asset.status = 'ENABLED'");
     while (account.hasNext()) {
       var a = account.next();
       out.links.push(assetLink(a.customerAsset.resourceName, 'account', '', a.customerAsset.fieldType, a.asset));
@@ -421,7 +421,7 @@ function adHealth() {
   }
   try {
     var mine = AdsApp.search(
-      'SELECT campaign_asset.resource_name, campaign_asset.field_type, campaign.id, ' + assetFields +
+      'SELECT campaign_asset.resource_name, campaign_asset.field_type, campaign_asset.asset, campaign_asset.campaign, campaign.id, campaign.status, asset.resource_name, ' + assetFields +
       " FROM campaign_asset WHERE campaign_asset.status = 'ENABLED' AND campaign.status != 'REMOVED'"
     );
     while (mine.hasNext()) {
