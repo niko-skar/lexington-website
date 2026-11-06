@@ -166,7 +166,6 @@ export function StoreApp({
   active,
   initial,
   startedOffline,
-  onReorders,
   ask,
   fresh,
 }: {
@@ -176,8 +175,6 @@ export function StoreApp({
   /** Null when the app opened on another part and the store hasn't arrived yet. */
   initial: StoreData | null;
   startedOffline: boolean;
-  /** How many lines are on the shopping list (for the badge on the bar). */
-  onReorders: (count: number) => void;
   /** A tab asked for from outside (the home page's To buy tile, the address's #buy). */
   ask: { tab: "buy"; at: number } | null;
   /** The page came with this part's data just now (it's the part the app opened on). */
@@ -292,7 +289,6 @@ export function StoreApp({
   // The shopping list: what's to buy (added, and the store's items at their reorder point), and what was got lately.
   const lines = useMemo(() => toBuyLines(items, tools, buys), [items, tools, buys]);
   const got = useMemo(() => gotLines(items, tools, buys), [items, tools, buys]);
-  useEffect(() => onReorders(lines.length), [lines.length, onReorders]);
 
   // Opened on the list: the address's #buy (a phone alert, the home page's tile), or asked for by the app.
   const hashRead = useRef(false);

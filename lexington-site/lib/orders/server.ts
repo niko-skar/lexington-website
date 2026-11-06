@@ -47,6 +47,7 @@ const ORDER_FIELDS = `{
   "lines": coalesce(lines[]{ "key": _key, "name": coalesce(name, ""), "qty": qty, "unit": coalesce(unit, ""), "price": price, "buyId": buyId, "itemId": itemId, "toolId": toolId }, []),
   "estimate": estimate,
   neededBy,
+  "payBy": payBy,
   "note": coalesce(note, ""),
   "floor": floor,
   "costClass": costClass{ id, name },
@@ -65,6 +66,7 @@ const toOrder = (raw: RawOrder): PurchaseOrder => ({
   ...raw,
   vendorId: raw.vendorId ?? null,
   estimate: typeof raw.estimate === "number" ? raw.estimate : null,
+  payBy: raw.payBy ?? null,
   floor: raw.floor ?? null,
   costClass: raw.costClass ?? null,
   orderedAt: raw.orderedAt ?? null,
@@ -219,6 +221,8 @@ export async function saveOrder(me: TodoMe, body: Data): Promise<string> {
   const amount = orderAmount({ lines: lines.map((l) => ({ ...l, key: l._key })), estimate });
   if (!(amount > 0)) throw new TodoError(400, "Put a price on the lines, or say about how much it all comes to (the cash flow needs it).");
   const neededBy = cleanDay(body.neededBy, "Pick when it's needed.");
+  // When it's paid (null, or the day it comes: when it comes).
+  const payBy = body.payBy ? cleanDay(body.payBy, "Pick when it's to be paid.") : null;
   const note = cleanText(body.note, MAX_ORDER_NOTE, "note");
   const areas = areasWith(FLOORS, (await cachedBookLists().catch(() => ({ locations: [] }))).locations);
   const floor = body.floor ? (typeof body.floor === "string" && areas.includes(body.floor) ? body.floor : null) : null;
@@ -234,6 +238,7 @@ export async function saveOrder(me: TodoMe, body: Data): Promise<string> {
     // The estimate only counts without prices; kept as typed.
     estimate,
     neededBy,
+    payBy: payBy && payBy !== neededBy ? payBy : null,
     note,
     floor,
     costClass,

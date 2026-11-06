@@ -43,8 +43,10 @@ export interface PurchaseOrder {
   lines: OrderLine[];
   /** About how much, when no line has a price. */
   estimate: number | null;
-  /** YYYY-MM-DD: when it's needed (and so paid, for the cash flow). */
+  /** YYYY-MM-DD: when it's needed (the goods at the site). */
   neededBy: string;
+  /** YYYY-MM-DD: when it's to be paid (ordered now, paid at the end of the month), or null: when it comes. The cash flow counts it then. */
+  payBy: string | null;
   note: string;
   /** Carried over to the bill or the expense it becomes. */
   floor: string | null;
@@ -157,6 +159,15 @@ export function ordersFrom(orders: readonly PurchaseOrder[], bills: readonly Pic
   );
 }
 
+/** The day an order's money goes out: when it's to be paid, else when it's needed. */
+export const payDay = (o: Pick<PurchaseOrder, "neededBy" | "payBy">) => o.payBy ?? o.neededBy;
+
+/** The last day of a day's month ("End of the month"). */
+export const monthEnd = (day: string) => {
+  const [y, m] = day.split("-").map(Number);
+  return new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
+};
+
 /** Where an order stands, in a few words. */
 export function orderStage(o: OrderView): string {
   if (o.status === "cancelled") return "Cancelled";
@@ -171,9 +182,16 @@ const money0 = (n: number) => `GH₵ ${n.toLocaleString("en-GB", { minimumFracti
 const longDate = (day: string) => new Date(`${day}T12:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
 
 /** The order to send the supplier on WhatsApp: its number to quote on their invoice, what, how many, the prices typed. */
-export function orderText(o: Pick<OrderView, "number" | "supplier" | "lines" | "neededBy" | "note" | "amount" | "estimate">, today: string): string {
+export function orderText(o: Pick<OrderView, "number" | "supplier" | "lines" | "neededBy" | "payBy" | "note" | "amount" | "estimate">, today: string): string {
   const priced = o.lines.some((l) => l.price !== null);
-  const head = [`*Purchase order ${o.number}*`, "The Lexington", o.supplier ? `To: ${o.supplier}` : "", `Date: ${longDate(today)}`, `Needed by: ${longDate(o.neededBy)}`];
+  const head = [
+    `*Purchase order ${o.number}*`,
+    "The Lexington",
+    o.supplier ? `To: ${o.supplier}` : "",
+    `Date: ${longDate(today)}`,
+    `Needed by: ${longDate(o.neededBy)}`,
+    o.payBy && o.payBy !== o.neededBy ? `Payment: by ${longDate(o.payBy)}` : "",
+  ];
   const items = o.lines.map((l) => {
     const qty = qtyWords(l);
     const price = l.price !== null ? ` @ ${money0(l.price)}${l.qty !== null && l.qty !== 1 ? ` = ${money0(lineTotal(l))}` : ""}` : "";

@@ -5,11 +5,19 @@
 // weekly figure typed), the suppliers' bills on their due dates, the purchase orders on the day they're needed, and
 // the money in or out typed as expected. Only the company's money counts (Site and Event entries, as in the books):
 // the House and Niko's own never do. Kept apart from the server so it can be checked on its own.
+// The money coming in (Niko, 5 Nov 2026: "most of my money comes from leo, so i need to be able to estimate future money
+// coming, and also future buyers"): Leo's each week (his last weeks' average on the day he sends most, or a figure
+// typed), each buyer's payments as planned (in dollars, until what they owe is paid), and new buyers expected; dollars
+// count in cedis at the last buyer payment's rate, or one typed.
 
 /** Payday: Saturday (the roll call pays the week, Monday to Saturday, that day). */
 export const PAYDAY = 6;
 /** The wages estimate: the average of the last few paydays. */
 export const WAGE_WEEKS = 4;
+/** Leo's estimate: the average of his last few weeks (the weeks he sent nothing count as nothing). */
+export const LEO_WEEKS = 4;
+export const CURRENCIES = ["GHS", "USD"] as const;
+export type Currency = (typeof CURRENCIES)[number];
 /** Weeks shown at first, and at most. */
 export const WEEKS = 8;
 export const MAX_WEEKS = 26;
@@ -28,8 +36,19 @@ export interface CashPlan {
   repeat: Repeat;
   /** The last day it repeats until (null: on and on). */
   until: string | null;
+  /** The amount's money: cedis, or dollars (a buyer's, a new sale's). */
+  currency: Currency;
+  /** A buyer's payments: counted only until what they owe is paid. */
+  buyerId: string | null;
   createdAt: string;
   createdBy: string;
+}
+
+/** A buyer still paying for their home (lib/buyers): what they owe, in dollars. */
+export interface CashBuyer {
+  id: string;
+  name: string;
+  balanceUSD: number;
 }
 
 /** The money as last typed: the bank, the cash and MoMo on hand, and when. */
@@ -66,6 +85,8 @@ export interface CashOrder {
   supplier: string;
   what: string;
   neededBy: string;
+  /** When it's to be paid, when that's not the day it comes. */
+  payBy?: string | null;
   left: number;
   status: "planned" | "ordered";
 }
@@ -78,16 +99,24 @@ export interface CashflowInputs {
   since: { out: number; in: number; count: number; pending: number };
   /** The paydays so far, what this week has paid already, and the weekly figure typed (null: the average). */
   wages: { weeks: WageWeek[]; thisWeek: number; typed: number | null };
+  /**
+   * Leo's money in by week (from the first week there's any), what came this week, the weekly figure typed (null:
+   * the average) and the day he sends most (0 Sunday ... 6 Saturday).
+   */
+  leo: { weeks: WageWeek[]; thisWeek: number; typed: number | null; day: number };
   bills: CashBill[];
   orders: CashOrder[];
   plans: CashPlan[];
+  buyers: CashBuyer[];
+  /** GH₵ per US$: the one typed, and the last buyer payment's. */
+  rate: { typed: number | null; last: number | null };
 }
 
 export interface CashItem {
   key: string;
   /** The day it's counted on (today, for what was due before). */
   date: string;
-  kind: "wages" | "bill" | "order" | "plan";
+  kind: "wages" | "bill" | "order" | "plan" | "leo";
   direction: "in" | "out";
   amount: number;
   what: string;
@@ -124,6 +153,12 @@ export interface Forecast {
   short: { date: string; amount: number } | null;
   /** The weekly wages counted: the figure typed, else the average; and the weeks behind the average. */
   wages: { weekly: number | null; typed: boolean; average: number | null; used: WageWeek[] };
+  /** Leo's weekly money counted, the same way, and the day it's counted on. */
+  leo: { weekly: number | null; typed: boolean; average: number | null; used: WageWeek[]; day: number };
+  /** The dollar rate used (null: none yet, so plans in dollars can't count). */
+  rate: number | null;
+  /** Plans in dollars left out for want of a rate. */
+  unconverted: number;
   /** In and out over the weeks shown. */
   totals: { out: number; in: number };
   /** After the weeks shown: the bills, orders and plans still to come. */
@@ -146,6 +181,20 @@ export function wageAverage(weeks: readonly WageWeek[], thisWeek: string): { ave
     .slice(0, WAGE_WEEKS);
   return { average: used.length ? round(used.reduce((n, w) => n + w.paid, 0) / used.length) : null, used };
 }
+
+/** Leo's average over his last weeks before this one: the weeks he sent nothing count, those before his first don't. */
+export function leoAverage(weeks: readonly WageWeek[], thisWeek: string): { average: number | null; used: WageWeek[] } {
+  const first = weeks.filter((w) => w.paid > 0).map((w) => w.week).sort()[0];
+  if (!first) return { average: null, used: [] };
+  const used: WageWeek[] = [];
+  for (let w = addDays(thisWeek, -7); w >= first && used.length < LEO_WEEKS; w = addDays(w, -7)) {
+    used.push({ week: w, paid: round(weeks.filter((x) => x.week === w).reduce((s, x) => s + x.paid, 0)) });
+  }
+  return { average: used.length ? round(used.reduce((s, w) => s + w.paid, 0) / used.length) : null, used };
+}
+
+/** The day a week's money from Leo is counted on: his usual weekday that week. */
+export const leoDayOf = (monday: string, day: number) => addDays(monday, (day + 6) % 7);
 
 /** The money now: as typed, less what went out since, plus what came in. */
 export function moneyNow(input: Pick<CashflowInputs, "money" | "since">): number | null {
@@ -183,6 +232,10 @@ export function forecast(input: CashflowInputs, weeks: number = WEEKS): Forecast
   const end = addDays(start, n * 7 - 1);
   const { average, used } = wageAverage(input.wages.weeks, start);
   const weekly = input.wages.typed ?? average;
+  const leoAvg = leoAverage(input.leo.weeks, start);
+  const leoWeekly = input.leo.typed ?? leoAvg.average;
+  const rate = input.rate.typed ?? input.rate.last;
+  let unconverted = 0;
   const items: Omit<CashItem, "after">[] = [];
   const later = { out: 0, in: 0, count: 0 };
   const due = (day: string | null) => (!day || day < today ? today : day);
@@ -220,24 +273,59 @@ export function forecast(input: CashflowInputs, weeks: number = WEEKS): Forecast
       noDate: !b.due,
     });
   }
+  // An order's money goes out the day it's to be paid (when it comes, unless said).
   for (const o of input.orders) {
+    const pay = o.payBy ?? o.neededBy;
     place({
       key: `order-${o.id}`,
-      date: due(o.neededBy),
+      date: due(pay),
       kind: "order",
       direction: "out",
       amount: o.left,
       what: [o.supplier, o.what].filter(Boolean).join(": "),
       ref: o.number,
       id: o.id,
-      late: o.neededBy < today ? o.neededBy : null,
+      late: pay < today ? pay : null,
       noDate: false,
     });
   }
-  // A plan that repeats counts in the weeks shown; one on a day after them is said apart.
+  // Leo's each week on his usual day; this week's less what came already (today, when his day has gone).
+  if (leoWeekly !== null && leoWeekly > 0) {
+    for (let w = 0; w < n; w++) {
+      const monday = addDays(start, w * 7);
+      const day = leoDayOf(monday, input.leo.day);
+      const amount = round(w === 0 ? Math.max(0, leoWeekly - input.leo.thisWeek) : leoWeekly);
+      place({ key: `leo-${monday}`, date: day < today ? today : day, kind: "leo", direction: "in", amount, what: "Leo", ref: null, id: null, late: null, noDate: false });
+    }
+  }
+  // A plan that repeats counts in the weeks shown; one on a day after them is said apart. Dollars count in cedis.
   for (const p of input.plans) {
+    const dollars = p.currency === "USD";
+    if (dollars && !rate) {
+      unconverted++;
+      continue;
+    }
+    const cedis = (x: number) => (dollars ? round(x * (rate ?? 0)) : x);
+    const buyer = p.buyerId ? input.buyers.find((b) => b.id === p.buyerId) : null;
+    // A buyer who owes nothing any more (or isn't there) pays nothing.
+    if (p.buyerId && !buyer) continue;
+    if (buyer && dollars) {
+      // Their payments until what they owe is paid (the last one only what's left); after the weeks shown, the rest once.
+      let owed = buyer.balanceUSD;
+      for (const day of planDays(p, today, addDays(end, 3660))) {
+        if (!(owed > 0.005)) break;
+        if (day > end) {
+          place({ key: `plan-${p.id}-later`, date: day, kind: "plan", direction: p.direction, amount: cedis(owed), what: p.what, ref: null, id: p.id, late: null, noDate: false });
+          break;
+        }
+        const usd = Math.min(p.amount, owed);
+        owed = round(owed - usd);
+        place({ key: `plan-${p.id}-${day}`, date: day, kind: "plan", direction: p.direction, amount: cedis(usd), what: p.what, ref: null, id: p.id, late: null, noDate: false });
+      }
+      continue;
+    }
     for (const day of planDays(p, today, p.repeat === "once" ? addDays(end, 3660) : end)) {
-      place({ key: `plan-${p.id}-${day}`, date: day, kind: "plan", direction: p.direction, amount: p.amount, what: p.what, ref: null, id: p.id, late: null, noDate: false });
+      place({ key: `plan-${p.id}-${day}`, date: day, kind: "plan", direction: p.direction, amount: cedis(p.amount), what: p.what, ref: null, id: p.id, late: null, noDate: false });
     }
   }
 
@@ -277,6 +365,9 @@ export function forecast(input: CashflowInputs, weeks: number = WEEKS): Forecast
     lowest,
     short,
     wages: { weekly, typed: input.wages.typed !== null, average, used },
+    leo: { weekly: leoWeekly, typed: input.leo.typed !== null, average: leoAvg.average, used: leoAvg.used, day: input.leo.day },
+    rate,
+    unconverted,
     totals: {
       out: round(counted.filter((i) => i.direction === "out").reduce((s, i) => s + i.amount, 0)),
       in: round(counted.filter((i) => i.direction === "in").reduce((s, i) => s + i.amount, 0)),

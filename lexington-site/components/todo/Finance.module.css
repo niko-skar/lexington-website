@@ -211,6 +211,40 @@
   background: var(--x-accent);
   color: var(--x-accent-ink);
 }
+.inLine {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 52px;
+  padding: 8px 0;
+  border: 0;
+  border-top: 1px solid var(--x-line);
+  background: transparent;
+  color: var(--x-ink);
+  text-align: left;
+}
+.inHead {
+  margin: 8px 0 0;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--x-muted);
+}
+.inTodo {
+  flex: none;
+  color: var(--x-accent);
+  font-weight: 700;
+}
+.linkInline {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--x-accent);
+  font-weight: 600;
+}
 .verdict {
   margin: 0 0 12px;
   padding: 12px 14px;

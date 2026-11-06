@@ -1,5 +1,6 @@
 import "server-only";
 
+import { listBuyers } from "@/lib/buyers/payments";
 import { listExpenses } from "@/lib/expenses/server";
 import type { Expense } from "@/lib/expenses/shared";
 import { listOrders } from "@/lib/orders/server";
@@ -13,7 +14,7 @@ import { listBills } from "@/lib/suppliers/server";
 import { suppliersFrom } from "@/lib/suppliers/shared";
 import { cleanText, TodoError } from "@/lib/todo/server";
 import type { TodoMe } from "@/lib/todo/shared";
-import { addDays, forecast, MAX_PLAN_WHAT, mondayOf, REPEATS, type CashflowInputs, type CashPlan, type Forecast, type MoneyNow, type Repeat, type WageWeek } from "./shared";
+import { addDays, CURRENCIES, forecast, MAX_PLAN_WHAT, mondayOf, REPEATS, type CashflowInputs, type CashPlan, type Currency, type Forecast, type MoneyNow, type Repeat, type WageWeek } from "./shared";
 
 // The cash flow (lib/cashflow/shared.ts says what and why). The money as last typed and the weekly wages figure are one
 // document ("cashflow-live"); each plan typed is its own ("cashplan-live-*"). The rest is read from what the app
@@ -34,10 +35,32 @@ export interface CashflowPage {
   unpriced: number;
 }
 
-type Settings = { money?: MoneyNow | null; wagesWeekly?: number | null };
-type RawPlan = Omit<CashPlan, "until"> & { until?: string | null };
+type Settings = { money?: MoneyNow | null; wagesWeekly?: number | null; leoWeekly?: number | null; rate?: number | null };
+type RawPlan = Omit<CashPlan, "until" | "buyerId"> & { until?: string | null; buyerId?: string | null };
 
-const PLAN_FIELDS = `{ "id": _id, direction, "what": coalesce(what, ""), amount, date, "repeat": coalesce(repeat, "once"), until, createdAt, "createdBy": coalesce(createdBy, "") }`;
+const PLAN_FIELDS = `{ "id": _id, direction, "what": coalesce(what, ""), amount, date, "repeat": coalesce(repeat, "once"), until, "currency": coalesce(currency, "GHS"), buyerId, createdAt, "createdBy": coalesce(createdBy, "") }`;
+
+/** Money in from Leo (his transfers, the bank texts' "Leo"): the company's, never a buyer's. */
+const fromLeo = (x: Expense) => x.kind === "inflow" && COMPANY.has(x.forWho) && /\bleo\b/i.test(x.supplier) && !/\(buyer\)/i.test(x.supplier);
+
+/** Leo's money in by week, and the weekday he sends most lately (Monday first when it's a tie; Tuesday with nothing to go by). */
+export function leoWeeks(expenses: readonly Expense[], thisWeek: string): { weeks: WageWeek[]; day: number } {
+  const byWeek = new Map<string, number>();
+  const days = new Map<number, number>();
+  const since = addDays(thisWeek, -56);
+  for (const x of expenses) {
+    if (!fromLeo(x)) continue;
+    const week = mondayOf(x.date);
+    byWeek.set(week, Math.round(((byWeek.get(week) ?? 0) + x.amount) * 100) / 100);
+    if (x.date >= since) {
+      const day = new Date(`${x.date}T00:00:00Z`).getUTCDay();
+      days.set(day, (days.get(day) ?? 0) + 1);
+    }
+  }
+  const order = [1, 2, 3, 4, 5, 6, 0];
+  const day = days.size ? order.reduce((best, d) => ((days.get(d) ?? 0) > (days.get(best) ?? 0) ? d : best), order.find((d) => days.has(d)) ?? 2) : 2;
+  return { weeks: [...byWeek].map(([week, paid]) => ({ week, paid })).sort((a, b) => a.week.localeCompare(b.week)), day };
+}
 
 /** A pay week's payments in the roll call (wages and the steel machines): what it paid in all. */
 function weekPaid(json: string): number {
@@ -73,8 +96,8 @@ async function cashInputs(me: TodoMe | null): Promise<{ inputs: CashflowInputs; 
   const today = ghanaDay();
   const thisWeek = mondayOf(today);
   const weeks = Array.from({ length: 9 }, (_, i) => addDays(thisWeek, -7 * i));
-  const [settings, plans, bills, expenses, orders, paydays, bankSettings, store] = await Promise.all([
-    client.fetch<Settings | null>(`*[_id == $id][0]{ money, wagesWeekly }`, { id: CASHFLOW_ID }),
+  const [settings, plans, bills, expenses, orders, paydays, bankSettings, store, buyersData] = await Promise.all([
+    client.fetch<Settings | null>(`*[_id == $id][0]{ money, wagesWeekly, leoWeekly, rate }`, { id: CASHFLOW_ID }),
     client.fetch<RawPlan[]>(`*[_type == "cashPlan" && string::startsWith(_id, $prefix)] | order(date asc)[0...500] ${PLAN_FIELDS}`, { prefix: CASH_PLAN_PREFIX }),
     listBills(),
     listExpenses(),
@@ -82,6 +105,7 @@ async function cashInputs(me: TodoMe | null): Promise<{ inputs: CashflowInputs; 
     client.fetch<Array<{ key: string; json: string }>>(`*[_type == "rollcallDoc" && _id in $ids]{ key, json }`, { ids: weeks.map((w) => `${ROLLCALL_PREFIX}payments--${w}`) }),
     client.fetch<{ accounts?: string[] } | null>(`*[_id == $id][0]{ accounts }`, { id: BANK_TEXT_SETTINGS_ID }),
     me ? getStore(me) : Promise.resolve(null),
+    listBuyers().catch(() => ({ buyers: [], lastRate: null })),
   ]);
   const money = settings?.money ?? null;
   const accounts = bankSettings?.accounts ?? [];
@@ -103,14 +127,18 @@ async function cashInputs(me: TodoMe | null): Promise<{ inputs: CashflowInputs; 
   const open = ordersFrom(orders, bills, expenses, today).filter((o) => !o.done && (o.status === "planned" || o.status === "ordered"));
   const paid: WageWeek[] = paydays.map((d) => ({ week: d.key, paid: weekPaid(d.json) }));
   const taken = new Set(open.flatMap((o) => o.lines.map((l) => l.buyId ?? l.itemId)).filter(Boolean));
+  const leo = leoWeeks(expenses, thisWeek);
   const inputs: CashflowInputs = {
     today,
     money,
     since: { ...(money ? sinceTyped(expenses, money.at) : { out: 0, in: 0, count: 0 }), pending: Math.round((pending ?? 0) * 100) / 100 },
     wages: { weeks: paid.filter((w) => w.week !== thisWeek), thisWeek: paid.find((w) => w.week === thisWeek)?.paid ?? 0, typed: settings?.wagesWeekly ?? null },
     bills: owed.map((b) => ({ id: b.id, vendorId: b.vendorId, appRef: b.appRef, supplier: b.supplier, description: b.description, due: b.due, left: b.left })),
-    orders: open.map((o) => ({ id: o.id, number: o.number, supplier: o.supplier, what: linesText(o.lines) || o.note, neededBy: o.neededBy, left: o.left, status: o.status as "planned" | "ordered" })),
-    plans: plans.map((p) => ({ ...p, until: p.until ?? null })),
+    orders: open.map((o) => ({ id: o.id, number: o.number, supplier: o.supplier, what: linesText(o.lines) || o.note, neededBy: o.neededBy, payBy: o.payBy, left: o.left, status: o.status as "planned" | "ordered" })),
+    plans: plans.map((p) => ({ ...p, until: p.until ?? null, currency: p.currency === "USD" ? "USD" : "GHS", buyerId: p.buyerId ?? null })),
+    leo: { weeks: leo.weeks.filter((w) => w.week !== thisWeek), thisWeek: leo.weeks.find((w) => w.week === thisWeek)?.paid ?? 0, typed: settings?.leoWeekly ?? null, day: leo.day },
+    buyers: buyersData.buyers.filter((b) => b.balanceUSD > 0.005).map((b) => ({ id: b.id, name: b.name, balanceUSD: Math.round(b.balanceUSD * 100) / 100 })),
+    rate: { typed: settings?.rate ?? null, last: buyersData.lastRate ?? null },
   };
   return {
     inputs,
@@ -150,7 +178,9 @@ function cleanDay(value: unknown, message: string): string {
 /**
  *   { action: "money", bank, cash }   the money there is now (from here on, each entry logged moves it)
  *   { action: "wages", weekly }       the wages each Saturday (null: the last paydays' average)
- *   { action: "plan", id?, direction, what, amount, date, repeat, until? }   money in or out expected
+ *   { action: "leo", weekly }         what Leo sends a week (null: his last weeks' average)
+ *   { action: "rate", rate }          GH₵ for one US$ (null: the last buyer payment's)
+ *   { action: "plan", id?, direction, what, amount, date, repeat, until?, currency?, buyerId? }   money in or out expected
  *   { action: "deleteplan", id }
  */
 export async function changeCashflow(me: TodoMe, body: Data): Promise<void> {
@@ -171,6 +201,20 @@ export async function changeCashflow(me: TodoMe, body: Data): Promise<void> {
     await (weekly === null ? client.patch(CASHFLOW_ID).unset(["wagesWeekly"]) : client.patch(CASHFLOW_ID).set({ wagesWeekly: weekly })).commit();
     return;
   }
+  if (body.action === "leo") {
+    const weekly = cleanMoney(body.weekly, "Type what Leo sends in a week as a number, e.g. 150000.");
+    if (weekly !== null && !(weekly > 0)) throw new TodoError(400, "Type what Leo sends in a week, or use the average.");
+    await client.createIfNotExists({ _id: CASHFLOW_ID, _type: "cashflowSettings" });
+    await (weekly === null ? client.patch(CASHFLOW_ID).unset(["leoWeekly"]) : client.patch(CASHFLOW_ID).set({ leoWeekly: weekly })).commit();
+    return;
+  }
+  if (body.action === "rate") {
+    const rate = cleanMoney(body.rate, "Type the rate as GH₵ for one US$, e.g. 11.7.");
+    if (rate !== null && !(rate > 0.5 && rate < 1000)) throw new TodoError(400, "Type the rate as GH₵ for one US$, e.g. 11.7.");
+    await client.createIfNotExists({ _id: CASHFLOW_ID, _type: "cashflowSettings" });
+    await (rate === null ? client.patch(CASHFLOW_ID).unset(["rate"]) : client.patch(CASHFLOW_ID).set({ rate })).commit();
+    return;
+  }
   if (body.action === "plan") {
     const direction = body.direction === "in" ? "in" : body.direction === "out" ? "out" : null;
     if (!direction) throw new TodoError(400, "Pick money in or a payment.");
@@ -183,7 +227,16 @@ export async function changeCashflow(me: TodoMe, body: Data): Promise<void> {
     if (!repeat) throw new TodoError(400, "Pick once, every week or every month.");
     const until = repeat !== "once" && body.until ? cleanDay(body.until, "Pick the last day it repeats.") : null;
     if (until && until < date) throw new TodoError(400, "It can't stop before it starts.");
-    const fields = { direction, what, amount, date, repeat, until, updatedAt: new Date().toISOString(), updatedBy: me.name };
+    const currency: Currency = (CURRENCIES as readonly string[]).includes(String(body.currency ?? "GHS")) ? (String(body.currency ?? "GHS") as Currency) : "GHS";
+    // A buyer's payments: theirs (one still paying), in dollars, money in.
+    let buyerId: string | null = null;
+    if (body.buyerId !== undefined && body.buyerId !== null && body.buyerId !== "") {
+      const buyer = (await listBuyers()).buyers.find((b) => b.id === body.buyerId);
+      if (!buyer) throw new TodoError(404, "That buyer isn't there any more. Refresh the page.");
+      if (direction !== "in" || currency !== "USD") throw new TodoError(400, "A buyer's payments are money in, in US$.");
+      buyerId = buyer.id;
+    }
+    const fields = { direction, what, amount, date, repeat, until, currency, buyerId, updatedAt: new Date().toISOString(), updatedBy: me.name };
     if (body.id !== undefined) {
       if (!isId(CASH_PLAN_PREFIX, body.id)) throw new TodoError(404, "That isn't there any more. Refresh the page.");
       const there = await client.fetch<number>(`count(*[_id == $id])`, { id: body.id });

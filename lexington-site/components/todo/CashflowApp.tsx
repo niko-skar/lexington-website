@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { CashflowPage } from "@/lib/cashflow/server";
-import { addDays, forecast, MAX_WEEKS, REPEATS, WEEKS, type CashItem, type CashPlan, type CashWeek, type Repeat } from "@/lib/cashflow/shared";
+import { addDays, forecast, MAX_WEEKS, REPEATS, WEEKS, type CashBuyer, type CashItem, type CashPlan, type CashWeek, type Currency, type Repeat, type WageWeek } from "@/lib/cashflow/shared";
 import { money } from "@/lib/expenses/shared";
 import type { TodoMe } from "@/lib/todo/shared";
 import { AccessSheet } from "./AccessSheet";
@@ -14,10 +14,17 @@ import styles from "./Todo.module.css";
 
 // The cash flow (lib/cashflow/shared.ts says what and why): the money now, whether it runs short and when, a column
 // for each week's end, then the weeks one by one with what's in them. Tapping a bill opens its supplier; an order, the
-// order; the wages or a plan, their sheet.
+// order; the wages or a plan, their sheet. Above the weeks, the money coming in: Leo's (estimated each week), each buyer's
+// payments as planned, new buyers expected, and the dollar rate they count at.
 
 type ToastData = { text: string; tone?: "error" };
-type Sheet = { kind: "money" } | { kind: "wages" } | { kind: "plan"; plan: CashPlan | null; direction: "in" | "out" };
+type Sheet =
+  | { kind: "money" }
+  | { kind: "wages" }
+  | { kind: "leo" }
+  | { kind: "rate" }
+  // A plan: one of any kind, a buyer's payments (buyer), or new buyers' money expected (sale).
+  | { kind: "plan"; plan: CashPlan | null; direction: "in" | "out"; buyer?: CashBuyer | null; sale?: boolean };
 
 const short = (day: string) => new Date(`${day}T12:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
 const dayWords = (day: string, today: string) =>
@@ -38,6 +45,12 @@ const toNumber = (s: string) => {
   return Number.isFinite(n) ? n : null;
 };
 const REPEAT_WORDS: Record<Repeat, string> = { once: "Once", week: "Every week", month: "Every month" };
+const WEEKDAYS = ["Sundays", "Mondays", "Tuesdays", "Wednesdays", "Thursdays", "Fridays", "Saturdays"];
+const usd = (n: number) => `US$ ${n.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+const inMoney = (amount: number, currency: Currency) => (currency === "USD" ? usd(amount) : money(amount));
+/** "US$ 2,000 every month from 20 Nov", "GH₵ 50,000.00 on 12 Nov". */
+const planWords = (p: CashPlan) =>
+  p.repeat === "once" ? `${inMoney(p.amount, p.currency)} on ${short(p.date)}` : `${inMoney(p.amount, p.currency)} ${REPEAT_WORDS[p.repeat].toLowerCase()} from ${short(p.date)}${p.until ? ` to ${short(p.until)}` : ""}`;
 
 export function CashflowApp({
   me,
@@ -125,13 +138,15 @@ export function CashflowApp({
 
   const open = (item: CashItem) => {
     if (item.kind === "wages") setSheet({ kind: "wages" });
+    else if (item.kind === "leo") setSheet({ kind: "leo" });
     else if (item.kind === "bill") {
       const bill = data?.inputs.bills.find((b) => b.id === item.id);
       if (bill) onBill(bill.vendorId);
     } else if (item.kind === "order" && item.id) onOrder(item.id);
     else if (item.kind === "plan") {
       const plan = data?.inputs.plans.find((p) => p.id === item.id) ?? null;
-      if (plan) setSheet({ kind: "plan", plan, direction: plan.direction });
+      const buyer = plan?.buyerId ? (data?.inputs.buyers.find((b) => b.id === plan.buyerId) ?? null) : null;
+      if (plan) setSheet({ kind: "plan", plan, direction: plan.direction, buyer, sale: plan.currency === "USD" && !plan.buyerId });
     }
   };
 
@@ -204,9 +219,11 @@ export function CashflowApp({
               />
             )}
 
+            <MoneyComing data={data} leo={f.leo} rate={f.rate} unconverted={f.unconverted} onSheet={setSheet} />
+
             <div className={fin.adds}>
               <button type="button" onClick={() => setSheet({ kind: "plan", plan: null, direction: "in" })}>
-                + Money coming in
+                + Other money coming in
               </button>
               <button type="button" onClick={() => setSheet({ kind: "plan", plan: null, direction: "out" })}>
                 + Another payment
@@ -253,12 +270,13 @@ export function CashflowApp({
                     w.items.map((item) => (
                       <button key={item.key} type="button" className={fin.item} onClick={() => open(item)}>
                         <span className={fin.itemText}>
-                          <b>{item.kind === "wages" ? "Wages (estimate)" : `${item.ref ? `${item.ref} · ` : ""}${item.what}`}</b>
+                          <b>{item.kind === "wages" ? "Wages (estimate)" : item.kind === "leo" ? "Leo (estimate)" : `${item.ref ? `${item.ref} · ` : ""}${item.what}`}</b>
                           <small>
                             {dayWords(item.date, today)}
                             {item.late ? ` · was due ${short(item.late)}` : ""}
                             {item.noDate ? " · no due date" : ""}
                             {item.kind === "order" ? " · order" : item.kind === "bill" ? " · bill" : item.kind === "plan" ? " · expected" : ""}
+                            {item.kind === "plan" && f.rate && data.inputs.plans.find((p) => p.id === item.id)?.currency === "USD" ? ` · ${usd(item.amount / f.rate)}` : ""}
                           </small>
                         </span>
                         <span className={item.direction === "in" ? fin.itemIn : fin.itemOut}>
@@ -309,7 +327,11 @@ export function CashflowApp({
 
       {sheet?.kind === "money" && data && <MoneySheet data={data} onClose={() => setSheet(null)} onSave={save} />}
       {sheet?.kind === "wages" && data && f && <WagesSheet weekly={f.wages} onClose={() => setSheet(null)} onSave={save} />}
-      {sheet?.kind === "plan" && data && <PlanSheet plan={sheet.plan} direction={sheet.direction} today={today} onClose={() => setSheet(null)} onSave={save} />}
+      {sheet?.kind === "plan" && data && f && (
+        <PlanSheet plan={sheet.plan} direction={sheet.direction} buyer={sheet.buyer ?? null} sale={!!sheet.sale} rate={f.rate} today={today} onClose={() => setSheet(null)} onSave={save} />
+      )}
+      {sheet?.kind === "leo" && data && f && <LeoSheet leo={f.leo} thisWeek={data.inputs.leo.thisWeek} onClose={() => setSheet(null)} onSave={save} />}
+      {sheet?.kind === "rate" && data && <RateSheet rate={data.inputs.rate} onClose={() => setSheet(null)} onSave={save} />}
       {menuOpen && <SiteMenu me={me} onClose={() => setMenuOpen(false)} onRefresh={() => void refresh()} onLogins={() => setAccessOpen(true)} />}
       {accessOpen && <AccessSheet onClose={() => setAccessOpen(false)} />}
       {toast && (
@@ -318,6 +340,82 @@ export function CashflowApp({
         </div>
       )}
     </>
+  );
+}
+
+/* ---------- the money coming in ---------- */
+
+function MoneyComing({
+  data,
+  leo,
+  rate,
+  unconverted,
+  onSheet,
+}: {
+  data: CashflowPage;
+  leo: { weekly: number | null; typed: boolean; average: number | null; used: WageWeek[]; day: number };
+  rate: number | null;
+  unconverted: number;
+  onSheet: (sheet: Sheet) => void;
+}) {
+  const plans = data.inputs.plans;
+  const sales = plans.filter((p) => p.direction === "in" && p.currency === "USD" && !p.buyerId);
+  const owed = data.inputs.buyers.reduce((n, b) => n + b.balanceUSD, 0);
+  return (
+    <section className={fin.money} aria-label="Money coming in">
+      <p className={fin.moneyLabel}>Money coming in</p>
+      <button type="button" className={fin.inLine} onClick={() => onSheet({ kind: "leo" })}>
+        <span className={fin.itemText}>
+          <b>Leo</b>
+          <small>
+            {leo.weekly === null
+              ? "Nothing from him in the app yet: tap to say what he sends"
+              : leo.typed
+                ? `a week, as you typed · counted on ${WEEKDAYS[leo.day]}`
+                : `a week, his last ${leo.used.length} ${leo.used.length === 1 ? "week" : "weeks"}' average · usually ${WEEKDAYS[leo.day]}`}
+          </small>
+        </span>
+        <span className={fin.itemIn}>{leo.weekly ? `+${money(leo.weekly)}` : "Set"}</span>
+      </button>
+      {data.inputs.buyers.length > 0 && (
+        <p className={fin.inHead}>
+          Buyers · {usd(owed)} still to pay
+        </p>
+      )}
+      {data.inputs.buyers.map((b) => {
+        const plan = plans.find((p) => p.buyerId === b.id) ?? null;
+        return (
+          <button key={b.id} type="button" className={fin.inLine} onClick={() => onSheet({ kind: "plan", plan, direction: "in", buyer: b })}>
+            <span className={fin.itemText}>
+              <b>{b.name}</b>
+              <small>
+                {usd(b.balanceUSD)} left to pay · {plan ? planWords(plan) : "tap to say when they'll pay"}
+              </small>
+            </span>
+            <span className={plan ? fin.itemIn : fin.inTodo}>{plan ? `+${usd(plan.amount)}` : "Plan"}</span>
+          </button>
+        );
+      })}
+      {sales.map((p) => (
+        <button key={p.id} type="button" className={fin.inLine} onClick={() => onSheet({ kind: "plan", plan: p, direction: "in", sale: true })}>
+          <span className={fin.itemText}>
+            <b>{p.what}</b>
+            <small>{planWords(p)}</small>
+          </span>
+          <span className={fin.itemIn}>+{usd(p.amount)}</span>
+        </button>
+      ))}
+      <button type="button" className={fin.moneyButton} onClick={() => onSheet({ kind: "plan", plan: null, direction: "in", sale: true })}>
+        + New buyers you expect
+      </button>
+      <p className={fin.moneyLine}>
+        {rate ? `Dollars count at GH₵ ${rate} for one US$ (${data.inputs.rate.typed ? "as you typed" : "the last buyer payment's rate"}). ` : "No dollar rate yet: type one so dollars count. "}
+        <button type="button" className={fin.linkInline} onClick={() => onSheet({ kind: "rate" })}>
+          Change
+        </button>
+      </p>
+      {unconverted > 0 && <p className={fin.moneyLine}>{unconverted} in dollars can&rsquo;t count until there&rsquo;s a rate.</p>}
+    </section>
   );
 }
 
@@ -468,6 +566,118 @@ function MoneySheet({ data, onClose, onSave }: { data: CashflowPage; onClose: ()
   );
 }
 
+/** What Leo sends a week: his last weeks' average, or a figure typed. */
+function LeoSheet({
+  leo,
+  thisWeek,
+  onClose,
+  onSave,
+}: {
+  leo: { weekly: number | null; typed: boolean; average: number | null; used: WageWeek[]; day: number };
+  thisWeek: number;
+  onClose: () => void;
+  onSave: Save;
+}) {
+  const [value, setValue] = useState(leo.typed && leo.weekly !== null ? String(leo.weekly) : "");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const go = async (useAverage: boolean) => {
+    const n = toNumber(value);
+    if (!useAverage && !(n && n > 0)) return setError("Type what Leo sends in a week, e.g. 150000, or use the average.");
+    setSaving(true);
+    setError("");
+    try {
+      await onSave({ action: "leo", weekly: useAverage ? null : n }, useAverage ? "Leo: his last weeks' average" : `Leo: ${money(n ?? 0)} a week`);
+    } catch (e) {
+      setError(errorText(e));
+      setSaving(false);
+    }
+  };
+  return (
+    <div className={styles.sheetBackdrop}>
+      <div className={styles.sheet} role="dialog" aria-label="Leo's money">
+        <h2 className={styles.sheetTitle}>Leo&rsquo;s money</h2>
+        {leo.average !== null ? (
+          <>
+            <p className={styles.sheetNote}>
+              His last {leo.used.length} {leo.used.length === 1 ? "week" : "weeks"} came to about <b>{money(leo.average)}</b> a week (his money in, in Expenses). It&rsquo;s counted each
+              week on {WEEKDAYS[leo.day]}, the day he sends most; this week&rsquo;s less the {money(thisWeek)} that came already.
+            </p>
+            <ul className={fin.history}>
+              {leo.used.map((w) => (
+                <li key={w.week}>
+                  Week of {short(w.week)}: <b>{money(w.paid)}</b>
+                </li>
+              ))}
+            </ul>
+          </>
+        ) : (
+          <p className={styles.sheetNote}>Nothing from Leo in the app yet to go by: type what he usually sends in a week.</p>
+        )}
+        <label className={styles.label} htmlFor="cf-leo">
+          Or a figure of your own (GH₵ a week)
+        </label>
+        <input id="cf-leo" className={styles.input} inputMode="decimal" value={value} onChange={(e) => setValue(e.target.value)} placeholder="e.g. 150000" disabled={saving} />
+        {error && (
+          <p className={styles.sheetError} role="alert">
+            {error}
+          </p>
+        )}
+        {leo.typed && leo.average !== null && (
+          <button type="button" className={styles.linkButton} onClick={() => void go(true)} disabled={saving}>
+            Use his average again ({money(leo.average)})
+          </button>
+        )}
+        <SheetButtons saving={saving} onClose={onClose} onSave={() => void go(false)} label="Use this figure" />
+      </div>
+    </div>
+  );
+}
+
+/** The dollar rate dollars count at: the last buyer payment's, or one typed. */
+function RateSheet({ rate, onClose, onSave }: { rate: { typed: number | null; last: number | null }; onClose: () => void; onSave: Save }) {
+  const [value, setValue] = useState(rate.typed !== null ? String(rate.typed) : rate.last !== null ? String(rate.last) : "");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const go = async (useLast: boolean) => {
+    const n = toNumber(value);
+    if (!useLast && !(n && n > 0.5)) return setError("Type the rate as GH₵ for one US$, e.g. 11.7.");
+    setSaving(true);
+    setError("");
+    try {
+      await onSave({ action: "rate", rate: useLast ? null : n }, useLast ? "Dollars count at the last buyer payment's rate" : `Dollars count at GH₵ ${n}`);
+    } catch (e) {
+      setError(errorText(e));
+      setSaving(false);
+    }
+  };
+  return (
+    <div className={styles.sheetBackdrop}>
+      <div className={styles.sheet} role="dialog" aria-label="The dollar rate">
+        <h2 className={styles.sheetTitle}>The dollar rate</h2>
+        <p className={styles.sheetNote}>
+          What one US$ counts as in the cash flow{rate.last !== null ? `; the last buyer payment in cedis was at GH₵ ${rate.last}` : ""}.
+        </p>
+        <label className={styles.label} htmlFor="cf-rate">
+          GH₵ for one US$
+        </label>
+        <input id="cf-rate" className={styles.input} inputMode="decimal" value={value} onChange={(e) => setValue(e.target.value)} placeholder="e.g. 11.7" disabled={saving} />
+        {error && (
+          <p className={styles.sheetError} role="alert">
+            {error}
+          </p>
+        )}
+        {rate.typed !== null && rate.last !== null && (
+          <button type="button" className={styles.linkButton} onClick={() => void go(true)} disabled={saving}>
+            Use the last buyer payment&rsquo;s (GH₵ {rate.last})
+          </button>
+        )}
+        <SheetButtons saving={saving} onClose={onClose} onSave={() => void go(false)} label="Use this rate" />
+      </div>
+    </div>
+  );
+}
+
 function WagesSheet({
   weekly,
   onClose,
@@ -533,12 +743,33 @@ function WagesSheet({
   );
 }
 
-function PlanSheet({ plan, direction: first, today, onClose, onSave }: { plan: CashPlan | null; direction: "in" | "out"; today: string; onClose: () => void; onSave: Save }) {
-  const [direction, setDirection] = useState<"in" | "out">(plan?.direction ?? first);
-  const [what, setWhat] = useState(plan?.what ?? "");
+function PlanSheet({
+  plan,
+  direction: first,
+  buyer,
+  sale,
+  rate,
+  today,
+  onClose,
+  onSave,
+}: {
+  plan: CashPlan | null;
+  direction: "in" | "out";
+  /** A buyer's payments: theirs, in dollars, counted until what they owe is paid. */
+  buyer: CashBuyer | null;
+  /** New buyers' money expected: in dollars to start with. */
+  sale: boolean;
+  rate: number | null;
+  today: string;
+  onClose: () => void;
+  onSave: Save;
+}) {
+  const [direction, setDirection] = useState<"in" | "out">(buyer || sale ? "in" : (plan?.direction ?? first));
+  const [what, setWhat] = useState(plan?.what ?? (buyer ? buyer.name : sale ? "New buyers" : ""));
+  const [currency, setCurrency] = useState<Currency>(plan?.currency ?? (buyer || sale ? "USD" : "GHS"));
   const [amount, setAmount] = useState(plan ? String(plan.amount) : "");
   const [date, setDate] = useState(plan?.date ?? today);
-  const [repeat, setRepeat] = useState<Repeat>(plan?.repeat ?? "once");
+  const [repeat, setRepeat] = useState<Repeat>(plan?.repeat ?? (buyer || sale ? "month" : "once"));
   const [until, setUntil] = useState(plan?.until ?? "");
   const [saving, setSaving] = useState(false);
   const [armed, setArmed] = useState(false);
@@ -551,8 +782,19 @@ function PlanSheet({ plan, direction: first, today, onClose, onSave }: { plan: C
     setError("");
     try {
       await onSave(
-        { action: "plan", ...(plan ? { id: plan.id } : {}), direction, what: what.trim(), amount: n, date, repeat, until: repeat !== "once" && until ? until : null },
-        `${direction === "in" ? "Coming in" : "To pay"}: ${what.trim()} ${money(n)}${repeat === "once" ? ` on ${short(date)}` : `, ${REPEAT_WORDS[repeat].toLowerCase()}`}`
+        {
+          action: "plan",
+          ...(plan ? { id: plan.id } : {}),
+          direction,
+          what: what.trim(),
+          amount: n,
+          date,
+          repeat,
+          until: repeat !== "once" && until && !buyer ? until : null,
+          currency,
+          buyerId: buyer?.id ?? null,
+        },
+        `${direction === "in" ? "Coming in" : "To pay"}: ${what.trim()} ${inMoney(n, currency)}${repeat === "once" ? ` on ${short(date)}` : `, ${REPEAT_WORDS[repeat].toLowerCase()}`}`
       );
     } catch (e) {
       setError(errorText(e));
@@ -572,32 +814,45 @@ function PlanSheet({ plan, direction: first, today, onClose, onSave }: { plan: C
   };
   return (
     <div className={styles.sheetBackdrop}>
-      <div className={styles.sheet} role="dialog" aria-label={direction === "in" ? "Money coming in" : "A payment to come"}>
-        <h2 className={styles.sheetTitle}>{direction === "in" ? "Money coming in" : "A payment to come"}</h2>
-        <div className={styles.chips}>
-          {(["in", "out"] as const).map((d) => (
-            <button key={d} type="button" className={direction === d ? styles.chipOn : styles.chip} aria-pressed={direction === d} onClick={() => setDirection(d)} disabled={saving}>
-              {d === "in" ? "Money in" : "A payment"}
-            </button>
-          ))}
-        </div>
-        <label className={styles.label} htmlFor="cf-what">
-          {direction === "in" ? "From whom" : "What for"}
-        </label>
-        <input id="cf-what" className={styles.input} value={what} onChange={(e) => setWhat(e.target.value)} maxLength={80} placeholder={direction === "in" ? "e.g. Leo" : "e.g. Security guard"} disabled={saving} />
-        {direction === "in" && !what && (
+      <div className={styles.sheet} role="dialog" aria-label={buyer ? `${buyer.name}'s payments` : sale ? "New buyers you expect" : direction === "in" ? "Money coming in" : "A payment to come"}>
+        <h2 className={styles.sheetTitle}>{buyer ? `${buyer.name}'s payments` : sale ? "New buyers you expect" : direction === "in" ? "Money coming in" : "A payment to come"}</h2>
+        {buyer ? (
+          <p className={styles.sheetNote}>
+            {usd(buyer.balanceUSD)} left to pay. Say what they pay and when: it counts until that&rsquo;s paid, and each payment logged on the Buyers tab takes it down.
+          </p>
+        ) : sale ? (
+          <p className={styles.sheetNote}>Sales you expect: e.g. a reservation fee or a deposit from new buyers each month.</p>
+        ) : (
           <div className={styles.chips}>
-            {["Leo", "A buyer's payment"].map((w) => (
-              <button key={w} type="button" className={styles.chip} onClick={() => setWhat(w)} disabled={saving}>
-                {w}
+            {(["in", "out"] as const).map((d) => (
+              <button key={d} type="button" className={direction === d ? styles.chipOn : styles.chip} aria-pressed={direction === d} onClick={() => setDirection(d)} disabled={saving}>
+                {d === "in" ? "Money in" : "A payment"}
+              </button>
+            ))}
+          </div>
+        )}
+        {!buyer && (
+          <>
+            <label className={styles.label} htmlFor="cf-what">
+              {direction === "in" ? "From whom" : "What for"}
+            </label>
+            <input id="cf-what" className={styles.input} value={what} onChange={(e) => setWhat(e.target.value)} maxLength={80} placeholder={direction === "in" ? "e.g. Leo" : "e.g. Security guard"} disabled={saving} />
+          </>
+        )}
+        {!buyer && (
+          <div className={styles.chips}>
+            {(["GHS", "USD"] as const).map((c) => (
+              <button key={c} type="button" className={currency === c ? styles.chipOn : styles.chip} aria-pressed={currency === c} onClick={() => setCurrency(c)} disabled={saving}>
+                {c === "GHS" ? "GH₵" : "US$"}
               </button>
             ))}
           </div>
         )}
         <label className={styles.label} htmlFor="cf-amount">
-          Amount (GH₵)
+          Amount ({currency === "USD" ? "US$" : "GH₵"}){buyer ? " each time" : ""}
         </label>
-        <input id="cf-amount" className={styles.input} inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="e.g. 50000" disabled={saving} />
+        <input id="cf-amount" className={styles.input} inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder={currency === "USD" ? "e.g. 2000" : "e.g. 50000"} disabled={saving} />
+        {currency === "USD" && toNumber(amount) && rate ? <p className={styles.sheetNote}>About {money((toNumber(amount) ?? 0) * rate)} at GH₵ {rate}.</p> : null}
         <label className={styles.label} htmlFor="cf-date">
           {repeat === "once" ? "When" : "From"}
         </label>
@@ -624,7 +879,7 @@ function PlanSheet({ plan, direction: first, today, onClose, onSave }: { plan: C
             </button>
           ))}
         </div>
-        {repeat !== "once" && (
+        {repeat !== "once" && !buyer && (
           <>
             <label className={styles.label} htmlFor="cf-until">
               Until (optional)

@@ -29,6 +29,8 @@ export type BillPayment = { billId: string; supplier: string; amount: number; de
 export type BillPrefill = {
   poId: string;
   vendorId: string;
+  /** When it's to be paid (the order's), or null. */
+  due: string | null;
   amount: number;
   description: string;
   floor: string | null;
@@ -478,7 +480,7 @@ function BillSheet({
   const [vendor, setVendor] = useState(bill?.vendorId ?? p?.vendorId ?? vendorId ?? "");
   const [find, setFind] = useState("");
   const [date, setDate] = useState(bill?.date ?? today);
-  const [due, setDue] = useState(bill?.due ?? "");
+  const [due, setDue] = useState(bill?.due ?? p?.due ?? "");
   const [amount, setAmount] = useState(bill ? String(bill.amount) : p ? String(p.amount) : "");
   const [description, setDescription] = useState(bill?.description ?? p?.description ?? "");
   const [ref, setRef] = useState(bill?.ref ?? "");

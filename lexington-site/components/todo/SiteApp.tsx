@@ -15,7 +15,6 @@ import type { BookLists } from "@/lib/quickbooks/books";
 import { opensRollcall } from "@/lib/rollcall/shared";
 import type { OpenArrival } from "@/lib/store/deliveries";
 import type { StoreData, StoreItem } from "@/lib/store/shared";
-import { toBuyCount } from "@/lib/store/shopping";
 import { FINANCE_SECTIONS, isFinance, PAGE_SECTIONS, sectionHref, type FinanceSection, type PageSection, type TodoList, type TodoMe, type TodoTask } from "@/lib/todo/shared";
 import { AlertsApp } from "./AlertsApp";
 import { send, startPolling } from "./api";
@@ -233,8 +232,6 @@ export function SiteApp({
   const [section, setSection] = useState<View>(first);
   const [opened, setOpened] = useState<View[]>([first]);
   const [data, setData] = useState<SiteData>(initial);
-  // The store's badge: how many lines are on its shopping list.
-  const [reorders, setReorders] = useState(() => (initial.store ? toBuyCount(initial.store.items, initial.store.buys ?? []) : 0));
   // The store's tab asked for (the home page's To buy tile, the back button to #buy; it reads #buy itself on opening).
   const [storeAsk, setStoreAsk] = useState<{ tab: "buy"; at: number } | null>(null);
   const [unread, setUnread] = useState(() => initial.alerts?.unread ?? 0);
@@ -286,7 +283,6 @@ export function SiteApp({
           const loaded = await load(s);
           if (!live) return;
           setData((d) => ({ ...loaded, ...d }));
-          if (loaded.store) setReorders(toBuyCount(loaded.store.items, loaded.store.buys ?? []));
           if (loaded.alerts) setUnread(loaded.alerts.unread);
         } catch {
           /* it loads when opened instead */
@@ -416,7 +412,6 @@ export function SiteApp({
             active={section === "store"}
             initial={data.store ?? null}
             startedOffline={startedOffline && first === "store"}
-            onReorders={setReorders}
             ask={storeAsk}
             fresh={first === "store"}
           />
@@ -557,7 +552,8 @@ export function SiteApp({
           <RollcallPart me={me} active={section === "rollcall"} ask={rcAsk} onTab={onRcTab} />
         </div>
       )}
-      <SiteNav me={me} current={section} onGo={go} badges={{ store: reorders, alerts: unread }} />
+      {/* Only the alerts carry a number on the bar (6 Nov 2026: none on Store; its shopping list says how many itself). */}
+      <SiteNav me={me} current={section} onGo={go} badges={{ alerts: unread }} />
     </div>
   );
 }
