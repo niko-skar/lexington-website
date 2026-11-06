@@ -1,5 +1,5 @@
 {
- "generated": "2026-10-08T14:55:39.524Z",
+ "generated": "2026-11-06T13:41:40.820Z",
  "postHourUtc": 18,
  "posts": [
   {
@@ -1318,6 +1318,443 @@
      "note": "amenity Garbage Management Chutes",
      "q": "count(*[_type==\"amenity\" && name==\"Garbage Management Chutes\"])",
      "equals": 1
+    }
+   ],
+   "notes": ""
+  },
+  {
+   "id": "lx32",
+   "date": "2026-11-08",
+   "pillar": "Homes",
+   "title": "One-bedroom, prices incl. VAT",
+   "images": [
+    "lx32-1.jpg",
+    "lx32-2.jpg",
+    "lx32-3.jpg"
+   ],
+   "alt": [
+    "Floor plan card: One-bedroom. Residence 205B. Floor 2, Area 44 sqm, Price incl. VAT $110,880.",
+    "Floor plan card: One-bedroom. Residence 206B. Floor 2, Area 60 sqm, Price incl. VAT $151,200.",
+    "Card: One-bedroom residences. From $110,880. Every price includes VAT. Compound parking included: one space for every one-bedroom; Full drawings on request for any floor or unit; Reserve from $10,000."
+   ],
+   "fb": "One-bedroom residences from $110,880 incl. VAT.\n\nResidence 205B is 44 sqm at $110,880. Residence 206B is 60 sqm at $151,200. Both prices include VAT.\n\nCompound parking is included: one space for every one-bedroom. Full drawings are available on request for any floor or unit.\n\nSee the residences: https://www.lexington.com.gh/residences?utm_source=facebook&utm_medium=organic_social&utm_campaign=daily_post&utm_content=lx32\n\n📍 Shiashie, East Legon, Accra\n\nFloor plans are illustrative. Prices include VAT and are subject to change.",
+   "ig": "One-bedroom residences from $110,880 incl. VAT.\n\nResidence 205B is 44 sqm at $110,880. Residence 206B is 60 sqm at $151,200. Both prices include VAT.\n\nCompound parking is included: one space for every one-bedroom. Full drawings are available on request for any floor or unit.\n\nSee the residences: link in bio (lexington.com.gh/residences)\n\n📍 Shiashie, East Legon, Accra\n\nFloor plans are illustrative. Prices include VAT and are subject to change.\n\n#TheLexingtonGH #EastLegon #Shiashie #Accra #GhanaRealEstate #AccraApartments #AccraProperty #OffPlan #PropertyInvestment #LuxuryApartments",
+   "checks": [
+    {
+     "note": "unit 205B",
+     "q": "*[_type==\"unit\" && unitNumber==\"205B\"][0]{areaSqm,floor,priceUSD,status}",
+     "equals": {
+      "areaSqm": 44,
+      "floor": 2,
+      "priceUSD": 92400,
+      "status": "available"
+     }
+    },
+    {
+     "note": "unit 206B",
+     "q": "*[_type==\"unit\" && unitNumber==\"206B\"][0]{areaSqm,floor,priceUSD,status}",
+     "equals": {
+      "areaSqm": 60,
+      "floor": 2,
+      "priceUSD": 126000,
+      "status": "available"
+     }
+    },
+    {
+     "note": "from price One Bedroom",
+     "q": "math::min(*[_type==\"unit\" && status==\"available\" && bedroomType==\"One Bedroom\"].priceUSD)",
+     "equals": 92400
+    },
+    {
+     "note": "page /residences says \"Compound parking included\"",
+     "page": "/residences",
+     "includes": "Compound parking included"
+    },
+    {
+     "note": "page /residences says \"drawings are available on request\"",
+     "page": "/residences",
+     "includes": "drawings are available on request"
+    },
+    {
+     "note": "page /residences says \"include VAT at 20%\"",
+     "page": "/residences",
+     "includes": "include VAT at 20%"
+    },
+    {
+     "note": "reservation",
+     "q": "*[_type==\"financingPlan\"][0].selfFinanceRows[milestone==\"Reservation\"][0].option1",
+     "equals": "$10,000"
+    }
+   ],
+   "notes": ""
+  },
+  {
+   "id": "lx33",
+   "date": "2026-11-09",
+   "pillar": "Homes",
+   "title": "Two-bedroom, prices incl. VAT",
+   "images": [
+    "lx33-1.jpg",
+    "lx33-2.jpg",
+    "lx33-3.jpg"
+   ],
+   "alt": [
+    "Floor plan card: Two-bedroom. Residence 207B. Floor 2, Area 72 sqm, Price incl. VAT $181,440.",
+    "Floor plan card: Two-bedroom. Residence 302A. Floor 3, Area 84 sqm, Price incl. VAT $221,760.",
+    "Card: Two-bedroom residences. From $181,440. Every price includes VAT. Compound parking included: two spaces for every two-bedroom; Full drawings on request for any floor or unit; Reserve from $10,000."
+   ],
+   "fb": "Two-bedroom residences from $181,440 incl. VAT.\n\nResidence 207B is 72 sqm at $181,440. Residence 302A is 84 sqm at $221,760. Both prices include VAT.\n\nCompound parking is included: two spaces for every two-bedroom. Full drawings are available on request for any floor or unit.\n\nSee the residences: https://www.lexington.com.gh/residences?utm_source=facebook&utm_medium=organic_social&utm_campaign=daily_post&utm_content=lx33\n\n📍 Shiashie, East Legon, Accra\n\nFloor plans are illustrative. Prices include VAT and are subject to change.",
+   "ig": "Two-bedroom residences from $181,440 incl. VAT.\n\nResidence 207B is 72 sqm at $181,440. Residence 302A is 84 sqm at $221,760. Both prices include VAT.\n\nCompound parking is included: two spaces for every two-bedroom. Full drawings are available on request for any floor or unit.\n\nSee the residences: link in bio (lexington.com.gh/residences)\n\n📍 Shiashie, East Legon, Accra\n\nFloor plans are illustrative. Prices include VAT and are subject to change.\n\n#TheLexingtonGH #EastLegon #Shiashie #Accra #GhanaRealEstate #AccraApartments #AccraProperty #OffPlan #PropertyInvestment #LuxuryApartments",
+   "checks": [
+    {
+     "note": "unit 207B",
+     "q": "*[_type==\"unit\" && unitNumber==\"207B\"][0]{areaSqm,floor,priceUSD,status}",
+     "equals": {
+      "areaSqm": 72,
+      "floor": 2,
+      "priceUSD": 151200,
+      "status": "available"
+     }
+    },
+    {
+     "note": "unit 302A",
+     "q": "*[_type==\"unit\" && unitNumber==\"302A\"][0]{areaSqm,floor,priceUSD,status}",
+     "equals": {
+      "areaSqm": 84,
+      "floor": 3,
+      "priceUSD": 184800,
+      "status": "available"
+     }
+    },
+    {
+     "note": "from price Two Bedroom",
+     "q": "math::min(*[_type==\"unit\" && status==\"available\" && bedroomType==\"Two Bedroom\"].priceUSD)",
+     "equals": 151200
+    },
+    {
+     "note": "page /residences says \"Compound parking included\"",
+     "page": "/residences",
+     "includes": "Compound parking included"
+    },
+    {
+     "note": "page /residences says \"drawings are available on request\"",
+     "page": "/residences",
+     "includes": "drawings are available on request"
+    },
+    {
+     "note": "page /residences says \"include VAT at 20%\"",
+     "page": "/residences",
+     "includes": "include VAT at 20%"
+    },
+    {
+     "note": "reservation",
+     "q": "*[_type==\"financingPlan\"][0].selfFinanceRows[milestone==\"Reservation\"][0].option1",
+     "equals": "$10,000"
+    }
+   ],
+   "notes": ""
+  },
+  {
+   "id": "lx34",
+   "date": "2026-11-10",
+   "pillar": "Buying",
+   "title": "Choose your finish, incl. VAT",
+   "images": [
+    "lx34-1.jpg",
+    "lx34-2.jpg",
+    "lx34-3.jpg",
+    "lx34-4.jpg"
+   ],
+   "alt": [
+    "Render of a bedroom with a wood-slat headboard wall and warm lighting.",
+    "Card: Package 1 of 3. Standard. The finish every residence ships with. Standard Porcelain tiles and white walls; Standard kitchen with laminate countertop; Standard bathroom fittings; Standard lights and ceiling works; Standard window glass.",
+    "Card: Package 2 of 3 · Popular. Premium. Natural stone finishes, upgraded fittings and soundproofed glass. Black natural stone and skirting; Premium kitchen with stone or granite countertop; Upgraded bathroom fittings; Paint colour of your choice; Hidden lights and ceiling works, plus dimmable switches; 10mm thick window glass, laminated and tempered for soundproofing.",
+    "Card: Package 3 of 3 · Smart Home. Premium Plus. Fully smart-home enabled, with advanced sound and burglarproofing. Curtains; Upgraded kitchen appliances; Smart home enabled — control everything from your phone; 16mm thick window glass; Advanced soundproofing and burglarproofing."
+   ],
+   "fb": "Choose your finish.\n\nStandard comes with every residence. Premium adds natural stone finishes, upgraded fittings and soundproofed glass for $180 per sqm incl. VAT. Premium Plus adds smart-home control from your phone, curtains and upgraded kitchen appliances for $360 per sqm incl. VAT.\n\nIncluded as standard on penthouses.\n\nSee the packages: https://www.lexington.com.gh/residences?utm_source=facebook&utm_medium=organic_social&utm_campaign=daily_post&utm_content=lx34\n\n📍 Shiashie, East Legon, Accra\n\nPrices include VAT and are subject to change.",
+   "ig": "Choose your finish.\n\nStandard comes with every residence. Premium adds natural stone finishes, upgraded fittings and soundproofed glass for $180 per sqm incl. VAT. Premium Plus adds smart-home control from your phone, curtains and upgraded kitchen appliances for $360 per sqm incl. VAT.\n\nIncluded as standard on penthouses.\n\nSee the packages: link in bio (lexington.com.gh/residences)\n\n📍 Shiashie, East Legon, Accra\n\nPrices include VAT and are subject to change.\n\n#TheLexingtonGH #EastLegon #Shiashie #Accra #GhanaRealEstate #PropertyInvestment #DiasporaInvestors #BuyInGhana #OffPlan #AccraProperty",
+   "checks": [
+    {
+     "note": "finish tiers",
+     "q": "*[_type==\"packageTiers\"][0].tiers[]{key,name,ratePerSqm,description,features,\"note\":coalesce(note,null),\"badge\":coalesce(badge,null)}",
+     "equals": [
+      {
+       "key": "standard",
+       "name": "Standard",
+       "ratePerSqm": 0,
+       "description": "The finish every residence ships with.",
+       "features": [
+        "Standard Porcelain tiles and white walls",
+        "Standard kitchen with laminate countertop",
+        "Standard bathroom fittings",
+        "Standard lights and ceiling works",
+        "Standard window glass"
+       ],
+       "note": null,
+       "badge": null
+      },
+      {
+       "key": "premium",
+       "name": "Premium",
+       "ratePerSqm": 150,
+       "description": "Natural stone finishes, upgraded fittings and soundproofed glass.",
+       "features": [
+        "Black natural stone and skirting",
+        "Premium kitchen with stone or granite countertop",
+        "Upgraded bathroom fittings",
+        "Paint colour of your choice",
+        "Hidden lights and ceiling works, plus dimmable switches",
+        "10mm thick window glass, laminated and tempered for soundproofing"
+       ],
+       "note": "Included as standard on penthouses.",
+       "badge": "Popular"
+      },
+      {
+       "key": "premiumplus",
+       "name": "Premium Plus",
+       "ratePerSqm": 300,
+       "description": "Fully smart-home enabled, with advanced sound and burglarproofing.",
+       "features": [
+        "Curtains",
+        "Upgraded kitchen appliances",
+        "Smart home enabled — control everything from your phone",
+        "16mm thick window glass",
+        "Advanced soundproofing and burglarproofing"
+       ],
+       "note": null,
+       "badge": "Smart Home"
+      }
+     ]
+    },
+    {
+     "note": "page /residences says \"include VAT at 20%\"",
+     "page": "/residences",
+     "includes": "include VAT at 20%"
+    }
+   ],
+   "notes": ""
+  },
+  {
+   "id": "lx35",
+   "date": "2026-11-11",
+   "pillar": "Homes",
+   "title": "PH1a penthouse, incl. VAT",
+   "images": [
+    "lx35-1.jpg",
+    "lx35-2.jpg",
+    "lx35-3.jpg"
+   ],
+   "alt": [
+    "Floor plan card: Three-bedroom duplex penthouse. PH1a. Bedrooms 3, Area 327 sqm, Price incl. VAT $1,020,240.",
+    "Floor plan card: PH1a. Lower floor. Level 6, Unit area 327 sqm.",
+    "Card: At a glance. PH1a. Three-bedroom duplex penthouse; 327 sqm over two floors; Premium finishes included as standard; $1,020,240 incl. VAT."
+   ],
+   "fb": "PH1a: three bedrooms over two floors.\n\n327 sqm, priced at $1,020,240 incl. VAT, with Premium finishes included as standard. Swipe for the plans.\n\nSee the residences: https://www.lexington.com.gh/residences?utm_source=facebook&utm_medium=organic_social&utm_campaign=daily_post&utm_content=lx35\n\n📍 Shiashie, East Legon, Accra\n\nFloor plans are illustrative. Prices include VAT and are subject to change.",
+   "ig": "PH1a: three bedrooms over two floors.\n\n327 sqm, priced at $1,020,240 incl. VAT, with Premium finishes included as standard. Swipe for the plans.\n\nSee the residences: link in bio (lexington.com.gh/residences)\n\n📍 Shiashie, East Legon, Accra\n\nFloor plans are illustrative. Prices include VAT and are subject to change.\n\n#TheLexingtonGH #EastLegon #Shiashie #Accra #GhanaRealEstate #AccraApartments #AccraProperty #OffPlan #PropertyInvestment #LuxuryApartments",
+   "checks": [
+    {
+     "note": "unit PH1a",
+     "q": "*[_type==\"unit\" && unitNumber==\"PH1a\"][0]{areaSqm,floor,priceUSD,status}",
+     "equals": {
+      "areaSqm": 327,
+      "floor": 7,
+      "priceUSD": 850200,
+      "status": "available"
+     }
+    },
+    {
+     "note": "finish tiers",
+     "q": "*[_type==\"packageTiers\"][0].tiers[]{key,name,ratePerSqm,description,features,\"note\":coalesce(note,null),\"badge\":coalesce(badge,null)}",
+     "equals": [
+      {
+       "key": "standard",
+       "name": "Standard",
+       "ratePerSqm": 0,
+       "description": "The finish every residence ships with.",
+       "features": [
+        "Standard Porcelain tiles and white walls",
+        "Standard kitchen with laminate countertop",
+        "Standard bathroom fittings",
+        "Standard lights and ceiling works",
+        "Standard window glass"
+       ],
+       "note": null,
+       "badge": null
+      },
+      {
+       "key": "premium",
+       "name": "Premium",
+       "ratePerSqm": 150,
+       "description": "Natural stone finishes, upgraded fittings and soundproofed glass.",
+       "features": [
+        "Black natural stone and skirting",
+        "Premium kitchen with stone or granite countertop",
+        "Upgraded bathroom fittings",
+        "Paint colour of your choice",
+        "Hidden lights and ceiling works, plus dimmable switches",
+        "10mm thick window glass, laminated and tempered for soundproofing"
+       ],
+       "note": "Included as standard on penthouses.",
+       "badge": "Popular"
+      },
+      {
+       "key": "premiumplus",
+       "name": "Premium Plus",
+       "ratePerSqm": 300,
+       "description": "Fully smart-home enabled, with advanced sound and burglarproofing.",
+       "features": [
+        "Curtains",
+        "Upgraded kitchen appliances",
+        "Smart home enabled — control everything from your phone",
+        "16mm thick window glass",
+        "Advanced soundproofing and burglarproofing"
+       ],
+       "note": null,
+       "badge": "Smart Home"
+      }
+     ]
+    },
+    {
+     "note": "page /residences says \"include VAT at 20%\"",
+     "page": "/residences",
+     "includes": "include VAT at 20%"
+    }
+   ],
+   "notes": ""
+  },
+  {
+   "id": "lx36",
+   "date": "2026-11-12",
+   "pillar": "Homes",
+   "title": "PH2b penthouse, incl. VAT",
+   "images": [
+    "lx36-1.jpg",
+    "lx36-2.jpg",
+    "lx36-3.jpg",
+    "lx36-4.jpg"
+   ],
+   "alt": [
+    "Render of the penthouse living, dining and kitchen area, with a long white dining table.",
+    "Floor plan card: PH2b. Upper floor. Level 7, Unit area 375 sqm.",
+    "Floor plan card: PH2b. Lower floor. Level 6, Unit area 375 sqm.",
+    "Card: Finishes. Premium finishes come as standard. On both penthouses. Plans and prices at lexington.com.gh/residences."
+   ],
+   "fb": "PH2b: a three-bedroom duplex penthouse.\n\n375 sqm over two floors, priced at $1,170,000 incl. VAT. Premium finishes are included as standard on the penthouses.\n\nSwipe for both floor plans.\n\nSee the residences: https://www.lexington.com.gh/residences?utm_source=facebook&utm_medium=organic_social&utm_campaign=daily_post&utm_content=lx36\n\n📍 Shiashie, East Legon, Accra\n\nIllustrative render and plans. Prices include VAT and are subject to change.",
+   "ig": "PH2b: a three-bedroom duplex penthouse.\n\n375 sqm over two floors, priced at $1,170,000 incl. VAT. Premium finishes are included as standard on the penthouses.\n\nSwipe for both floor plans.\n\nSee the residences: link in bio (lexington.com.gh/residences)\n\n📍 Shiashie, East Legon, Accra\n\nIllustrative render and plans. Prices include VAT and are subject to change.\n\n#TheLexingtonGH #EastLegon #Shiashie #Accra #GhanaRealEstate #AccraApartments #AccraProperty #OffPlan #PropertyInvestment #LuxuryApartments",
+   "checks": [
+    {
+     "note": "unit PH2b",
+     "q": "*[_type==\"unit\" && unitNumber==\"PH2b\"][0]{areaSqm,floor,priceUSD,status}",
+     "equals": {
+      "areaSqm": 375,
+      "floor": 7,
+      "priceUSD": 975000,
+      "status": "available"
+     }
+    },
+    {
+     "note": "finish tiers",
+     "q": "*[_type==\"packageTiers\"][0].tiers[]{key,name,ratePerSqm,description,features,\"note\":coalesce(note,null),\"badge\":coalesce(badge,null)}",
+     "equals": [
+      {
+       "key": "standard",
+       "name": "Standard",
+       "ratePerSqm": 0,
+       "description": "The finish every residence ships with.",
+       "features": [
+        "Standard Porcelain tiles and white walls",
+        "Standard kitchen with laminate countertop",
+        "Standard bathroom fittings",
+        "Standard lights and ceiling works",
+        "Standard window glass"
+       ],
+       "note": null,
+       "badge": null
+      },
+      {
+       "key": "premium",
+       "name": "Premium",
+       "ratePerSqm": 150,
+       "description": "Natural stone finishes, upgraded fittings and soundproofed glass.",
+       "features": [
+        "Black natural stone and skirting",
+        "Premium kitchen with stone or granite countertop",
+        "Upgraded bathroom fittings",
+        "Paint colour of your choice",
+        "Hidden lights and ceiling works, plus dimmable switches",
+        "10mm thick window glass, laminated and tempered for soundproofing"
+       ],
+       "note": "Included as standard on penthouses.",
+       "badge": "Popular"
+      },
+      {
+       "key": "premiumplus",
+       "name": "Premium Plus",
+       "ratePerSqm": 300,
+       "description": "Fully smart-home enabled, with advanced sound and burglarproofing.",
+       "features": [
+        "Curtains",
+        "Upgraded kitchen appliances",
+        "Smart home enabled — control everything from your phone",
+        "16mm thick window glass",
+        "Advanced soundproofing and burglarproofing"
+       ],
+       "note": null,
+       "badge": "Smart Home"
+      }
+     ]
+    },
+    {
+     "note": "page /residences says \"include VAT at 20%\"",
+     "page": "/residences",
+     "includes": "include VAT at 20%"
+    }
+   ],
+   "notes": ""
+  },
+  {
+   "id": "lx37",
+   "date": "2026-11-13",
+   "pillar": "Offer",
+   "title": "Phase 1 pricing to 30 November",
+   "images": [
+    "lx37-1.jpg"
+   ],
+   "alt": [
+    "Countdown card: Phase 1 pricing ends 30 November. 17. Days left. 15% off with full payment; 8% off with flexible payment plans up to 18 months."
+   ],
+   "fb": "Phase 1 pricing now runs to 30 November.\n\nPhase 1 pricing at The Lexington ends on 30 November: 15% off with full payment, or 8% off with flexible payment plans of up to 18 months.\n\nReserve from $10,000.\n\nEnquire: https://www.lexington.com.gh/contact?utm_source=facebook&utm_medium=organic_social&utm_campaign=daily_post&utm_content=lx37\n\n📍 Shiashie, East Legon, Accra\n\nTerms apply. Prices include VAT and are subject to change.",
+   "ig": "Phase 1 pricing now runs to 30 November.\n\nPhase 1 pricing at The Lexington ends on 30 November: 15% off with full payment, or 8% off with flexible payment plans of up to 18 months.\n\nReserve from $10,000.\n\nEnquire: link in bio (lexington.com.gh/contact)\n\n📍 Shiashie, East Legon, Accra\n\nTerms apply. Prices include VAT and are subject to change.\n\n#TheLexingtonGH #EastLegon #Shiashie #Accra #GhanaRealEstate #PropertyInvestment #DiasporaInvestors #BuyInGhana #OffPlan #AccraProperty",
+   "checks": [
+    {
+     "note": "promo banner on",
+     "q": "*[_type==\"siteSettings\"][0].promoBanner.enabled",
+     "equals": true
+    },
+    {
+     "note": "banner says 15% off",
+     "q": "*[_type==\"siteSettings\"][0].promoBanner.message",
+     "includes": "15% off"
+    },
+    {
+     "note": "banner says 8% off",
+     "q": "*[_type==\"siteSettings\"][0].promoBanner.message",
+     "includes": "8% off"
+    },
+    {
+     "note": "banner says 18 months",
+     "q": "*[_type==\"siteSettings\"][0].promoBanner.message",
+     "includes": "18 months"
+    },
+    {
+     "note": "banner says 30th of November",
+     "q": "*[_type==\"siteSettings\"][0].promoBanner.message",
+     "includes": "30th of November"
+    },
+    {
+     "note": "reservation",
+     "q": "*[_type==\"financingPlan\"][0].selfFinanceRows[milestone==\"Reservation\"][0].option1",
+     "equals": "$10,000"
     }
    ],
    "notes": ""
