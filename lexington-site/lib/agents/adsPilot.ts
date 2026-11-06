@@ -2,15 +2,18 @@ import "server-only";
 
 import { randomUUID } from "node:crypto";
 
-import { readGoogleReport } from "@/lib/ads/googleStore";
+import { readGoogleReport, type StoredGoogleReport } from "@/lib/ads/googleStore";
 import { leadsOf, metaConfig, type MetaConfig } from "@/lib/ads/meta";
 import { MetaError, metaGraph } from "@/lib/ads/metaGraph";
+import { notifyOwner } from "@/lib/alerts/notify";
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
 import { buildStories, shiftDay } from "@/lib/visits/report";
 import { readVisitLogs } from "@/lib/visits/store";
 
+import { checkGoogleHealth, type GoogleFix, type GoogleHealth, type HealthProblem } from "./adsHealthCore";
 import { MIN_DAILY, dayIn, monthStart, pilotSettings, planPilot, usd, type Holder, type PilotChange, type PilotPlan } from "./adsPilotCore";
-import { longDate } from "./factsCore";
+import { loadFactPack } from "./facts";
+import { allowedAmounts, longDate, soldOutWords } from "./factsCore";
 
 /**
  * THE ADS AUTOPILOT. Every morning at 6 (GMT) it reads what each Facebook / Instagram
@@ -30,6 +33,12 @@ import { longDate } from "./factsCore";
  * what it would do (the default anywhere but the live site). It never creates, edits or
  * extends an advert: only budgets, and pausing or switching back on.
  *
+ * THE DAILY ADS HEALTH CHECK (adsHealthCore.ts, from 6 Nov 2026) runs with it: map pins and
+ * out-of-date words are taken off the Google adverts (by the version 3 script), an out-of-date
+ * ad is paused when its group has a right one, and when Google's paid clicks don't reach the
+ * website for no reason it can see, Google is stopped (`googleHold`) until Claude, prompted by
+ * the alert and the daily watcher, finds the cause and clears it. Each new problem is one alert.
+ *
  * What it did, and what it needs to remember, lives in one private document
  * (`agentRun.adsPilot`); the switch in `agentConfig.adsPilot`.
  */
@@ -41,6 +50,11 @@ const newKey = () => randomUUID().replace(/-/g, "").slice(0, 12);
 
 /** How long the Google script may still make a change after it was decided. */
 const GOOGLE_PLAN_MINUTES = 75;
+/**
+ * The health check judges Google's clicks from this day on: the map pins came off on the evening of 5 Nov 2026, so
+ * the days before would only say again what is already fixed. A fix that takes pins off moves it to the next day.
+ */
+const HEALTH_FROM = "2026-11-06";
 /** The Google report counts as current for this long (the script sends one every hour). */
 const GOOGLE_FRESH_HOURS = 30;
 
@@ -67,6 +81,22 @@ export interface GooglePlan {
   validUntil: string;
   maxDaily: number;
   campaigns: Array<{ _key: string; id: string; name: string; dailyBudget?: number; status?: "ENABLED" | "PAUSED" }>;
+  /** The health check's fixes for the version 3 script: take a link off the adverts, or pause an ad. */
+  fixes?: Array<{ _key: string; id: string; op: GoogleFix["op"]; resource: string; what: string }>;
+}
+
+/** The daily ads health check's latest findings, for the dashboard, the alerts and Claude's daily watcher. */
+export interface HealthRecord {
+  checkedAt: string;
+  /** Google's clicks are judged from this day on. */
+  from: string;
+  scriptVersion: number;
+  traffic: GoogleHealth["traffic"];
+  problems: Array<HealthProblem & { _key: string; since: string }>;
+  /** Fixes handed to the Google script on this run. */
+  fixes: Array<{ _key: string; id: string; op: GoogleFix["op"]; resource: string; what: string }>;
+  /** Stopped by the check until a person (Claude, or Niko) clears it: unset `googleHold` on this document. */
+  hold: { since: string; reason: string } | null;
 }
 
 export type StoredPlan = Omit<PilotPlan, "changes" | "pausedForCap" | "notes">;
@@ -92,6 +122,12 @@ export interface PilotRun {
   pausedForResults?: DayMark[];
   noPauseUntil?: DayMark[];
   googlePlan?: GooglePlan | null;
+  /** The daily ads health check (adsHealthCore.ts). */
+  health?: HealthRecord | null;
+  /** Google's spending stopped by the health check, until someone clears this. */
+  googleHold?: { since: string; reason: string } | null;
+  /** Google campaigns the hold paused, switched back on when it is cleared. */
+  pausedForHealth?: string[];
   /** The last changes made, newest first. */
   recent?: PilotRunChange[];
   history?: Array<{ _key: string; ranAt: string; mode: string; changes: number; errors: number; spentMtd: number; monthCap: number }>;
@@ -332,11 +368,13 @@ interface GoogleSide {
   holders: Holder[];
   spentMtd: number;
   notes: string[];
+  /** The script's last report, for the health check. */
+  report: StoredGoogleReport | null;
 }
 
 async function gatherGoogle(today: string, fromDay: string, nowMs: number, adContacts: number): Promise<GoogleSide> {
   const connected = (process.env.GOOGLE_ADS_REPORT_SECRET ?? "").trim().length >= 16;
-  const empty: GoogleSide = { connected, managed: false, canSpend: false, holders: [], spentMtd: 0, notes: [] };
+  const empty: GoogleSide = { connected, managed: false, canSpend: false, holders: [], spentMtd: 0, notes: [], report: null };
   if (!connected) return empty;
   const report = await readGoogleReport();
   if (report.error) return { ...empty, notes: [`The Google figures couldn't be read (${report.error}).`] };
@@ -384,27 +422,79 @@ async function gatherGoogle(today: string, fromDay: string, nowMs: number, adCon
   } else if (spentLately) {
     notes.push("Google is spending, but its budgets can't be changed until the new Google Ads script is pasted in (Connect page): its spend still counts toward the month.");
   }
-  return { connected, managed, canSpend: managed && spentLately, holders, spentMtd, notes };
+  return { connected, managed, canSpend: managed && spentLately, holders, spentMtd, notes, report };
 }
 
-/** Website enquiries from Google adverts in the last 14 days, from the site's own visit record. */
-async function googleAdContacts(today: string): Promise<number> {
+/**
+ * Visitors from Google adverts in the last 14 days, from the site's own visit record: how many got in touch (website
+ * enquiries Google's own conversions may miss), and how many arrived each day (the health check's count of the clicks
+ * that reached the website).
+ */
+async function googleAdVisits(today: string): Promise<{ contacts: number; arrivals: Record<string, number> }> {
   try {
     const days = Array.from({ length: 15 }, (_, i) => shiftDay(today, i - 15));
     const logs = await readVisitLogs(days);
     const stories = buildStories(logs.visits, logs.events, { from: `${days[1]}T00:00:00.000Z`, to: `${today}T00:00:00.000Z` });
-    return stories.filter((s) => s.sourceKind === "google_ad" && s.contacted).length;
+    const fromGoogle = stories.filter((s) => s.sourceKind === "google_ad");
+    const arrivals: Record<string, number> = {};
+    for (const s of fromGoogle) arrivals[s.firstAt.slice(0, 10)] = (arrivals[s.firstAt.slice(0, 10)] ?? 0) + 1;
+    return { contacts: fromGoogle.filter((s) => s.contacted).length, arrivals };
   } catch {
-    return 0;
+    return { contacts: 0, arrivals: {} };
   }
+}
+
+/** The health check's view of Google today (see adsHealthCore.ts), and the day it judges clicks from. */
+async function googleHealthNow(args: {
+  today: string;
+  google: GoogleSide;
+  previous: PilotRun | null;
+  arrivals: Record<string, number>;
+}): Promise<{ health: GoogleHealth; from: string } | null> {
+  const { today, google, previous } = args;
+  const report = google.report;
+  if (!google.connected || !report) return null;
+  let from = previous?.health?.from ?? HEALTH_FROM;
+  // Pins the script took off explain the clicks before: judge from the day after.
+  const applied = report.lastApplied;
+  if (applied && applied.items.some((a) => a.id.startsWith("p") && a.did === "removed")) {
+    const next = shiftDay(applied.at.slice(0, 10), 1);
+    if (next > from) from = next;
+  }
+  // Google switched back on after a hold: judge from then, not from the days that caused it.
+  if (!previous?.googleHold && (previous?.pausedForHealth?.length ?? 0) > 0 && today > from) from = today;
+  const pack = await loadFactPack();
+  const v3 = report.health;
+  return {
+    from,
+    health: checkGoogleHealth({
+      today,
+      rows: report.rows.filter((r) => r.day >= from),
+      arrivals: Object.fromEntries(Object.entries(args.arrivals).filter(([day]) => day >= from)),
+      // The script's click types cover the last 7 days whole: usable once all of them are being judged.
+      clickTypes: v3 && from <= shiftDay(today, -7) ? v3.clickTypes : null,
+      links: v3?.links ?? null,
+      ads: v3?.ads ?? null,
+      prices: allowedAmounts(pack),
+      soldOut: soldOutWords(pack),
+      liveCampaigns: new Set(report.campaigns.filter((c) => c.status === "ENABLED" || c.status === "PAUSED").map((c) => c.id)),
+    }),
+  };
+}
+
+/** A short, stable name for a fix, which the Google script hands back with what it did. Pin fixes start with "p". */
+function fixId(fix: GoogleFix): string {
+  let h = 0;
+  for (const ch of fix.key) h = (Math.imul(h, 31) + ch.charCodeAt(0)) | 0;
+  return `${fix.key.startsWith("pin:") ? "p" : "f"}${(h >>> 0).toString(36)}`;
 }
 
 // ---- the run ---------------------------------------------------------------------------
 
 function carried(previous: PilotRun | null): Partial<PilotRun> {
   if (!previous) return {};
-  const { startedOn, lastSplit, pausedForCap, lastChanged, pausedForResults, noPauseUntil, googlePlan, recent, history, limit } = previous;
-  return { startedOn, lastSplit, pausedForCap, lastChanged, pausedForResults, noPauseUntil, googlePlan, recent, history, limit };
+  const { startedOn, lastSplit, pausedForCap, lastChanged, pausedForResults, noPauseUntil, googlePlan, recent, history, limit, health, googleHold, pausedForHealth } = previous;
+  return { startedOn, lastSplit, pausedForCap, lastChanged, pausedForResults, noPauseUntil, googlePlan, recent, history, limit, health, googleHold, pausedForHealth };
 }
 
 /**
@@ -448,8 +538,20 @@ export async function runAdsPilot(opts: { nowMs?: number } = {}): Promise<PilotR
     const startDate = startFor(today);
     const fromDay = monthStart(today, startDate);
 
-    const [google, share] = await Promise.all([googleAdContacts(today).then((n) => gatherGoogle(today, fromDay, nowMs, n)), realShares(nowMs)]);
+    const visits = await googleAdVisits(today);
+    const [google, share] = await Promise.all([gatherGoogle(today, fromDay, nowMs, visits.contacts), realShares(nowMs)]);
     const notes: string[] = [...google.notes];
+
+    // The daily ads health check: map pins, where Google's clicks went, the adverts' words (adsHealthCore.ts).
+    const healthRun = await googleHealthNow({ today, google, previous, arrivals: visits.arrivals }).catch((error: Error) => {
+      errors.push(`The ads health check couldn't run: ${error.message}`);
+      return null;
+    });
+    const health = healthRun?.health ?? null;
+    // A hold stays until someone clears it (unset googleHold on agentRun.adsPilot): Claude, once the cause is found.
+    let googleHold = previous?.googleHold ?? null;
+    if (!googleHold && health?.hold) googleHold = { since: today, reason: health.hold.reason };
+    if (googleHold) notes.push(`Google's spending is stopped by the ads health check since ${longDate(googleHold.since)}: ${googleHold.reason}`);
 
     // Meta counts every form entry; only the ones that aren't cold are results.
     const metaHolders = meta.holders.map((h) => ({ ...h, last14: { ...h.last14, leads: Math.round(h.last14.leads * share(h) * 100) / 100 } }));
@@ -478,13 +580,26 @@ export async function runAdsPilot(opts: { nowMs?: number } = {}): Promise<PilotR
       startDate,
       holders,
       spentMtd: { meta: meta.spentMtd, google: google.spentMtd },
-      canSpend: { meta: meta.accountStatus === 1, google: google.canSpend },
+      canSpend: { meta: meta.accountStatus === 1, google: google.canSpend && !googleHold },
       lastSplit: previous?.lastSplit ?? null,
       pausedForCap: pausedForCapBefore,
       lastChanged,
       noPauseUntil,
     });
     notes.push(...plan.notes);
+
+    // The hold pauses Google's campaigns (not just holds them at the minimum) and switches them back on once cleared.
+    const pausedForHealthBefore = previous?.pausedForHealth ?? [];
+    if (googleHold) {
+      plan.changes = plan.changes.filter((c) => c.channel !== "google");
+      for (const h of google.holders.filter((x) => x.status === "active")) {
+        plan.changes.push({ channel: "google", id: h.id, level: h.level, name: h.name, kind: "pause", fromBudget: null, toBudget: null, cause: "health", reason: `The ads health check stopped Google: ${googleHold.reason}` });
+      }
+    } else {
+      for (const h of google.holders.filter((x) => x.status === "paused" && pausedForHealthBefore.includes(x.id))) {
+        plan.changes.push({ channel: "google", id: h.id, level: h.level, name: h.name, kind: "enable", fromBudget: null, toBudget: null, cause: "health", reason: "The ads health check was cleared, so Google is switched back on." });
+      }
+    }
     if (meta.accountStatus !== null && meta.accountStatus !== 1) notes.push("The Meta ad account can't run adverts at the moment (see the daily ads check), so its budgets are left as they are.");
 
     // ---- make the changes
@@ -526,24 +641,27 @@ export async function runAdsPilot(opts: { nowMs?: number } = {}): Promise<PilotR
       }
       for (const c of changes) if (c.done === "not" && c.error && c.channel === "meta" && c.error !== metaBlocked) errors.push(`${c.name}: ${c.error}`);
 
-      // The Google script collects its share within the hour.
+      // The Google script collects its share within the hour, and the health check's fixes with it.
       const forGoogle = changes.filter((c) => c.channel === "google" && c.done === "queued");
+      const fixes = google.managed ? (health?.fixes ?? []).map((f) => ({ _key: newKey(), id: fixId(f), op: f.op, resource: f.resource, what: f.what })) : [];
       const issued = new Date(nowMs);
-      googlePlan = forGoogle.length
-        ? {
-            issuedAt: issued.toISOString(),
-            validUntil: new Date(nowMs + GOOGLE_PLAN_MINUTES * 60_000).toISOString(),
-            maxDaily: Math.min(100, Math.ceil(Math.max(MIN_DAILY, ...forGoogle.map((c) => c.toBudget ?? 0)))),
-            campaigns: forGoogle.map((c) => ({
-              _key: newKey(),
-              id: c.id,
-              name: c.name,
-              ...(c.kind === "budget" && c.toBudget !== null && { dailyBudget: c.toBudget }),
-              ...(c.kind === "pause" && { status: "PAUSED" as const }),
-              ...(c.kind === "enable" && { status: "ENABLED" as const }),
-            })),
-          }
-        : null;
+      googlePlan =
+        forGoogle.length || fixes.length
+          ? {
+              issuedAt: issued.toISOString(),
+              validUntil: new Date(nowMs + GOOGLE_PLAN_MINUTES * 60_000).toISOString(),
+              maxDaily: Math.min(100, Math.ceil(Math.max(MIN_DAILY, ...forGoogle.map((c) => c.toBudget ?? 0)))),
+              campaigns: forGoogle.map((c) => ({
+                _key: newKey(),
+                id: c.id,
+                name: c.name,
+                ...(c.kind === "budget" && c.toBudget !== null && { dailyBudget: c.toBudget }),
+                ...(c.kind === "pause" && { status: "PAUSED" as const }),
+                ...(c.kind === "enable" && { status: "ENABLED" as const }),
+              })),
+              ...(fixes.length > 0 && { fixes }),
+            }
+          : null;
 
       // Remember what was done.
       for (const c of changes) {
@@ -566,6 +684,51 @@ export async function runAdsPilot(opts: { nowMs?: number } = {}): Promise<PilotR
             ]),
           ]
         : pausedForCapBefore;
+    const pausedForHealth =
+      mode === "on"
+        ? googleHold
+          ? [...new Set([...pausedForHealthBefore, ...done.filter((c) => c.kind === "pause" && c.cause === "health").map((c) => c.id)])]
+          : pausedForHealthBefore.filter((id) => !done.some((c) => c.id === id && c.kind === "enable"))
+        : pausedForHealthBefore;
+
+    // The health check's record, and one alert for what is new (a problem is told once, not every morning).
+    let healthRecord: HealthRecord | null = previous?.health ?? null;
+    if (health && healthRun) {
+      const before = new Map((previous?.health?.problems ?? []).map((p) => [p.key, p.since]));
+      const problems = health.problems.map((p) => ({ ...p, _key: newKey(), since: before.get(p.key) ?? today }));
+      const fresh = problems.filter((p) => !before.has(p.key));
+      const newHold = Boolean(googleHold && !previous?.googleHold);
+      healthRecord = {
+        checkedAt: ranAt,
+        from: healthRun.from,
+        scriptVersion: google.report?.version ?? 0,
+        traffic: health.traffic,
+        problems,
+        fixes: mode === "on" ? (googlePlan?.fixes ?? []) : [],
+        hold: googleHold,
+      };
+      if (fresh.length || newHold) {
+        const how = (p: HealthProblem) =>
+          p.fix === "agent"
+            ? mode === "on"
+              ? "Being fixed automatically: the Google Ads script does it within the hour."
+              : "It would be fixed automatically, but the autopilot isn't making changes (paused or a trial run)."
+            : p.fix === "claude"
+              ? "Claude looks at it this morning and puts it right."
+              : "This one needs you.";
+        await notifyOwner({
+          kind: "ads",
+          urgent: newHold || fresh.some((p) => p.level === "act"),
+          title: newHold ? "Google ads stopped: paid clicks aren't reaching the website" : fresh.length === 1 ? fresh[0].title : `The daily ads check found ${fresh.length} things`,
+          lines: [
+            ...fresh.flatMap((p) => [`• ${p.title}`, p.detail, how(p)]),
+            ...(newHold && googleHold ? [`Google's adverts are paused until the cause is found: ${googleHold.reason}`] : []),
+          ],
+          links: [{ label: "Open the dashboard", url: "/admin/dashboard" }],
+        });
+      }
+    }
+
     const stored: StoredPlan = {
       monthCap: plan.monthCap,
       spentMtd: plan.spentMtd,
@@ -595,6 +758,9 @@ export async function runAdsPilot(opts: { nowMs?: number } = {}): Promise<PilotR
       pausedForResults: mapToMarks(pausedForResults),
       noPauseUntil: mapToMarks(noPauseUntil),
       googlePlan,
+      health: healthRecord,
+      googleHold,
+      pausedForHealth,
       recent: [...done, ...(previous?.recent ?? [])].slice(0, 40),
       history: [
         ...(previous?.history ?? []),

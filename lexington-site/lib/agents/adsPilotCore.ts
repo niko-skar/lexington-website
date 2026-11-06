@@ -68,8 +68,8 @@ export interface PilotChange {
   /** For a budget, dollars a day; for the others, null. */
   fromBudget: number | null;
   toBudget: number | null;
-  /** Why it paused: the month's money ran out, or the results. */
-  cause: "cap" | "results" | "pace" | "idle" | "month";
+  /** Why it paused: the month's money ran out, or the results; "health": the daily ads health check stopped Google. */
+  cause: "cap" | "results" | "pace" | "idle" | "month" | "health";
   reason: string;
 }
 

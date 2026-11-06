@@ -2,7 +2,7 @@ import "server-only";
 
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
 
-import type { GoogleApplied, GoogleCampaignState, GoogleRow } from "./google";
+import type { GoogleApplied, GoogleCampaignState, GoogleHealthReport, GoogleRow } from "./google";
 
 /**
  * The last report the Google Ads script sent, kept as one document in the
@@ -26,6 +26,8 @@ export interface GoogleReportExtra {
   campaigns: GoogleCampaignState[];
   applied: GoogleApplied[];
   snapshotError: string;
+  /** Version 3 on: where the clicks went, what is added to the adverts and what they say. */
+  health?: GoogleHealthReport | null;
 }
 
 export interface StoredGoogleReport {
@@ -36,6 +38,7 @@ export interface StoredGoogleReport {
   campaigns: GoogleCampaignState[];
   snapshotError: string;
   lastApplied: { at: string; items: GoogleApplied[] } | null;
+  health: GoogleHealthReport | null;
 }
 
 // Sanity drops nulls; leave them out and put them back when reading.
@@ -59,6 +62,14 @@ export async function saveGoogleReport(
         version: extra.version,
         campaigns: extra.campaigns.map((c, index) => ({ _key: `c${index}`, ...withoutNulls(c) })),
         snapshotError: extra.snapshotError,
+        ...(extra.health && {
+          health: {
+            clickTypes: extra.health.clickTypes.map((c, index) => ({ _key: `t${index}`, ...c })),
+            links: extra.health.links.map((l, index) => ({ _key: `l${index}`, ...l })),
+            ads: extra.health.ads.map((a, index) => ({ _key: `d${index}`, ...a })),
+            error: extra.health.error,
+          },
+        }),
       })
     );
   if (extra.applied.length) {
@@ -78,7 +89,8 @@ export async function readGoogleReport(): Promise<StoredGoogleReport> {
       campaigns?: Array<Partial<GoogleCampaignState>>;
       snapshotError?: string;
       lastApplied?: { at?: string; items?: Array<Partial<GoogleApplied>> };
-    } | null>(`*[_id == $id][0]{rows, receivedAt, version, campaigns, snapshotError, lastApplied}`, { id: reportId() });
+      health?: { clickTypes?: unknown; links?: unknown; ads?: unknown; error?: string };
+    } | null>(`*[_id == $id][0]{rows, receivedAt, version, campaigns, snapshotError, lastApplied, health}`, { id: reportId() });
     const rows = (doc?.rows ?? []).map((row) => ({
       day: row.day,
       campaignId: row.campaignId,
@@ -104,6 +116,12 @@ export async function readGoogleReport(): Promise<StoredGoogleReport> {
           items: (doc.lastApplied.items ?? []).map((a) => ({ id: a.id ?? "", did: a.did ?? "", from: a.from ?? null, to: a.to ?? null, error: a.error ?? "" })),
         }
       : null;
+    // Sanity's list keys off again.
+    const strip = <T,>(list: unknown): T[] =>
+      (Array.isArray(list) ? list : []).map((item: Record<string, unknown>) => Object.fromEntries(Object.entries(item).filter(([k]) => k !== "_key")) as T);
+    const health: GoogleHealthReport | null = doc?.health
+      ? { clickTypes: strip(doc.health.clickTypes), links: strip(doc.health.links), ads: strip(doc.health.ads), error: String(doc.health.error ?? "") }
+      : null;
     return {
       rows,
       receivedAt: doc?.receivedAt ?? null,
@@ -112,6 +130,7 @@ export async function readGoogleReport(): Promise<StoredGoogleReport> {
       campaigns,
       snapshotError: doc?.snapshotError ?? "",
       lastApplied,
+      health,
     };
   } catch (error) {
     return {
@@ -122,6 +141,7 @@ export async function readGoogleReport(): Promise<StoredGoogleReport> {
       campaigns: [],
       snapshotError: "",
       lastApplied: null,
+      health: null,
     };
   }
 }

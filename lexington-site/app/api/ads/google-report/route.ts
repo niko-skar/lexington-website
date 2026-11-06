@@ -1,6 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
 
-import { GOOGLE_REPORT_MAX_BYTES, parseGoogleApplied, parseGoogleCampaigns, parseGoogleReport } from "@/lib/ads/google";
+import { GOOGLE_REPORT_MAX_BYTES, parseGoogleApplied, parseGoogleCampaigns, parseGoogleHealth, parseGoogleReport } from "@/lib/ads/google";
 import { saveGoogleReport } from "@/lib/ads/googleStore";
 
 export const dynamic = "force-dynamic";
@@ -9,7 +9,8 @@ export const dynamic = "force-dynamic";
  * POST /api/ads/google-report: where the Google Ads script (shown on
  * /admin/dashboard/connect) sends the account's spend and clicks every hour,
  * and from version 2 each campaign's budget and what it did with the ads
- * autopilot's changes.
+ * autopilot's changes; from version 3 also where the clicks went and what the
+ * adverts say, for the daily ads check.
  *
  * Only a request carrying the secret (`Authorization: Bearer
  * <GOOGLE_ADS_REPORT_SECRET>`) is read; without the setting nothing is. The
@@ -57,6 +58,7 @@ export async function POST(request: Request): Promise<Response> {
       campaigns: parseGoogleCampaigns(body),
       applied: parseGoogleApplied(body),
       snapshotError: String(sent.snapshotError ?? "").slice(0, 300),
+      health: parseGoogleHealth(body),
     });
   } catch (error) {
     console.error("[google-report] could not be stored:", error instanceof Error ? error.message : "unknown");

@@ -176,6 +176,78 @@ export function parseGoogleApplied(body: unknown): GoogleApplied[] {
     }));
 }
 
+/* --- What the script says about where the clicks go and what the adverts say (version 3 on) --- */
+
+/** Clicks of one kind (Google's click type: URL_CLICKS, CALLS, GET_DIRECTIONS...) for a campaign, the last 7 days. */
+export interface GoogleClickType {
+  campaignId: string;
+  type: string;
+  clicks: number;
+  spend: number;
+}
+
+/**
+ * Something added to the adverts, account-wide or for one campaign: a location (the map pins of a Business
+ * Profile), or a callout, sitelink or snippet with its words. `resource` is Google's name for the link, which
+ * is what the script removes.
+ */
+export interface GoogleLink {
+  resource: string;
+  level: "account" | "campaign";
+  campaignId: string;
+  kind: "location" | "text" | "other";
+  text: string;
+}
+
+/** A responsive search ad that is switched on, with all its headlines and descriptions. */
+export interface GoogleAdText {
+  resource: string;
+  campaignId: string;
+  adGroupId: string;
+  texts: string[];
+}
+
+export interface GoogleHealthReport {
+  clickTypes: GoogleClickType[];
+  links: GoogleLink[];
+  ads: GoogleAdText[];
+  /** What the script couldn't read, in its words. */
+  error: string;
+}
+
+/** The names of the links and adverts the script may remove or pause, and nothing else. */
+export const GOOGLE_RESOURCE = /^customers\/\d{1,20}\/(customerAssetSets|campaignAssetSets|customerAssets|campaignAssets|adGroupAds)\/[\w~.-]{1,120}$/;
+
+/** The version 3 additions, checked. Lenient: a bad entry is left out, not the report. */
+export function parseGoogleHealth(body: unknown): GoogleHealthReport | null {
+  const health = (body as { health?: unknown } | null)?.health as Record<string, unknown> | null | undefined;
+  if (!health || typeof health !== "object") return null;
+  const list = (value: unknown, max: number) => (Array.isArray(value) ? value.slice(0, max) : []).filter((x): x is Record<string, unknown> => Boolean(x) && typeof x === "object");
+  const id = (value: unknown) => {
+    const s = String(value ?? "").trim();
+    return /^\d{1,20}$/.test(s) ? s : "";
+  };
+  const clickTypes = list(health.clickTypes, 400).flatMap((c) => {
+    const clicks = finite(c.clicks);
+    const spend = finite(c.spend);
+    const type = String(c.type ?? "").trim().toUpperCase().slice(0, 60);
+    return clicks == null || clicks < 0 || !type ? [] : [{ campaignId: id(c.campaignId), type, clicks: Math.round(clicks), spend: spend != null && spend >= 0 ? Math.round(spend * 100) / 100 : 0 }];
+  });
+  const links = list(health.links, 400).flatMap((l): GoogleLink[] => {
+    const resource = String(l.resource ?? "").trim();
+    if (!GOOGLE_RESOURCE.test(resource)) return [];
+    const kind = l.kind === "location" || l.kind === "text" ? l.kind : "other";
+    return [{ resource, level: l.level === "campaign" ? "campaign" : "account", campaignId: id(l.campaignId), kind, text: String(l.text ?? "").slice(0, 500) }];
+  });
+  const ads = list(health.ads, 200).flatMap((a): GoogleAdText[] => {
+    const resource = String(a.resource ?? "").trim();
+    if (!GOOGLE_RESOURCE.test(resource)) return [];
+    const texts = (Array.isArray(a.texts) ? a.texts : []).slice(0, 30).map((t) => String(t ?? "").slice(0, 200)).filter(Boolean);
+    return [{ resource, campaignId: id(a.campaignId), adGroupId: id(a.adGroupId), texts }];
+  });
+  return { clickTypes, links, ads, error: String(health.error ?? "").slice(0, 300) };
+}
+
 /* --- The sums the Ads tab shows ------------------------------------------------------------- */
 
 export interface GoogleTotals {
@@ -253,15 +325,24 @@ export function summariseGoogle(rows: readonly GoogleRow[], days: readonly strin
  * only until its time runs out, so nothing is ever repeated a day later). Then it
  * sends the last 30 days' figures and each campaign's status and daily budget.
  * `secret` goes into the text, so this is built only on the admin's Connect page.
+ *
+ * Version 3 (6 Nov 2026) also sends where the clicks went (by click type), what is
+ * added to the adverts (locations, callouts, sitelinks, snippets) and the words of
+ * each switched-on ad, and makes the daily ads check's fixes: removing a link (the
+ * map pins, or words with an old price) or pausing an ad. The map pins of every
+ * business in the Google Business account (Kaiser Kitchen's among them) had taken
+ * most of the money since August without one visit to the website.
  */
-export const GOOGLE_SCRIPT_VERSION = 2;
+export const GOOGLE_SCRIPT_VERSION = 3;
 
 export function googleAdsScript(args: { endpoint: string; planEndpoint: string; secret: string }): string {
   return `// The Lexington: sends the Google Ads spend and clicks to the website's dashboard, and makes
 // the ads autopilot's budget changes (it keeps all the advertising within the monthly budget).
+// It also sends where the clicks went and what the adverts say, and makes the daily ads check's
+// fixes: taking map pins or out-of-date words off the adverts, or pausing an ad with an old price.
 // Paste this into Google Ads: Tools > Bulk actions > Scripts (replace the old one, or New script).
 // Then press Authorize, Run once, Save, and under Frequency choose Hourly.
-// Only figures are sent: spend, clicks, views and each campaign's budget. Nothing about who clicked.
+// Only figures and the adverts' own words are sent. Nothing about who clicked.
 
 var VERSION = ${GOOGLE_SCRIPT_VERSION};
 var REPORT_URL = ${JSON.stringify(args.endpoint)};
@@ -281,10 +362,112 @@ function main() {
     method: 'post',
     contentType: 'application/json',
     headers: { Authorization: 'Bearer ' + SECRET },
-    payload: JSON.stringify({ version: VERSION, rows: dailyRows(), campaigns: campaigns, applied: applied, snapshotError: snapshotError }),
+    payload: JSON.stringify({ version: VERSION, rows: dailyRows(), campaigns: campaigns, applied: applied, snapshotError: snapshotError, health: adHealth() }),
     muteHttpExceptions: true
   });
   Logger.log('The dashboard answered ' + response.getResponseCode() + ': ' + response.getContentText());
+}
+
+// Where the clicks went, what is added to the adverts and what the adverts say: the daily ads check reads these.
+function adHealth() {
+  var out = { clickTypes: [], links: [], ads: [], error: '' };
+  var note = function (what, e) {
+    out.error = (out.error ? out.error + ' | ' : '') + what + ': ' + String(e).slice(0, 120);
+  };
+  try {
+    var types = AdsApp.search(
+      'SELECT campaign.id, segments.click_type, metrics.clicks, metrics.cost_micros FROM campaign ' +
+      'WHERE segments.date DURING LAST_7_DAYS AND metrics.clicks > 0'
+    );
+    while (types.hasNext()) {
+      var t = types.next();
+      out.clickTypes.push({ campaignId: String(t.campaign.id), type: t.segments.clickType, clicks: Number(t.metrics.clicks), spend: Number(t.metrics.costMicros) / 1000000 });
+    }
+  } catch (e) {
+    note('click types', e);
+  }
+  try {
+    var sets = AdsApp.search("SELECT customer_asset_set.resource_name, asset_set.type FROM customer_asset_set WHERE customer_asset_set.status = 'ENABLED'");
+    while (sets.hasNext()) {
+      var s = sets.next();
+      out.links.push({ resource: s.customerAssetSet.resourceName, level: 'account', kind: isLocation(s.assetSet.type) ? 'location' : 'other', text: String(s.assetSet.type) });
+    }
+  } catch (e) {
+    note('account asset sets', e);
+  }
+  try {
+    var campaignSets = AdsApp.search(
+      'SELECT campaign_asset_set.resource_name, campaign.id, asset_set.type FROM campaign_asset_set ' +
+      "WHERE campaign_asset_set.status = 'ENABLED' AND campaign.status != 'REMOVED'"
+    );
+    while (campaignSets.hasNext()) {
+      var c = campaignSets.next();
+      out.links.push({ resource: c.campaignAssetSet.resourceName, level: 'campaign', campaignId: String(c.campaign.id), kind: isLocation(c.assetSet.type) ? 'location' : 'other', text: String(c.assetSet.type) });
+    }
+  } catch (e) {
+    note('campaign asset sets', e);
+  }
+  var assetFields =
+    'asset.type, asset.callout_asset.callout_text, asset.sitelink_asset.link_text, asset.sitelink_asset.description1, ' +
+    'asset.sitelink_asset.description2, asset.structured_snippet_asset.header, asset.structured_snippet_asset.values';
+  try {
+    var account = AdsApp.search('SELECT customer_asset.resource_name, customer_asset.field_type, ' + assetFields + " FROM customer_asset WHERE customer_asset.status = 'ENABLED'");
+    while (account.hasNext()) {
+      var a = account.next();
+      out.links.push(assetLink(a.customerAsset.resourceName, 'account', '', a.customerAsset.fieldType, a.asset));
+    }
+  } catch (e) {
+    note('account assets', e);
+  }
+  try {
+    var mine = AdsApp.search(
+      'SELECT campaign_asset.resource_name, campaign_asset.field_type, campaign.id, ' + assetFields +
+      " FROM campaign_asset WHERE campaign_asset.status = 'ENABLED' AND campaign.status != 'REMOVED'"
+    );
+    while (mine.hasNext()) {
+      var b = mine.next();
+      out.links.push(assetLink(b.campaignAsset.resourceName, 'campaign', String(b.campaign.id), b.campaignAsset.fieldType, b.asset));
+    }
+  } catch (e) {
+    note('campaign assets', e);
+  }
+  try {
+    var ads = AdsApp.search(
+      'SELECT ad_group_ad.resource_name, campaign.id, ad_group.id, ad_group_ad.ad.responsive_search_ad.headlines, ' +
+      "ad_group_ad.ad.responsive_search_ad.descriptions FROM ad_group_ad WHERE ad_group_ad.status = 'ENABLED' " +
+      "AND ad_group_ad.ad.type = 'RESPONSIVE_SEARCH_AD' AND campaign.status != 'REMOVED' AND ad_group.status != 'REMOVED'"
+    );
+    while (ads.hasNext()) {
+      var d = ads.next();
+      var rsa = (d.adGroupAd.ad && d.adGroupAd.ad.responsiveSearchAd) || {};
+      var texts = [];
+      (rsa.headlines || []).concat(rsa.descriptions || []).forEach(function (part) {
+        if (part && part.text) texts.push(part.text);
+      });
+      out.ads.push({ resource: d.adGroupAd.resourceName, campaignId: String(d.campaign.id), adGroupId: String(d.adGroup.id), texts: texts });
+    }
+  } catch (e) {
+    note('ads', e);
+  }
+  return out;
+}
+
+function isLocation(type) {
+  return /LOCATION/.test(String(type || ''));
+}
+
+// A callout, sitelink or snippet with its words; a location (map pins) is marked as one.
+function assetLink(resource, level, campaignId, fieldType, asset) {
+  asset = asset || {};
+  var words = [];
+  if (asset.calloutAsset) words.push(asset.calloutAsset.calloutText);
+  if (asset.sitelinkAsset) words.push(asset.sitelinkAsset.linkText, asset.sitelinkAsset.description1, asset.sitelinkAsset.description2);
+  if (asset.structuredSnippetAsset) words.push((asset.structuredSnippetAsset.header || '') + ': ' + (asset.structuredSnippetAsset.values || []).join(', '));
+  words = words.filter(function (w) {
+    return w;
+  });
+  var kind = isLocation(fieldType) || isLocation(asset.type) ? 'location' : words.length ? 'text' : 'other';
+  return { resource: resource, level: level, campaignId: campaignId, kind: kind, text: words.join(' | ') };
 }
 
 // Spend, clicks, views and conversions for each campaign and day, the last 30 days.
@@ -344,8 +527,10 @@ function applyPlan() {
     return done;
   }
   var plan = JSON.parse(response.getContentText());
-  if (!plan.ok || plan.mode !== 'on' || !plan.campaigns || !plan.validUntil || new Date() > new Date(plan.validUntil)) return done;
+  if (!plan.ok || plan.mode !== 'on' || !plan.validUntil || new Date() > new Date(plan.validUntil)) return done;
   var most = Math.min(Number(plan.maxDaily) || 0, 100);
+  applyFixes(plan.fixes || [], done);
+  plan.campaigns = plan.campaigns || [];
   for (var i = 0; i < plan.campaigns.length; i++) {
     var want = plan.campaigns[i];
     var campaign = findCampaign(want.id);
@@ -376,6 +561,34 @@ function applyPlan() {
     }
   }
   return done;
+}
+
+// The daily ads check's fixes: take a link off the adverts (map pins, or words with an old price), or pause an ad.
+// Only those two, and only for Google's names of links and ads.
+function applyFixes(fixes, done) {
+  var operations = { customerAssetSets: 'customerAssetSetOperation', campaignAssetSets: 'campaignAssetSetOperation', customerAssets: 'customerAssetOperation', campaignAssets: 'campaignAssetOperation' };
+  for (var f = 0; f < fixes.length && f < 50; f++) {
+    var fix = fixes[f];
+    var id = String(fix.id || '').slice(0, 30);
+    var name = String(fix.resource || '');
+    var kind = (name.match(/^customers\\/\\d+\\/(customerAssetSets|campaignAssetSets|customerAssets|campaignAssets|adGroupAds)\\/[\\w~.-]+$/) || [])[1];
+    var operation = {};
+    if (kind && fix.op === 'pauseAd' && kind === 'adGroupAds') {
+      operation.adGroupAdOperation = { update: { resourceName: name, status: 'PAUSED' }, updateMask: 'status' };
+    } else if (kind && fix.op === 'remove' && operations[kind]) {
+      operation[operations[kind]] = { remove: name };
+    } else {
+      done.push({ id: id, error: 'not a change the script makes' });
+      continue;
+    }
+    try {
+      var result = AdsApp.mutate(operation);
+      if (result.isSuccessful()) done.push({ id: id, did: fix.op === 'pauseAd' ? 'ad paused' : 'removed' });
+      else done.push({ id: id, error: String(result.getErrorMessages()).slice(0, 200) });
+    } catch (e) {
+      done.push({ id: id, error: String(e).slice(0, 200) });
+    }
+  }
 }
 
 // Search, Display, Performance Max, video and shopping campaigns each have their own list.

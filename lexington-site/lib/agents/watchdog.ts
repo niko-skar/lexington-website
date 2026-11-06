@@ -21,6 +21,8 @@ import { pilotSettings, readPilotRun, readPilotSwitch } from "./adsPilot";
 import { usd } from "./adsPilotCore";
 import { parseOffer } from "./factsCore";
 import { metaLeadsConfigured, readMetaLeadsState } from "./metaLeads";
+import { staleFindings, type StaleItem } from "./adsHealthCore";
+import { findStaleCopy } from "./staleCopy";
 import {
   checkAll,
   emailSubject,
@@ -39,7 +41,9 @@ import {
  * enquiries and the offer on the website, and runs the rules in watchdogCore.ts.
  * Niko gets an alert in the site app when something needs him (it buzzes his phone),
  * and a quiet round-up every Monday; the dashboard shows the latest check. It only
- * reads: nothing changes an advert.
+ * reads: nothing changes an advert. Since 6 Nov 2026 it also reads the Instagram and
+ * Facebook posts and the live ads' lead forms for out-of-date prices and offers
+ * (staleCopy.ts); the Google adverts' own check runs with the autopilot (adsHealthCore.ts).
  */
 
 // A test copy or a preview keeps its own record, apart from the live site's.
@@ -54,6 +58,11 @@ export interface WatchdogRun {
   summary?: string | null;
   emailed?: boolean;
   history?: Array<{ _key: string; ranAt: string; act: number; watch: number }>;
+  /** Posts and live lead forms with out-of-date words (staleCopy.ts), for Claude's daily watcher. */
+  stale?: Array<StaleItem & { _key: string }>;
+  staleError?: string | null;
+  /** Posts already told about, so each is told once. */
+  staleSeen?: string[];
 }
 
 // ---- Meta -------------------------------------------------------------------
@@ -315,6 +324,15 @@ export async function runWatchdog(opts: { email: boolean; nowMs?: number }): Pro
       chats,
     });
 
+    // Out-of-date prices or offers on the posts and the live ads' lead forms (told once per post).
+    const previous = await readWatchdog();
+    const stale = await findStaleCopy(today);
+    const seen = new Set(previous?.staleSeen ?? []);
+    findings.push(...staleFindings(stale.items, seen));
+    if (stale.error) findings.push({ level: "watch", area: "Setup", title: "The posts and lead forms couldn't all be checked for old prices", detail: stale.error });
+    const order = { act: 0, watch: 1, ok: 2 } as const;
+    findings.sort((a, b) => order[a.level] - order[b.level]);
+
     const emailing = opts.email && shouldEmail(findings, today);
     const summary = emailing ? await claudeNote(findings) : null;
 
@@ -333,7 +351,6 @@ export async function runWatchdog(opts: { email: boolean; nowMs?: number }): Pro
       });
     }
 
-    const previous = await readWatchdog();
     const ranAt = new Date(nowMs).toISOString();
     const run: WatchdogRun = {
       _id: RUN_ID,
@@ -346,6 +363,10 @@ export async function runWatchdog(opts: { email: boolean; nowMs?: number }): Pro
         ...(previous?.history ?? []),
         { _key: newKey(), ranAt, act: findings.filter((f) => f.level === "act").length, watch: findings.filter((f) => f.level === "watch").length },
       ].slice(-30),
+      stale: stale.items.map((item) => ({ _key: newKey(), ...item })),
+      staleError: stale.error,
+      // Told once: a post found today stays "seen" (a "Check now" without the alert counts as told: the dashboard shows it).
+      staleSeen: [...new Set([...seen, ...stale.items.filter((i) => i.where !== "Lead form").map((i) => i.id)])].slice(-500),
     };
     await getBuyersClient().createOrReplace(run);
     return run;

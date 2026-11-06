@@ -311,7 +311,8 @@ export default async function ConnectPage() {
         <ul className={styles.steplist}>
           <li>
             It needs the Meta key above with <Code>ads_management</Code> and <Code>pages_manage_ads</Code>, and for Google the
-            script below (version {GOOGLE_SCRIPT_VERSION}).
+            script below (version {GOOGLE_SCRIPT_VERSION}). With it, the daily ads health check also sees where Google&rsquo;s clicks
+            go and takes map pins and out-of-date words off the adverts by itself.
           </li>
           <li>
             As a safety net, Facebook&rsquo;s own account spending limit is set to the month&rsquo;s budget on the 1st: Facebook
@@ -364,7 +365,9 @@ export default async function ConnectPage() {
               <p className={styles.sub}>
                 Last report received: {new Date(report.receivedAt).toUTCString().slice(5, 22)} GMT
                 {report.version < GOOGLE_SCRIPT_VERSION
-                  ? ". The script in Google Ads is the older one: replace it with this one so the autopilot can set Google's budgets."
+                  ? report.version < 2
+                    ? ". The script in Google Ads is an older one: replace it with this one so the autopilot can set Google's budgets."
+                    : ". The script in Google Ads is an older one: replace it with this one so the daily ads check can see where the clicks go and take map pins and old prices off the adverts."
                   : "."}
               </p>
             )}

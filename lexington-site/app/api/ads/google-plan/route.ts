@@ -46,6 +46,8 @@ export async function GET(request: Request): Promise<Response> {
         ...(c.dailyBudget !== undefined && { dailyBudget: c.dailyBudget }),
         ...(c.status && { status: c.status }),
       })),
+      // The daily ads health check's fixes (a version 3 script makes them): map pins or out-of-date words taken off, an ad paused.
+      fixes: (plan.fixes ?? []).map((f) => ({ id: f.id, op: f.op, resource: f.resource })),
     });
   } catch (error) {
     console.error("[google-plan] could not be read:", error instanceof Error ? error.message : "unknown");
