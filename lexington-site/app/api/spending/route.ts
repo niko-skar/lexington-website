@@ -1,5 +1,7 @@
 import { syncHistory } from "@/lib/quickbooks/history";
+import { cleanDateFixes, fixDates } from "@/lib/spending/fixDates";
 import { spendingData, supplierHistory } from "@/lib/spending/server";
+import { ghanaDay } from "@/lib/store/shared";
 import { errorResponse, readJson, requireTodoUser, TodoError } from "@/lib/todo/server";
 
 export const dynamic = "force-dynamic";
@@ -23,11 +25,19 @@ export async function GET(request: Request): Promise<Response> {
   }
 }
 
-/** POST /api/spending { action: "refresh" }: read QuickBooks again now (only reads the books). */
+/**
+ * POST /api/spending { action: "refresh" }: read QuickBooks again now (only reads the books).
+ * POST /api/spending { action: "fixDates", fixes: [{ key, from, to }] }: those entries' dates put right in QuickBooks
+ * (lib/spending/fixDates.ts); answers { results, data }.
+ */
 export async function POST(request: Request): Promise<Response> {
   try {
     await requireTodoUser(true, "spending");
     const body = await readJson(request);
+    if (body.action === "fixDates") {
+      const results = await fixDates(cleanDateFixes(body.fixes, ghanaDay()));
+      return Response.json({ results, data: await spendingData() });
+    }
     if (body.action !== "refresh") throw new TodoError(400, "That button isn't known.");
     await syncHistory(true);
     return Response.json(await spendingData());

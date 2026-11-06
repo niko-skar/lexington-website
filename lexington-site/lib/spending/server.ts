@@ -12,7 +12,7 @@ import { EXPENSE_PREFIX } from "@/lib/site/ids";
 import { ghanaDay } from "@/lib/store/shared";
 import { listBills } from "@/lib/suppliers/server";
 import { supplierKey } from "@/lib/suppliers/shared";
-import { floorName, type QboTxn, type SpendEntry, type SpendingData } from "./shared";
+import { floorName, meantDate, type QboTxn, type SpendEntry, type SpendingData } from "./shared";
 
 // The spending (lib/spending/shared.ts says what and why): QuickBooks' transactions as read (lib/quickbooks/history.ts),
 // and the site app's own that aren't in QuickBooks yet: its company expenses (Site and Event) never sent (before the
@@ -38,7 +38,7 @@ function fromQbo(t: QboTxn, floors: readonly string[], billNames: ReadonlyMap<st
     floor: floorName(t.location?.name, floors),
     lines: t.lines.map((l) => ({ amount: l.amount, cls: l.className })),
     ref: t.appRef ?? (t.doc || null),
-    ...(t.created && t.date && daysBetween(t.date, t.created) > ODD_DAYS ? { odd: true } : {}),
+    ...(t.created && t.date && daysBetween(t.date, t.created) > ODD_DAYS ? { odd: true, typed: t.created, meant: meantDate(t.date, t.created) } : {}),
     ...(t.type === "BillPayment" ? { pays: (t.paysBills ?? []).map((id) => billNames.get(id) ?? "a bill").join(", ") || "a bill" } : {}),
   };
 }

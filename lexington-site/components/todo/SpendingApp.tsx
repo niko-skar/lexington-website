@@ -12,6 +12,8 @@ import {
   entriesOf,
   inPeriod,
   isCost,
+  isDay,
+  NO_SUPPLIER,
   PERIOD_NAMES,
   PERIODS,
   periodDays,
@@ -65,6 +67,7 @@ export function SpendingApp({
   const [by, setBy] = useState<By>("class");
   const [open, setOpen] = useState<{ by: By | Fix; name: string } | null>(null);
   const [reading, setReading] = useState(false);
+  const [fixing, setFixing] = useState(false);
   const [toast, setToast] = useState<ToastData | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [accessOpen, setAccessOpen] = useState(false);
@@ -174,6 +177,11 @@ export function SpendingApp({
                 {open.by === "odd" ? ": probably the day and month swapped when typed (8/2 for 8 February read as 2 August). Fix their dates in QuickBooks." : ""}
               </p>
             </section>
+            {open.by === "odd" && data.connected && list.length > 0 && (
+              <button type="button" className={sp.readAgain} onClick={() => setFixing(true)}>
+                Fix the dates in QuickBooks
+              </button>
+            )}
             <Entries entries={list} />
           </>
         ) : (
@@ -259,12 +267,132 @@ export function SpendingApp({
 
       {menuOpen && <SiteMenu me={me} onClose={() => setMenuOpen(false)} onRefresh={() => void refresh()} onLogins={() => setAccessOpen(true)} />}
       {accessOpen && <AccessSheet onClose={() => setAccessOpen(false)} />}
+      {fixing && data && (
+        <FixDatesSheet
+          entries={checks.odd}
+          today={data.today}
+          onClose={() => setFixing(false)}
+          onFixed={(next, fixed, notFixed) => {
+            setData(next);
+            if (!notFixed) setFixing(false);
+            showToast(
+              notFixed
+                ? { text: `${fixed ? `Fixed ${fixed}; ` : ""}${notFixed} not fixed: why is under each`, tone: "error" }
+                : { text: `Fixed ${fixed} ${fixed === 1 ? "date" : "dates"} in QuickBooks` }
+            );
+          }}
+        />
+      )}
       {toast && (
         <div className={`${styles.toast} ${toast.tone === "error" ? styles.toastError : ""}`} role="status">
           <span>{toast.text}</span>
         </div>
       )}
     </>
+  );
+}
+
+/**
+ * Fix the dates (Niko, 6 Nov 2026: "can you bulk reverse the dates on qbo for me?"): each one dated long after it was
+ * typed, with the date it should have: its day and month swapped, ticked, when that fits; the others wait for a date
+ * typed (which ticks them). The ticked ones go into QuickBooks (lib/spending/fixDates.ts); any QuickBooks didn't take
+ * stay here with why.
+ */
+function FixDatesSheet({
+  entries,
+  today,
+  onClose,
+  onFixed,
+}: {
+  entries: readonly SpendEntry[];
+  today: string;
+  onClose: () => void;
+  onFixed: (data: SpendingData, fixed: number, notFixed: number) => void;
+}) {
+  const [rows, setRows] = useState<Record<string, { on: boolean; to: string }>>(() => Object.fromEntries(entries.map((e) => [e.key, { on: !!e.meant, to: e.meant ?? "" }])));
+  const [failed, setFailed] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const rowOf = (key: string) => rows[key] ?? { on: false, to: "" };
+  const setRow = (key: string, change: Partial<{ on: boolean; to: string }>) => setRows((r) => ({ ...r, [key]: { ...(r[key] ?? { on: false, to: "" }), ...change } }));
+  const chosen = entries.filter((e) => rowOf(e.key).on);
+
+  const fix = async () => {
+    setError("");
+    const missing = chosen.find((e) => !isDay(rowOf(e.key).to));
+    if (missing) return setError(`Type the date for ${missing.supplier || NO_SUPPLIER}, ${money(missing.amount)}.`);
+    setSaving(true);
+    try {
+      const reply = await send<{ results: { key: string; ok: boolean; why?: string }[]; data: SpendingData }>("/api/spending", "POST", {
+        action: "fixDates",
+        fixes: chosen.map((e) => ({ key: e.key, from: e.date, to: rowOf(e.key).to })),
+      });
+      const bad = reply.results.filter((r) => !r.ok);
+      setFailed(Object.fromEntries(bad.map((r) => [r.key, r.why ?? "QuickBooks didn't take it."])));
+      onFixed(reply.data, reply.results.length - bad.length, bad.length);
+    } catch (e) {
+      setError(errorText(e));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className={styles.sheetBackdrop}>
+      <div className={styles.sheet} role="dialog" aria-label="Fix the dates">
+        <h2 className={styles.sheetTitle}>Fix the dates</h2>
+        <p className={styles.sheetNote}>
+          They went in with the day and month the wrong way round (11/2 for 11 February went in as 2 November). Each ticked one goes into QuickBooks with the date
+          beside it: only its date changes.
+        </p>
+        <ul className={sp.fixList}>
+          {entries.map((e) => {
+            const r = rowOf(e.key);
+            const who = e.supplier || NO_SUPPLIER;
+            return (
+              <li key={e.key} data-key={e.key} className={sp.fixRow}>
+                <label className={sp.fixTick}>
+                  <input type="checkbox" checked={r.on} onChange={(ev) => setRow(e.key, { on: ev.target.checked })} disabled={saving} />
+                  <span>
+                    <b>
+                      {who} · {money(e.amount)}
+                    </b>
+                    {e.description && <small>{e.description}</small>}
+                  </span>
+                </label>
+                <span className={sp.fixDates}>
+                  <span>
+                    <s>{niceDate(e.date)}</s> →
+                  </span>
+                  <input
+                    type="date"
+                    className={styles.input}
+                    value={r.to}
+                    max={today}
+                    onChange={(ev) => setRow(e.key, { to: ev.target.value, on: !!ev.target.value })}
+                    disabled={saving}
+                    aria-label={`The date it should have: ${who}, ${money(e.amount)}`}
+                  />
+                </span>
+                <small className={sp.fixNote}>
+                  {e.meant ? `Typed ${niceDate(e.typed ?? "")}: its day and month swapped.` : "Its day and month can't be swapped back: type the day it really was."}
+                </small>
+                {failed[e.key] && <small className={sp.fixFailed}>{failed[e.key]}</small>}
+              </li>
+            );
+          })}
+        </ul>
+        {error && <p className={styles.sheetError}>{error}</p>}
+        <div className={styles.sheetButtons}>
+          <button type="button" className={styles.sheetCancel} onClick={onClose} disabled={saving}>
+            Cancel
+          </button>
+          <button type="button" className={styles.sheetSave} onClick={() => void fix()} disabled={saving || chosen.length === 0}>
+            {saving ? "Fixing…" : `Fix ${chosen.length} in QuickBooks`}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 

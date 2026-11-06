@@ -58,8 +58,38 @@ export interface SpendEntry {
   ref: string | null;
   /** Dated long after it was typed (QuickBooks only): probably the day and month swapped. */
   odd?: boolean;
+  /** An odd one: the day it was typed into QuickBooks, and the date it was meant to have (null: for the office to say). */
+  typed?: string;
+  meant?: string | null;
   /** A payment: the bill(s) it paid ("BILL-0003", their invoice number, or "a bill"). */
   pays?: string;
+}
+
+/** A whole date that exists ("2026-02-11"; not "2026-02-30"). */
+export function isDay(value: unknown): value is string {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const d = new Date(`${value}T00:00:00Z`);
+  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === value;
+}
+
+/** The day and month the other way round ("2026-11-02" -> "2026-02-11"); null when the day can't be a month. */
+export function swapDayMonth(date: string): string | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
+  if (!m || Number(m[3]) > 12) return null;
+  const swapped = `${m[1]}-${m[3]}-${m[2]}`;
+  return isDay(swapped) ? swapped : null;
+}
+
+/**
+ * The date one dated long after it was typed was meant to have (Niko, 6 Nov 2026: "can you bulk reverse the dates on
+ * qbo for me?"): its day and month swapped (8/2 typed for 8 February, read as 2 August), when that lands on or before
+ * the day it was typed and within half a year of it (his sheet's February went in from an export in June). Else null.
+ */
+export function meantDate(date: string, typed: string): string | null {
+  const swapped = swapDayMonth(date);
+  if (!swapped || !isDay(typed)) return null;
+  const before = (Date.parse(`${typed}T00:00:00Z`) - Date.parse(`${swapped}T00:00:00Z`)) / 86_400_000;
+  return before >= -1 && before <= 183 ? swapped : null;
 }
 
 export interface SpendingData {

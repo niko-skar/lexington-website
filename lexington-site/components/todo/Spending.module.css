@@ -212,3 +212,66 @@
     background: var(--x-bg);
   }
 }
+
+/* Fix the dates (6 Nov 2026): each one dated long after it was typed, with the date it should have. */
+.fixList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+.fixRow {
+  display: grid;
+  gap: 6px;
+  padding: 10px;
+  border: 1px solid var(--x-line);
+  border-radius: 10px;
+  background: var(--x-surface);
+}
+.fixTick {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+}
+.fixTick input {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  margin: 1px 0 0;
+  accent-color: var(--x-accent);
+}
+.fixTick span {
+  display: grid;
+  min-width: 0;
+}
+.fixTick small {
+  font-size: 13px;
+  color: var(--x-muted);
+  overflow-wrap: anywhere;
+}
+.fixDates {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding-left: 32px;
+}
+.fixDates > span {
+  font-size: 14px;
+  color: var(--x-muted);
+  white-space: nowrap;
+}
+.fixNote,
+.fixFailed {
+  padding-left: 32px;
+  font-size: 13px;
+}
+.fixNote {
+  color: var(--x-muted);
+}
+.fixFailed {
+  color: var(--x-warn);
+  font-weight: 600;
+}

@@ -132,12 +132,13 @@ const names = (list: readonly BookNamed[]) => new Map(list.map((x) => [x.id, x.n
 /**
  * Reads the books again when a few hours old (or now, when forced): month by month, a month only written when it
  * changed, and one no longer in the books removed. Never throws: how it went is kept for the Spending page.
+ * "now": straight after the site app changed something in them (lib/spending/fixDates.ts), however recent the last read.
  */
-export async function syncHistory(force = false): Promise<HistoryStatus> {
+export async function syncHistory(force: boolean | "now" = false): Promise<HistoryStatus> {
   const client = getBuyersClient();
   const before = await historyStatus();
   // Asked for now: at most once a minute (a second tap answers with what was just read).
-  if (before.fetchedAt && !before.error && Date.now() - Date.parse(before.fetchedAt) < (force ? 60_000 : HISTORY_STALE_MS)) return before;
+  if (force !== "now" && before.fetchedAt && !before.error && Date.now() - Date.parse(before.fetchedAt) < (force ? 60_000 : HISTORY_STALE_MS)) return before;
   const conn = await loadConnection().catch(() => null);
   if (!conn || conn.status !== "connected") return before;
   try {
