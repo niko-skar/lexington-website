@@ -4,6 +4,7 @@ import { listExpenses } from "@/lib/expenses/server";
 import { FLOORS, type Expense } from "@/lib/expenses/shared";
 import { areasWith } from "@/lib/quickbooks/books";
 import { cachedBookLists } from "@/lib/quickbooks/booksCache";
+import { catchUpCard } from "@/lib/quickbooks/catchup";
 import { cachedHistory, historyStatus } from "@/lib/quickbooks/history";
 import { loadConnection } from "@/lib/quickbooks/store";
 import { cachedVendors } from "@/lib/quickbooks/vendors";
@@ -129,7 +130,7 @@ export async function spendingData(): Promise<SpendingData> {
     });
   }
   entries.sort((a, b) => b.date.localeCompare(a.date) || a.key.localeCompare(b.key));
-  return { entries, fetchedAt: status.fetchedAt, error: status.error, connected, today: ghanaDay() };
+  return { entries, fetchedAt: status.fetchedAt, error: status.error, connected, today: ghanaDay(), catchUp: await catchUpCard() };
 }
 
 /** One supplier's whole record: everything with them in QuickBooks, and the app's own not there yet. */

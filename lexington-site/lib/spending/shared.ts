@@ -1,4 +1,5 @@
 import { areaKey } from "@/lib/quickbooks/books";
+import type { CatchUpSummary } from "@/lib/quickbooks/catchupShared";
 
 // Spending (Niko, 3 Nov 2026: "is it worth importing every transaction inside quickbooks and attributing them to the
 // supplier so I can easily see the entire record I have with one supplier and also pull easy information like total
@@ -99,6 +100,8 @@ export interface SpendingData {
   error: string | null;
   connected: boolean;
   today: string;
+  /** Lines from one of his sheets waiting to go into QuickBooks at one tap (lib/quickbooks/catchup.ts), if any. */
+  catchUp?: CatchUpSummary | null;
 }
 
 /* ---------- adding up ---------- */

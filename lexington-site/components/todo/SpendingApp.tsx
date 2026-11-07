@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { money } from "@/lib/expenses/shared";
+import { type CatchUp, type CatchUpLine, CATCHUP_PER_SEND, type CatchUpResult } from "@/lib/quickbooks/catchupShared";
 import {
   byClass,
   byFloor,
@@ -68,6 +69,7 @@ export function SpendingApp({
   const [open, setOpen] = useState<{ by: By | Fix; name: string } | null>(null);
   const [reading, setReading] = useState(false);
   const [fixing, setFixing] = useState(false);
+  const [catchingUp, setCatchingUp] = useState(false);
   const [toast, setToast] = useState<ToastData | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [accessOpen, setAccessOpen] = useState(false);
@@ -223,6 +225,24 @@ export function SpendingApp({
               </div>
             )}
 
+            {data.catchUp && data.catchUp.toSend > 0 && (
+              <section className={sp.catchCard} aria-label="From your sheet">
+                <p className={sp.cardName}>From your sheet</p>
+                <b>{data.catchUp.title}</b>
+                <p className={sp.line}>
+                  {data.catchUp.toSend} to go into QuickBooks · {money(data.catchUp.toSendAmount)}
+                  {data.catchUp.sent ? ` · ${data.catchUp.sent} in already` : ""}
+                </p>
+                {data.connected ? (
+                  <button type="button" className={sp.readAgain} onClick={() => setCatchingUp(true)}>
+                    Check and send
+                  </button>
+                ) : (
+                  <p className={sp.line}>Connect QuickBooks first (the QuickBooks page).</p>
+                )}
+              </section>
+            )}
+
             <h2 className={styles.groupTitle}>To put right in QuickBooks</h2>
             <div className={sp.checks}>
               {(Object.keys(FIX_NAMES) as Fix[]).map((f) =>
@@ -283,12 +303,182 @@ export function SpendingApp({
           }}
         />
       )}
+      {catchingUp && (
+        <CatchUpSheet
+          onClose={() => setCatchingUp(false)}
+          onDone={(sent, notSent) => {
+            if (!notSent) setCatchingUp(false);
+            showToast(
+              notSent
+                ? { text: `${sent ? `Sent ${sent}; ` : ""}${notSent} not sent: why is under each`, tone: "error" }
+                : { text: `Sent ${sent} to QuickBooks` }
+            );
+            // QuickBooks read again, so they're in the spending (and the card counts down).
+            void send<SpendingData>("/api/spending", "POST", { action: "refresh" })
+              .then(setData)
+              .catch(() => refresh());
+          }}
+        />
+      )}
       {toast && (
         <div className={`${styles.toast} ${toast.tone === "error" ? styles.toastError : ""}`} role="status">
           <span>{toast.text}</span>
         </div>
       )}
     </>
+  );
+}
+
+/**
+ * From your sheet (Niko, 7 Nov 2026, his Aug-Sep sheet: "One tap from the app"): every line prepared from it, ticked,
+ * with its supplier, cost type, floor and the receipt photos found; the ones he looked at marked with why. The ticked
+ * ones go into QuickBooks a few at a time (lib/quickbooks/catchup.ts): anything QuickBooks already has on that day for
+ * that amount is left out and said why, and one sent never goes twice.
+ */
+function CatchUpSheet({ onClose, onDone }: { onClose: () => void; onDone: (sent: number, notSent: number) => void }) {
+  const [catchUp, setCatchUp] = useState<CatchUp | null>(null);
+  const [ticks, setTicks] = useState<Record<string, boolean>>({});
+  const [failed, setFailed] = useState<Record<string, string>>({});
+  const [progress, setProgress] = useState<{ done: number; of: number } | null>(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let gone = false;
+    fetch("/api/spending?catchup=1", { cache: "no-store" })
+      .then(async (r) => {
+        if (!r.ok) throw new Error(r.status === 401 || r.status === 403 ? "You've been signed out: sign in again." : "The list couldn't be loaded.");
+        return (await r.json()) as { catchUp: CatchUp | null };
+      })
+      .then(({ catchUp: c }) => {
+        if (gone) return;
+        setCatchUp(c);
+        setTicks(Object.fromEntries((c?.lines ?? []).filter((l) => !l.sent && !l.left).map((l) => [l.key, true])));
+      })
+      .catch((e: unknown) => !gone && setError(e instanceof Error ? e.message : "The list couldn't be loaded."));
+    return () => {
+      gone = true;
+    };
+  }, []);
+
+  const waiting = (catchUp?.lines ?? []).filter((l) => !l.sent && !l.left);
+  const chosen = waiting.filter((l) => ticks[l.key]);
+  const sending = progress !== null;
+  const groups: { title: string; lines: CatchUpLine[] }[] = catchUp
+    ? [
+        { title: "Site costs", lines: catchUp.lines.filter((l) => l.kind === "expense") },
+        { title: "Money in from Leo", lines: catchUp.lines.filter((l) => l.kind === "deposit") },
+      ].filter((g) => g.lines.length)
+    : [];
+
+  const sendAll = async () => {
+    if (!catchUp) return;
+    setError("");
+    setFailed({});
+    const keys = chosen.map((l) => l.key);
+    const results: CatchUpResult[] = [];
+    setProgress({ done: 0, of: keys.length });
+    try {
+      for (let i = 0; i < keys.length; i += CATCHUP_PER_SEND) {
+        const reply = await send<{ results: CatchUpResult[]; catchUp: CatchUp }>("/api/spending", "POST", { action: "catchUp", batch: catchUp.batch, keys: keys.slice(i, i + CATCHUP_PER_SEND) });
+        results.push(...reply.results);
+        setCatchUp(reply.catchUp);
+        setFailed((f) => ({ ...f, ...Object.fromEntries(reply.results.filter((r) => r.outcome === "failed").map((r) => [r.key, r.why ?? "QuickBooks didn't take it."])) }));
+        setProgress({ done: Math.min(keys.length, i + CATCHUP_PER_SEND), of: keys.length });
+      }
+    } catch (e) {
+      setError(`${errorText(e)} The rest weren't sent: send again to carry on.`);
+    }
+    setProgress(null);
+    const sent = results.filter((r) => r.outcome === "sent" || r.outcome === "already").length;
+    if (results.length) onDone(sent, results.length - sent);
+  };
+
+  return (
+    <div className={styles.sheetBackdrop}>
+      <div className={styles.sheet} role="dialog" aria-label="From your sheet">
+        <h2 className={styles.sheetTitle}>{catchUp?.title ?? "From your sheet"}</h2>
+        {!catchUp ? (
+          <p className={styles.sheetNote}>{error || "Loading…"}</p>
+        ) : (
+          <>
+            <p className={styles.sheetNote}>
+              Each ticked line goes into QuickBooks as its own expense from Cash on Hand (money in from Leo as a deposit from his loan), with its supplier, cost type, floor
+              and receipt photos. Anything QuickBooks already has on that day for that amount is left out. The marked ones are worth a look: untick any that
+              shouldn&rsquo;t go.
+            </p>
+            <p className={sp.catchTotals}>
+              <b>
+                {chosen.length} ticked · {money(chosen.reduce((n, l) => n + l.amount, 0))}
+              </b>
+              <span>
+                <button type="button" className={styles.linkButton} onClick={() => setTicks(Object.fromEntries(waiting.map((l) => [l.key, true])))} disabled={sending}>
+                  Tick all
+                </button>
+                <button type="button" className={styles.linkButton} onClick={() => setTicks({})} disabled={sending}>
+                  Untick all
+                </button>
+              </span>
+            </p>
+            {groups.map((g) => (
+              <section key={g.title} aria-label={g.title}>
+                <h3 className={sp.catchGroup}>
+                  {g.title} · {g.lines.length}
+                </h3>
+                <ul className={sp.fixList}>
+                  {g.lines.map((l) => (
+                    <li key={l.key} data-key={l.key} className={l.flag && !l.sent ? `${sp.fixRow} ${sp.catchFlag}` : sp.fixRow}>
+                      <label className={sp.fixTick}>
+                        <input
+                          type="checkbox"
+                          checked={!!l.sent || (!l.left && !!ticks[l.key])}
+                          onChange={(ev) => setTicks((t) => ({ ...t, [l.key]: ev.target.checked }))}
+                          disabled={sending || !!l.sent || !!l.left}
+                        />
+                        <span>
+                          <b>
+                            {niceDate(l.date)} · {l.supplier || (l.kind === "deposit" ? "Leo" : NO_SUPPLIER)} · {money(l.amount)}
+                          </b>
+                          <small>{l.description}</small>
+                          <small>{[l.className ?? (l.kind === "expense" ? "No cost type" : ""), l.location ?? "", l.ref].filter(Boolean).join(" · ")}</small>
+                        </span>
+                      </label>
+                      {l.receipts.length > 0 && (
+                        <span className={sp.catchPhotos}>
+                          {l.receipts.map((r) => (
+                            <a key={r.key} href={r.url} target="_blank" rel="noreferrer" title={r.caption}>
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={r.thumb} alt={r.caption || "Receipt"} loading="lazy" />
+                            </a>
+                          ))}
+                        </span>
+                      )}
+                      {l.note && !l.sent && <small className={l.flag ? sp.fixFailed : sp.fixNote}>{l.note}</small>}
+                      {l.sent && (
+                        <small className={sp.catchSent}>
+                          In QuickBooks ({l.sent.type === "Deposit" ? "deposit" : "expense"} {l.sent.id}
+                          {l.sent.attached ? `, ${l.sent.attached} ${l.sent.attached === 1 ? "photo" : "photos"}` : ""})
+                        </small>
+                      )}
+                      {l.left && <small className={sp.fixNote}>Left out: {l.left}</small>}
+                      {failed[l.key] && !l.sent && <small className={sp.fixFailed}>Not sent: {failed[l.key]}</small>}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ))}
+          </>
+        )}
+        {error && catchUp && <p className={styles.sheetError}>{error}</p>}
+        <div className={styles.sheetButtons}>
+          <button type="button" className={styles.sheetCancel} onClick={onClose} disabled={sending}>
+            {catchUp && !waiting.length ? "Close" : "Cancel"}
+          </button>
+          <button type="button" className={styles.sheetSave} onClick={() => void sendAll()} disabled={sending || !catchUp || chosen.length === 0}>
+            {progress ? `Sending… ${progress.done} of ${progress.of}` : `Send ${chosen.length} to QuickBooks`}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 

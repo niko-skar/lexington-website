@@ -49,6 +49,8 @@ export const POUR_DAY_PREFIX = `concreteday-${TAG}-`;
 /** QuickBooks' transactions read into the website for the Spending page (3 Nov 2026): one document a month, and how the last read went. */
 export const QBO_TXN_MONTH_PREFIX = `qbotxns-${TAG}-`;
 export const QBO_HISTORY_ID = `qbohistory-${TAG}`;
+/** Lines from one of Niko's sheets waiting to go into QuickBooks at one tap (lib/quickbooks/catchup.ts, 7 Nov 2026): one document a sheet. */
+export const QBO_CATCHUP_PREFIX = `qbocatchup-${TAG}-`;
 /** A pour's pre-pour photos (one record each, the original in the private photo store) and its concrete cubes (3 Nov 2026). */
 export const POUR_PHOTO_PREFIX = `pourphoto-${TAG}-`;
 export const POUR_CUBES_PREFIX = `pourcubes-${TAG}-`;

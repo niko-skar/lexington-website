@@ -275,3 +275,64 @@
   color: var(--x-warn);
   font-weight: 600;
 }
+
+/* From your sheet: a sheet's lines waiting to go into QuickBooks at one tap (lib/quickbooks/catchup.ts). */
+.catchCard {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 14px;
+  padding: 14px 14px 4px;
+  border: 1px solid var(--x-line);
+  border-radius: 10px;
+  background: var(--x-surface);
+  box-shadow: inset 4px 0 0 var(--x-amber);
+}
+.catchCard > b {
+  font-size: 17px;
+}
+.catchTotals {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 12px;
+  margin: 0 0 8px;
+  font-size: 15px;
+}
+.catchTotals span {
+  display: flex;
+  gap: 14px;
+}
+.catchGroup {
+  margin: 14px 0 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--x-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.catchFlag {
+  border-color: var(--x-amber);
+  box-shadow: inset 4px 0 0 var(--x-amber);
+}
+.catchPhotos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-left: 32px;
+}
+.catchPhotos img {
+  display: block;
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border: 1px solid var(--x-line);
+  border-radius: 6px;
+  background: var(--x-bg);
+}
+.catchSent {
+  padding-left: 32px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--x-ok);
+}

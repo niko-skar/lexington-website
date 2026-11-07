@@ -406,7 +406,7 @@ export function planFor(x: FeedDoc, s: FeedSettings, lists: Lists, conn: QboConn
 const quote = (s: string) => s.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
 
 /** The supplier as a QuickBooks vendor: found by name, or added. */
-async function vendorFor(name: string, cache: Map<string, string>): Promise<string> {
+export async function vendorFor(name: string, cache: Map<string, string>): Promise<string> {
   const display = clip(name.replace(/\s+/g, " ").trim(), 100);
   const known = cache.get(display.toLowerCase());
   if (known) return known;
@@ -446,7 +446,7 @@ async function attachReceipt(type: TxnType, txnId: string, x: FeedDoc): Promise<
 }
 
 /** A file from the image store attached to a transaction in QuickBooks (a receipt, a supplier's bill). */
-async function attachFile(type: string, txnId: string, url: string, type_: string, fileName: string): Promise<string> {
+export async function attachFile(type: string, txnId: string, url: string, type_: string, fileName: string): Promise<string> {
   const response = await fetch(url, { signal: AbortSignal.timeout(30_000) });
   if (!response.ok) throw new QboError(`The photo couldn't be fetched (${response.status}).`);
   const bytes = await response.arrayBuffer();
