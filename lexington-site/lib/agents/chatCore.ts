@@ -210,7 +210,17 @@ export function holdingMessage(name?: string | null): string {
 /** A message from someone, or one Niko sent himself (from Business Suite, Messenger, Instagram or the WhatsApp Business app). */
 export type ChatEvent =
   | { kind: "incoming"; channel: ChatChannel; senderId: string; text: string; mid: string; at: string; name?: string }
-  | { kind: "owner"; channel: ChatChannel; senderId: string; text: string; mid: string; at: string; fromAgent: boolean };
+  | {
+      kind: "owner";
+      channel: ChatChannel;
+      senderId: string;
+      text: string;
+      mid: string;
+      at: string;
+      fromAgent: boolean;
+      /** Sent by Meta for the Page, not typed by Niko: the lead form's automatic chat starter (a template). */
+      automated?: boolean;
+    };
 
 /** Sent with every agent message on Messenger and Instagram, and echoed back: how its own messages are told apart from Niko's. */
 export const AGENT_METADATA = "lexington-agent";
@@ -242,7 +252,12 @@ export function parseWebhook(body: unknown, appId?: string): ChatEvent[] {
           const customer = m.recipient?.id;
           if (!customer) continue;
           const fromAgent = msg.metadata === AGENT_METADATA || (appId !== undefined && String(msg.app_id ?? "") === appId);
-          out.push({ kind: "owner", channel, senderId: customer, text, mid: msg.mid, at, fromAgent });
+          // A template (a structured card) with no words of its own is Meta's automation, never Niko typing: the lead form's
+          // "thanks" that starts the chat came back like this and silenced the assistant for 12 hours (Nadim, 6 Nov 2026:
+          // his "Can I see the 2bd" eight minutes later went unanswered).
+          const attachments = msg.attachments ?? [];
+          const automated = !fromAgent && !(msg.text ?? "").trim() && attachments.length > 0 && attachments.every((a) => a.type === "template");
+          out.push({ kind: "owner", channel, senderId: customer, text, mid: msg.mid, at, fromAgent, ...(automated && { automated }) });
         } else if (m.sender?.id && text) {
           out.push({ kind: "incoming", channel, senderId: m.sender.id, text, mid: msg.mid, at });
         }

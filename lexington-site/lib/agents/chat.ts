@@ -391,7 +391,8 @@ export async function handleChatEvent(ev: ChatEvent, nowMs = Date.now()): Promis
     const fresh = (): ChatThread => ({ _id: id, _type: "chatThread", channel: ev.channel, senderId: ev.senderId, messages: [] });
 
     if (ev.kind === "owner") {
-      if (ev.fromAgent) return;
+      // The assistant's own messages, and Meta's automatic ones (the lead form's chat starter), aren't Niko taking over.
+      if (ev.fromAgent || ev.automated) return;
       // The agent's own message can come back before it is saved: give that a moment, then look again.
       await sleep(3000);
       const saved = await updateThread(
