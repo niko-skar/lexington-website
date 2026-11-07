@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import type { AlertsData } from "@/lib/alerts/shared";
+import type { AnalysisData } from "@/lib/analysis/shared";
 import type { BuyersData } from "@/lib/buyers/shared";
 import type { CashflowPage } from "@/lib/cashflow/server";
 import type { ConcreteData } from "@/lib/concrete/shared";
@@ -17,6 +18,7 @@ import type { OpenArrival } from "@/lib/store/deliveries";
 import type { StoreData, StoreItem } from "@/lib/store/shared";
 import { FINANCE_SECTIONS, isFinance, PAGE_SECTIONS, sectionHref, type FinanceSection, type PageSection, type TodoList, type TodoMe, type TodoTask } from "@/lib/todo/shared";
 import { AlertsApp } from "./AlertsApp";
+import { AnalysisApp } from "./AnalysisApp";
 import { send, startPolling } from "./api";
 import { BuyersApp } from "./BuyersApp";
 import { CashflowApp } from "./CashflowApp";
@@ -56,6 +58,7 @@ export type SiteData = {
   spending?: SpendingData;
   orders?: OrdersPage;
   cashflow?: CashflowPage;
+  analysis?: AnalysisData;
 };
 
 // Since 30 Oct 2026 the app opens on its home page (/todo) and the to-do list is /todo/jobs.
@@ -82,6 +85,8 @@ const sectionFrom = (path: string): View | null =>
             ? "orders"
           : path.startsWith("/todo/cashflow")
             ? "cashflow"
+          : path.startsWith("/todo/analysis")
+            ? "analysis"
           : path.startsWith("/todo/jobs")
           ? "todo"
           : path === "/todo" || path === "/todo/"
@@ -105,6 +110,7 @@ async function load(section: PageSection): Promise<SiteData> {
   if (section === "spending") return { spending: await get("/api/spending") };
   if (section === "orders") return { orders: await get("/api/orders") };
   if (section === "cashflow") return { cashflow: await get("/api/cashflow") };
+  if (section === "analysis") return { analysis: await get("/api/analysis") };
   const [x, s] = await Promise.all([get("/api/expenses"), get("/api/store")]);
   return { expenses: { expenses: x.expenses, items: s.items, arrivals: s.arrivals, pending: x.pending, books: x.books, bills: x.bills, vendors: x.vendors } };
 }
@@ -527,6 +533,18 @@ export function SiteApp({
             startedOffline={startedOffline && first === "spending"}
             fresh={first === "spending"}
             tabs={tabs("spending")}
+          />
+        </div>
+      )}
+      {show("analysis") && (
+        <div hidden={section !== "analysis"}>
+          <AnalysisApp
+            me={me}
+            active={section === "analysis"}
+            initial={data.analysis ?? null}
+            startedOffline={startedOffline && first === "analysis"}
+            fresh={first === "analysis"}
+            tabs={tabs("analysis")}
           />
         </div>
       )}

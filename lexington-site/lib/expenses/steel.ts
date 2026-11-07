@@ -61,8 +61,9 @@ export function isSteelLabour(x: Expense): boolean {
   return /\bwonder\b/i.test(x.supplier) || /steel bend|bending labou?r|steel bender/i.test(`${x.description} ${x.supplier}`);
 }
 
-/** A payment towards steel already counted (the rest of a delivery's price): no tons of its own. */
-const PART_PAYMENT = /final payment|part payment|\bbalance\b|instal|second payment|remaining|top.?up/i;
+/** A payment towards steel already counted (the rest of a delivery's price): no tons of its own. Also the analysis's
+ * rule for any material (lib/analysis/shared.ts). */
+export const PART_PAYMENT = /final payment|part payment|\bbalance\b|instal|second payment|remaining|top.?up|payment final/i;
 
 /**
  * The steel summary. `unitOf` gives the store room's unit for a material ("tons"), so a quantity can be read as

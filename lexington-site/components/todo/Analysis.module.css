@@ -1,0 +1,255 @@
+/* Analysis (7 Nov 2026). Colours come from .app in Todo.module.css; the cards and rows are Spending.module.css's. */
+
+.views {
+  margin-bottom: 14px;
+}
+
+/* Claude's review: numbered points, each a bold line and its words. */
+.review {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 18px;
+  padding: 14px;
+  border: 1px solid var(--x-line);
+  border-radius: 10px;
+  background: var(--x-surface);
+  box-shadow: inset 4px 0 0 var(--x-accent);
+}
+.points {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding-left: 22px;
+}
+.points li {
+  display: grid;
+  gap: 2px;
+  font-size: 15px;
+  line-height: 1.4;
+}
+.points li::marker {
+  color: var(--x-muted);
+  font-weight: 700;
+}
+.points b {
+  font-size: 16px;
+}
+.small {
+  margin: 0;
+  font-size: 13px;
+  color: var(--x-muted);
+}
+
+/* Money in against money out, side by side. */
+.inOut {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.inOut div {
+  display: grid;
+  gap: 2px;
+  padding: 12px;
+  border: 1px solid var(--x-line);
+  border-radius: 10px;
+  background: var(--x-surface);
+}
+.inOut b {
+  font-family: var(--x-display);
+  font-size: 22px;
+  overflow-wrap: anywhere;
+}
+.inOut small {
+  font-size: 12px;
+  color: var(--x-muted);
+}
+
+/* The keys above the bars: a square of each colour and its name, in the page's ink. */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 0 2px 8px;
+  font-size: 13px;
+  color: var(--x-muted);
+}
+.legend span::before {
+  content: "";
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 6px;
+  border-radius: 2px;
+  vertical-align: -1px;
+}
+.keyOut::before,
+.keyBig::before {
+  background: var(--x-accent);
+}
+.keyIn::before {
+  background: var(--x-ok);
+}
+.keyRest::before {
+  background: var(--x-accent-soft);
+  box-shadow: inset 0 0 0 1px var(--x-accent);
+}
+
+/* Week by week: out and in, a thin bar each, the amounts written beside. */
+.weeks,
+.months {
+  display: grid;
+  gap: 0;
+  margin: 0 0 8px;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--x-line);
+  border-radius: 10px;
+  background: var(--x-surface);
+  list-style: none;
+}
+.weeks li,
+.months li {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 8px 14px;
+  border-top: 1px solid var(--x-line);
+}
+.weeks li:first-child,
+.months li:first-child {
+  border-top: 0;
+}
+.weekName {
+  font-size: 14px;
+  font-weight: 600;
+}
+.weekBars {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.barLine {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.barLine small {
+  font-family: var(--x-num);
+  font-size: 12px;
+  color: var(--x-muted);
+  overflow-wrap: anywhere;
+}
+.barOut,
+.barIn {
+  display: block;
+  min-width: 2px;
+  height: 8px;
+  border-radius: 0 4px 4px 0;
+}
+.barOut {
+  background: var(--x-accent);
+}
+.barIn {
+  background: var(--x-ok);
+}
+
+/* Month by month: steel and concrete, then the rest, in one bar; the total at the end. */
+.months li {
+  grid-template-columns: 76px minmax(0, 1fr) auto;
+}
+.months li b {
+  font-family: var(--x-num);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.monthBar {
+  display: flex;
+  gap: 2px;
+  min-width: 0;
+  height: 12px;
+}
+.barBig,
+.barRest {
+  display: block;
+  height: 100%;
+}
+.barBig {
+  border-radius: 2px 0 0 2px;
+  background: var(--x-accent);
+}
+.barRest {
+  border-radius: 0 4px 4px 0;
+  background: var(--x-accent-soft);
+  box-shadow: inset 0 0 0 1px var(--x-accent);
+}
+
+/* Prices then and now. */
+.prices {
+  display: grid;
+  margin: 0 0 8px;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--x-line);
+  border-radius: 10px;
+  background: var(--x-surface);
+  list-style: none;
+}
+.prices li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 56px;
+  padding: 8px 14px;
+  border-top: 1px solid var(--x-line);
+}
+.prices li:first-child {
+  border-top: 0;
+}
+.prices li > span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.prices small {
+  font-size: 12px;
+  color: var(--x-muted);
+}
+.priceNow {
+  flex: none;
+  justify-items: end;
+  font-family: var(--x-num);
+  font-size: 14px;
+  text-align: right;
+}
+.priceNow small {
+  font-family: var(--x-body);
+  font-size: 13px;
+  font-weight: 600;
+}
+.priceNow small.up {
+  color: var(--x-amber);
+}
+.priceNow small.down {
+  color: var(--x-ok);
+}
+.warn {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--x-warn);
+}
+
+/* A material's count, on the right of its row. */
+.count {
+  position: relative;
+  flex: none;
+  font-family: var(--x-display);
+  font-size: 20px;
+  font-weight: 700;
+  white-space: nowrap;
+}
