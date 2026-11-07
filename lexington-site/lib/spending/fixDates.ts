@@ -8,8 +8,12 @@ import { isDay, type QboTxn } from "./shared";
 
 // Putting the dates right in QuickBooks (Niko, 6 Nov 2026: "can you bulk reverse the dates on qbo for me?"): the
 // entries dated long after they were typed, each with the date the office ticked on the Spending page (its day and
-// month swapped, or one typed). Only the date changes (a sparse update), and only while QuickBooks still has the date
-// the page showed: a second tap never swaps one back. Then the books are read again, so the page shows them moved.
+// month swapped, or one typed). Only the date changes, and only while QuickBooks still has the date the page showed:
+// a second tap never swaps one back. Then the books are read again, so the page shows them moved.
+//
+// Each goes back whole, as QuickBooks has it, with the new date (a full update). The date on its own (a sparse update)
+// was refused for every expense on 7 Nov 2026 ("Required parameter PaymentType is missing in the request"), and an
+// expense sent with only some of what it has would lose the rest: a full update empties whatever it leaves out.
 
 export interface DateFix {
   /** The entry's key on the Spending page: "qbo:Purchase:123". */
@@ -54,10 +58,10 @@ async function fixOne(f: DateFix): Promise<DateFixResult> {
   const [, type, id] = KEY.exec(f.key)!;
   const path = ENDPOINTS[type as QboTxn["type"]];
   try {
-    const current = (await qboApi<Record<string, { Id: string; SyncToken: string; TxnDate?: string } | undefined>>(`${path}/${id}`))[type];
+    const current = (await qboApi<Record<string, (Record<string, unknown> & { Id: string; SyncToken: string; TxnDate?: string }) | undefined>>(`${path}/${id}`))[type];
     if (!current) return { key: f.key, ok: false, why: "QuickBooks doesn't have it any more." };
     if (current.TxnDate !== f.from) return { key: f.key, ok: false, why: `QuickBooks has it on ${current.TxnDate ?? "no date"} now: left as it is.` };
-    await qboApi(path, { method: "POST", body: { Id: current.Id, SyncToken: current.SyncToken, sparse: true, TxnDate: f.to } });
+    await qboApi(path, { method: "POST", body: { ...current, TxnDate: f.to, sparse: false } });
     await writeLog({ action: "api", ok: true, httpStatus: 200, intuitTid: null, message: `Spending, fix the dates: ${type} ${id} dated ${f.from} -> ${f.to}` });
     return { key: f.key, ok: true };
   } catch (error) {
