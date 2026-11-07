@@ -18,11 +18,15 @@ import {
   CHAT_SYSTEM,
   HANDOVER_WORDS,
   OWNER_QUIET_HOURS,
+  PLACEHOLDER_NAME,
+  chatLeadId,
   chatProblems,
   chatPrompt,
+  formStarterContacts,
   handoverTopic,
   holdingMessage,
   introLine,
+  joinRecords,
   pickCards,
   quietReason,
   tooChatty,
@@ -219,24 +223,49 @@ const keepLast = (messages: ChatMessage[]) => messages.slice(-80);
 
 // ---- the prospect in the CRM --------------------------------------------------------------------------
 
-const PLACEHOLDER = / contact$/;
+/** Another prospect who is the same person: by email, else by phone number (written locally or with +233). Oldest first. */
+async function samePerson(email: string, phone: string, notId: string): Promise<string | null> {
+  const buyers = getBuyersClient();
+  if (email.includes("@")) {
+    const id = await buyers.fetch<string | null>(`*[_type == "lead" && lower(email) == $email && _id != $not] | order(_createdAt asc)[0]._id`, {
+      email: email.toLowerCase(),
+      not: notId,
+    });
+    if (id) return id;
+  }
+  const digits = phone ? internationalDigits(phone).replace(/\D/g, "") : "";
+  if (digits.length >= 9) {
+    const withPhones = await buyers.fetch<Array<{ _id: string; phone: string }>>(`*[_type == "lead" && defined(phone) && _id != $not] | order(_createdAt asc){ _id, phone }`, {
+      not: notId,
+    });
+    const same = withPhones.find((l) => internationalDigits(l.phone).replace(/\D/g, "") === digits);
+    if (same) return same._id;
+  }
+  return null;
+}
 
 async function ensureLead(thread: ChatThread): Promise<string | null> {
   if (thread.leadId) return thread.leadId;
   const buyers = getBuyersClient();
   try {
-    // On WhatsApp the number says who it is: the same person already in Prospects keeps their record.
-    if (thread.channel === "whatsapp") {
-      const digits = internationalDigits(`+${thread.senderId}`).replace(/\D/g, "");
-      const withPhones = await buyers.fetch<Array<{ _id: string; phone: string }>>(`*[_type == "lead" && defined(phone)]{ _id, phone }`);
-      const same = withPhones.find((l) => internationalDigits(l.phone).replace(/\D/g, "") === digits);
-      if (same) return same._id;
+    // Who it is: a WhatsApp number, or the details a lead form's chat starts with. Someone already in Prospects (the lead
+    // form's entry often arrives first) keeps their record, and the chat is added to it.
+    const said = thread.messages.filter((m) => m.from === "them").map((m) => formStarterContacts(m.text)).find((c) => c.email || c.phone) ?? { name: "", phone: "", email: "" };
+    const phone = thread.channel === "whatsapp" ? `+${thread.senderId}` : said.phone;
+    const id = chatLeadId(thread._id);
+    const same = await samePerson(said.email, phone, id);
+    if (same) {
+      await buyers.patch(same).setIfMissing({ chatThread: thread._id }).commit().catch(() => undefined);
+      return same;
     }
     const now = new Date().toISOString();
-    const doc = await buyers.create({
+    // One prospect per chat, whatever arrives at once: two of Nadim's messages together made two (6 Nov 2026).
+    const doc = await buyers.createIfNotExists({
+      _id: id,
       _type: "lead",
-      name: thread.name?.trim() || `${CHANNEL_NAMES[thread.channel]} contact`,
-      ...(thread.channel === "whatsapp" && { phone: `+${thread.senderId}` }),
+      name: thread.name?.trim() || said.name || `${CHANNEL_NAMES[thread.channel]} contact`,
+      ...(phone && { phone }),
+      ...(said.email && { email: said.email }),
       source: thread.channel === "whatsapp" ? "whatsapp" : "messenger",
       stage: "new",
       paymentPreference: "undecided",
@@ -251,6 +280,56 @@ async function ensureLead(thread: ChatThread): Promise<string | null> {
   }
 }
 
+interface JoinableLead {
+  _id: string;
+  _rev: string;
+  name?: string;
+  email?: string;
+  phone?: string;
+  interest?: string;
+  chatThread?: string;
+  metaLeadId?: string;
+  buyerAccountId?: string;
+  unitNumber?: string;
+  agreedPriceUSD?: number;
+  notes?: Array<{ _key: string; at?: string; kind?: string; text?: string }>;
+  tasks?: Array<{ _key: string; text?: string; done?: boolean }>;
+}
+
+/**
+ * A chat's prospect that turns out to be someone already in Prospects (their email or number is on another record,
+ * often the lead form's, which arrives a few seconds before or after the chat) is joined into that record: the chat,
+ * its notes and open steps move there, and the chat's record goes. Only a record the chat made and nothing else has
+ * written to (no form entry, buyer login or sale) is ever removed. Answers the prospect the chat now belongs to.
+ */
+async function joinSamePerson(leadId: string, threadId: string, channel: ChatChannel): Promise<string> {
+  const buyers = getBuyersClient();
+  try {
+    const mine = await buyers.getDocument<JoinableLead>(leadId);
+    if (!mine || mine.chatThread !== threadId || mine.metaLeadId || mine.buyerAccountId || mine.unitNumber || mine.agreedPriceUSD) return leadId;
+    const otherId = await samePerson(mine.email ?? "", mine.phone ?? "", leadId);
+    const other = otherId ? await buyers.getDocument<JoinableLead>(otherId) : null;
+    if (!other) return leadId;
+    const set = joinRecords(other, mine, {
+      _key: newKey(),
+      at: new Date().toISOString(),
+      text: `Joined with the record the ${CHANNEL_NAMES[channel]} chat had started: the same ${mine.email && mine.email === other.email ? "email" : "phone number"}.`,
+    });
+    await buyers
+      .transaction()
+      .patch(other._id, (p) => p.ifRevisionId(other._rev).set(set))
+      .patch(mine._id, (p) => p.ifRevisionId(mine._rev).set({ joinedInto: other._id }))
+      .delete(mine._id)
+      .patch(threadId, (p) => p.set({ leadId: other._id }))
+      .commit();
+    return other._id;
+  } catch (error) {
+    // A record changed meanwhile: left as it is, and the next message tries again.
+    console.error("[chat] could not join the same person's records:", error instanceof Error ? error.message : error);
+    return leadId;
+  }
+}
+
 async function leadNote(leadId: string | null | undefined, text: string): Promise<void> {
   if (!leadId) return;
   await getBuyersClient()
@@ -261,21 +340,25 @@ async function leadNote(leadId: string | null | undefined, text: string): Promis
     .catch((e: Error) => console.error("[chat] note not saved:", e.message));
 }
 
-/** What the person said about themselves, onto their record (a name replaces only the placeholder). */
-async function learnAbout(leadId: string | null | undefined, out: ChatOut): Promise<void> {
-  if (!leadId) return;
+/**
+ * What the person said about themselves, onto their record (a name replaces only the placeholder). A new email or
+ * number that is already someone's in Prospects joins the two. Answers the prospect the chat belongs to now.
+ */
+async function learnAbout(leadId: string | null | undefined, out: ChatOut, thread: ChatThread): Promise<string | null | undefined> {
+  if (!leadId) return leadId;
   const buyers = getBuyersClient();
   const lead = await buyers.fetch<{ name?: string; email?: string; phone?: string; interest?: string } | null>(
     `*[_type == "lead" && _id == $id][0]{ name, email, phone, interest }`,
     { id: leadId }
   );
-  if (!lead) return;
+  if (!lead) return leadId;
   const set: Record<string, string> = {};
-  if (out.name.trim() && (!lead.name || PLACEHOLDER.test(lead.name))) set.name = out.name.trim().slice(0, 120);
+  if (out.name.trim() && (!lead.name || PLACEHOLDER_NAME.test(lead.name))) set.name = out.name.trim().slice(0, 120);
   if (out.email.includes("@") && !lead.email) set.email = out.email.trim().toLowerCase().slice(0, 160);
   if (out.phone.replace(/\D/g, "").length >= 9 && !lead.phone) set.phone = out.phone.trim().slice(0, 40);
   if (out.interest.trim() && !lead.interest) set.interest = out.interest.trim().slice(0, 120);
   if (Object.keys(set).length) await buyers.patch(leadId).set(set).commit().catch(() => undefined);
+  return set.email || set.phone ? joinSamePerson(leadId, thread._id, thread.channel) : leadId;
 }
 
 async function handoverTask(leadId: string | null | undefined, name: string, channel: ChatChannel, why: string): Promise<void> {
@@ -496,7 +579,10 @@ export async function handleChatEvent(ev: ChatEvent, nowMs = Date.now()): Promis
             )) ?? thread;
         }
         if (mid) await leadNote(thread.leadId, `${CHANNEL_NAMES[current.channel]}, assistant: ${d.text}${cards.length ? ` [cards: ${cards.map((c) => c.unit).join(", ")}]` : ""}`);
-        if (d.out) await learnAbout(thread.leadId, d.out);
+        if (d.out) {
+          const joinedId = await learnAbout(thread.leadId, d.out, thread);
+          if (joinedId && joinedId !== thread.leadId) thread = { ...thread, leadId: joinedId };
+        }
 
         if (d.handover || sendError) {
           const name = thread.name || d.out?.name || "Someone";

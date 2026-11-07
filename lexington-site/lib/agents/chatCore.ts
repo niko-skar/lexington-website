@@ -79,6 +79,70 @@ export function wantsNoReplies(text: string): boolean {
   return /^\s*(stop|unsubscribe|stop messaging( me)?|don'?t (message|text) me)\s*[.!]*\s*$/i.test(text);
 }
 
+// ---- one person, one prospect -----------------------------------------------------------------------------
+// A lead form that opens a chat made two prospects for the same person (Eric Nkrumah and Nadim, 6 Nov 2026): the chat's
+// record had no email or number yet when the form's entry came in, and two of Nadim's messages arriving together each
+// made one. Niko, 7 Nov: "yes make it join them automatically".
+
+/** The name a chat's record has until the person's real one is known ("Instagram contact"). */
+export const PLACEHOLDER_NAME = / contact$/;
+
+/**
+ * The contact details in the message a lead form's chat starts with: Meta writes the form's answers into it as
+ * "Question: answer" lines ("Full name: Nadim", "Phone number: 024 215 8252", "Email: ..."). Empty when absent.
+ */
+export function formStarterContacts(text: string): { name: string; phone: string; email: string } {
+  const line = (re: RegExp) => (text.match(re)?.[1] ?? "").trim();
+  const email = line(/^\s*(?:e-?mail|work email)\s*:\s*(\S+@\S+\.\S+)\s*$/im);
+  const phone = line(/^\s*(?:phone number|phone|mobile|whatsapp(?: number)?)\s*:\s*(\+?[\d][\d\s().-]{6,})\s*$/im);
+  const name = line(/^\s*(?:full name|name)\s*:\s*(.+?)\s*$/im);
+  return { name: name.slice(0, 120), phone: phone.replace(/\s+/g, " ").slice(0, 40), email: email.toLowerCase().slice(0, 160) };
+}
+
+/** The prospect a chat makes, by the chat: however many of its messages arrive at once, there is only one. */
+export function chatLeadId(threadId: string): string {
+  return `chatlead-${threadId.replace(/[^A-Za-z0-9_-]/g, "-")}`;
+}
+
+interface JoinNote {
+  _key: string;
+  at?: string;
+  kind?: string;
+  text?: string;
+}
+interface JoinTask {
+  _key: string;
+  text?: string;
+  done?: boolean;
+}
+export interface JoinSide {
+  name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  interest?: string | null;
+  chatThread?: string | null;
+  notes?: JoinNote[];
+  tasks?: JoinTask[];
+}
+
+/**
+ * What the record that stays gets from the one that goes: every note (in time order, none twice), the open steps it
+ * doesn't already have, and the details it is missing (a real name over "Instagram contact"). Pure.
+ */
+export function joinRecords(keep: JoinSide, drop: JoinSide, note: { _key: string; at: string; text: string }): Record<string, unknown> {
+  const keepNotes = keep.notes ?? [];
+  const notes = [...keepNotes, ...(drop.notes ?? []).filter((n) => !keepNotes.some((m) => m.text === n.text)), { ...note, kind: "system" }].sort((a, b) =>
+    String(a.at ?? "").localeCompare(String(b.at ?? ""))
+  );
+  const openKeep = new Set((keep.tasks ?? []).filter((t) => !t.done).map((t) => t.text));
+  const tasks = [...(keep.tasks ?? []), ...(drop.tasks ?? []).filter((t) => !t.done && !openKeep.has(t.text))];
+  const set: Record<string, unknown> = { notes, tasks };
+  if (!keep.chatThread && drop.chatThread) set.chatThread = drop.chatThread;
+  for (const k of ["email", "phone", "interest"] as const) if (!keep[k] && drop[k]) set[k] = drop[k];
+  if ((!keep.name || PLACEHOLDER_NAME.test(keep.name)) && drop.name && !PLACEHOLDER_NAME.test(drop.name)) set.name = drop.name;
+  return set;
+}
+
 export type HandoverTopic = "viewing" | "payment" | "price" | "legal" | "complaint" | "person" | "unknown" | "none";
 
 /** What in their words always goes to Niko, whatever the agent thinks. */
