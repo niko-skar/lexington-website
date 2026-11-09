@@ -7,6 +7,7 @@ import { POUR_DAY_PREFIX, TRUCK_PREFIX } from "@/lib/site/ids";
 import { ghanaDay } from "@/lib/store/shared";
 import { cleanText, TodoError } from "@/lib/todo/server";
 import type { TodoMe } from "@/lib/todo/shared";
+import { checkEstimate, checkOrder, dropEstimate, lastOrder, pourEstimates, saveEstimate, saveOrderDoc } from "./estimateServer";
 import { pourCubes, pourPhotos } from "./pourFiles";
 import type { PourBooking, PourCheck, PourInfo, Truck } from "./shared";
 
@@ -134,9 +135,17 @@ export async function listPours(): Promise<PourInfo> {
   const pours = listed
     .filter((b) => b.phase === "check" || (b.poured ?? "") >= recent || missing(b.id))
     .sort((a, b) => a.day.localeCompare(b.day) || a.what.localeCompare(b.what));
-  const photos = await pourPhotos(pours.map((b) => b.id));
+  const [photos, estimates, orderDefaults] = await Promise.all([pourPhotos(pours.map((b) => b.id)), pourEstimates(pours.map((b) => b.id)), lastOrder()]);
   const cubes = allCubes.filter((c) => pours.some((b) => b.id === c.pourId));
-  return { pours, photos, cubes, checklists: state.checklists.map((c) => ({ id: c.id, name: c.name })), curers: curers(state), curingDays: state.curing.days };
+  return {
+    pours: pours.map((b) => ({ ...b, estimate: estimates.get(b.id)?.estimate ?? null, order: estimates.get(b.id)?.order ?? null })),
+    photos,
+    cubes,
+    checklists: state.checklists.map((c) => ({ id: c.id, name: c.name })),
+    curers: curers(state),
+    curingDays: state.curing.days,
+    orderDefaults,
+  };
 }
 
 /* ---------- the concrete day: what's poured and the mix ordered, from the day's bookings ---------- */
@@ -199,6 +208,8 @@ export async function bookPour(me: TodoMe, body: Data): Promise<string> {
   const mix = cleanText(body.mix, 30, "mix");
   const volume = cleanVolume(body.volume);
   const worker = cleanCurer(body.curer, state);
+  // The concrete worked out from the building (checked before anything is booked).
+  const estimate = body.estimate ? await checkEstimate(body.estimate) : null;
   const list = typeof body.checklist === "string" ? state.checklists.find((c) => c.id === body.checklist) : undefined;
   const items: Record<string, Item> = {};
   if (list) {
@@ -221,6 +232,7 @@ export async function bookPour(me: TodoMe, body: Data): Promise<string> {
     volume,
   };
   await saveRollcallRecord(me.name, "pours", id, "set", doc);
+  if (estimate) await saveEstimate(me, id, estimate);
   const after = { ...state, pours: [...state.pours, { id, p: doc as RcPour }] };
   await syncPourDay(day, after);
   // Booked after the trucks came: it's poured already.
@@ -244,10 +256,34 @@ export async function changePour(me: TodoMe, id: unknown, body: Data): Promise<v
   const what = cleanText(body.what ?? p.what, 80, "pour");
   if (!what) throw new TodoError(400, "Say what's being poured, e.g. 1st floor slab.");
   const change: Data = { what, planned: day, mix: cleanText(body.mix ?? p.mix ?? "", 30, "mix"), volume: cleanVolume(body.volume === undefined ? p.volume : body.volume), worker: cleanCurer(body.curer ?? p.worker, state) };
+  // The concrete worked out: changed, taken off (null), or left as it was (not sent).
+  const estimate = body.estimate ? await checkEstimate(body.estimate) : null;
   await saveRollcallRecord(me.name, "pours", key, "update", change);
+  if (estimate) await saveEstimate(me, key, estimate);
+  else if (body.estimate === null) await dropEstimate(key);
   const fresh = await rollcallState();
   await syncPourDay(day, fresh);
   if (p.planned && p.planned !== day) await syncPourDay(p.planned, fresh);
+}
+
+/**
+ * The order sent (or copied) to the concrete company: kept with the pour, and its m³ become the pour's "m³ ordered"
+ * when they differ (the order is what's coming).
+ */
+export async function orderPour(me: TodoMe, id: unknown, value: unknown): Promise<void> {
+  const state = await rollcallState();
+  const { id: key, p } = pourOf(state, id);
+  const order = checkOrder(value);
+  const total = Math.round(order.lines.reduce((s, l) => s + l.m3, 0) * 10) / 10;
+  const change: Data = {};
+  if (total > 0 && total !== p.volume) change.volume = total;
+  if (order.mix && order.mix !== (p.mix ?? "")) change.mix = order.mix;
+  // The pour first, then the order: anything that shows the order sent shows the pour as ordered.
+  if (p.phase === "check" && Object.keys(change).length) {
+    await saveRollcallRecord(me.name, "pours", key, "update", change);
+    if (p.planned) await syncPourDay(p.planned);
+  }
+  await saveOrderDoc(me, key, order);
 }
 
 /** A check ticked (or unticked) before the pour, as on the roll call: `ok` as tapped (without it, the other way round). */

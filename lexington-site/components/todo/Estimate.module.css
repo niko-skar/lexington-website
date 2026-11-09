@@ -1,0 +1,333 @@
+/* The concrete worked out when a pour is booked, and its WhatsApp order (9 Nov 2026). Colours come from .app in
+   Todo.module.css. */
+
+.panel {
+  display: grid;
+  gap: 12px;
+}
+.block {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--x-line);
+  border-radius: 10px;
+  background: var(--x-bg);
+}
+.blockTitle {
+  margin: 0;
+  font-family: var(--x-display);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.note,
+.hint {
+  margin: 0;
+  font-size: 14px;
+  color: var(--x-muted);
+}
+.hint {
+  font-size: 13px;
+}
+.warn {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--x-amber-soft);
+  color: var(--x-amber);
+  font-size: 14px;
+  font-weight: 600;
+}
+.grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.grid2 > label {
+  display: grid;
+  gap: 6px;
+}
+.beamPick {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+}
+.beamPick button {
+  min-height: 48px;
+}
+.size {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr auto 1fr;
+  align-items: center;
+  gap: 6px;
+  color: var(--x-muted);
+}
+
+/* ---------- the plan: drawn in mm, so strokes don't scale ---------- */
+.planWrap {
+  overflow-x: auto;
+  border: 1px solid var(--x-line);
+  border-radius: 8px;
+  background: var(--x-surface);
+  -webkit-overflow-scrolling: touch;
+}
+.plan {
+  display: block;
+  width: 100%;
+  min-width: 720px;
+  height: auto;
+}
+.plan * {
+  vector-effect: non-scaling-stroke;
+}
+.outline {
+  fill: var(--x-bg);
+  stroke: var(--x-muted);
+  stroke-width: 1px;
+}
+.slabRest {
+  fill: var(--x-bg);
+  stroke: var(--x-muted);
+  stroke-width: 1px;
+}
+.slabPicked {
+  fill: var(--x-accent-soft);
+  stroke: var(--x-accent);
+  stroke-width: 2px;
+}
+.gridLine {
+  stroke: var(--x-line);
+  stroke-width: 1px;
+  stroke-dasharray: 6 4;
+}
+.hole rect {
+  fill: var(--x-surface);
+  stroke: var(--x-ink);
+  stroke-width: 1px;
+}
+.hole path {
+  stroke: var(--x-muted);
+  stroke-width: 1px;
+}
+.holeFaint rect {
+  fill: none;
+  stroke: var(--x-line);
+  stroke-width: 1px;
+}
+.holeFaint path {
+  stroke: var(--x-line);
+  stroke-width: 1px;
+}
+.beam {
+  stroke: var(--x-accent);
+  stroke-width: 3px;
+  stroke-dasharray: 8 4;
+  opacity: 0.75;
+}
+.item {
+  fill: var(--x-surface);
+  stroke: var(--x-ink);
+  stroke-width: 1.5px;
+}
+.itemOn {
+  fill: var(--x-accent);
+  stroke: var(--x-accent);
+  stroke-width: 1.5px;
+}
+.lift > rect:first-child {
+  fill: var(--x-surface);
+  stroke: var(--x-ink);
+  stroke-width: 1.5px;
+}
+.liftOn > rect:first-child {
+  fill: var(--x-accent);
+  stroke: var(--x-accent);
+  stroke-width: 1.5px;
+}
+.shaft {
+  fill: var(--x-bg);
+  stroke: var(--x-ink);
+  stroke-width: 1px;
+}
+.faint,
+.faint > rect {
+  fill: var(--x-line);
+  stroke: none;
+}
+.faint .shaft {
+  fill: var(--x-bg);
+}
+.hit {
+  fill: transparent;
+  stroke: none;
+  cursor: pointer;
+  pointer-events: all;
+}
+.hit:focus-visible {
+  outline: none;
+  stroke: var(--x-accent);
+  stroke-width: 2px;
+}
+.bubble circle,
+.bubbleTap circle {
+  fill: var(--x-surface);
+  stroke: var(--x-muted);
+  stroke-width: 1px;
+}
+.bubble text,
+.bubbleTap text {
+  fill: var(--x-ink);
+  font-family: var(--x-body);
+  font-size: 820px;
+  font-weight: 700;
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+.bubbleTap {
+  cursor: pointer;
+}
+.bubbleTap circle {
+  stroke: var(--x-accent);
+}
+.bubbleTap:focus-visible circle {
+  stroke-width: 3px;
+}
+.bubbleTap:focus {
+  outline: none;
+}
+
+/* ---------- what it comes to ---------- */
+.summary {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--x-accent);
+  border-radius: 10px;
+  background: var(--x-surface);
+}
+.part {
+  display: grid;
+  gap: 4px;
+}
+.partTop {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0;
+  font-size: 16px;
+}
+.partTop span {
+  font-family: var(--x-num);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.lines {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+  color: var(--x-muted);
+}
+.problem {
+  margin: 0;
+  color: var(--x-amber);
+  font-weight: 600;
+  font-size: 15px;
+}
+.total {
+  margin: 4px 0 0;
+  font-size: 17px;
+}
+.total b {
+  font-family: var(--x-num);
+}
+
+/* ---------- on the pour's card ---------- */
+.worked {
+  margin: 0;
+  font-size: 14px;
+  color: var(--x-muted);
+}
+.orderButton {
+  min-height: 44px;
+  border: 1px solid var(--x-accent);
+  border-radius: 8px;
+  background: var(--x-surface);
+  color: var(--x-accent);
+  font-weight: 600;
+  font-size: 15px;
+}
+.sent {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--x-ok);
+}
+
+/* ---------- the order sheet ---------- */
+.orderLine {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 72px auto auto 112px;
+  align-items: center;
+  gap: 6px;
+}
+.swipe {
+  display: none;
+}
+.unit {
+  color: var(--x-muted);
+  font-weight: 600;
+}
+.preview {
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--x-line);
+  border-radius: 8px;
+  background: var(--x-bg);
+  font-family: var(--x-body);
+  font-size: 15px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.copy {
+  min-height: 48px;
+  border: 1px solid var(--x-line);
+  border-radius: 8px;
+  background: var(--x-bg);
+  color: var(--x-ink);
+  font-weight: 600;
+}
+.send {
+  display: grid;
+  place-items: center;
+  text-decoration: none;
+}
+.send[aria-disabled="true"] {
+  opacity: 0.5;
+}
+
+/* A booking working out its concrete gets a wider window on a laptop (the plan needs the room). */
+@media (min-width: 1024px) {
+  .sheetWide.sheetWide {
+    max-width: 980px;
+  }
+}
+
+/* A phone: the part's name on its own line, then its m³ and slump. */
+@media (max-width: 560px) {
+  .orderLine {
+    grid-template-columns: 72px auto auto minmax(0, 1fr);
+  }
+  .orderLabel {
+    grid-column: 1 / -1;
+  }
+}
+/* The plan is wider than a phone: it scrolls sideways. */
+@media (max-width: 760px) {
+  .swipe {
+    display: inline;
+  }
+}

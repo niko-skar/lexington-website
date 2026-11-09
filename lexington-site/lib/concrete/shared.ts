@@ -101,6 +101,9 @@ export interface PourBooking {
   /** The checklist it started from, or null. */
   checklist: string | null;
   checks: PourCheck[];
+  /** The concrete worked out from the building when it was booked (lib/concrete/estimate.ts), and the order sent. */
+  estimate?: SavedEstimate | null;
+  order?: SavedOrder | null;
 }
 
 export interface PourInfo {
@@ -114,8 +117,11 @@ export interface PourInfo {
   curers: Array<{ id: string; name: string }>;
   /** Days of curing a pour gets now (the roll call's settings). */
   curingDays: number;
+  /** The last order sent to the concrete company: its company, number, first truck, pump and contact start the next. */
+  orderDefaults?: Partial<PourOrder> | null;
 }
 
+import type { PourOrder, SavedEstimate, SavedOrder } from "./estimate";
 import type { PourCubes, PourPhoto } from "./pourExtras";
 
 export interface ConcreteData {

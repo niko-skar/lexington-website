@@ -1,13 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
+import { estimate, ESTIMATE_KINDS, KIND_NAMES, type EstimateInput, type PourOrder } from "@/lib/concrete/estimate";
 import { addDays, dayWords as pourDayWords, type PourCubes, type PourPhoto } from "@/lib/concrete/pourExtras";
 import { type ConcreteData, type PourBooking, type PourInfo, type Truck } from "@/lib/concrete/shared";
 import { ghanaDay } from "@/lib/store/shared";
 import type { TodoMe } from "@/lib/todo/shared";
-import { errorText, send } from "./api";
+import { errorText, send, when } from "./api";
+import es from "./Estimate.module.css";
 import { cubesLine, PourCubesCard } from "./PourCubes";
+import { EstimatePanel, estimateToSend, PourOrderSheet, startEstimate, useEstimateFloors } from "./PourEstimate";
 import { PourPhotos } from "./PourPhotos";
 import ps from "./Pours.module.css";
 import styles from "./Todo.module.css";
@@ -39,7 +42,7 @@ export function BookedPours({ info, me, onData, onToast }: { info: PourInfo; me:
         Pours booked <span>{coming.length || ""}</span>
       </h2>
       {coming.map((b) => (
-        <PourCard key={b.id} booking={b} photos={info.photos ?? []} me={me} onData={onData} onToast={onToast} onChange={() => setSheet({ booking: b })} />
+        <PourCard key={b.id} booking={b} photos={info.photos ?? []} me={me} orderDefaults={info.orderDefaults} onData={onData} onToast={onToast} onChange={() => setSheet({ booking: b })} />
       ))}
       <button type="button" className={ps.book} onClick={() => setSheet({ booking: null })}>
         + Book a pour
@@ -65,6 +68,7 @@ function PourCard({
   booking: b,
   photos,
   me,
+  orderDefaults,
   onData,
   onToast,
   onChange,
@@ -72,6 +76,7 @@ function PourCard({
   booking: PourBooking;
   photos: PourPhoto[];
   me: TodoMe;
+  orderDefaults: Partial<PourOrder> | null | undefined;
   onData: (data: ConcreteData) => void;
   onToast: (text: string, error?: boolean) => void;
   onChange: () => void;
@@ -80,6 +85,7 @@ function PourCard({
   const [ticking, setTicking] = useState<Record<string, boolean>>({});
   const [armed, setArmed] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [ordering, setOrdering] = useState(false);
   const checks = b.checks.map((c) => (c.key in ticking ? { ...c, ok: ticking[c.key] } : c));
   const left = checks.filter((c) => !c.ok).length;
 
@@ -124,6 +130,16 @@ function PourCard({
       <p className={ps.line}>
         {[ordered(b) ? `Ordered ${ordered(b)}` : "", b.curer ? `cured by ${b.curer.name}` : ""].filter(Boolean).join(" · ")}
       </p>
+      {b.estimate && (
+        <p className={es.worked}>
+          Worked out: {b.estimate.result.parts.map((p) => `${p.label} ${p.m3.toLocaleString("en-GB", { maximumFractionDigits: 1 })} m³`).join(" + ")}
+        </p>
+      )}
+      {b.order?.sentAt && <p className={es.sent}>Order sent to {b.order.supplier || "the concrete company"} {when(b.order.sentAt)}</p>}
+      <button type="button" className={es.orderButton} onClick={() => setOrdering(true)}>
+        {b.order?.sentAt ? "Order on WhatsApp again" : "Order on WhatsApp"}
+      </button>
+      {ordering && <PourOrderSheet booking={b} defaults={orderDefaults} onClose={() => setOrdering(false)} onData={onData} onToast={onToast} />}
       {checks.length > 0 && (
         <>
           <p className={ps.progress}>
@@ -227,6 +243,34 @@ function BookSheet({ info, booking, onClose, onSaved }: { info: PourInfo; bookin
   const [saving, setSaving] = useState(false);
   const [armed, setArmed] = useState(false);
   const [error, setError] = useState("");
+  // The concrete worked out from the building (lib/concrete/estimate.ts): it fills "What's being poured" and the m³
+  // while they're as it last filled them (or empty), so a figure typed over it stays.
+  const [est, setEst] = useState<EstimateInput | null>(booking?.estimate?.input ?? null);
+  const { floors, error: floorsError } = useEstimateFloors(est !== null);
+  const result = useMemo(() => (est && floors ? estimate(est, floors) : null), [est, floors]);
+  const [filled, setFilled] = useState<{ what: string; volume: string }>({
+    what: booking?.estimate ? booking.estimate.result.what : "",
+    volume: booking?.estimate ? String(booking.estimate.result.order) : "",
+  });
+  const [lastResult, setLastResult] = useState<typeof result>(null);
+  if (result !== lastResult) {
+    setLastResult(result);
+    if (result && !result.problem && result.order > 0) {
+      const nextWhat = what.trim() === "" || what === filled.what ? result.what : what;
+      const nextVolume = volume.trim() === "" || volume === filled.volume ? String(result.order) : volume;
+      if (nextWhat !== what) setWhat(nextWhat);
+      if (nextVolume !== volume) setVolume(nextVolume);
+      setFilled({ what: result.what, volume: String(result.order) });
+    }
+  }
+  const pickKind = (k: EstimateInput["kind"]) => {
+    if (est?.kind === k) return setEst(null);
+    setEst(startEstimate(k, est, floors ?? [], what, volume));
+  };
+  // The building came after the kind was picked: start its parts now.
+  if (est && floors && ((est.kind !== "other" && !est.columns?.floor && !est.slab?.floor) || (est.kind === "other" && !est.other))) {
+    setEst(startEstimate(est.kind, null, floors, what, volume));
+  }
 
   const run = async (body: Record<string, unknown>, text: string) => {
     setSaving(true);
@@ -240,13 +284,16 @@ function BookSheet({ info, booking, onClose, onSaved }: { info: PourInfo; bookin
   };
   const save = () => {
     if (!what.trim()) return setError("Say what's being poured, e.g. 1st floor slab.");
-    const fields = { day, what: what.trim(), mix: mix.trim(), volume: volume.trim(), curer };
+    if (est && result?.problem) return setError(`${result.problem} (Or tap ${KIND_NAMES[est.kind]} again to book it without working it out.)`);
+    if (est && !result) return setError("Still getting the building's measurements: try again in a moment.");
+    const estimateField = est ? { estimate: estimateToSend(est) } : booking?.estimate ? { estimate: null } : {};
+    const fields = { day, what: what.trim(), mix: mix.trim(), volume: volume.trim(), curer, ...estimateField };
     void (booking ? run({ action: "change", id: booking.id, ...fields }, "Pour changed") : run({ action: "book", ...fields, checklist }, `Booked: ${what.trim()}, ${pourDayWords(day).toLowerCase()}`));
   };
 
   return (
     <div className={styles.sheetBackdrop}>
-      <div className={styles.sheet} role="dialog" aria-label={booking ? "Change the pour" : "Book a pour"}>
+      <div className={est ? `${styles.sheet} ${es.sheetWide}` : styles.sheet} role="dialog" aria-label={booking ? "Change the pour" : "Book a pour"}>
         <h2 className={styles.sheetTitle}>{booking ? "Change the pour" : "Book a pour"}</h2>
         <label className={styles.label} htmlFor="bp-day">
           Day of the pour
@@ -256,6 +303,15 @@ function BookSheet({ info, booking, onClose, onSaved }: { info: PourInfo; bookin
           What&rsquo;s being poured
         </label>
         <input id="bp-what" className={styles.input} value={what} onChange={(e) => setWhat(e.target.value)} maxLength={80} placeholder="e.g. 1st floor slab" disabled={saving} />
+        <span className={styles.label}>Work out the m³ from the building</span>
+        <div className={styles.chips} role="group" aria-label="Work out the m³">
+          {ESTIMATE_KINDS.map((k) => (
+            <button key={k} type="button" className={est?.kind === k ? styles.chipOn : styles.chip} aria-pressed={est?.kind === k} onClick={() => pickKind(k)} disabled={saving}>
+              {KIND_NAMES[k]}
+            </button>
+          ))}
+        </div>
+        {est && <EstimatePanel floors={floors} error={floorsError} value={est} onChange={setEst} result={result} disabled={saving} />}
         {!booking && (
           <>
             <span className={styles.label}>Checklist before the pour</span>

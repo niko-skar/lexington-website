@@ -54,6 +54,8 @@ export const QBO_CATCHUP_PREFIX = `qbocatchup-${TAG}-`;
 /** A pour's pre-pour photos (one record each, the original in the private photo store) and its concrete cubes (3 Nov 2026). */
 export const POUR_PHOTO_PREFIX = `pourphoto-${TAG}-`;
 export const POUR_CUBES_PREFIX = `pourcubes-${TAG}-`;
+/** A pour's worked-out concrete (what was picked and the m³) and its order to the concrete company (9 Nov 2026). */
+export const POUR_ESTIMATE_PREFIX = `pourestimate-${TAG}-`;
 /** A photo that landed after its record was saved (3 Nov 2026): which stored photo a phone's ticket became. */
 export const PHOTO_TICKET_PREFIX = `phototicket-${TAG}-`;
 /** Purchase orders (lib/orders, 5 Nov 2026): one document each, and the running number behind PO-0001. */
