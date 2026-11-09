@@ -259,6 +259,19 @@
   font-weight: 600;
   font-size: 15px;
 }
+.poLink {
+  justify-self: start;
+  min-height: 36px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--x-accent);
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
 .sent {
   margin: 0;
   font-size: 13px;

@@ -23,7 +23,7 @@ export default async function ConcretePage({ searchParams }: { searchParams: Pro
   let concrete: ConcreteData = { trucks: [], days: [] };
   let failed = false;
   try {
-    concrete = await concreteData();
+    concrete = await concreteData(me);
   } catch (error) {
     console.error("[concrete] load failed:", error instanceof Error ? error.message : error);
     failed = true;

@@ -148,18 +148,25 @@ export function OrdersApp({
     return startPolling(refresh, 60_000, 180_000);
   }, [active, refresh]);
 
-  // Opened from the cash flow: that order's sheet.
+  // Opened from the cash flow or a concrete pour: that order's sheet. The orders it has may be from before the order was
+  // made (loaded when the app opened): then it waits for them to be loaded again. Once per ask (they refresh meanwhile).
+  const askDone = useRef<number | null>(null);
   useEffect(() => {
-    if (!ask || !data) return;
+    if (!ask || !data || askDone.current === ask.at) return;
+    const o = data.orders.find((x) => x.id === ask.orderId);
+    if (!o && lastLoadedAt.current < ask.at) {
+      void refresh();
+      return;
+    }
     const timer = setTimeout(() => {
-      const o = data.orders.find((x) => x.id === ask.orderId);
+      // Marked done only when it opens (a re-run before then clears this timer and starts its own).
+      askDone.current = ask.at;
       if (o) setSheet({ order: o });
       else showToast({ text: "That order isn't there any more." });
     }, 0);
     return () => clearTimeout(timer);
-    // Once per ask (the data may refresh meanwhile).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ask]);
+  }, [ask, data]);
 
   const put = useCallback((next: OrdersPage) => {
     localAt.current = Date.now();

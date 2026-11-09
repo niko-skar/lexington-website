@@ -21,6 +21,10 @@ import styles from "./Todo.module.css";
 // pre-pour photos (PourPhotos.tsx); once poured, its concrete cubes' tests (PourCubes.tsx).
 
 const ordered = (b: PourBooking) => [b.mix, b.volume ? `${b.volume} m³` : ""].filter(Boolean).join(", ");
+const money = (n: number) => `GH₵ ${n.toLocaleString("en-GB", { maximumFractionDigits: 2 })}`;
+const PO_STAGE: Record<string, string> = { planned: "to order", ordered: "ordered", closed: "closed", cancelled: "cancelled" };
+/** "PO-0012 · GH₵ 25,721 · to order" (the office's). */
+const poWords = (po: NonNullable<PourBooking["po"]>) => `Purchase order ${po.number} · ${money(po.amount)} · ${PO_STAGE[po.status] ?? po.status}`;
 
 /** What the day's bookings came to, under the day's heading: poured and curing, or still waiting. */
 export function pourStatus(b: PourBooking): string {
@@ -33,7 +37,20 @@ export function pourStatus(b: PourBooking): string {
 }
 
 /** The pours booked and not poured yet, soonest first, each with its checklist. */
-export function BookedPours({ info, me, onData, onToast }: { info: PourInfo; me: TodoMe; onData: (data: ConcreteData) => void; onToast: (text: string, error?: boolean) => void }) {
+export function BookedPours({
+  info,
+  me,
+  onData,
+  onToast,
+  onOrder,
+}: {
+  info: PourInfo;
+  me: TodoMe;
+  onData: (data: ConcreteData) => void;
+  onToast: (text: string, error?: boolean) => void;
+  /** Opens a purchase order in Finance (the office). */
+  onOrder?: (orderId: string) => void;
+}) {
   const [sheet, setSheet] = useState<{ booking: PourBooking | null } | null>(null);
   const coming = info.pours.filter((b) => b.phase === "check");
   return (
@@ -42,7 +59,17 @@ export function BookedPours({ info, me, onData, onToast }: { info: PourInfo; me:
         Pours booked <span>{coming.length || ""}</span>
       </h2>
       {coming.map((b) => (
-        <PourCard key={b.id} booking={b} photos={info.photos ?? []} me={me} orderDefaults={info.orderDefaults} onData={onData} onToast={onToast} onChange={() => setSheet({ booking: b })} />
+        <PourCard
+          key={b.id}
+          booking={b}
+          photos={info.photos ?? []}
+          me={me}
+          orderDefaults={info.orderDefaults}
+          onData={onData}
+          onToast={onToast}
+          onChange={() => setSheet({ booking: b })}
+          onOrder={onOrder}
+        />
       ))}
       <button type="button" className={ps.book} onClick={() => setSheet({ booking: null })}>
         + Book a pour
@@ -51,6 +78,7 @@ export function BookedPours({ info, me, onData, onToast }: { info: PourInfo; me:
       {sheet && (
         <BookSheet
           info={info}
+          office={me.kind === "admin"}
           booking={sheet.booking}
           onClose={() => setSheet(null)}
           onSaved={(data, text) => {
@@ -72,6 +100,7 @@ function PourCard({
   onData,
   onToast,
   onChange,
+  onOrder,
 }: {
   booking: PourBooking;
   photos: PourPhoto[];
@@ -80,6 +109,7 @@ function PourCard({
   onData: (data: ConcreteData) => void;
   onToast: (text: string, error?: boolean) => void;
   onChange: () => void;
+  onOrder?: (orderId: string) => void;
 }) {
   // A tick shows at once; the website catches up (and a failure puts it back).
   const [ticking, setTicking] = useState<Record<string, boolean>>({});
@@ -135,6 +165,14 @@ function PourCard({
           Worked out: {b.estimate.result.parts.map((p) => `${p.label} ${p.m3.toLocaleString("en-GB", { maximumFractionDigits: 1 })} m³`).join(" + ")}
         </p>
       )}
+      {b.po &&
+        (onOrder ? (
+          <button type="button" className={es.poLink} onClick={() => onOrder(b.po!.id)}>
+            {poWords(b.po)}
+          </button>
+        ) : (
+          <p className={es.worked}>{poWords(b.po)}</p>
+        ))}
       {b.order?.sentAt && <p className={es.sent}>Order sent to {b.order.supplier || "the concrete company"} {when(b.order.sentAt)}</p>}
       <button type="button" className={es.orderButton} onClick={() => setOrdering(true)}>
         {b.order?.sentAt ? "Order on WhatsApp again" : "Order on WhatsApp"}
@@ -232,13 +270,29 @@ function PouredCard({
   );
 }
 
-function BookSheet({ info, booking, onClose, onSaved }: { info: PourInfo; booking: PourBooking | null; onClose: () => void; onSaved: (data: ConcreteData, text: string) => void }) {
+function BookSheet({
+  info,
+  office,
+  booking,
+  onClose,
+  onSaved,
+}: {
+  info: PourInfo;
+  /** The office: the price of a m³ for the pour's purchase order. */
+  office: boolean;
+  booking: PourBooking | null;
+  onClose: () => void;
+  onSaved: (data: ConcreteData, text: string) => void;
+}) {
   const today = ghanaDay();
   const [day, setDay] = useState(booking?.day ?? today);
   const [what, setWhat] = useState(booking?.what ?? "");
   const [checklist, setChecklist] = useState<string>(booking ? "" : (info.checklists[0]?.id ?? "none"));
   const [mix, setMix] = useState(booking?.mix ?? "");
   const [volume, setVolume] = useState(booking?.volume ? String(booking.volume) : "");
+  // The pour's purchase order (9 Nov 2026): its price per m³ as on the order, else as it last cost.
+  const startPrice = booking?.po && !booking.po.done ? booking.po.price : (info.concretePrice?.price ?? null);
+  const [price, setPrice] = useState(startPrice ? String(startPrice) : "");
   const [curer, setCurer] = useState(booking?.curer?.id ?? info.curers.find((c) => /albert/i.test(c.name))?.id ?? info.curers[0]?.id ?? "");
   const [saving, setSaving] = useState(false);
   const [armed, setArmed] = useState(false);
@@ -272,6 +326,16 @@ function BookSheet({ info, booking, onClose, onSaved }: { info: PourInfo; bookin
     setEst(startEstimate(est.kind, null, floors, what, volume));
   }
 
+  const priceNumber = price.trim() ? Number(price.replace(/,/g, "").trim()) : null;
+  const volumeNumber = volume.trim() ? Number(volume.replace(/,/g, "").trim()) : null;
+  const poTotal = priceNumber && priceNumber > 0 && volumeNumber && volumeNumber > 0 ? Math.round(priceNumber * volumeNumber * 100) / 100 : null;
+  const po = booking?.po && !booking.po.done ? booking.po : null;
+  const poNote = !office
+    ? ""
+    : poTotal
+      ? `${po ? `Purchase order ${po.number} changes with it` : "A purchase order is made with it"}: ${volumeNumber} m³ × ${money(priceNumber!)} = ${money(poTotal)}${!po && info.concretePrice && priceNumber === info.concretePrice.price ? ` (${info.concretePrice.from})` : ""}.`
+      : `Type the m³ ordered and the price of a m³: a purchase order is made with it.`;
+
   const run = async (body: Record<string, unknown>, text: string) => {
     setSaving(true);
     setError("");
@@ -286,8 +350,9 @@ function BookSheet({ info, booking, onClose, onSaved }: { info: PourInfo; bookin
     if (!what.trim()) return setError("Say what's being poured, e.g. 1st floor slab.");
     if (est && result?.problem) return setError(`${result.problem} (Or tap ${KIND_NAMES[est.kind]} again to book it without working it out.)`);
     if (est && !result) return setError("Still getting the building's measurements: try again in a moment.");
+    if (office && price.trim() && !(priceNumber && priceNumber > 0)) return setError("Type the price of a m³ in GH₵, e.g. 1513.");
     const estimateField = est ? { estimate: estimateToSend(est) } : booking?.estimate ? { estimate: null } : {};
-    const fields = { day, what: what.trim(), mix: mix.trim(), volume: volume.trim(), curer, ...estimateField };
+    const fields = { day, what: what.trim(), mix: mix.trim(), volume: volume.trim(), curer, ...estimateField, ...(office && priceNumber ? { price: priceNumber } : {}) };
     void (booking ? run({ action: "change", id: booking.id, ...fields }, "Pour changed") : run({ action: "book", ...fields, checklist }, `Booked: ${what.trim()}, ${pourDayWords(day).toLowerCase()}`));
   };
 
@@ -334,6 +399,17 @@ function BookSheet({ info, booking, onClose, onSaved }: { info: PourInfo; bookin
             <input className={styles.input} inputMode="decimal" value={volume} onChange={(e) => setVolume(e.target.value)} placeholder="e.g. 24" disabled={saving} />
           </label>
         </div>
+        {office && (
+          <>
+            <label className={styles.label} htmlFor="bp-price">
+              Price of a m³ (GH₵)
+            </label>
+            <input id="bp-price" className={styles.input} inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="e.g. 1513" disabled={saving} />
+            <p className={styles.sheetNote} aria-live="polite">
+              {poNote}
+            </p>
+          </>
+        )}
         {info.curers.length > 0 && (
           <>
             <label className={styles.label} htmlFor="bp-curer">

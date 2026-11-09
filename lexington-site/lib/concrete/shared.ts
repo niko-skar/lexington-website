@@ -104,6 +104,8 @@ export interface PourBooking {
   /** The concrete worked out from the building when it was booked (lib/concrete/estimate.ts), and the order sent. */
   estimate?: SavedEstimate | null;
   order?: SavedOrder | null;
+  /** The office's: the pour's purchase order (lib/concrete/pourOrder.ts), made with the booking. */
+  po?: { id: string; number: string; amount: number; price: number | null; status: string; done: boolean } | null;
 }
 
 export interface PourInfo {
@@ -119,6 +121,8 @@ export interface PourInfo {
   curingDays: number;
   /** The last order sent to the concrete company: its company, number, first truck, pump and contact start the next. */
   orderDefaults?: Partial<PourOrder> | null;
+  /** The office's: a m³ of ready-mix as it last cost, and where that's from (a new pour's purchase order starts from it). */
+  concretePrice?: { price: number; from: string } | null;
 }
 
 import type { PourOrder, SavedEstimate, SavedOrder } from "./estimate";

@@ -9,14 +9,14 @@ export const maxDuration = 120;
 /** GET /api/concrete: the trucks and pour days of the last four months, and the pours booked; ?id= one truck (while its waybill is read). */
 export async function GET(request: Request): Promise<Response> {
   try {
-    await requireTodoUser(false, "concrete");
+    const me = await requireTodoUser(false, "concrete");
     const id = new URL(request.url).searchParams.get("id");
     if (id) {
       const truck = await getTruck(id);
       if (!truck) throw new TodoError(404, "That truck isn't on the list any more.");
       return Response.json({ truck }, { headers: { "Cache-Control": "no-store" } });
     }
-    return Response.json(await concreteData(), { headers: { "Cache-Control": "no-store" } });
+    return Response.json(await concreteData(me), { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     return errorResponse(error);
   }
@@ -27,7 +27,7 @@ export async function POST(request: Request): Promise<Response> {
   try {
     const me = await requireTodoUser(false, "concrete");
     const truck = await createTruck(me, await readJson(request));
-    return Response.json({ truck, pours: await listPours() }, { status: 201 });
+    return Response.json({ truck, pours: await listPours(me) }, { status: 201 });
   } catch (error) {
     return errorResponse(error);
   }

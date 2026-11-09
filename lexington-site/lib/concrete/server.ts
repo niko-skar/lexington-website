@@ -84,8 +84,8 @@ export async function listConcrete(): Promise<ConcreteData> {
 }
 
 /** The concrete page's data: the trucks and pour days, and the pours booked (lib/concrete/pours.ts). */
-export async function concreteData(): Promise<ConcreteData> {
-  const [all, pours] = await Promise.all([listConcrete(), listPours()]);
+export async function concreteData(me?: TodoMe | null): Promise<ConcreteData> {
+  const [all, pours] = await Promise.all([listConcrete(), listPours(me)]);
   return { ...all, pours };
 }
 

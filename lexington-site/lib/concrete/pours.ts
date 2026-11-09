@@ -8,6 +8,7 @@ import { ghanaDay } from "@/lib/store/shared";
 import { cleanText, TodoError } from "@/lib/todo/server";
 import type { TodoMe } from "@/lib/todo/shared";
 import { checkEstimate, checkOrder, dropEstimate, lastOrder, pourEstimates, saveEstimate, saveOrderDoc } from "./estimateServer";
+import { cancelPourOrder, concretePrice, pourOrders, syncPourOrder, type PourForOrder } from "./pourOrder";
 import { pourCubes, pourPhotos } from "./pourFiles";
 import type { PourBooking, PourCheck, PourInfo, Truck } from "./shared";
 
@@ -120,9 +121,10 @@ function toBooking(id: string, p: RcPour, state: State): PourBooking {
 
 /**
  * The bookings to show, with their photos and cubes: every pour still before its pour, those poured in the last five
- * weeks (their cube tests run to 28 days), and, up to two months, those with cube results still missing.
+ * weeks (their cube tests run to 28 days), and, up to two months, those with cube results still missing. The office
+ * also gets each one's purchase order and the price per m³ a new one starts from (money stays off site logins).
  */
-export async function listPours(): Promise<PourInfo> {
+export async function listPours(me?: TodoMe | null): Promise<PourInfo> {
   const state = await rollcallState();
   const today = ghanaDay();
   const recent = addDays(today, -35);
@@ -135,17 +137,55 @@ export async function listPours(): Promise<PourInfo> {
   const pours = listed
     .filter((b) => b.phase === "check" || (b.poured ?? "") >= recent || missing(b.id))
     .sort((a, b) => a.day.localeCompare(b.day) || a.what.localeCompare(b.what));
-  const [photos, estimates, orderDefaults] = await Promise.all([pourPhotos(pours.map((b) => b.id)), pourEstimates(pours.map((b) => b.id)), lastOrder()]);
+  const office = me?.kind === "admin";
+  const ids = pours.map((b) => b.id);
+  const [photos, estimates, orderDefaults, pos, concrete] = await Promise.all([
+    pourPhotos(ids),
+    pourEstimates(ids),
+    lastOrder(),
+    office ? pourOrders(ids) : Promise.resolve(null),
+    office ? concretePrice() : Promise.resolve(null),
+  ]);
   const cubes = allCubes.filter((c) => pours.some((b) => b.id === c.pourId));
   return {
-    pours: pours.map((b) => ({ ...b, estimate: estimates.get(b.id)?.estimate ?? null, order: estimates.get(b.id)?.order ?? null })),
+    pours: pours.map((b) => ({
+      ...b,
+      estimate: estimates.get(b.id)?.estimate ?? null,
+      order: estimates.get(b.id)?.order ?? null,
+      ...(pos ? { po: pos.get(b.id) ?? null } : {}),
+    })),
     photos,
     cubes,
     checklists: state.checklists.map((c) => ({ id: c.id, name: c.name })),
     curers: curers(state),
     curingDays: state.curing.days,
     orderDefaults,
+    ...(office ? { concretePrice: concrete } : {}),
   };
+}
+
+/** The m³ of a booking as order lines: its estimate's parts when they add up to what's ordered, else the whole as one. */
+function linesOf(what: string, volume: number | null, parts: Array<{ label: string; order: number }> | null | undefined): Array<{ label: string; m3: number }> {
+  if (!volume || !(volume > 0)) return [];
+  if (parts?.length && Math.abs(parts.reduce((s, p) => s + p.order, 0) - volume) < 0.05) return parts.map((p) => ({ label: p.label, m3: p.order }));
+  return [{ label: what, m3: volume }];
+}
+
+function cleanPrice(value: unknown): number | null {
+  if (value === null || value === undefined || value === "") return null;
+  const n = Math.round(Number(String(value).replace(/,/g, "")) * 100) / 100;
+  if (!(n > 0 && n <= 1_000_000)) throw new TodoError(400, "Type the price of a m³ in GH₵, e.g. 1513.");
+  return n;
+}
+
+/** The pour's purchase order made or changed with it; a failure there never undoes the booking (it shows without one). */
+async function keepOrderWith(me: TodoMe, pour: PourForOrder, lines: Array<{ label: string; m3: number }>, price: number | null, opts?: { supplier?: string; ordered?: boolean }) {
+  try {
+    const fallbackPrice = price ? null : ((await concretePrice())?.price ?? null);
+    await syncPourOrder(me, pour, lines, price, { ...opts, fallbackPrice });
+  } catch (error) {
+    console.error("[concrete] the pour's purchase order:", error instanceof Error ? error.message : error);
+  }
 }
 
 /**
@@ -232,8 +272,10 @@ export async function bookPour(me: TodoMe, body: Data): Promise<string> {
   const mix = cleanText(body.mix, 30, "mix");
   const volume = cleanVolume(body.volume);
   const worker = cleanCurer(body.curer, state);
-  // The concrete worked out from the building (checked before anything is booked).
+  // The concrete worked out from the building (checked before anything is booked), and the price of a m³ for its
+  // purchase order: the office's as typed, else as it last cost.
   const estimate = body.estimate ? await checkEstimate(body.estimate) : null;
+  const typedPrice = me.kind === "admin" ? cleanPrice(body.price) : null;
   const list = typeof body.checklist === "string" ? state.checklists.find((c) => c.id === body.checklist) : undefined;
   const items: Record<string, Item> = {};
   if (list) {
@@ -268,6 +310,8 @@ export async function bookPour(me: TodoMe, body: Data): Promise<string> {
     await markPoured(me.name, after, id, day);
     for (const t of trucks.filter((x) => !x.pourId)) await getBuyersClient().patch(t._id).set({ pourId: id }).commit();
   }
+  // Its purchase order, with the cost put in (Niko, 9 Nov 2026).
+  await keepOrderWith(me, { id, what, day, mix }, linesOf(what, volume, estimate?.result.parts), typedPrice);
   return id;
 }
 
@@ -282,12 +326,16 @@ export async function changePour(me: TodoMe, id: unknown, body: Data): Promise<v
   const change: Data = { what, planned: day, mix: cleanText(body.mix ?? p.mix ?? "", 30, "mix"), volume: cleanVolume(body.volume === undefined ? p.volume : body.volume), worker: cleanCurer(body.curer ?? p.worker, state) };
   // The concrete worked out: changed, taken off (null), or left as it was (not sent).
   const estimate = body.estimate ? await checkEstimate(body.estimate) : null;
+  const typedPrice = me.kind === "admin" ? cleanPrice(body.price) : null;
   await saveRollcallRecord(me.name, "pours", key, "update", change);
   if (estimate) await saveEstimate(me, key, estimate);
   else if (body.estimate === null) await dropEstimate(key);
   const fresh = await rollcallState();
   await syncPourDay(day, fresh);
   if (p.planned && p.planned !== day) await syncPourDay(p.planned, fresh);
+  // Its purchase order follows (the price as typed, else the order's own).
+  const parts = estimate ? estimate.result.parts : body.estimate === null ? null : (await pourEstimates([key])).get(key)?.estimate?.result.parts;
+  await keepOrderWith(me, { id: key, what, day, mix: String(change.mix) }, linesOf(what, change.volume as number | null, parts), typedPrice);
 }
 
 /**
@@ -306,6 +354,11 @@ export async function orderPour(me: TodoMe, id: unknown, value: unknown): Promis
   if (p.phase === "check" && Object.keys(change).length) {
     await saveRollcallRecord(me.name, "pours", key, "update", change);
     if (p.planned) await syncPourDay(p.planned);
+  }
+  // Its purchase order: as ordered (each part's m³), and placed with the concrete company.
+  if (p.phase === "check" && p.planned) {
+    const pour = { id: key, what: p.what ?? "", day: p.planned, mix: String(change.mix ?? p.mix ?? "") };
+    await keepOrderWith(me, pour, order.lines.map((l) => ({ label: l.label, m3: l.m3 })), null, { supplier: order.supplier, ordered: true });
   }
   await saveOrderDoc(me, key, order);
 }
@@ -330,6 +383,12 @@ export async function deletePour(me: TodoMe, id: unknown): Promise<void> {
   if (p.phase !== "check") throw new TodoError(409, "It's poured already: take it off on the roll call if it never happened.");
   await saveRollcallRecord(me.name, "pours", key, "update", { deleted: true });
   if (p.planned) await syncPourDay(p.planned);
+  // Its purchase order is cancelled too (unless something billed or paid it).
+  try {
+    await cancelPourOrder(me, key);
+  } catch (error) {
+    console.error("[concrete] cancelling the pour's purchase order:", error instanceof Error ? error.message : error);
+  }
 }
 
 /** Poured on a day: from then on it cures like any other pour, as the roll call's own "Poured" button does. */

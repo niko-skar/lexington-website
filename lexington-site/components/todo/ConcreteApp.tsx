@@ -92,6 +92,7 @@ export function ConcreteApp({
   openTruck,
   startedOffline,
   fresh,
+  onOrder,
 }: {
   me: TodoMe;
   active: boolean;
@@ -101,6 +102,8 @@ export function ConcreteApp({
   openTruck?: string;
   startedOffline: boolean;
   fresh: boolean;
+  /** A pour's purchase order opened in Finance (the office). */
+  onOrder?: (orderId: string) => void;
 }) {
   const [data, setData] = useState<ConcreteData>(initial ?? { trucks: [], days: [] });
   const [loaded, setLoaded] = useState(initial !== null);
@@ -325,7 +328,7 @@ export function ConcreteApp({
               </div>
             ))}
 
-            {data.pours && <BookedPours info={data.pours} me={me} onData={putData} onToast={(text, error) => showToast({ text, tone: error ? "error" : undefined })} />}
+            {data.pours && <BookedPours info={data.pours} me={me} onData={putData} onToast={(text, error) => showToast({ text, tone: error ? "error" : undefined })} onOrder={onOrder} />}
             {data.pours && <PouredPours info={data.pours} me={me} onData={putData} onToast={(text, error) => showToast({ text, tone: error ? "error" : undefined })} />}
 
             {!days.includes(today) && (

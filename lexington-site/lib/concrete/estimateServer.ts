@@ -224,6 +224,7 @@ export function checkOrder(value: unknown): PourOrder {
     notes: cleanText(value.notes, 400, "note"),
     mix: cleanText(value.mix, 30, "mix"),
     lines,
+    ref: cleanText(value.ref, 20, "order number"),
   };
 }
 

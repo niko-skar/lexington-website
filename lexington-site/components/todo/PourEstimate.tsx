@@ -635,6 +635,8 @@ export function PourOrderSheet({
     notes: saved?.notes ?? "",
     mix: b.mix,
     lines: savedLines ?? fresh,
+    // Our purchase order's number for their invoice (the office sees it; site logins don't).
+    ref: b.po && !b.po.done ? b.po.number : "",
   }));
   const [m3Text, setM3Text] = useState<string[]>(() => form.lines.map((l) => (l.m3 ? String(l.m3) : "")));
   const [error, setError] = useState("");

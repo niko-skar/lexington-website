@@ -32,7 +32,7 @@ export async function POST(request: Request): Promise<Response> {
     else if (body.action === "cubeResult") await setCubeResult(me, body);
     else if (body.action === "cubeForm") await attachCubeForm(me, body);
     else throw new TodoError(400, "That button isn't known.");
-    return Response.json(await concreteData());
+    return Response.json(await concreteData(me));
   } catch (error) {
     return errorResponse(error);
   }

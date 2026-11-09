@@ -659,6 +659,8 @@ export interface PourOrder {
   /** The strength ordered, as the pour has it ("35mpa", "C35"). */
   mix: string;
   lines: OrderLine[];
+  /** Our purchase order's number (PO-0012), for their invoice; the office's. */
+  ref?: string;
 }
 /** The order as last sent or copied. */
 export interface SavedOrder extends PourOrder {
@@ -701,6 +703,7 @@ export function orderText(day: string, order: PourOrder): string {
   const strength = strengthWords(order.mix);
   const out = [`Hello ${order.supplier.trim() || "there"}, a concrete order for The Lexington, please:`, ""];
   out.push(`*${longDay(day)}*${order.time ? `, first truck on site at ${timeWords(order.time)}` : ""}`);
+  if (order.ref?.trim()) out.push(`Our order number: ${order.ref.trim()} (please put it on your invoice)`);
   if (strength) out.push(`Strength: ${strength}`);
   for (const l of lines) out.push(`${l.label}: *${m3Words(l.m3)}*${l.slump.trim() ? `, slump ${l.slump.trim()}` : ""}`);
   if (lines.length > 1) out.push(`Total: *${m3Words(Math.round(total * 10) / 10)}*`);
@@ -718,9 +721,10 @@ export function whatsappLink(phone: string, text: string): string {
   return `https://wa.me/${digits}?text=${encodeURIComponent(text)}`;
 }
 
-/** The order's lines from a booking: its estimate's parts, else one line for the whole pour. */
+/** The order's lines from a booking: its estimate's parts while they add up to its m³ ordered, else one line for the whole pour. */
 export function orderLines(what: string, volume: number | null, parts: EstimatePart[] | null | undefined): OrderLine[] {
-  if (parts?.length) return parts.map((p) => ({ label: p.label, m3: p.order || p.m3, slump: p.slump }));
+  const sum = (parts ?? []).reduce((s, p) => s + (p.order || p.m3), 0);
+  if (parts?.length && (volume === null || Math.abs(sum - volume) < 0.05)) return parts.map((p) => ({ label: p.label, m3: p.order || p.m3, slump: p.slump }));
   const slump = /slab|beam|stair/i.test(what) ? SLAB_SLUMP : /column|wall|lift/i.test(what) ? COLUMN_SLUMP : "";
   return [{ label: what, m3: volume ?? 0, slump }];
 }

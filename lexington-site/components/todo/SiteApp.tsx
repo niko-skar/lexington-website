@@ -504,6 +504,14 @@ export function SiteApp({
             openTruck={openTruck}
             startedOffline={startedOffline && first === "concrete"}
             fresh={first === "concrete"}
+            onOrder={
+              me.sections.includes("orders")
+                ? (orderId) => {
+                    setOrderAsk({ orderId, at: Date.now() });
+                    go("orders");
+                  }
+                : undefined
+            }
           />
         </div>
       )}

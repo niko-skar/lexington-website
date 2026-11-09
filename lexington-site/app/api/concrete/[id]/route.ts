@@ -12,7 +12,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     const { id } = await params;
     const body = await readJson(request);
     const truck = await changeTruck(me, id, body);
-    return Response.json({ truck, ...("pourId" in body ? { pours: await listPours() } : {}) });
+    return Response.json({ truck, ...("pourId" in body ? { pours: await listPours(me) } : {}) });
   } catch (error) {
     return errorResponse(error);
   }
@@ -25,7 +25,7 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
     const { id } = await params;
     await deleteTruck(me, id);
     // Its pour may be back before its pour.
-    return Response.json({ ok: true, pours: await listPours() });
+    return Response.json({ ok: true, pours: await listPours(me) });
   } catch (error) {
     return errorResponse(error);
   }
