@@ -22,6 +22,9 @@ const money = (n: number) => `GH₵ ${Math.round(n).toLocaleString("en-GH")}`;
 const clock = (iso: string) => new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 const longDay = (day: string) => new Date(`${day}T12:00:00Z`).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short" });
 const shortDay = (day: string) => new Date(`${day}T12:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+/** "Fri 13 Nov". */
+const weekDay = (day: string) => new Date(`${day}T12:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+const nextDay = (day: string) => new Date(Date.parse(`${day}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10);
 
 function rollcallTile(r: NonNullable<DashboardData["rollcall"]>): Tile {
   // The latest check that has marks, else "not marked yet".
@@ -96,14 +99,36 @@ function tiles(d: DashboardData, unread: number): Tile[] {
     });
   }
   if (d.workers && !d.rollcall) out.push({ section: "workers", name: "Workers", big: `${d.workers.active} on the books`, small: "names, numbers, ID photos" });
+  // Concrete: a pour day's trucks as they come; any other day, the next pour booked: its day and the m³ ordered
+  // (Niko, 9 Nov 2026), what it is, and whether its order went to the concrete company.
   if (d.concrete) {
     const c = d.concrete;
-    const load = `${c.trucks} ${c.trucks === 1 ? "truck" : "trucks"} · ${Math.round(c.volume * 10) / 10} m³`;
-    out.push(
-      c.day === d.today
-        ? { section: "concrete", name: "Concrete", big: load, small: c.flagged ? `${c.flagged} to look at` : "all on time today", tone: c.flagged ? "warn" : "ok" }
-        : { section: "concrete", name: "Concrete", big: "No trucks today", small: c.day ? `last pour ${shortDay(c.day)}: ${load}` : "photo each waybill on pour days" }
-    );
+    const m3 = (v: number) => `${Math.round(v * 10) / 10} m³`;
+    const load = `${c.trucks} ${c.trucks === 1 ? "truck" : "trucks"} · ${m3(c.volume)}`;
+    const n = c.next ?? null;
+    const tomorrow = nextDay(d.today);
+    if (c.day === d.today) {
+      out.push({
+        section: "concrete",
+        name: "Concrete",
+        big: load,
+        small: [c.ordered ? `of ${m3(c.ordered)} ordered` : "", c.flagged ? `${c.flagged} to look at` : "all on time today"].filter(Boolean).join(" · "),
+        tone: c.flagged ? "warn" : "ok",
+      });
+    } else if (n) {
+      const when = n.day === d.today ? "Today" : n.day === tomorrow ? "Tomorrow" : weekDay(n.day);
+      // The day and the m³ each stay in one piece on a phone (it wraps between them).
+      const whole = (s: string) => s.replace(/ /g, " ");
+      out.push({
+        section: "concrete",
+        name: "Concrete",
+        big: `${whole(when)} · ${whole(n.volume ? m3(n.volume) : "m³ not set")}`,
+        small: [n.what.join(" + "), n.mix, n.sent ? "order sent" : "order not sent yet"].filter(Boolean).join(" · "),
+        tone: !n.sent && n.day <= tomorrow ? "warn" : undefined,
+      });
+    } else {
+      out.push({ section: "concrete", name: "Concrete", big: "No pour booked", small: c.day ? `last pour ${shortDay(c.day)}: ${load}` : "book the next pour in Concrete" });
+    }
   }
   // What's spent is the Spending tile's (and Expenses is on the bar): this one only while the bank's payments wait to be
   // completed there.

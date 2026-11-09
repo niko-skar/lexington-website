@@ -3,6 +3,7 @@ import "server-only";
 import { unreadCount } from "@/lib/alerts/notify";
 import { listBuyers } from "@/lib/buyers/payments";
 import { cashflowNow } from "@/lib/cashflow/server";
+import { nextBooked } from "@/lib/concrete/pours";
 import { listConcrete } from "@/lib/concrete/server";
 import { daySummary, truckFlags, trucksOn } from "@/lib/concrete/shared";
 import { rollcallAccess } from "@/lib/rollcall/shared";
@@ -44,8 +45,18 @@ export interface DashboardData {
   suppliers?: { owed: number; open: number; overdue: number; nextDue: string | null; suppliers: number };
   /** Spending: this month and this year, QuickBooks' and the app's own not there yet (lib/spending). */
   spending?: { month: number; year: number; read: string | null };
-  /** Concrete trucks: today's (with how many don't add up), else the last pour day's. */
-  concrete?: { day: string | null; trucks: number; volume: number; flagged: number };
+  /**
+   * Concrete trucks: today's (with how many don't add up, and the m³ ordered for today), else the last pour day's; and
+   * the next pour booked (its day, m³ ordered, what, mix, order sent or not).
+   */
+  concrete?: {
+    day: string | null;
+    trucks: number;
+    volume: number;
+    flagged: number;
+    ordered?: number | null;
+    next?: { day: string; volume: number | null; what: string[]; mix: string; sent: boolean } | null;
+  };
   /** Steel: the tons bought, installed and in stock; what the steel benders were paid and are owed (below 0: paid ahead); the buys with no tons. */
   steel?: { bought: number; installed: number; stock: number; paid: number; owed: number; unknown: number };
   /** The roll call isn't moved in from its Claude page yet (one tile says so instead of three empty ones). */
@@ -178,13 +189,13 @@ async function rollcallParts(me: TodoMe, today: string): Promise<Pick<DashboardD
 }
 
 async function concretePart(today: string): Promise<NonNullable<DashboardData["concrete"]>> {
-  const { trucks, days } = await listConcrete();
+  const [{ trucks, days }, next] = await Promise.all([listConcrete(), nextBooked(today)]);
   const day = trucks.some((t) => t.day === today) ? today : (trucks[0]?.day ?? null);
-  if (!day) return { day: null, trucks: 0, volume: 0, flagged: 0 };
+  if (!day) return { day: null, trucks: 0, volume: 0, flagged: 0, ordered: null, next };
   const list = trucksOn(trucks, day);
   const pour = days.find((d) => d.day === day);
   const sum = daySummary(list);
-  return { day, trucks: sum.trucks, volume: sum.volume, flagged: list.filter((t) => truckFlags(t, trucks, pour).some((f) => f.tone === "bad")).length };
+  return { day, trucks: sum.trucks, volume: sum.volume, flagged: list.filter((t) => truckFlags(t, trucks, pour).some((f) => f.tone === "bad")).length, ordered: pour?.volume ?? null, next };
 }
 
 async function buyersPart(): Promise<NonNullable<DashboardData["buyers"]>> {

@@ -148,6 +148,30 @@ export async function listPours(): Promise<PourInfo> {
   };
 }
 
+/**
+ * The next pour booked, for the Home tile (Niko, 9 Nov 2026: "change this tile for the next booked concrete order date
+ * and amount"): the soonest day from today with pours booked and not poured yet, the m³ ordered for them, what they
+ * are, the mix, and whether each one's order has gone to the concrete company.
+ */
+export async function nextBooked(today: string): Promise<{ day: string; volume: number | null; what: string[]; mix: string; sent: boolean } | null> {
+  const rows = await readRollcallRecords(["pours"]);
+  const booked = rows
+    .map((r) => ({ id: r.key, p: r.data as RcPour }))
+    .filter(({ p }) => !p.deleted && p.phase === "check" && typeof p.planned === "string" && p.planned >= today);
+  if (!booked.length) return null;
+  const day = booked.map(({ p }) => p.planned as string).sort()[0];
+  const those = booked.filter(({ p }) => p.planned === day);
+  const volumes = those.map(({ p }) => p.volume).filter((v): v is number => typeof v === "number");
+  const orders = await pourEstimates(those.map(({ id }) => id));
+  return {
+    day,
+    volume: volumes.length ? Math.round(volumes.reduce((a, b) => a + b, 0) * 10) / 10 : null,
+    what: those.map(({ p }) => p.what ?? "").filter(Boolean),
+    mix: [...new Set(those.map(({ p }) => (p.mix ?? "").trim()).filter(Boolean))].join(" / "),
+    sent: those.every(({ id }) => !!orders.get(id)?.order?.sentAt),
+  };
+}
+
 /* ---------- the concrete day: what's poured and the mix ordered, from the day's bookings ---------- */
 
 async function syncPourDay(day: string, state?: State): Promise<void> {
