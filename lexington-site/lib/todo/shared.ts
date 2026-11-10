@@ -46,7 +46,7 @@ export interface TodoTask {
  * messages). To-do, Store, Expenses and Alerts are drawn in the one page; the roll call's three parts
  * (Today, Payday, Workers) are its own page, /todo/rollcall (lib/rollcall).
  */
-export const SECTIONS = ["todo", "store", "expenses", "alerts", "rollcall", "payday", "workers", "concrete", "buyers", "steel", "suppliers", "spending", "orders", "cashflow", "analysis"] as const;
+export const SECTIONS = ["todo", "store", "expenses", "alerts", "rollcall", "payday", "workers", "concrete", "buyers", "steel", "suppliers", "spending", "orders", "cashflow", "analysis", "asbuilt"] as const;
 export type Section = (typeof SECTIONS)[number];
 /**
  * Concrete (the trucks on pour days, lib/concrete, 30 Oct 2026), Buyers (their payments and receipts,
@@ -55,9 +55,11 @@ export type Section = (typeof SECTIONS)[number];
  * lib/suppliers, the office only, 2 Nov 2026) and Spending (QuickBooks' transactions with the app's own, by cost type,
  * floor, supplier and month, lib/spending, the office only, 3 Nov 2026) are drawn in the one page too, and so are the
  * purchase orders (lib/orders) and the cash flow (lib/cashflow), the office only, 5 Nov 2026, and the analysis (how
- * the money's going and every material bought, counted, lib/analysis, the office only, 7 Nov 2026).
+ * the money's going and every material bought, counted, lib/analysis, the office only, 7 Nov 2026). The as-built
+ * record (every floor as drawn and as measured, lib/asbuilt, the office only) moved in from the admin pages on
+ * 10 Nov 2026 (Niko: "put the as build dimensions for the building onto the app as well").
  */
-export const PAGE_SECTIONS = ["todo", "store", "expenses", "alerts", "concrete", "buyers", "steel", "suppliers", "spending", "orders", "cashflow", "analysis"] as const;
+export const PAGE_SECTIONS = ["todo", "store", "expenses", "alerts", "concrete", "buyers", "steel", "asbuilt", "suppliers", "spending", "orders", "cashflow", "analysis"] as const;
 export type PageSection = (typeof PAGE_SECTIONS)[number];
 export const isPageSection = (section: string): section is PageSection => (PAGE_SECTIONS as readonly string[]).includes(section);
 /**
@@ -67,7 +69,7 @@ export const isPageSection = (section: string): section is PageSection => (PAGE_
 export const FINANCE_SECTIONS = ["expenses", "orders", "suppliers", "cashflow", "spending", "analysis", "buyers"] as const;
 export type FinanceSection = (typeof FINANCE_SECTIONS)[number];
 export const isFinance = (section: string): section is FinanceSection => (FINANCE_SECTIONS as readonly string[]).includes(section);
-export type SiteSection = Exclude<Section, "expenses" | "alerts" | "buyers" | "steel" | "suppliers" | "spending" | "orders" | "cashflow" | "analysis">;
+export type SiteSection = Exclude<Section, "expenses" | "alerts" | "buyers" | "steel" | "suppliers" | "spending" | "orders" | "cashflow" | "analysis" | "asbuilt">;
 export const SITE_SECTIONS: readonly SiteSection[] = ["todo", "store", "rollcall", "payday", "workers", "concrete"];
 const HREF: Record<Section, string> = {
   todo: "/todo/jobs",
@@ -85,6 +87,7 @@ const HREF: Record<Section, string> = {
   orders: "/todo/orders",
   cashflow: "/todo/cashflow",
   analysis: "/todo/analysis",
+  asbuilt: "/todo/asbuilt",
 };
 export const sectionHref = (section: Section) => HREF[section];
 const SECTION_NAMES: Record<Section, string> = {
@@ -103,6 +106,7 @@ const SECTION_NAMES: Record<Section, string> = {
   orders: "Orders",
   cashflow: "Cash flow",
   analysis: "Analysis",
+  asbuilt: "As-built",
 };
 export const sectionName = (section: Section) => SECTION_NAMES[section];
 /** Where a sign-in from the app may send someone back to. */
@@ -121,6 +125,7 @@ export const APP_PAGES: readonly string[] = [
   "/todo/orders",
   "/todo/cashflow",
   "/todo/analysis",
+  "/todo/asbuilt",
 ];
 
 /** Who is using the page: Niko and other admins add and delete; a "site" login (the foreman) ticks. */

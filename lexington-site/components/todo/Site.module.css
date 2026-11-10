@@ -2136,3 +2136,25 @@
     background: var(--x-bg);
   }
 }
+
+/* ---------- the as-built record in the app (AsBuiltPart.tsx, 10 Nov 2026) ---------- */
+/* The plan wants the room: as wide as the screen allows on a laptop (the record's own limit is 1480 px). */
+.asbuiltMain {
+  max-width: min(1480px, 100%);
+}
+.bannerButton {
+  margin-left: 6px;
+  padding: 2px 10px;
+  border: 1px solid currentColor;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+}
+@media (max-width: 720px) {
+  .asbuiltMain {
+    padding-left: max(8px, env(safe-area-inset-left, 0px));
+    padding-right: max(8px, env(safe-area-inset-right, 0px));
+  }
+}

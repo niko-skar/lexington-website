@@ -1969,3 +1969,55 @@ textarea.text {
   color: #5a4a46;
   font-variant-numeric: tabular-nums;
 }
+
+/* ---- inside the site app (/todo/asbuilt, 10 Nov 2026) ------------------------------
+   The same record on its own sheet of paper (light in the app's dark mode too), under the
+   app's header and over its bar. */
+
+.inApp {
+  max-width: none;
+  padding: 12px;
+  border: 1px solid var(--stone-lt);
+  border-radius: 12px;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.inApp .top {
+  margin-bottom: 6px;
+}
+
+/* Full screen covers the app's header (20) and bar (30); the panel stays over the plan. */
+.inApp .board.boardFull,
+.inApp .boardPlacing.boardFull {
+  z-index: 45;
+}
+
+@media (min-width: 1000px) {
+  .inApp .panel {
+    top: calc(var(--x-head, 120px) + 12px);
+    max-height: calc(100dvh - var(--x-head, 120px) - 24px);
+  }
+  .inApp.appFull .panel {
+    top: 12px;
+    z-index: 50;
+    max-height: calc(100dvh - 24px);
+  }
+}
+
+@media (max-width: 999px) {
+  .inApp .panel {
+    z-index: 50;
+  }
+}
+
+/* A phone: the line editor's Save bar sits above the app's bar, not under it. */
+@media (max-width: 720px) {
+  .inApp {
+    padding: 8px;
+    border-radius: 10px;
+  }
+  .inApp .lineActions {
+    bottom: calc(66px + env(safe-area-inset-bottom, 0px));
+  }
+}

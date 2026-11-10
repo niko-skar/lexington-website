@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import type { AlertsData } from "@/lib/alerts/shared";
@@ -20,6 +21,7 @@ import { FINANCE_SECTIONS, isFinance, PAGE_SECTIONS, sectionHref, type FinanceSe
 import { AlertsApp } from "./AlertsApp";
 import { AnalysisApp } from "./AnalysisApp";
 import { send, startPolling } from "./api";
+import type { AsBuiltData } from "./AsBuiltPart";
 import { BuyersApp } from "./BuyersApp";
 import { CashflowApp } from "./CashflowApp";
 import { ConcreteApp } from "./ConcreteApp";
@@ -38,6 +40,11 @@ import { SuppliersApp, type BillPayment, type BillPrefill } from "./SuppliersApp
 import { TodoApp } from "./TodoApp";
 import styles from "./Todo.module.css";
 import { useSheetGestures } from "./useSheetGestures";
+
+// The as-built record's screen is big (the plan, its panels): fetched only when the office opens that part.
+const AsBuiltPart = dynamic(() => import("./AsBuiltPart").then((m) => m.AsBuiltPart), { loading: () => null });
+/** Parts read only when they're opened (not quietly after the app opens): the as-built record is big. */
+const ON_OPENING: readonly PageSection[] = ["asbuilt"];
 
 // The whole site app in one page, so moving between To-do, Store and Expenses is instant (Niko,
 // 23 Oct 2026: "its too slow, clicking between things is laggy"). Each part loads once and stays
@@ -59,6 +66,7 @@ export type SiteData = {
   orders?: OrdersPage;
   cashflow?: CashflowPage;
   analysis?: AnalysisData;
+  asbuilt?: AsBuiltData;
 };
 
 // Since 30 Oct 2026 the app opens on its home page (/todo) and the to-do list is /todo/jobs.
@@ -87,6 +95,8 @@ const sectionFrom = (path: string): View | null =>
             ? "cashflow"
           : path.startsWith("/todo/analysis")
             ? "analysis"
+          : path.startsWith("/todo/asbuilt")
+            ? "asbuilt"
           : path.startsWith("/todo/jobs")
           ? "todo"
           : path === "/todo" || path === "/todo/"
@@ -111,6 +121,7 @@ async function load(section: PageSection): Promise<SiteData> {
   if (section === "orders") return { orders: await get("/api/orders") };
   if (section === "cashflow") return { cashflow: await get("/api/cashflow") };
   if (section === "analysis") return { analysis: await get("/api/analysis") };
+  if (section === "asbuilt") return { asbuilt: await get("/api/asbuilt") };
   const [x, s] = await Promise.all([get("/api/expenses"), get("/api/store")]);
   return { expenses: { expenses: x.expenses, items: s.items, arrivals: s.arrivals, pending: x.pending, books: x.books, bills: x.bills, vendors: x.vendors } };
 }
@@ -284,7 +295,7 @@ export function SiteApp({
       // The roll call's page loads in its frame meanwhile, so the first tap on it is instant too.
       if (opensRollcall(me.sections)) setOpened((o) => (o.includes("rollcall") ? o : [...o, "rollcall"]));
       for (const s of PAGE_SECTIONS) {
-        if (!live || s === first || !me.sections.includes(s)) continue;
+        if (!live || s === first || !me.sections.includes(s) || ON_OPENING.includes(s)) continue;
         try {
           const loaded = await load(s);
           if (!live) return;
@@ -525,6 +536,11 @@ export function SiteApp({
             fresh={first === "buyers"}
             tabs={tabs("buyers")}
           />
+        </div>
+      )}
+      {show("asbuilt") && (
+        <div hidden={section !== "asbuilt"}>
+          <AsBuiltPart me={me} active={section === "asbuilt"} initial={data.asbuilt ?? null} startedOffline={startedOffline && first === "asbuilt"} />
         </div>
       )}
       {show("steel") && (

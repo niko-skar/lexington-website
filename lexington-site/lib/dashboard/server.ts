@@ -1,6 +1,7 @@
 import "server-only";
 
 import { unreadCount } from "@/lib/alerts/notify";
+import { floorId, SEED_FLOORS } from "@/lib/asbuilt/store";
 import { listBuyers } from "@/lib/buyers/payments";
 import { cashflowNow } from "@/lib/cashflow/server";
 import { nextBooked } from "@/lib/concrete/pours";
@@ -57,6 +58,8 @@ export interface DashboardData {
     ordered?: number | null;
     next?: { day: string; volume: number | null; what: string[]; mix: string; sent: boolean } | null;
   };
+  /** The as-built record: the floor last worked on, how many of its columns and lift cores are measured, and when it last changed. */
+  asbuilt?: { floor: string | null; measured: number; total: number; last: string | null };
   /** Steel: the tons bought, installed and in stock; what the steel benders were paid and are owed (below 0: paid ahead); the buys with no tons. */
   steel?: { bought: number; installed: number; stock: number; paid: number; owed: number; unknown: number };
   /** The roll call isn't moved in from its Claude page yet (one tile says so instead of three empty ones). */
@@ -198,6 +201,18 @@ async function concretePart(today: string): Promise<NonNullable<DashboardData["c
   return { day, trucks: sum.trucks, volume: sum.volume, flagged: list.filter((t) => truckFlags(t, trucks, pour).some((f) => f.tone === "bad")).length, ordered: pour?.volume ?? null, next };
 }
 
+/** The as-built record at a glance: one small read (the counts are worked out where the record is kept). */
+async function asbuiltPart(): Promise<NonNullable<DashboardData["asbuilt"]>> {
+  const taped = `defined(actual) || defined(w) || defined(h) || defined(gx) || defined(gy) || count(edges) > 0`;
+  const rows = await getBuyersClient().fetch<Array<{ name: string; order: number; total: number; measured: number; last: string | null }>>(
+    `*[_type == "asbuiltFloor" && _id in $ids]{ name, order, "total": count(columns) + count(cores), "measured": count(columns[${taped}]) + count(cores[${taped}]), "last": log[-1].at }`,
+    { ids: SEED_FLOORS.map((f) => floorId(f.key)) }
+  );
+  // The floor changed last (where the measuring is); none changed yet: the lowest with anything measured.
+  const worked = rows.filter((r) => r.last).sort((a, b) => (b.last ?? "").localeCompare(a.last ?? ""))[0] ?? rows.filter((r) => r.measured > 0).sort((a, b) => a.order - b.order)[0];
+  return worked ? { floor: worked.name, measured: worked.measured, total: worked.total, last: worked.last } : { floor: null, measured: 0, total: 0, last: null };
+}
+
 async function buyersPart(): Promise<NonNullable<DashboardData["buyers"]>> {
   const { buyers } = await listBuyers();
   const latest = buyers
@@ -237,7 +252,7 @@ async function ordersPart(): Promise<NonNullable<DashboardData["orders"]>> {
 export async function getDashboard(me: TodoMe): Promise<DashboardData> {
   const today = ghanaDay();
   const has = (s: string) => me.sections.includes(s as never);
-  const [todo, store, expenses, unread, rollcall, concrete, buyers, suppliers, steel, spending, cashflow, orders] = await Promise.all([
+  const [todo, store, expenses, unread, rollcall, concrete, buyers, suppliers, steel, spending, cashflow, orders, asbuilt] = await Promise.all([
     has("todo") ? settle(todoPart(me, today)) : undefined,
     has("store") ? settle(storePart(me, today)) : undefined,
     has("expenses") ? settle(expensesPart(today)) : undefined,
@@ -250,6 +265,7 @@ export async function getDashboard(me: TodoMe): Promise<DashboardData> {
     has("spending") ? settle(spendingPart(today)) : undefined,
     has("cashflow") ? settle(cashflowPart()) : undefined,
     has("orders") ? settle(ordersPart()) : undefined,
+    has("asbuilt") ? settle(asbuiltPart()) : undefined,
   ]);
   return {
     today,
@@ -261,6 +277,7 @@ export async function getDashboard(me: TodoMe): Promise<DashboardData> {
     ...(concrete ? { concrete } : {}),
     ...(buyers ? { buyers } : {}),
     ...(steel ? { steel } : {}),
+    ...(asbuilt ? { asbuilt } : {}),
     ...(suppliers ? { suppliers } : {}),
     ...(spending ? { spending } : {}),
     ...(cashflow ? { cashflow } : {}),

@@ -41,6 +41,12 @@ interface Props {
   initialTab: AsBuiltTab;
   /** False on a preview or local copy: changes go to a separate test record. */
   realRecord: boolean;
+  /**
+   * Inside the site app (/todo/asbuilt, 10 Nov 2026): the app's own header names it, it sits on its sheet of paper
+   * under that header and over the app's bar, and it only keeps the address in step while it's the part on screen.
+   */
+  inApp?: boolean;
+  active?: boolean;
 }
 
 interface Settings {
@@ -67,7 +73,7 @@ function newVoidKey(): string {
   return `v${Array.from(bytes, (b) => (b % 36).toString(36)).join("")}`;
 }
 
-export function AsBuiltApp({ initialFloors, initialKey, initialTab, realRecord }: Props) {
+export function AsBuiltApp({ initialFloors, initialKey, initialTab, realRecord, inApp = false, active = true }: Props) {
   const [floors, setFloors] = useState(initialFloors);
   const [floorKey, setFloorKey] = useState(initialKey);
   const [tab, setTab] = useState<AsBuiltTab>(initialTab);
@@ -75,6 +81,8 @@ export function AsBuiltApp({ initialFloors, initialKey, initialTab, realRecord }
   const [saving, setSaving] = useState(0);
   const [placing, setPlacing] = useState(false);
   const [full, setFull] = useState(false);
+  // Another part of the site app came on screen: the plan leaves full screen (it holds the page still).
+  if (!active && full) setFull(false);
   const [settings, setSettings] = useLocalSetting<Settings>("lexington.asbuilt.settings", DEFAULT_SETTINGS);
   const toast = useToast();
   const floorRow = useRef<HTMLElement>(null);
@@ -109,13 +117,15 @@ export function AsBuiltApp({ initialFloors, initialKey, initialTab, realRecord }
     };
   }, [full]);
 
-  // Keep the address in step, so a refresh (or a saved link) opens the same floor and tab.
+  // Keep the address in step, so a refresh (or a saved link) opens the same floor and tab (in the site app only
+  // while this is the part on screen: the address is another part's otherwise).
   useEffect(() => {
+    if (!active) return;
     const url = new URL(window.location.href);
     url.searchParams.set("floor", floorKey);
     url.searchParams.set("view", tab);
     window.history.replaceState(null, "", url.toString());
-  }, [floorKey, tab]);
+  }, [floorKey, tab, active]);
 
   const saveRef = useRef<SaveFn | null>(null);
 
@@ -324,7 +334,7 @@ export function AsBuiltApp({ initialFloors, initialKey, initialTab, realRecord }
   ) : null;
 
   return (
-    <div className={full ? `${s.app} ${s.appFull}` : s.app}>
+    <div className={[s.app, full ? s.appFull : "", inApp ? s.inApp : ""].filter(Boolean).join(" ")}>
       {!realRecord && (
         <div className={s.devBanner}>
           Test copy: anything saved here is kept apart from the real record, so try things freely.
@@ -332,7 +342,8 @@ export function AsBuiltApp({ initialFloors, initialKey, initialTab, realRecord }
       )}
 
       <div className={s.top}>
-        <h1 className={s.title}>As-built record</h1>
+        {/* In the site app its header says "As-built" already. */}
+        {inApp ? <span className={s.title} /> : <h1 className={s.title}>As-built record</h1>}
         <span className={s.saving} aria-live="polite">
           {saving > 0 ? "Saving…" : ""}
         </span>

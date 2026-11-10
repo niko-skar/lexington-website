@@ -183,6 +183,15 @@ function tiles(d: DashboardData, unread: number): Tile[] {
       tone: x.late ? "warn" : undefined,
     });
   }
+  // The as-built record (10 Nov 2026): the floor being measured and how far it's got.
+  if (d.asbuilt) {
+    const x = d.asbuilt;
+    out.push(
+      x.floor
+        ? { section: "asbuilt", name: "As-built", big: `${x.floor.replace(/ floor$/i, "")}: ${x.measured} of ${x.total} measured`, small: `plan, measurements and set-out${x.last ? ` · last change ${shortDay(x.last.slice(0, 10))}` : ""}` }
+        : { section: "asbuilt", name: "As-built", big: "Every floor's plan", small: "nothing measured yet: the drawings' figures" }
+    );
+  }
   if (d.steel) {
     const x = d.steel;
     const t = (n: number) => `${Math.round(n * 10) / 10} t`;
