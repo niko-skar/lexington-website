@@ -312,9 +312,9 @@ async function FeedPanel({ conn }: { conn: QboConnection }) {
         </label>
 
         <label className={crm.field}>
-          <span>Every marketing event (Event entry) is booked to</span>
+          <span>Marketing (Event entries, and anything with the Marketing cost type) is booked to</span>
           <select name="eventAccount" defaultValue={pick(s.eventAccount, guess.eventAccount) ?? ""}>
-            <option value="">Choose the account for marketing events</option>
+            <option value="">Choose the account for marketing</option>
             {otherAccounts.map((a) => (
               <option key={a.id} value={a.id}>
                 {a.name} ({a.type})

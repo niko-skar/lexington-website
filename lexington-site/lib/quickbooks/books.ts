@@ -52,6 +52,11 @@ export function areasWith(floors: readonly string[], locations: readonly BookNam
   return [...first, ...body];
 }
 
+/** The Marketing cost type, or one under it ("Marketing:Ads"): booked to the marketing account, not the building. */
+export function isMarketingClass(name: string | null | undefined): boolean {
+  return !!name && /^marketing(:|$)/i.test(name.trim());
+}
+
 /** A class by its name in the books (any case), or its parent's when the books have no such sub-class. */
 export function classNamed(name: string, classes: readonly BookNamed[]): BookNamed | null {
   const find = (n: string) => classes.find((c) => c.name.toLowerCase() === n.toLowerCase()) ?? null;

@@ -7,7 +7,7 @@ import { CATEGORIES, materialWords, METHODS, receiptFileName, todayISO, vatParts
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
 import { BILL_PREFIX, EXPENSE_PREFIX, QBO_FEED_ID, QBO_GONE_PREFIX } from "@/lib/site/ids";
 
-import { classNamed, locationForArea, TRADE_CLASS } from "./books";
+import { classNamed, isMarketingClass, locationForArea, TRADE_CLASS } from "./books";
 import { BOOK_LISTS_STALE_MS, cachedBookLists, saveBookLists } from "./booksCache";
 import { fetchCompany, qboApi, QboError } from "./client";
 import { loadConnection, writeLog, type QboConnection } from "./store";
@@ -266,10 +266,15 @@ export function planFor(x: FeedDoc, s: FeedSettings, lists: Lists, conn: QboConn
   const name = (id: string | null) => lists.accounts.find((a) => a.id === id)?.name ?? "?";
   const noTax = conn.country && conn.country !== "US" ? { GlobalTaxCalculation: "NotApplicable" } : {};
   const event = x.forWho === "Event";
+  // The class is the cost type: the one chosen on the entry (found again by its name if it was renamed).
+  const chosen = x.costClass ? (lists.classes.find((c) => c.id === x.costClass?.id) ?? classNamed(x.costClass.name, lists.classes)) : null;
+  // Marketing (Niko, 10 Nov 2026: "new ads typed in the app go to Advertising"): a marketing event, or anything
+  // with the Marketing cost type, is booked to the marketing account, not to the building.
+  const marketing = event || isMarketingClass(chosen?.name ?? x.costClass?.name);
   // The location is the building's stage or floor: the entry's floor when the books have it as a location
   // ("Ground floor" -> "Ground Floor", "Foundations"), else the stage set on the QuickBooks page (wages, and
-  // entries for the whole building). It isn't one for a marketing event.
-  const locationId = event ? null : (locationForArea(x.floor, lists.locations)?.id ?? s.location ?? null);
+  // entries for the whole building). Marketing has none.
+  const locationId = marketing ? null : (locationForArea(x.floor, lists.locations)?.id ?? s.location ?? null);
   const location = locationId ? { DepartmentRef: { value: locationId } } : {};
   const hash = contentHash(x);
   const ref = x.ref ?? x.id;
@@ -336,15 +341,14 @@ export function planFor(x: FeedDoc, s: FeedSettings, lists: Lists, conn: QboConn
     };
   }
 
-  const costAccount = event ? s.eventAccount : s.expenseAccount;
+  const costAccount = marketing ? s.eventAccount : s.expenseAccount;
   if (!costAccount || !lists.accounts.some((a) => a.id === costAccount)) {
-    return { send: false, reason: event ? "Choose the account for marketing events" : "Choose the cost account for site expenses", needsYou: true };
+    return { send: false, reason: marketing ? "Choose the account for marketing" : "Choose the cost account for site expenses", needsYou: true };
   }
   const category = (x.category ?? "Other") as Category;
-  // The class is the cost type: the one chosen on the entry (found again by its name if it was renamed), else
-  // the one set for its kind on the QuickBooks page. Marketing has none.
-  const chosen = x.costClass ? (lists.classes.find((c) => c.id === x.costClass?.id) ?? classNamed(x.costClass.name, lists.classes)) : null;
-  const classId = event ? null : (chosen?.id ?? s.classFor[category] ?? null);
+  // No cost type chosen: the one set for its kind on the QuickBooks page; a marketing event takes Marketing (every
+  // entry has a cost type: Niko, 7 Nov 2026).
+  const classId = chosen?.id ?? (event ? (classNamed("Marketing", lists.classes)?.id ?? null) : (s.classFor[category] ?? null));
   // Wages from Payday: a line per payment, each on the class of the worker's trade.
   const lineClass = (group: string) => classNamed(TRADE_CLASS[group] ?? "", lists.classes)?.id ?? classId;
   const paid = x.payday?.lines?.length ? x.payday : null;
@@ -675,10 +679,14 @@ async function loadBills(ids: string[] | null): Promise<BillDoc[]> {
 
 /** A bill as QuickBooks takes it: owed to its vendor, its cost on the site's cost account with its class and location. */
 export function billPlan(b: BillDoc, s: FeedSettings, lists: Lists, conn: QboConnection): Plan {
-  const costAccount = s.expenseAccount;
-  if (!costAccount || !lists.accounts.some((a) => a.id === costAccount)) return { send: false, reason: "Choose the cost account for site expenses", needsYou: true };
   const chosen = b.costClass ? (lists.classes.find((c) => c.id === b.costClass?.id) ?? classNamed(b.costClass.name, lists.classes)) : null;
-  const locationId = locationForArea(b.floor, lists.locations)?.id ?? s.location ?? null;
+  // A marketing bill (the Marketing cost type) is owed for marketing, not for the building: no floor either.
+  const marketing = isMarketingClass(chosen?.name ?? b.costClass?.name);
+  const costAccount = marketing ? s.eventAccount : s.expenseAccount;
+  if (!costAccount || !lists.accounts.some((a) => a.id === costAccount)) {
+    return { send: false, reason: marketing ? "Choose the account for marketing" : "Choose the cost account for site expenses", needsYou: true };
+  }
+  const locationId = marketing ? null : (locationForArea(b.floor, lists.locations)?.id ?? s.location ?? null);
   const noTax = conn.country && conn.country !== "US" ? { GlobalTaxCalculation: "NotApplicable" } : {};
   const appRef = b.appRef ?? b.id;
   const hash = createHash("sha1")
