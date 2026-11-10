@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { CashflowPage } from "@/lib/cashflow/server";
-import { addDays, forecast, MAX_WEEKS, REPEATS, WEEKS, type CashBuyer, type CashItem, type CashPlan, type CashWeek, type Currency, type Repeat, type WageWeek } from "@/lib/cashflow/shared";
+import { addDays, forecast, MAX_WEEKS, REPEATS, WEEKS, type CashBuyer, type CashItem, type CashPlan, type CashWeek, type Currency, type Forecast, type Repeat, type WageWeek } from "@/lib/cashflow/shared";
 import { money } from "@/lib/expenses/shared";
 import type { TodoMe } from "@/lib/todo/shared";
 import { AccessSheet } from "./AccessSheet";
@@ -212,12 +212,7 @@ export function CashflowApp({
                   : `Never below ${money(f.lowest?.amount ?? f.now)} in the next ${weeks} weeks${f.lowest && f.lowest.amount < f.now ? ` (lowest ${dayWords(f.lowest.date, today)})` : ""}.`}
               </p>
             )}
-            {f.now !== null && (
-              <WeekChart
-                weeks={f.weeks}
-                onPick={(start) => document.getElementById(`week-${start}`)?.scrollIntoView({ behavior: "smooth", block: "start" })}
-              />
-            )}
+            {f.now !== null && <Charts f={f} now={f.now} today={today} />}
 
             <MoneyComing data={data} leo={f.leo} rate={f.rate} unconverted={f.unconverted} onSheet={setSheet} />
 
@@ -419,18 +414,74 @@ function MoneyComing({
   );
 }
 
-/* ---------- the chart: the money at the end of each week ---------- */
+/* ---------- the charts: the money at the end of each week, as expected and if no money comes in ---------- */
 
-function WeekChart({ weeks, onPick }: { weeks: CashWeek[]; onPick: (start: string) => void }) {
+// Side by side (one under the other on a phone), on the same scale so a column's height means the same money in both:
+// with the money expected (Leo, the buyers, the rest), and with none of it (Niko, 10 Nov 2026: "a chart next to this
+// one that shows my positions if no cash comes in, in other words my entire exposure").
+function Charts({ f, now, today }: { f: Forecast; now: number; today: string }) {
+  const weeks = f.weeks;
+  const expected = weeks.map((w) => w.close ?? 0);
+  const bare = weeks.map((w) => w.closeNoIn ?? 0);
+  const span: [number, number] = [Math.min(0, ...expected, ...bare), Math.max(0, ...expected, ...bare)];
+  const last = weeks[weeks.length - 1].end;
+  const end = f.noIn.end ?? now;
+  const lowest = f.lowest?.amount ?? now;
+  const pick = (start: string) => document.getElementById(`week-${start}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  return (
+    <div className={fin.charts}>
+      <figure className={fin.chartBox}>
+        <figcaption>
+          <b>With the money you expect</b>
+          <span className={lowest < 0 ? fin.below : undefined}>
+            {lowest < 0 ? `${money(-lowest)} short at the lowest${f.lowest ? ` (${short(f.lowest.date)})` : ""}` : `Never below ${money(lowest)}`}
+          </span>
+          <small>Leo, the buyers and the other money in, all counted.</small>
+        </figcaption>
+        <WeekChart weeks={weeks} values={expected} span={span} name="The money at the end of each week, with the money you expect" tip="at the end of the week" onPick={pick} />
+      </figure>
+      <figure className={fin.chartBox}>
+        <figcaption>
+          <b>If no money comes in</b>
+          <span className={end < 0 ? fin.below : undefined}>{end < 0 ? `${money(-end)} short by ${short(last)}: your whole exposure` : `${money(end)} still left on ${short(last)}`}</span>
+          <small>
+            {money(f.totals.out)} to pay in these {weeks.length} weeks, {money(now)} in hand
+            {f.noIn.short ? `. Short from ${dayWords(f.noIn.short.date, today)}` : ""}
+            {f.later.out ? `. After these weeks, ${money(f.later.out)} more to pay` : ""}.
+          </small>
+        </figcaption>
+        <WeekChart weeks={weeks} values={bare} span={span} name="The money at the end of each week if no money comes in" tip="at the end of the week if no money comes in" onPick={pick} />
+      </figure>
+    </div>
+  );
+}
+
+function WeekChart({
+  weeks,
+  values,
+  span: [low, high],
+  name,
+  tip,
+  onPick,
+}: {
+  weeks: CashWeek[];
+  /** A figure for each week. */
+  values: number[];
+  /** The least and the most on the scale (both charts' together, so they read alike). */
+  span: [number, number];
+  name: string;
+  /** What a column's figure is, after it: "at the end of the week". */
+  tip: string;
+  onPick: (start: string) => void;
+}) {
   const W = 340;
   const H = 150;
   const left = 34;
   const right = 4;
   const top = 18;
   const bottom = 22;
-  const values = weeks.map((w) => w.close ?? 0);
-  const hi = Math.max(0, ...values);
-  const lo = Math.min(0, ...values);
+  const hi = Math.max(0, high, ...values);
+  const lo = Math.min(0, low, ...values);
   const span = hi - lo || 1;
   const max = hi + span * 0.12;
   const min = lo < 0 ? lo - span * 0.14 : 0;
@@ -444,11 +495,12 @@ function WeekChart({ weeks, onPick }: { weeks: CashWeek[]; onPick: (start: strin
     const step = 10 ** Math.floor(Math.log10(Math.abs(v)));
     return Math.sign(v) * Math.floor(Math.abs(v) / step) * step;
   };
-  const ticks = [...new Set([0, round(hi), ...(lo < 0 ? [round(lo)] : [])])];
+  // (A line too near the one at nothing is left out: their figures would sit on each other.)
+  const ticks = [...new Set([0, round(hi), ...(lo < 0 ? [round(lo)] : [])])].filter((t) => t === 0 || Math.abs(y(t) - zero) >= 12);
   const lowest = values.indexOf(Math.min(...values));
   const every = weeks.length > 8 ? 2 : 1;
   return (
-    <svg className={fin.chart} viewBox={`0 0 ${W} ${H}`} role="img" aria-label="The money at the end of each week (the weeks below say each in full)">
+    <svg className={fin.chart} viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${name} (the weeks below say each in full)`}>
       {ticks.map((t) => (
         <g key={t}>
           <line x1={left} x2={W - right} y1={y(t)} y2={y(t)} className={t === 0 ? fin.chartZero : fin.chartGrid} />
@@ -471,7 +523,7 @@ function WeekChart({ weeks, onPick }: { weeks: CashWeek[]; onPick: (start: strin
         const label = i === lowest || i === weeks.length - 1;
         return (
           <g key={w.start} onClick={() => onPick(w.start)} className={fin.chartColumn}>
-            <title>{`${short(w.start)}–${short(w.end)}: ${money(v)} at the end of the week`}</title>
+            <title>{`${short(w.start)}–${short(w.end)}: ${money(v)} ${tip}`}</title>
             <rect x={left + band * i} y={top - 12} width={band} height={H - top - bottom + 12} fill="transparent" />
             {Math.abs(zero - end) > 0.5 && <path d={d} className={v < 0 ? fin.chartBarBelow : fin.chartBar} />}
             {label && (

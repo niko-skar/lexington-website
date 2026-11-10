@@ -260,14 +260,62 @@
   background: var(--x-ok-soft);
   color: var(--x-ok);
 }
+/* The two charts: one under the other on a phone, side by side on a laptop. */
+.charts {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.chartBox {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  min-width: 0;
+  margin: 0;
+  padding: 12px 14px 6px;
+  border: 1px solid var(--x-line);
+  border-radius: 10px;
+  background: var(--x-surface);
+}
+.chartBox figcaption {
+  display: grid;
+  gap: 2px;
+  align-content: start;
+}
+.chartBox figcaption b {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--x-muted);
+}
+.chartBox figcaption span {
+  font-size: 16px;
+  font-weight: 600;
+}
+.chartBox figcaption span.below {
+  color: var(--x-warn);
+}
+.chartBox figcaption small {
+  font-size: 13px;
+  color: var(--x-muted);
+}
 .chart {
   display: block;
   width: 100%;
   /* A phone's size on a laptop too: drawn bigger, its columns and words would only grow. */
   max-width: 560px;
   height: auto;
-  margin-bottom: 14px;
   overflow: visible;
+}
+@media (min-width: 1024px) {
+  .charts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  /* Their captions the same height, so the two charts' lines at nothing sit level. */
+  .chartBox {
+    grid-template-rows: 1fr auto;
+  }
 }
 .chartBar {
   fill: var(--x-accent);

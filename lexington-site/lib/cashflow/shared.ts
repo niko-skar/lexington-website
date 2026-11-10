@@ -141,6 +141,8 @@ export interface CashWeek {
   in: number;
   /** The money at the end of the week (null: not typed yet). */
   close: number | null;
+  /** The same if no money comes in: the money now less everything that's gone out by then. */
+  closeNoIn: number | null;
 }
 
 export interface Forecast {
@@ -151,6 +153,12 @@ export interface Forecast {
   lowest: { amount: number; date: string } | null;
   /** The first day it goes below nothing, and how far. */
   short: { date: string; amount: number } | null;
+  /**
+   * If no money comes in (Niko, 10 Nov 2026: "my positions if no cash comes in, in other words my entire exposure"):
+   * Leo's, the buyers' and every other money in left out, only what goes out counted. The first day it's below nothing,
+   * and the money at the end of the weeks shown (below nothing: that much to find).
+   */
+  noIn: { short: { date: string; amount: number } | null; end: number | null };
   /** The weekly wages counted: the figure typed, else the average; and the weeks behind the average. */
   wages: { weekly: number | null; typed: boolean; average: number | null; used: WageWeek[] };
   /** Leo's weekly money counted, the same way, and the day it's counted on. */
@@ -345,11 +353,19 @@ export function forecast(input: CashflowInputs, weeks: number = WEEKS): Forecast
 
   const list: CashWeek[] = [];
   let close = now;
+  // If no money comes in: the same days, only what goes out.
+  let bare = now;
+  let bareShort: Forecast["short"] = now !== null && now < 0 ? { date: today, amount: now } : null;
   for (let w = 0; w < n; w++) {
     const monday = addDays(start, w * 7);
     const sunday = addDays(monday, 6);
     const mine = counted.filter((i) => i.date >= monday && i.date <= sunday);
     if (close !== null && mine.length) close = mine[mine.length - 1].after;
+    for (const i of mine) {
+      if (bare === null || i.direction !== "out") continue;
+      bare = round(bare - i.amount);
+      if (!bareShort && bare < 0) bareShort = { date: i.date, amount: bare };
+    }
     list.push({
       start: monday,
       end: sunday,
@@ -357,6 +373,7 @@ export function forecast(input: CashflowInputs, weeks: number = WEEKS): Forecast
       out: round(mine.filter((i) => i.direction === "out").reduce((s, i) => s + i.amount, 0)),
       in: round(mine.filter((i) => i.direction === "in").reduce((s, i) => s + i.amount, 0)),
       close,
+      closeNoIn: bare,
     });
   }
   return {
@@ -364,6 +381,7 @@ export function forecast(input: CashflowInputs, weeks: number = WEEKS): Forecast
     weeks: list,
     lowest,
     short,
+    noIn: { short: bareShort, end: bare },
     wages: { weekly, typed: input.wages.typed !== null, average, used },
     leo: { weekly: leoWeekly, typed: input.leo.typed !== null, average: leoAvg.average, used: leoAvg.used, day: input.leo.day },
     rate,
