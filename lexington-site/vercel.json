@@ -48,6 +48,22 @@
     {
       "path": "/api/cron/concrete-cubes",
       "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/cron/rollcall-reminder",
+      "schedule": "45 7 * * 1-6"
+    },
+    {
+      "path": "/api/cron/rollcall-reminder",
+      "schedule": "58 12 * * 1-5"
+    },
+    {
+      "path": "/api/cron/rollcall-reminder",
+      "schedule": "45 16 * * 1-5"
+    },
+    {
+      "path": "/api/cron/rollcall-reminder",
+      "schedule": "0 14 * * 6"
     }
   ]
 }

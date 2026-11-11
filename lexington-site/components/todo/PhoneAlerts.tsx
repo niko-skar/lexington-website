@@ -198,7 +198,7 @@ export function OfficePhoneCard({ phone, toast }: { phone: PhoneAlerts; toast: T
     body = (
       <>
         <p>
-          <b>On for this phone.</b> New enquiries, reservations, Facebook leads, messages handed to you, jobs the foreman adds and problems buzz it.
+          <b>On for this phone.</b> New enquiries, reservations, Facebook leads, messages handed to you, jobs the foreman adds, problems and the roll call reminders buzz it.
         </p>
         <div className={alerts.phoneButtons}>
           <button
@@ -227,7 +227,7 @@ export function OfficePhoneCard({ phone, toast }: { phone: PhoneAlerts; toast: T
   else
     body = (
       <>
-        <p>Get a buzz on this phone for new enquiries, reservations, Facebook leads, messages handed to you, jobs the foreman adds and problems.</p>
+        <p>Get a buzz on this phone for new enquiries, reservations, Facebook leads, messages handed to you, jobs the foreman adds, problems and the roll call reminders.</p>
         <div className={alerts.phoneButtons}>
           <button
             type="button"
