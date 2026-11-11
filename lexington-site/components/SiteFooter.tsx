@@ -83,6 +83,7 @@ export async function SiteFooter() {
                 Message on WhatsApp
               </a>
               <a href={`mailto:${siteSettings.contactEmail}`}>{siteSettings.contactEmail}</a>
+              <Link href="/visit">Book a Site Visit</Link>
               <Link href="/reserve">Reserve a Unit</Link>
             </div>
           </div>

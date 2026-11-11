@@ -11,6 +11,7 @@ import type { ConcreteData } from "@/lib/concrete/shared";
 import type { BankDebit, Expense } from "@/lib/expenses/shared";
 import type { SteelData } from "@/lib/expenses/steel";
 import type { OrdersPage } from "@/lib/orders/shared";
+import type { VisitsData } from "@/lib/siteVisits/shared";
 import type { SpendingData } from "@/lib/spending/shared";
 import type { OpenBill, SuppliersPage } from "@/lib/suppliers/shared";
 import type { BookLists } from "@/lib/quickbooks/books";
@@ -38,6 +39,7 @@ import { SteelApp } from "./SteelApp";
 import { StoreApp } from "./StoreApp";
 import { SuppliersApp, type BillPayment, type BillPrefill } from "./SuppliersApp";
 import { TodoApp } from "./TodoApp";
+import { VisitsApp } from "./VisitsApp";
 import styles from "./Todo.module.css";
 import { useSheetGestures } from "./useSheetGestures";
 
@@ -67,6 +69,7 @@ export type SiteData = {
   cashflow?: CashflowPage;
   analysis?: AnalysisData;
   asbuilt?: AsBuiltData;
+  visits?: VisitsData;
 };
 
 // Since 30 Oct 2026 the app opens on its home page (/todo) and the to-do list is /todo/jobs.
@@ -97,6 +100,8 @@ const sectionFrom = (path: string): View | null =>
             ? "analysis"
           : path.startsWith("/todo/asbuilt")
             ? "asbuilt"
+          : path.startsWith("/todo/visits")
+            ? "visits"
           : path.startsWith("/todo/jobs")
           ? "todo"
           : path === "/todo" || path === "/todo/"
@@ -122,6 +127,7 @@ async function load(section: PageSection): Promise<SiteData> {
   if (section === "cashflow") return { cashflow: await get("/api/cashflow") };
   if (section === "analysis") return { analysis: await get("/api/analysis") };
   if (section === "asbuilt") return { asbuilt: await get("/api/asbuilt") };
+  if (section === "visits") return { visits: await get("/api/site-visits") };
   const [x, s] = await Promise.all([get("/api/expenses"), get("/api/store")]);
   return { expenses: { expenses: x.expenses, items: s.items, arrivals: s.arrivals, pending: x.pending, books: x.books, bills: x.bills, vendors: x.vendors } };
 }
@@ -419,6 +425,17 @@ export function SiteApp({
             phone={phone}
             startedOffline={startedOffline && first === "todo"}
             fresh={first === "todo"}
+          />
+        </div>
+      )}
+      {show("visits") && (
+        <div hidden={section !== "visits"}>
+          <VisitsApp
+            me={me}
+            active={section === "visits"}
+            initial={data.visits ?? null}
+            startedOffline={startedOffline && first === "visits"}
+            fresh={first === "visits"}
           />
         </div>
       )}

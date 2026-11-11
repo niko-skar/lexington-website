@@ -84,6 +84,9 @@ export default async function HomePage() {
           <Button href="/residences" variant="clay">
             View Residences
           </Button>
+          <Button href="/visit" variant="outline-light">
+            Book a Site Visit
+          </Button>
           <Button href="/reserve" variant="outline-light">
             Reserve a Unit
           </Button>
@@ -243,9 +246,12 @@ export default async function HomePage() {
               Flexible self-finance and mortgage payment plans are available,
               with early-payment discounts of up to 15%.
             </p>
-            <div style={{ marginTop: 32 }}>
+            <div style={{ marginTop: 32, display: "flex", flexWrap: "wrap", gap: 12, justifyContent: "center" }}>
               <Button href="/reserve" variant="clay">
                 Start Your Reservation
+              </Button>
+              <Button href="/visit" variant="outline-dark">
+                Book a Site Visit
               </Button>
             </div>
           </Reveal>

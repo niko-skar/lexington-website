@@ -1,0 +1,251 @@
+/* Site visits in the site app (/todo/visits, 11 Nov 2026). Colours come from .app in Todo.module.css. */
+
+.tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.tool {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--x-line);
+  border-radius: 8px;
+  background: var(--x-surface);
+  color: var(--x-ink);
+  font-size: 15px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.section {
+  margin-bottom: 18px;
+}
+
+.dayTitle {
+  margin: 4px 0 8px;
+  font-family: var(--x-display);
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.card {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 10px;
+  padding: 14px;
+  border: 1px solid var(--x-line);
+  border-radius: 10px;
+  background: var(--x-surface);
+}
+
+.cardDone {
+  opacity: 0.75;
+}
+
+.top {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+}
+
+.time {
+  flex: none;
+  font-family: var(--x-num);
+  font-size: 19px;
+  font-weight: 600;
+  color: var(--x-accent);
+}
+
+.name {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--x-display);
+  font-size: 21px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.status {
+  flex: none;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--x-bg);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--x-muted);
+}
+
+.s_booked {
+  background: var(--x-accent-soft);
+  color: var(--x-accent);
+}
+
+.s_came {
+  color: var(--x-ok);
+}
+
+.s_missed {
+  color: var(--x-amber);
+}
+
+.s_cancelled {
+  text-decoration: line-through;
+}
+
+.line {
+  margin: 0;
+  font-size: 15px;
+}
+
+.note {
+  margin: 0;
+  font-size: 15px;
+  font-style: italic;
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 0;
+  font-size: 14px;
+  color: var(--x-muted);
+  overflow-wrap: anywhere;
+}
+
+.link {
+  color: var(--x-accent);
+  font-weight: 600;
+}
+
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.buttons > * {
+  flex: 1 1 auto;
+}
+
+.primary,
+.secondary {
+  min-height: 46px;
+  padding: 0 14px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.primary {
+  flex: 1;
+  border: 0;
+  background: var(--x-accent);
+  color: var(--x-accent-ink);
+}
+
+.secondary {
+  border: 1px solid var(--x-line);
+  background: var(--x-bg);
+  color: var(--x-ink);
+}
+
+.past {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.past li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--x-surface);
+  font-size: 15px;
+}
+
+.dayChips {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  margin-bottom: 8px;
+}
+
+.dayChips > button {
+  flex: none;
+}
+
+.hours {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: 8px;
+  margin: 6px 0 12px;
+}
+
+.hour {
+  display: grid;
+  gap: 2px;
+  justify-items: center;
+  min-height: 56px;
+  padding: 6px 4px;
+  border: 1px solid var(--x-line);
+  border-radius: 8px;
+  background: var(--x-surface);
+  color: var(--x-ink);
+  font-size: 13px;
+}
+
+.hour b {
+  font-family: var(--x-num);
+  font-size: 16px;
+}
+
+.hourBlocked {
+  background: var(--x-bg);
+  color: var(--x-muted);
+  text-decoration: line-through;
+}
+
+.hourBooked {
+  background: var(--x-accent-soft);
+  color: var(--x-accent);
+}
+
+.toastLink {
+  margin-left: 10px;
+  font-weight: 700;
+  color: inherit;
+  text-decoration: underline;
+  white-space: nowrap;
+}
+
+/* A laptop: two columns of cards. */
+@media (min-width: 1280px) {
+  .section {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 14px;
+    align-items: start;
+  }
+  .dayTitle,
+  .past {
+    grid-column: 1 / -1;
+  }
+}

@@ -55,6 +55,13 @@ export default async function PrivacyPage() {
               card or bank details.
             </li>
             <li>
+              <strong>If you book a site visit:</strong> the day and time you
+              pick, your name, phone or WhatsApp number, your email address if
+              you give it, how many of you are coming and any note. We use them
+              to arrange and confirm the visit, to remind you the day before,
+              and to offer you another time if you can&rsquo;t make it.
+            </li>
+            <li>
               <strong>Usage information:</strong> pages visited, device and
               browser type, and approximate location, collected through
               cookies and similar tools such as Google Analytics and the Meta

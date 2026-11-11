@@ -73,6 +73,21 @@ export default async function ContactPage() {
               </div>
 
               <div className={styles.reserveBox}>
+                <div className="eyebrow">Visit the Site</div>
+                <p>
+                  Come and see the building and the homes. Pick a day and a time that suits
+                  you: Monday to Saturday, 8am to 6pm.
+                </p>
+                <Link
+                  href="/visit"
+                  className={`${buttonStyles.btn} ${buttonStyles.brass}`}
+                  style={{ marginTop: 18 }}
+                >
+                  Book a Site Visit
+                </Link>
+              </div>
+
+              <div className={styles.reserveBox}>
                 <div className="eyebrow">Reserve a Unit</div>
                 <p>
                   A minimum $10,000 reservation{feeVatSuffix(vatFrom(siteSettings))} secures

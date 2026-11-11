@@ -74,6 +74,14 @@ const ICONS: Record<NavItem, React.ReactNode> = {
       <path d="M5 13l6 6M9 9l6 6M13 5l6 6" />
     </svg>
   ),
+  // A calendar page: the site visits booked.
+  visits: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M4 6.5h16V20H4z" />
+      <path d="M4 10.5h16M8.5 4v4M15.5 4v4" />
+      <path d="M9 15.5l2 2 4-4" />
+    </svg>
+  ),
   // A plan with a dimension line: the as-built record.
   asbuilt: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

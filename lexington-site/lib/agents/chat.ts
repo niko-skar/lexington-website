@@ -5,9 +5,12 @@ import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import { claudeConfigured, writeWithClaude } from "@/lib/ai/claude";
 import { notifyOwner } from "@/lib/alerts/notify";
 import { firstName, todayISO } from "@/lib/crm";
-import { internationalDigits } from "@/lib/format";
+import { samePerson } from "@/lib/crmMatch";
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
 import { SITE_URL } from "@/lib/seo";
+import { googleMapsUrl } from "@/lib/maps";
+import { VISIT_PLACE, dayLabel, rangeLabel, slotDay, slotFromText, slotLabel, timeLabel, type SlotKey } from "@/lib/siteVisits/shared";
+import { bookVisit, freeVisitSlots } from "@/lib/siteVisits/store";
 import { cardVersion } from "@/lib/unitCard";
 import { NO_VAT, type Vat } from "@/lib/vat";
 
@@ -105,8 +108,11 @@ function graphBase(): string {
 /** Words, or a residence card's picture (by its address on the website). */
 type Outgoing = { text: string } | { image: string };
 
-/** Sends one message on the chat's channel and returns its id. Throws in Meta's words. */
-async function send(thread: ChatThread, outgoing: Outgoing): Promise<string> {
+/**
+ * Sends one message on the chat's channel and returns its id. Throws in Meta's words. `tag`: a Messenger message that
+ * isn't an answer (the site-visit reminder, an update to an event they booked).
+ */
+async function send(thread: ChatThread, outgoing: Outgoing, tag?: "CONFIRMED_EVENT_UPDATE"): Promise<string> {
   let url: string;
   let token: string;
   let body: Record<string, unknown>;
@@ -130,7 +136,7 @@ async function send(thread: ChatThread, outgoing: Outgoing): Promise<string> {
             attachment: { type: "image", payload: { url: outgoing.image, ...(thread.channel === "messenger" ? { is_reusable: true } : {}) } },
             metadata: AGENT_METADATA,
           };
-    body = { recipient: { id: thread.senderId }, messaging_type: "RESPONSE", message };
+    body = { recipient: { id: thread.senderId }, ...(tag ? { messaging_type: "MESSAGE_TAG", tag } : { messaging_type: "RESPONSE" }), message };
   }
   const response = await fetch(url, {
     method: "POST",
@@ -146,6 +152,29 @@ async function send(thread: ChatThread, outgoing: Outgoing): Promise<string> {
   } | null;
   if (!response.ok || out?.error) throw new Error(out?.error?.message ?? `Meta answered ${response.status}`);
   return out?.message_id ?? out?.messages?.[0]?.id ?? `sent-${newKey()}`;
+}
+
+/**
+ * A message from The Lexington into a chat that isn't an answer: the site-visit reminder the day before
+ * (lib/siteVisits/jobs.ts). Messenger allows it as an update to an event they booked (the CONFIRMED_EVENT_UPDATE tag);
+ * Instagram and WhatsApp only within a day of their last message. Never throws.
+ */
+export async function remindInChat(threadId: string, text: string): Promise<"sent" | "closed" | "failed"> {
+  try {
+    const thread = await readThread(threadId);
+    if (!thread || thread.optedOut) return "closed";
+    const lastTheirs = [...thread.messages].reverse().find((m) => m.from === "them");
+    const open = lastTheirs ? Date.now() - Date.parse(lastTheirs.at) < 23 * 3_600_000 : false;
+    if (!open && thread.channel !== "messenger") return "closed";
+    const mid = await send(thread, { text }, open ? undefined : "CONFIRMED_EVENT_UPDATE");
+    const at = new Date().toISOString();
+    await updateThread(threadId, (t) => ({ ...t, messages: keepLast([...t.messages, { _key: newKey(), from: "agent", text, at, mid }]) }), () => thread);
+    await leadNote(thread.leadId, `${CHANNEL_NAMES[thread.channel]}, assistant (visit reminder): ${text}`);
+    return "sent";
+  } catch (error) {
+    console.error("[chat] the visit reminder couldn't be sent:", error instanceof Error ? error.message : error);
+    return "failed";
+  }
 }
 
 /**
@@ -223,26 +252,7 @@ const keepLast = (messages: ChatMessage[]) => messages.slice(-80);
 
 // ---- the prospect in the CRM --------------------------------------------------------------------------
 
-/** Another prospect who is the same person: by email, else by phone number (written locally or with +233). Oldest first. */
-async function samePerson(email: string, phone: string, notId: string): Promise<string | null> {
-  const buyers = getBuyersClient();
-  if (email.includes("@")) {
-    const id = await buyers.fetch<string | null>(`*[_type == "lead" && lower(email) == $email && _id != $not] | order(_createdAt asc)[0]._id`, {
-      email: email.toLowerCase(),
-      not: notId,
-    });
-    if (id) return id;
-  }
-  const digits = phone ? internationalDigits(phone).replace(/\D/g, "") : "";
-  if (digits.length >= 9) {
-    const withPhones = await buyers.fetch<Array<{ _id: string; phone: string }>>(`*[_type == "lead" && defined(phone) && _id != $not] | order(_createdAt asc){ _id, phone }`, {
-      not: notId,
-    });
-    const same = withPhones.find((l) => internationalDigits(l.phone).replace(/\D/g, "") === digits);
-    if (same) return same._id;
-  }
-  return null;
-}
+// samePerson (by email, else by phone number) lives in lib/crmMatch.ts: the site-visit booking uses it too.
 
 async function ensureLead(thread: ChatThread): Promise<string | null> {
   if (thread.leadId) return thread.leadId;
@@ -388,13 +398,17 @@ interface Drafted {
   out: ChatOut | null;
   /** VAT on the prices, for the card pictures. */
   vat?: Vat;
+  /** A free site-visit hour they said yes to: booked before the reply goes (lib/siteVisits). */
+  book?: SlotKey | null;
 }
 
 // Problems another go can fix: too long, or prices in its words that belong on the cards.
 const STYLE_ONLY = /characters \(at most|quotes prices/;
 
 async function draft(thread: ChatThread, nowMs: number): Promise<Drafted> {
-  const pack = await loadFactPack();
+  // The free site-visit hours of the next days: the assistant may offer and book only these.
+  const free = await freeVisitSlots(nowMs, 8).catch(() => [] as SlotKey[]);
+  const pack = { ...(await loadFactPack()), visits: { free, nowMs } };
   // What they said since the last reply (theirs may be several messages in a row).
   const lastOurs = thread.messages.map((m) => m.from !== "them").lastIndexOf(true);
   const latest = thread.messages.slice(lastOurs + 1).map((m) => m.text).join("\n");
@@ -426,6 +440,13 @@ async function draft(thread: ChatThread, nowMs: number): Promise<Drafted> {
   const topic: HandoverTopic = forced !== "none" ? forced : out?.handover ? out.topic === "none" ? "unknown" : out.topic : problems.length || loop ? "unknown" : "none";
   const handover = topic !== "none";
   if (problems.length || loop) text = holdingMessage(thread.name || out?.name);
+  // A visit it booked must be one of the free hours it was given; otherwise it says which are free that day instead.
+  let book: SlotKey | null = null;
+  if (out?.visit_time?.trim() && !problems.length && !loop) {
+    const slot = slotFromText(out.visit_time);
+    if (slot && free.includes(slot)) book = slot;
+    else text = notFreeText(slot, free);
+  }
   if (!thread.messages.some((m) => m.from === "agent")) text = `${introLine()}\n\n${text}`;
   const reason = loop
     ? "a long run of messages in an hour"
@@ -441,7 +462,57 @@ async function draft(thread: ChatThread, nowMs: number): Promise<Drafted> {
           .map((n) => pack.units.find((u) => u.unitNumber === n))
           .filter((u): u is UnitFact => Boolean(u))
       : [];
-  return { text, cards, handover, topic, reason, out, vat: pack.vat };
+  return { text, cards, handover, topic, reason, out, vat: pack.vat, book };
+}
+
+/** "That time isn't free": the free hours that day (or the next days), else the booking page. */
+function notFreeText(slot: SlotKey | null, free: SlotKey[]): string {
+  const day = slot ? slotDay(slot) : "";
+  const sameDay = free.filter((k) => slotDay(k) === day);
+  const later = free.filter((k) => !day || k > `${day}T23`);
+  const pick = sameDay.length ? sameDay : later.filter((k) => slotDay(k) === slotDay(later[0] ?? ""));
+  if (!pick.length) return `Sorry, that time isn't free. You can pick another time here: ${SITE_URL}/visit`;
+  return `Sorry, ${slot ? slotLabel(slot) : "that time"} isn't free. On ${dayLabel(slotDay(pick[0]))} we can show you the site at ${pick.slice(0, 6).map(timeLabel).join(", ")}. Which suits you?`;
+}
+
+/**
+ * Books the hour the assistant agreed with them (lib/siteVisits/store.ts: their record, Niko's alert, the day before a
+ * reminder in this chat). Answers the words to send: the assistant's reply and the visit's details, or, when the hour
+ * has just gone, the free ones instead. `failed` when it couldn't be booked at all (the chat then goes to Niko).
+ */
+async function bookFromChat(thread: ChatThread, d: Drafted): Promise<{ text: string; failed: boolean }> {
+  const slot = d.book!;
+  const out = d.out;
+  const name = out?.name.trim() || thread.name?.trim() || `${CHANNEL_NAMES[thread.channel]} contact`;
+  const phone = out?.phone.trim() || (thread.channel === "whatsapp" ? `+${thread.senderId}` : "");
+  const email = out?.email.includes("@") ? out.email.trim() : "";
+  const result = await bookVisit({
+    slot,
+    name,
+    phone,
+    email,
+    people: null,
+    interest: out?.interest.trim() ?? "",
+    note: "",
+    source: thread.channel,
+    leadId: thread.leadId ?? null,
+    threadId: thread._id,
+  });
+  if (result.ok) {
+    return {
+      text: `${d.text}\n\nBooked: ${dayLabel(slotDay(slot))}, ${rangeLabel(slot)} (Accra time). We are at ${VISIT_PLACE}: ${googleMapsUrl()}. If you need to change it, just reply here.`,
+      failed: false,
+    };
+  }
+  if (result.reason === "error") return { text: holdingMessage(name), failed: true };
+  const alts = result.alternatives;
+  const day = alts.length ? slotDay(alts[0]) : "";
+  return {
+    text: alts.length
+      ? `Sorry, ${slotLabel(slot)} has just been taken. On ${dayLabel(day)} we can show you the site at ${alts.filter((k) => slotDay(k) === day).map(timeLabel).join(", ")}. Which suits you?`
+      : `Sorry, ${slotLabel(slot)} has just been taken. You can pick another time here: ${SITE_URL}/visit`,
+    failed: false,
+  };
 }
 
 /** Alerts Niko about a chat (an alert in the site app that buzzes his phone), at most once an hour per chat. */
@@ -545,7 +616,16 @@ export async function handleChatEvent(ev: ChatEvent, nowMs = Date.now()): Promis
       for (let round = 0; round < 3; round += 1) {
         const current: ChatThread = (await readThread(id)) ?? thread;
         const seen = current.messages.length;
-        const d = await draft(current, Date.now());
+        const drafted = await draft(current, Date.now());
+        const booking = drafted.book ? await bookFromChat(current, drafted) : null;
+        const d: Drafted = booking
+          ? {
+              ...drafted,
+              text: booking.text,
+              handover: drafted.handover || booking.failed,
+              reason: booking.failed ? "the visit they agreed couldn't be booked: book it by hand" : drafted.reason,
+            }
+          : drafted;
         let mid: string | null = null;
         let sendError: string | null = null;
         try {

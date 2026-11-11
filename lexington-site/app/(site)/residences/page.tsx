@@ -12,6 +12,7 @@ import {
 } from "@/lib/sanity/queries";
 import type { GalleryImage, PackageTiers, SiteSettings, Unit } from "@/lib/sanity/types";
 
+import { Button } from "@/components/Button";
 import { PageIntro } from "@/components/PageIntro";
 import { UnitFinder } from "@/components/UnitFinder";
 import { SplitSection } from "@/components/SplitSection";
@@ -72,6 +73,12 @@ export default async function ResidencesPage() {
             ventilation and generous storage — full drawings are available on
             request for any floor or unit.
           </p>
+          <p>Want to see the building for yourself? Our team shows the site Monday to Saturday, 8am to 6pm.</p>
+          <div style={{ marginTop: 24 }}>
+            <Button href="/visit" variant="clay">
+              Book a Site Visit
+            </Button>
+          </div>
         </SplitSection>
       )}
 

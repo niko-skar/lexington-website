@@ -19,6 +19,7 @@ import { formatUSD } from "@/lib/format";
 import { has3DModel } from "@/lib/models3d";
 import { RESERVATION_FEE_USD, unitTypeFor } from "@/lib/reservation/config";
 import { ESTIMATED_COMPLETION, POSTAL_ADDRESS, SITE_URL } from "@/lib/seo";
+import { freeTimesText, type SlotKey } from "@/lib/siteVisits/shared";
 import { NO_VAT, feeVatSuffix, withVat, type Vat } from "@/lib/vat";
 
 export interface RawFacts {
@@ -98,7 +99,9 @@ export interface FactPack {
   latestUpdate: { date: string; title: string; text: string } | null;
   contact: { phone: string; email: string; office: string };
   address: string;
-  links: { residences: string; reserve: string; gallery: string; amenities: string; progress: string; contact: string };
+  links: { residences: string; reserve: string; gallery: string; amenities: string; progress: string; contact: string; visit: string };
+  /** The site-visit hours free to book now (only the chat assistant is given them: it can book one). */
+  visits?: { free: SlotKey[]; nowMs: number };
 }
 
 const MONTHS = [
@@ -250,6 +253,7 @@ export function buildFactPack(raw: RawFacts, today: string): FactPack {
       amenities: `${SITE_URL}/amenities`,
       progress: `${SITE_URL}/progress`,
       contact: `${SITE_URL}/contact`,
+      visit: `${SITE_URL}/visit`,
     },
   };
 }
@@ -290,6 +294,17 @@ export function factPackText(pack: FactPack): string {
     "- After a reservation request, the sales team agrees with the buyer how they will pay and then sends the matching bank details themselves.",
     ""
   );
+
+  add(
+    "SITE VISITS",
+    "- Our team shows the site Monday to Saturday, 8am to 6pm (Accra time, GMT). A visit takes about an hour; it is a building site, so closed shoes are best.",
+    `- Anyone can book a visit themselves, at a time that suits them: ${pack.links.visit}`
+  );
+  if (pack.visits) {
+    const times = freeTimesText(pack.visits.free, pack.visits.nowMs, 7);
+    add(times.length ? "- Free times in the next 7 days (Accra time), the only times you may book:" : "- No free times in the next 7 days: the team arranges one.", ...times);
+  }
+  add("");
 
   add("PAYING");
   if (pack.offer?.planPct != null) {
@@ -359,7 +374,7 @@ export function factPackText(pack: FactPack): string {
     `- Phone and WhatsApp: ${pack.contact.phone}`,
     `- Email: ${pack.contact.email}`,
     `- Sales office: ${pack.contact.office}`,
-    `- Pages: all residences ${pack.links.residences} · photos ${pack.links.gallery} · amenities ${pack.links.amenities} · contact ${pack.links.contact}`
+    `- Pages: all residences ${pack.links.residences} · photos ${pack.links.gallery} · amenities ${pack.links.amenities} · contact ${pack.links.contact} · book a site visit ${pack.links.visit}`
   );
 
   return lines.filter((line, i, all) => !(line === "" && all[i - 1] === "")).join("\n");

@@ -148,7 +148,8 @@ export type HandoverTopic = "viewing" | "payment" | "price" | "legal" | "complai
 /** What in their words always goes to Niko, whatever the agent thinks. */
 export function handoverTopic(text: string): HandoverTopic {
   if (/\b(bank|account (number|details)|transfer|wire|deposit|momo|mobile money|send (you )?money|pay(ment)? (now|today|link)|how (do|can) i pay|invoice)\b/i.test(text)) return "payment";
-  if (/\b(view(ing)?|visit|come (and|to) see|see the (site|flat|apartment|unit)|inspect|tour|video call|meet(ing)?|appointment|call me|phone me|ring me)\b/i.test(text)) return "viewing";
+  // A visit to the site the assistant books itself (lib/siteVisits, 11 Nov 2026); a call still goes to Niko.
+  if (/\b(video call|call me|phone me|ring me|give me a call|whatsapp call|zoom|google meet)\b/i.test(text)) return "viewing";
   if (/\b(discount|negotiat\w*|lower (the )?price|best price|last price|reduce|cheaper|deal)\b/i.test(text)) return "price";
   if (/\b(lawyer|solicitor|contract|agreement|title|deed|indenture|lease|land|refund|cancel)\b/i.test(text)) return "legal";
   if (/\b(complain\w*|scam|fraud|angry|disappointed|terrible|useless)\b/i.test(text)) return "complaint";
@@ -157,7 +158,7 @@ export function handoverTopic(text: string): HandoverTopic {
 }
 
 export const HANDOVER_WORDS: Record<Exclude<HandoverTopic, "none">, string> = {
-  viewing: "wants a viewing or a call",
+  viewing: "wants a call, or a visit at a time that isn't free",
   payment: "asks how to pay",
   price: "asks for a better price",
   legal: "has a legal or contract question",
@@ -182,8 +183,15 @@ THE FACTS ARE ONLY WHAT YOU ARE GIVEN
 - Never write bank or account details. Never name the developer company. The only rooftop amenity is the Private Resident's Rooftop Garden; the swimming pool is not on the roof.
 - If they ask whether they are talking to a person or a machine, say plainly that you are The Lexington's assistant and that the sales team reads every message and can take over.
 
+SITE VISITS (you can book them)
+- When they want to see the site or a home, offer a visit: suggest one or two of the free times listed under SITE VISITS in the FACTS that fit what they said, or ask which day suits them. Visits are Monday to Saturday, 8am to 6pm, Accra time.
+- Book it once they have clearly said yes to one of the listed free times and you know their name: put that time in visit_time exactly as "YYYY-MM-DD HH:00" (for example 2026-11-13 10:00) and say in your reply that it is booked. The day, the address and the map are sent right after your message, so don't write them. If you don't have a WhatsApp number yet, ask for one so the team can reach them on the day.
+- Never put a time in visit_time that isn't listed as free, and never book without their clear yes to one time. Otherwise visit_time is "".
+- If none of the free times suits them (an evening, a Sunday, a time not listed), hand over: the team will arrange it.
+- If they would rather pick a time themselves, give them the booking link from the FACTS.
+
 HAND OVER TO THE SALES TEAM (handover: true) when they:
-- want a viewing, a site visit, a video call or a phone call: don't book anything; say the team will get in touch to arrange it, and ask for a day and time that suits them and a WhatsApp number or email if you don't have one;
+- want a video call or a phone call, or a visit at a time that isn't free: say the team will get in touch to arrange it, and ask for a WhatsApp number or email if you don't have one;
 - ask how to pay, for bank details, or want to reserve now: explain what the FACTS say about reserving and paying, and say the team will contact them to agree how they pay;
 - ask for a better price or a discount beyond the website's offer, or ask legal, title, contract or refund questions;
 - complain, are upset, or ask to speak to a person;
@@ -194,7 +202,8 @@ ALSO
 - Learn who they are as you go: ask for their name and a WhatsApp number or email only when it helps (once is enough), and never ask again for what they already told you.
 - temperature: "hot" for a clear sign they want to act soon (a specific unit, a viewing, how to pay or reserve, buying within a month); "warm" for genuine interest; "cold" for spam, agents selling something, or just browsing.
 - name, email, phone, interest, budget: what they have told you so far in this chat (empty when not said). interest is the unit type or unit they want.
-- topic: what kind of question needs the team: viewing, payment, price, legal, complaint, person, unknown, or none.`;
+- topic: what kind of question needs the team: viewing, payment, price, legal, complaint, person, unknown, or none. A visit you booked yourself is "none".
+- visit_time: the free time you booked, as "YYYY-MM-DD HH:00", or "".`;
 
 export const CHAT_SCHEMA = {
   type: "object",
@@ -210,8 +219,9 @@ export const CHAT_SCHEMA = {
     interest: { type: "string" },
     budget: { type: "string" },
     cards: { type: "array", items: { type: "string" } },
+    visit_time: { type: "string" },
   },
-  required: ["reply", "handover", "topic", "handover_reason", "temperature", "name", "email", "phone", "interest", "budget", "cards"],
+  required: ["reply", "handover", "topic", "handover_reason", "temperature", "name", "email", "phone", "interest", "budget", "cards", "visit_time"],
   additionalProperties: false,
 } as const;
 
@@ -228,6 +238,8 @@ export interface ChatOut {
   phone: string;
   interest: string;
   budget: string;
+  /** A free site-visit hour they said yes to ("2026-11-13 10:00"), or "": the code books it (lib/siteVisits). */
+  visit_time: string;
 }
 
 /** The conversation for Claude: the facts, then the last messages, oldest first. */

@@ -494,3 +494,116 @@ export function personalEmailHtml(text: string) {
     .join("");
   return `<div style="font-family:${FONT_SANS}; font-size:15px; line-height:1.6; color:#15181a; max-width:600px;">${paragraphs}</div>`;
 }
+
+// ---- site visits (lib/siteVisits) ---------------------------------------------------------------------
+
+/**
+ * booked / moved / reminder: the visit is on (when, where, the map, a link to change it).
+ * missed / cancelled / cancelledByUs: it isn't, and here is where to pick another time.
+ */
+export type VisitEmailKind = "booked" | "moved" | "reminder" | "missed" | "cancelled" | "cancelledByUs";
+
+export function visitEmail({
+  kind,
+  name,
+  when,
+  whenShort,
+  people,
+  mapUrl,
+  manageUrl,
+  bookUrl,
+  siteSettings,
+}: {
+  kind: VisitEmailKind;
+  name: string;
+  /** "Thursday 13 November, 10:00 to 11:00" */
+  when: string;
+  /** "Thursday 13 November at 10:00" (subjects) */
+  whenShort: string;
+  people: number | null;
+  mapUrl: string;
+  /** The visitor's own page to change or cancel it. */
+  manageUrl: string;
+  /** The booking page, filled in with their details. */
+  bookUrl: string;
+  siteSettings: SiteSettings;
+}) {
+  const first = escapeHtml(name.trim().split(/\s+/)[0] || name);
+  const on = kind === "booked" || kind === "moved" || kind === "reminder";
+  const heading: Record<VisitEmailKind, string> = {
+    booked: `Your site visit is booked, ${first}.`,
+    moved: `Your site visit has a new time, ${first}.`,
+    reminder: `See you tomorrow, ${first}.`,
+    missed: `Sorry we missed you, ${first}.`,
+    cancelled: `Your site visit is cancelled, ${first}.`,
+    cancelledByUs: `We need to change your site visit, ${first}.`,
+  };
+  const intro: Record<VisitEmailKind, string> = {
+    booked: "Thank you for booking a visit to The Lexington. A member of our team will meet you and show you the building and the homes.",
+    moved: "Your visit has moved to the time below. A member of our team will meet you and show you the building and the homes.",
+    reminder: "This is a reminder of your visit to The Lexington tomorrow. A member of our team will meet you there.",
+    missed: "We were expecting you at The Lexington but didn't see you. If something came up, you are welcome to pick another time.",
+    cancelled: "As you asked, your visit is cancelled. You are welcome to book another time whenever it suits you.",
+    cancelledByUs: "We are sorry: we can no longer show you the site at the time you booked. Please pick another time that suits you.",
+  };
+  const subject: Record<VisitEmailKind, string> = {
+    booked: `Your site visit: ${whenShort} — The Lexington`,
+    moved: `New time for your site visit: ${whenShort} — The Lexington`,
+    reminder: `Tomorrow: your visit to The Lexington (${whenShort.replace(/^.* at /, "")})`,
+    missed: "Sorry we missed you — pick another time to visit The Lexington",
+    cancelled: "Your site visit is cancelled — The Lexington",
+    cancelledByUs: "We need to change your site visit — The Lexington",
+  };
+  const rows: Array<[string, string]> = on
+    ? [
+        ["When", when],
+        ["Where", siteSettings.officeAddress],
+        ...(people ? ([["People", String(people)]] as Array<[string, string]>) : []),
+      ]
+    : [[kind === "missed" ? "Your visit was" : "Cancelled", when]];
+  const notes = on
+    ? [
+        "A visit takes about an hour.",
+        "It's a building site, so closed shoes are best.",
+        `If you are running late, call or WhatsApp us on ${siteSettings.contactPhone}.`,
+      ]
+    : [];
+
+  const body = `
+    <tr>
+      <td style="padding:44px 40px 8px;">
+        <div style="font-family:${FONT_SERIF}; font-size:24px; color:#15181a; line-height:1.3; margin-bottom:18px;">
+          ${heading[kind]}
+        </div>
+        <p style="font-family:${FONT_SANS}; font-size:15px; line-height:1.7; color:#3a3a36; margin:0 0 24px;">
+          ${escapeHtml(intro[kind])}
+        </p>
+      </td>
+    </tr>
+    ${factsBox(rows)}
+    ${
+      notes.length
+        ? `
+    <tr>
+      <td style="padding:0 40px 16px;">
+        ${notes.map((n) => `<p style="font-family:${FONT_SANS}; font-size:14.5px; line-height:1.6; color:#3a3a36; margin:0 0 8px;">${escapeHtml(n)}</p>`).join("")}
+      </td>
+    </tr>`
+        : ""
+    }
+    ${on ? ctaButton(escapeHtml(mapUrl), "Open the map") : ctaButton(escapeHtml(bookUrl), "Pick another time")}
+    ${
+      on
+        ? `
+    <tr>
+      <td style="padding:0 40px 32px;">
+        <p style="font-family:${FONT_SANS}; font-size:13px; line-height:1.6; color:#6b6b66; margin:0;">
+          Need to change the time or cancel? <a href="${escapeHtml(manageUrl)}" style="color:#8b4a34;">Change or cancel your visit</a>, or reply to this email.
+        </p>
+      </td>
+    </tr>`
+        : ""
+    }`;
+
+  return { subject: subject[kind], html: shell(siteSettings, body) };
+}

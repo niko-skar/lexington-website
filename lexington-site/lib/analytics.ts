@@ -27,7 +27,7 @@ export function pushEvent(event: DataLayerEvent) {
  * `generate_lead` is GA4's recommended event name, so it maps cleanly onto a
  * GA4 key event and a Google Ads / Meta lead conversion inside GTM.
  */
-export function trackLead(details?: { unit?: string; form?: "contact" | "reservation" }) {
+export function trackLead(details?: { unit?: string; form?: "contact" | "reservation" | "site_visit" }) {
   pushEvent({
     event: "generate_lead",
     form_name: details?.form ?? "contact",
