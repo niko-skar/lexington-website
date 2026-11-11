@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 
 import type {
   BedroomType,
@@ -62,6 +62,44 @@ function typeRank(type: string) {
   return 5;
 }
 
+// A link can pick the filters, so one kind of home can be sent to someone on WhatsApp, cheapest first (Niko, 11 Nov 2026):
+//   /residences?type=2-bed#pricing   type = studio, 1-bed, 2-bed, 3-bed or penthouse (or the type's own name)
+//   and/or floor=5 (0 or "ground" = the ground floor), status=available | reserved | sold
+// A word it doesn't know leaves that filter on All; a click on a filter or a heading still changes it.
+interface LinkFilters {
+  floor: number | null;
+  type: BedroomType | null;
+  status: UnitStatus | null;
+}
+
+function linkFilters(search: string, floors: number[], types: BedroomType[]): LinkFilters {
+  const q = new URLSearchParams(search);
+  const typeWord = q.get("type")?.trim().toLowerCase() ?? "";
+  let type = types.find((t) => t.toLowerCase() === typeWord) ?? null;
+  if (!type && typeWord) {
+    const rank = /penthouse|^ph/.test(typeWord)
+      ? 4
+      : /^studio/.test(typeWord)
+        ? 0
+        : /^(1|one)(?!\d)/.test(typeWord)
+          ? 1
+          : /^(2|two)(?!\d)/.test(typeWord)
+            ? 2
+            : /^(3|three)(?!\d)/.test(typeWord)
+              ? 3
+              : -1;
+    type = types.find((t) => typeRank(t) === rank) ?? null;
+  }
+  const floorWord = q.get("floor")?.trim().toLowerCase() ?? "";
+  const floorNumber = /^(g|ground)$/.test(floorWord) ? 0 : /^\d+$/.test(floorWord) ? Number(floorWord) : NaN;
+  const statusWord = q.get("status")?.trim().toLowerCase() ?? "";
+  return {
+    floor: floors.includes(floorNumber) ? floorNumber : null,
+    type,
+    status: (Object.keys(STATUS_ORDER) as UnitStatus[]).find((s) => s === statusWord) ?? null,
+  };
+}
+
 interface UnitFinderProps {
   units: Unit[];
   tiers: PackageTier[];
@@ -70,9 +108,10 @@ interface UnitFinderProps {
 }
 
 export function UnitFinder({ units, tiers, vat }: UnitFinderProps) {
-  const [floor, setFloor] = useState<FloorFilter>("all");
-  const [type, setType] = useState<TypeFilter>("all");
-  const [status, setStatus] = useState<StatusFilter>("all");
+  // The filters a click picked; null until then (the link's filter, else All).
+  const [floorPick, setFloor] = useState<FloorFilter | null>(null);
+  const [typePick, setType] = useState<TypeFilter | null>(null);
+  const [statusPick, setStatus] = useState<StatusFilter | null>(null);
   const [selectedUnit, setSelectedUnit] = useState<Unit | null>(null);
   const [compareIds, setCompareIds] = useState<string[]>([]);
   const [showCompare, setShowCompare] = useState(false);
@@ -83,14 +122,11 @@ export function UnitFinder({ units, tiers, vat }: UnitFinderProps) {
   // units arrived in, unchanged until someone clicks a header.
   const [sortColumn, setSortColumn] = useState<SortColumn | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>("asc");
-  // A link to the prices (/residences#pricing, as ads and posts use) lists the homes cheapest first (Niko, 5 Nov 2026);
-  // a click on a heading still sorts by that column.
   const fromPricingLink = useSyncExternalStore(
     onHashChange,
     () => window.location.hash.toLowerCase() === "#pricing",
     () => false
   );
-  const sortBy: SortColumn | null = sortColumn ?? (fromPricingLink ? "price" : null);
   const areaUnit = useAreaUnit();
 
   // A link can open one unit's pop-up straight away, e.g. /residences?unit=405B (to send someone a unit's floor plan or its 3D
@@ -117,6 +153,34 @@ export function UnitFinder({ units, tiers, vat }: UnitFinderProps) {
     () => Array.from(new Set(units.map((u) => u.bedroomType))),
     [units]
   );
+
+  // Read once the page is in the browser, like ?unit= above.
+  const linkSearch = useSyncExternalStore(noSubscription, () => window.location.search, () => "");
+  const fromLink = useMemo(() => linkFilters(linkSearch, floors, types), [linkSearch, floors, types]);
+  const floor: FloorFilter = floorPick ?? fromLink.floor ?? "all";
+  const type: TypeFilter = typePick ?? fromLink.type ?? "all";
+  const status: StatusFilter = statusPick ?? fromLink.status ?? "all";
+  // A link to the prices (/residences#pricing, as ads and posts use) or one that picks a filter lists the homes cheapest
+  // first (Niko, 5 and 11 Nov 2026); a click on a heading still sorts by that column.
+  const linkPicked = fromLink.floor !== null || fromLink.type !== null || fromLink.status !== null;
+  const sortBy: SortColumn | null = sortColumn ?? (fromPricingLink || linkPicked ? "price" : null);
+  // Such a link opens on the prices: the browser's own jump to #pricing was lost while the page loaded (the page stayed at
+  // its top, 11 Nov 2026). Once, when the page opens, and only while it is still at its top (not if the browser's jump
+  // worked or they've started scrolling). A link that picks the homes opens on the list itself where the filters fill most
+  // of the screen (a phone); a laptop shows the filters with the list under them.
+  const landed = useRef(false);
+  useEffect(() => {
+    if (landed.current || !(fromPricingLink || linkPicked)) return;
+    // Marked when it happens, not before: a second run of this effect (React's dev check) must still get there.
+    const frame = requestAnimationFrame(() => {
+      landed.current = true;
+      if (window.scrollY > 50) return;
+      const box = document.getElementById("pricing");
+      const list = linkPicked && box && box.offsetHeight > window.innerHeight * 0.45 ? document.getElementById("pricing-list") : null;
+      (list ?? box)?.scrollIntoView({ behavior: "instant", block: "start" });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [fromPricingLink, linkPicked]);
 
   const filtered = useMemo(
     () =>
@@ -261,7 +325,7 @@ export function UnitFinder({ units, tiers, vat }: UnitFinderProps) {
         </div>
       </div>
 
-      <div className={styles.count}>
+      <div id="pricing-list" className={styles.count} style={{ scrollMarginTop: 120 }}>
         {availableInFiltered} of {filtered.length} shown are available
       </div>
 
