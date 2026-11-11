@@ -10,6 +10,7 @@ import { daySummary, truckFlags, trucksOn } from "@/lib/concrete/shared";
 import { rollcallAccess } from "@/lib/rollcall/shared";
 import { orderViews } from "@/lib/orders/server";
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
+import { client } from "@/lib/sanity/client";
 import { BANK_TEXT_PREFIX, BILL_PREFIX, EXPENSE_PREFIX, QBO_HISTORY_ID, QBO_TXN_MONTH_PREFIX, ROLLCALL_PREFIX } from "@/lib/site/ids";
 import { steelData } from "@/lib/steel/server";
 import { getStore } from "@/lib/store/server";
@@ -60,6 +61,8 @@ export interface DashboardData {
   };
   /** The as-built record: the floor last worked on, how many of its columns and lift cores are measured, and when it last changed. */
   asbuilt?: { floor: string | null; measured: number; total: number; last: string | null };
+  /** Site updates: the last one posted to the website's Construction Progress page (none yet: null). */
+  updates?: { last: { date: string; title: string; photos: number } | null };
   /** Steel: the tons bought, installed and in stock; what the steel benders were paid and are owed (below 0: paid ahead); the buys with no tons. */
   steel?: { bought: number; installed: number; stock: number; paid: number; owed: number; unknown: number };
   /** The roll call isn't moved in from its Claude page yet (one tile says so instead of three empty ones). */
@@ -213,6 +216,19 @@ async function asbuiltPart(): Promise<NonNullable<DashboardData["asbuilt"]>> {
   return worked ? { floor: worked.name, measured: worked.measured, total: worked.total, last: worked.last } : { floor: null, measured: 0, total: 0, last: null };
 }
 
+/**
+ * Site updates at a glance: the last one posted. One small read of the website's own records, from Sanity's API CDN
+ * (they change a few times a month; the Home page asks every 30 s while it's open, and CDN reads aren't the metered kind).
+ */
+async function updatesPart(): Promise<NonNullable<DashboardData["updates"]>> {
+  const last = await client
+    .withConfig({ useCdn: true })
+    .fetch<{ date: string; title: string; photos: number | null } | null>(
+      `*[_type == "progressReport"] | order(date desc, _createdAt desc)[0]{ date, title, "photos": count(photos) }`
+    );
+  return { last: last?.date ? { date: last.date, title: last.title ?? "", photos: last.photos ?? 0 } : null };
+}
+
 async function buyersPart(): Promise<NonNullable<DashboardData["buyers"]>> {
   const { buyers } = await listBuyers();
   const latest = buyers
@@ -252,7 +268,7 @@ async function ordersPart(): Promise<NonNullable<DashboardData["orders"]>> {
 export async function getDashboard(me: TodoMe): Promise<DashboardData> {
   const today = ghanaDay();
   const has = (s: string) => me.sections.includes(s as never);
-  const [todo, store, expenses, unread, rollcall, concrete, buyers, suppliers, steel, spending, cashflow, orders, asbuilt] = await Promise.all([
+  const [todo, store, expenses, unread, rollcall, concrete, buyers, suppliers, steel, spending, cashflow, orders, asbuilt, updates] = await Promise.all([
     has("todo") ? settle(todoPart(me, today)) : undefined,
     has("store") ? settle(storePart(me, today)) : undefined,
     has("expenses") ? settle(expensesPart(today)) : undefined,
@@ -266,6 +282,7 @@ export async function getDashboard(me: TodoMe): Promise<DashboardData> {
     has("cashflow") ? settle(cashflowPart()) : undefined,
     has("orders") ? settle(ordersPart()) : undefined,
     has("asbuilt") ? settle(asbuiltPart()) : undefined,
+    has("updates") ? settle(updatesPart()) : undefined,
   ]);
   return {
     today,
@@ -278,6 +295,7 @@ export async function getDashboard(me: TodoMe): Promise<DashboardData> {
     ...(buyers ? { buyers } : {}),
     ...(steel ? { steel } : {}),
     ...(asbuilt ? { asbuilt } : {}),
+    ...(updates ? { updates } : {}),
     ...(suppliers ? { suppliers } : {}),
     ...(spending ? { spending } : {}),
     ...(cashflow ? { cashflow } : {}),

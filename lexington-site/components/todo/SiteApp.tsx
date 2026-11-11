@@ -23,6 +23,7 @@ import { AlertsApp } from "./AlertsApp";
 import { AnalysisApp } from "./AnalysisApp";
 import { send, startPolling } from "./api";
 import type { AsBuiltData } from "./AsBuiltPart";
+import type { UpdatesData } from "./UpdatesPart";
 import { BuyersApp } from "./BuyersApp";
 import { CashflowApp } from "./CashflowApp";
 import { ConcreteApp } from "./ConcreteApp";
@@ -43,10 +44,12 @@ import { VisitsApp } from "./VisitsApp";
 import styles from "./Todo.module.css";
 import { useSheetGestures } from "./useSheetGestures";
 
-// The as-built record's screen is big (the plan, its panels): fetched only when the office opens that part.
+// The as-built record's screen is big (the plan, its panels): fetched only when the office opens that part. Site updates
+// (the website's progress reporter) too: the office only, now and then.
 const AsBuiltPart = dynamic(() => import("./AsBuiltPart").then((m) => m.AsBuiltPart), { loading: () => null });
-/** Parts read only when they're opened (not quietly after the app opens): the as-built record is big. */
-const ON_OPENING: readonly PageSection[] = ["asbuilt"];
+const UpdatesPart = dynamic(() => import("./UpdatesPart").then((m) => m.UpdatesPart), { loading: () => null });
+/** Parts read only when they're opened (not quietly after the app opens): the as-built record is big; Site updates is rare. */
+const ON_OPENING: readonly PageSection[] = ["asbuilt", "updates"];
 
 // The whole site app in one page, so moving between To-do, Store and Expenses is instant (Niko,
 // 23 Oct 2026: "its too slow, clicking between things is laggy"). Each part loads once and stays
@@ -70,6 +73,7 @@ export type SiteData = {
   analysis?: AnalysisData;
   asbuilt?: AsBuiltData;
   visits?: VisitsData;
+  updates?: UpdatesData;
 };
 
 // Since 30 Oct 2026 the app opens on its home page (/todo) and the to-do list is /todo/jobs.
@@ -102,6 +106,8 @@ const sectionFrom = (path: string): View | null =>
             ? "asbuilt"
           : path.startsWith("/todo/visits")
             ? "visits"
+          : path.startsWith("/todo/updates")
+            ? "updates"
           : path.startsWith("/todo/jobs")
           ? "todo"
           : path === "/todo" || path === "/todo/"
@@ -128,6 +134,7 @@ async function load(section: PageSection): Promise<SiteData> {
   if (section === "analysis") return { analysis: await get("/api/analysis") };
   if (section === "asbuilt") return { asbuilt: await get("/api/asbuilt") };
   if (section === "visits") return { visits: await get("/api/site-visits") };
+  if (section === "updates") return { updates: await get("/api/updates") };
   const [x, s] = await Promise.all([get("/api/expenses"), get("/api/store")]);
   return { expenses: { expenses: x.expenses, items: s.items, arrivals: s.arrivals, pending: x.pending, books: x.books, bills: x.bills, vendors: x.vendors } };
 }
@@ -558,6 +565,11 @@ export function SiteApp({
       {show("asbuilt") && (
         <div hidden={section !== "asbuilt"}>
           <AsBuiltPart me={me} active={section === "asbuilt"} initial={data.asbuilt ?? null} startedOffline={startedOffline && first === "asbuilt"} />
+        </div>
+      )}
+      {show("updates") && (
+        <div hidden={section !== "updates"}>
+          <UpdatesPart me={me} active={section === "updates"} initial={data.updates ?? null} startedOffline={startedOffline && first === "updates"} />
         </div>
       )}
       {show("steel") && (

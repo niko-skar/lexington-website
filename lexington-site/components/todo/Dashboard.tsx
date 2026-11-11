@@ -192,6 +192,15 @@ function tiles(d: DashboardData, unread: number): Tile[] {
         : { section: "asbuilt", name: "As-built", big: "Every floor's plan", small: "nothing measured yet: the drawings' figures" }
     );
   }
+  // Site updates (11 Nov 2026): when the last one went out; the tile opens the form for the next.
+  if (d.updates) {
+    const x = d.updates.last;
+    out.push(
+      x
+        ? { section: "updates", name: "Site updates", big: `Last update ${shortDay(x.date)}`, small: [x.title, `${x.photos} ${x.photos === 1 ? "photo" : "photos"}`].filter(Boolean).join(" · ") }
+        : { section: "updates", name: "Site updates", big: "Post site photos", small: "to the website, Facebook and Instagram" }
+    );
+  }
   if (d.steel) {
     const x = d.steel;
     const t = (n: number) => `${Math.round(n * 10) / 10} t`;

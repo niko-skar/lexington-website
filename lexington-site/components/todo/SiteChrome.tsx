@@ -89,6 +89,13 @@ const ICONS: Record<NavItem, React.ReactNode> = {
       <path d="M7 15.5h10M7 13.5v4M17 13.5v4" />
     </svg>
   ),
+  // A camera: site photos out to the website and the socials.
+  updates: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M4 8h3.5L9 5.5h6L16.5 8H20v11H4z" />
+      <circle cx="12" cy="13.5" r="3.2" />
+    </svg>
+  ),
   spending: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M4 20h16" />
@@ -134,10 +141,10 @@ const BADGE_WORDS: Partial<Record<NavItem, string>> = { alerts: "new" };
 
 /**
  * Used now and then (Concrete on pour days, Buyers on a payment, Steel as it goes in, the as-built record when
- * measuring or setting out): on a phone's bar when there's room, else from the home page's tile. A laptop's rail has
- * room for every part (2 Nov 2026).
+ * measuring or setting out, Site updates when there are photos to post): on a phone's bar when there's room, else from
+ * the home page's tile. A laptop's rail has room for every part (2 Nov 2026).
  */
-const NOW_AND_THEN: readonly NavItem[] = ["concrete", "steel", "asbuilt"];
+const NOW_AND_THEN: readonly NavItem[] = ["concrete", "steel", "asbuilt", "updates"];
 type NavEntry = { item: NavItem; laptopOnly: boolean };
 const navItems = (me: TodoMe): NavEntry[] => {
   // Alerts last: the end of a phone's bar, the very bottom of a laptop's rail (Niko, 2 Nov 2026). The money parts

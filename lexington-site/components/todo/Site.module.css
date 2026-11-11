@@ -2158,3 +2158,29 @@
     padding-right: max(8px, env(safe-area-inset-right, 0px));
   }
 }
+
+/* ---------- Site updates in the app (UpdatesPart.tsx, 11 Nov 2026) ---------- */
+/* The website's progress reporter on a light sheet, like As-built, so it reads the same in the app's dark mode. */
+.updatesMain {
+  max-width: 760px;
+}
+.updatesSheet {
+  padding: 16px;
+  border: 1px solid var(--stone-lt);
+  border-radius: 12px;
+  background: var(--paper);
+  color: var(--ink);
+}
+.updatesSheet a {
+  color: inherit;
+  text-decoration: underline;
+}
+@media (max-width: 720px) {
+  .updatesMain {
+    padding-left: max(8px, env(safe-area-inset-left, 0px));
+    padding-right: max(8px, env(safe-area-inset-right, 0px));
+  }
+  .updatesSheet {
+    padding: 12px;
+  }
+}

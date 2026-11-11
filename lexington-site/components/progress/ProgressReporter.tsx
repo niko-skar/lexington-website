@@ -59,7 +59,18 @@ async function shrink(file: File): Promise<Blob> {
   return blob.size > 4_000_000 ? encode(0.7) : blob;
 }
 
-export function ProgressReporter({ stages, aiOn, socialOn }: { stages: string[]; aiOn: boolean; socialOn: boolean }) {
+export function ProgressReporter({
+  stages,
+  aiOn,
+  socialOn,
+  onPublished,
+}: {
+  stages: string[];
+  aiOn: boolean;
+  socialOn: boolean;
+  /** After Publish has run (the site app's part reads its list of recent updates again). */
+  onPublished?: () => void;
+}) {
   const [reportId, setReportId] = useState(newReportId);
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [stage, setStage] = useState(stages[0] ?? "");
@@ -144,6 +155,7 @@ export function ProgressReporter({ stages, aiOn, socialOn }: { stages: string[];
       });
       if (!result.ok) return setError(result.error);
       setResults(result.result);
+      onPublished?.();
     });
   }
 

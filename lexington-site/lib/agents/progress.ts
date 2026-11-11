@@ -270,3 +270,18 @@ export async function knownStages(): Promise<string[]> {
     return [];
   }
 }
+
+export interface ReporterData {
+  stages: string[];
+  recent: RecentUpdate[];
+  /** Claude writes the words (else the note is used as it is). */
+  aiOn: boolean;
+  /** Facebook and Instagram are connected on this copy of the site. */
+  socialOn: boolean;
+}
+
+/** All the form needs, for the site app's Site updates part (11 Nov 2026; the admin page reads the same itself). */
+export async function reporterData(): Promise<ReporterData> {
+  const [stages, recent] = await Promise.all([knownStages(), recentUpdates()]);
+  return { stages, recent, aiOn: claudeConfigured(), socialOn: Boolean(process.env.META_PAGE_ID && process.env.META_PAGE_TOKEN) };
+}
