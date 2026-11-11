@@ -14,9 +14,9 @@ export const revalidate = 600;
 
 export const metadata = pageMetadata({
   path: "/about",
-  title: "Our Story | The Lexington — Skarlatos & Son",
+  title: "Our Story | The Lexington — An Olympian Development",
   description:
-    "Three generations of Skarlatos & Son shaping Ghana's landscape, and the thinking behind The Lexington in Shiashie, East Legon.",
+    "Three generations of the Skarlatos family shaping Ghana's landscape, and the thinking behind The Lexington in Shiashie, East Legon.",
 });
 
 export default async function AboutPage() {

@@ -734,7 +734,7 @@ async function seedSiteSettings() {
       lede: "Situated in a prime and highly desirable location, The Lexington offers an exceptional investment opportunity with the potential for consistent demand and a foundation for strong, long-term returns.",
     },
     aboutIntro: {
-      eyebrow: "Skarlatos & Son",
+      eyebrow: "An Olympian Development",
       title: "Three generations shaping Ghana's landscape.",
       lede: "",
     },

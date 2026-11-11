@@ -42,7 +42,7 @@ export async function SiteFooter() {
           <div>
             <div className={styles.brand}>
               The Lexington
-              <small>A Skarlatos &amp; Son Development</small>
+              <small>An Olympian Development</small>
             </div>
             <a
               className={styles.mapThumb}
@@ -90,7 +90,7 @@ export async function SiteFooter() {
         </div>
         <div className={styles.bottom}>
           <span>
-            © {new Date().getFullYear()} Skarlatos &amp; Son. All rights reserved.{" "}
+            © {new Date().getFullYear()} Olympian Developments. All rights reserved.{" "}
             <Link href="/privacy">Privacy Policy</Link> · <Link href="/terms">Terms of Use</Link>
           </span>
           <a href={googleMapsUrl()} target="_blank" rel="noopener noreferrer">

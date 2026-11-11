@@ -43,7 +43,7 @@ function shell(siteSettings: SiteSettings, bodyHtml: string) {
         The&nbsp;Lexington
       </div>
       <div style="font-family:${FONT_SANS}; font-size:11px; letter-spacing:2px; text-transform:uppercase; color:#d9c29a; margin-top:8px;">
-        A Skarlatos &amp; Son Development
+        An Olympian Development
       </div>
     </td>
   </tr>

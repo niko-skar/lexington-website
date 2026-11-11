@@ -147,7 +147,7 @@ export async function buildReservationFormPdf(
   // ---- header band (as on the receipt) ----
   page.drawRectangle({ x: 0, y: PAGE_H - 120, width: PAGE_W, height: 120, color: NAVY });
   draw("The Lexington", MARGIN, PAGE_H - 64, serifBold, 28, PAPER);
-  draw("A SKARLATOS & SON DEVELOPMENT", MARGIN, PAGE_H - 86, sansBold, 7.5, BRASS_LT);
+  draw("AN OLYMPIAN DEVELOPMENT", MARGIN, PAGE_H - 86, sansBold, 7.5, BRASS_LT);
   draw("RESERVATION FEE FORM", PAGE_W - MARGIN, PAGE_H - 58, sansBold, 9, BRASS_LT, "right");
   draw(`USD ${money(data.amountUSD).replace(/\.00$/, "")}`, PAGE_W - MARGIN, PAGE_H - 84, serifBold, 20, PAPER, "right");
   if (data.vatIncluded) draw("VAT INCLUDED", PAGE_W - MARGIN, PAGE_H - 101, sansBold, 7.5, BRASS_LT, "right");

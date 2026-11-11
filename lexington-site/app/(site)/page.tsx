@@ -218,7 +218,7 @@ export default async function HomePage() {
           imageUrl={urlFor(familyPhotoMember.photo).width(800).height(1000).url()}
           imageAlt={familyPhotoMember.name}
           reverse
-          eyebrow="Skarlatos & Son"
+          eyebrow="An Olympian Development"
           title="Three generations shaping Ghana's landscape."
         >
           <p>

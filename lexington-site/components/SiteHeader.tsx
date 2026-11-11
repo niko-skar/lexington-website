@@ -25,7 +25,7 @@ export function SiteHeader() {
       <div className={`wrap ${styles.bar}`}>
         <Link href="/" className={styles.brand} onClick={() => setOpen(false)}>
           The Lexington
-          <small>Skarlatos &amp; Son</small>
+          <small>An Olympian Development</small>
         </Link>
 
         <nav className={`${styles.nav} ${open ? styles.navOpen : ""}`}>

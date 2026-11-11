@@ -31,7 +31,7 @@ export default async function StructuredData() {
   const developer = {
     "@type": "Organization",
     "@id": `${SITE_URL}/#developer`,
-    name: "Skarlatos & Son",
+    name: "Olympian Developments",
     url: SITE_URL,
   };
 

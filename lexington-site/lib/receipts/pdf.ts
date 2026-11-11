@@ -114,7 +114,7 @@ export async function buildReceiptPdf(data: ReceiptData): Promise<Uint8Array> {
   // ---- header band ----
   page.drawRectangle({ x: 0, y: PAGE_H - 120, width: PAGE_W, height: 120, color: NAVY });
   draw("The Lexington", MARGIN, PAGE_H - 64, serifBold, 28, PAPER);
-  draw("A SKARLATOS & SON DEVELOPMENT", MARGIN, PAGE_H - 86, sansBold, 7.5, BRASS_LT);
+  draw("AN OLYMPIAN DEVELOPMENT", MARGIN, PAGE_H - 86, sansBold, 7.5, BRASS_LT);
   draw("PAYMENT RECEIPT", PAGE_W - MARGIN, PAGE_H - 58, sansBold, 9, BRASS_LT, "right");
   draw(data.receiptNumber, PAGE_W - MARGIN, PAGE_H - 84, serifBold, 20, PAPER, "right");
 

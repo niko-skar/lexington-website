@@ -766,7 +766,7 @@ export function ReserveForm({ units, contactPhone, contactEmail, whatsappHref, v
           </p>
         )}
         <p className={styles.note}>
-          Your details are sent to Skarlatos &amp; Son and kept so we can follow up with you. Questions? Call{" "}
+          Your details are sent to Olympian Developments and kept so we can follow up with you. Questions? Call{" "}
           <a href={`tel:${contactPhone.replace(/[^\d+]/g, "")}`}>{contactPhone}</a>.
         </p>
       </form>

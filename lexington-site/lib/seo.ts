@@ -14,11 +14,11 @@ export const SITE_URL = "https://www.lexington.com.gh";
 export const SITE_NAME = "The Lexington";
 
 export const SITE_TITLE =
-  "The Lexington — Shiashie, East Legon | A Skarlatos & Son Development";
+  "The Lexington — Shiashie, East Legon | An Olympian Development";
 
 /** The site-wide description (search results, share previews, structured data): the lowest price with the VAT in it while VAT is on. */
 export function siteDescription(vat: Vat = NO_VAT): string {
-  return `The Lexington: eight storeys of studio to three-bedroom residences and a penthouse duplex in Shiashie, East Legon, Accra. From ${formatUSD(withVat(PRICE_FROM_USD, vat))}${inclVatSuffix(vat)}. A Skarlatos & Son development.`;
+  return `The Lexington: eight storeys of studio to three-bedroom residences and a penthouse duplex in Shiashie, East Legon, Accra. From ${formatUSD(withVat(PRICE_FROM_USD, vat))}${inclVatSuffix(vat)}. An Olympian Development.`;
 }
 
 /**

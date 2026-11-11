@@ -19,7 +19,7 @@ export function PortalHeader({ navLinks, signOutAction }: PortalHeaderProps) {
         {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- see above */}
         <a href="/" className={styles.brand}>
           The Lexington
-          <small>Skarlatos &amp; Son</small>
+          <small>An Olympian Development</small>
         </a>
 
         {navLinks && navLinks.length > 0 && (
