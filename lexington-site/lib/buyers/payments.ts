@@ -8,7 +8,7 @@ import { byDateThenKey, ensureReceiptNumbers } from "@/lib/receipts/issue";
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
 import type { BuyerAccount, Payment } from "@/lib/sanity/buyersTypes";
 import { cleanText, TodoError } from "@/lib/todo/server";
-import { BUYER_METHODS, MAX_NOTE, namesBuyer, paymentText, type BuyerPaymentRow, type BuyerRow, type BuyersData } from "./shared";
+import { BUYER_METHODS, isEmail, MAX_NOTE, namesBuyer, paymentText, type BuyerPaymentRow, type BuyerRow, type BuyersData } from "./shared";
 
 // Buyer payments logged in the site app (lib/buyers/shared.ts says what and why). The payment is written onto the
 // buyer's account exactly as one typed in Studio (so the portal, the receipts and the admin pages all see it the
@@ -78,11 +78,11 @@ export async function listBuyers(): Promise<BuyersData> {
 
 const number = (value: unknown) => (typeof value === "number" ? value : typeof value === "string" ? Number(value.replace(/,/g, "")) : NaN);
 
-/** A payment from a buyer: onto their account, numbered, its receipt emailed to them. */
+/** A payment from a buyer: onto their account, numbered, its receipt emailed to them (kept for the office to send when they have no email). */
 export async function logBuyerPayment(body: Record<string, unknown>): Promise<{
   data: BuyersData;
   receipt: string | null;
-  emailed: { ok: true; to: string } | { ok: false; error: string };
+  emailed: { ok: true; to: string } | { ok: false; error: string; noEmail?: boolean };
 }> {
   const client = getBuyersClient();
   const buyer = await client.fetch<BuyerAccount | null>(`${BUYERS}[_id == $id][0]`, { id: typeof body.buyerId === "string" ? body.buyerId : "" });
@@ -117,11 +117,25 @@ export async function logBuyerPayment(body: Record<string, unknown>): Promise<{
   const numbers = await ensureReceiptNumbers(buyer._id, fresh.payments);
   const receipt = numbers.get(key) ?? null;
   const docId = receiptDocId(buyer._id, key);
+  // A buyer with a username and no email: the receipt is made and kept, never emailed; the office sends it.
+  if (!isEmail(fresh.email)) {
+    await client.patch(docId).set({ skipEmail: true }).commit().catch(() => {});
+    await notifyOwner({
+      kind: "receipt",
+      title: `Receipt ${receipt ?? ""} for ${fresh.name} is ready to send`.replace("  ", " "),
+      lines: [`${paymentText({ amount, currency })} · unit ${fresh.unitNumber ?? "—"} · no email on this account: open it and send it yourself.`],
+      links: [
+        { label: "Open the receipt", url: `/admin/receipts/${fresh._id}/${key}` },
+        { label: "Open their page", url: `/admin/${fresh._id}` },
+      ],
+    });
+    return { data: await listBuyers(), receipt, emailed: { ok: false, noEmail: true, error: "No email on this account." } };
+  }
   const claimed = await client
     .fetch<{ _rev: string } | null>(`*[_id == $id][0]{ _rev }`, { id: docId })
     .then((r) => (r ? client.patch(docId).ifRevisionId(r._rev).set({ emailClaimedAt: new Date().toISOString() }).commit() : null))
     .catch(() => null);
-  let emailed: { ok: true; to: string } | { ok: false; error: string };
+  let emailed: { ok: true; to: string } | { ok: false; error: string; noEmail?: boolean };
   if (!claimed) emailed = { ok: false, error: "The receipt is being sent already." };
   else {
     const result = await sendReceiptEmail(fresh, key);

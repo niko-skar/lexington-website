@@ -29,7 +29,7 @@ export default async function AdminPage() {
           <table className={styles.table}>
             <thead>
               <tr>
-                <th>Email</th>
+                <th>Email or username</th>
                 <th>Name</th>
                 <th>Unit</th>
                 <th></th>

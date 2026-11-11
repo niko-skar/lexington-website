@@ -26,12 +26,12 @@ export async function loginAction(
   const appPage = APP_PAGES.includes(next) ? next : null;
 
   if (!email || !password) {
-    return { status: "error", message: appPage ? "Please enter your email or username, and your password." : "Please enter your email and password." };
+    return { status: "error", message: "Please enter your email or username, and your password." };
   }
 
   // One generic message either way -- never reveal whether the account
   // exists, only that the combination didn't work.
-  const invalid: LoginState = { status: "error", message: appPage ? "Invalid email, username or password." : "Invalid email or password." };
+  const invalid: LoginState = { status: "error", message: "Invalid email, username or password." };
 
   // Wrong tries are counted per connection and per account (security check, 27 Oct 2026).
   const rules = await loginRules("account", email);

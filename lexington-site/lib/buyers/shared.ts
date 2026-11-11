@@ -46,9 +46,20 @@ export interface BuyerPaymentRow {
   emailedAt: string | null;
   emailedTo: string | null;
   emailError: string | null;
-  /** A receipt from before the emails went out by themselves (never sent, on purpose). */
+  /** A receipt that isn't emailed: from before the emails went out by themselves, or a buyer with no email. */
   noEmail: boolean;
 }
+
+/**
+ * A buyer's login is their email address, or a username when they have none (Niko, 11 Nov 2026: "open up his
+ * account without an email just username"). Nothing can be emailed to a username: their receipts are made and kept
+ * for the office to send.
+ */
+export const isEmail = (login: string | null | undefined): boolean => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((login ?? "").trim());
+/** 3 to 30 lowercase letters, digits, dots, dashes or underscores, starting with a letter or digit (as a site login's). */
+export const USERNAME_RE = /^[a-z0-9][a-z0-9._-]{2,29}$/;
+/** An email address or a username, as typed into a login field (compared lowercase). */
+export const isLogin = (login: string): boolean => (login.includes("@") ? isEmail(login) : USERNAME_RE.test(login));
 
 export interface BuyerRow {
   id: string;

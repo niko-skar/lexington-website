@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { getAdminSession } from "@/lib/auth/session";
 import { hashPassword } from "@/lib/auth/password";
 import { createBuyerAccountRecord, generatePassword } from "@/lib/auth/buyerAccountsCore";
+import { isLogin } from "@/lib/buyers/shared";
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
 
 export interface CreateBuyerState {
@@ -33,6 +34,10 @@ export async function createBuyerAccountAction(
 
   if (!email || !name || !unitNumber || !contractPriceUSD || contractPriceUSD <= 0) {
     return { status: "error", message: "Please fill in every field with a valid contract price." };
+  }
+  // A buyer with no email signs in with a username instead (11 Nov 2026); their receipts are kept for the office to send.
+  if (!isLogin(email)) {
+    return { status: "error", message: "Type their email address, or a username of 3 to 30 letters and numbers with no spaces (e.g. guyman)." };
   }
 
   try {

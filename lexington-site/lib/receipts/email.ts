@@ -2,6 +2,7 @@ import "server-only";
 import { Resend } from "resend";
 
 import { notifyOwner } from "@/lib/alerts/notify";
+import { isEmail } from "@/lib/buyers/shared";
 import { receiptEmail } from "@/lib/email/templates";
 import { SITE_URL } from "@/lib/seo";
 import { client } from "@/lib/sanity/client";
@@ -30,6 +31,8 @@ type SendResult = { ok: true; to: string; number: string } | { ok: false; error:
 export async function sendReceiptEmail(buyer: BuyerAccount, paymentKey: string): Promise<SendResult> {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) return { ok: false, error: "RESEND_API_KEY is not set." };
+  // A buyer with a username and no email: there is nowhere to send it.
+  if (!isEmail(buyer.email)) return { ok: false, error: "No email on this account." };
 
   const file = await renderReceipt(buyer, paymentKey);
   if (!file) return { ok: false, error: "That payment has no receipt." };
@@ -79,6 +82,7 @@ interface ReceiptRow {
   _rev: string;
   buyerId: string;
   paymentKey: string;
+  number?: string;
   issuedAt?: string;
   emailedAt?: string;
   skipEmail?: boolean;
@@ -98,7 +102,7 @@ export async function emailPendingReceipts(): Promise<{ newReceipts: number; sen
     // Never a test buyer (an @example.com account a test made a moment ago): its receipts are no one's.
     db.fetch<BuyerAccount[]>(`*[_type == "buyerAccount" && role != "admin" && count(payments) > 0 && !(email match "*@example.com")]`),
     db.fetch<ReceiptRow[]>(
-      `*[_type == "receipt"]{ _id, _rev, buyerId, paymentKey, issuedAt, emailedAt, skipEmail, emailClaimedAt, emailAttempts }`
+      `*[_type == "receipt"]{ _id, _rev, buyerId, paymentKey, number, issuedAt, emailedAt, skipEmail, emailClaimedAt, emailAttempts }`
     ),
   ]);
 
@@ -121,6 +125,24 @@ export async function emailPendingReceipts(): Promise<{ newReceipts: number; sen
       if (sent + failed >= MAX_PER_RUN) return { newReceipts, sent, failed };
       const row = payment._key ? byPayment.get(`${buyer._id}|${payment._key}`) : undefined;
       if (!row || row.emailedAt || row.skipEmail) continue;
+      // A buyer with a username and no email (their payment typed in Studio): kept for the office to send, said once.
+      if (!isEmail(buyer.email)) {
+        try {
+          await db.patch(row._id).ifRevisionId(row._rev).set({ skipEmail: true }).commit();
+        } catch {
+          continue;
+        }
+        await notifyOwner({
+          kind: "receipt",
+          title: `Receipt ${row.number ?? ""} for ${buyer.name} is ready to send`.replace("  ", " "),
+          lines: [`Unit ${buyer.unitNumber ?? "—"} · no email on this account: open it and send it yourself.`],
+          links: [
+            { label: "Open the receipt", url: `/admin/receipts/${buyer._id}/${payment._key}` },
+            { label: "Open their page", url: `/admin/${buyer._id}` },
+          ],
+        });
+        continue;
+      }
       if ((row.emailAttempts ?? 0) >= MAX_ATTEMPTS) continue;
       if (minutesAgo(row.issuedAt) < GRACE_MINUTES) continue;
       if (minutesAgo(row.emailClaimedAt) < STALE_CLAIM_MINUTES) continue;

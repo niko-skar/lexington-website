@@ -28,8 +28,8 @@ export function CreateBuyerForm() {
   return (
     <form action={formAction}>
       <div className={styles.field}>
-        <label htmlFor="email">Email</label>
-        <input type="email" id="email" name="email" required />
+        <label htmlFor="email">Email, or a username if they have no email</label>
+        <input type="text" id="email" name="email" required autoCapitalize="none" autoCorrect="off" spellCheck={false} placeholder="e.g. name@example.com, or guyman" />
       </div>
       <div className={styles.field}>
         <label htmlFor="name">Name</label>

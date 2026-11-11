@@ -28,8 +28,8 @@ export function LoginForm() {
   return (
     <form action={formAction}>
       <div className={styles.field}>
-        <label htmlFor="email">Email</label>
-        <input type="email" id="email" name="email" required autoComplete="email" />
+        <label htmlFor="email">Email or username</label>
+        <input type="text" id="email" name="email" required autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck={false} inputMode="email" />
       </div>
       <div className={styles.field}>
         <label htmlFor="password">Password</label>

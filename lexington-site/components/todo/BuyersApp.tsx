@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { BUYER_METHODS, MAX_NOTE, paymentText, usd, type BuyerMethod, type BuyerRow, type BuyersData } from "@/lib/buyers/shared";
+import { BUYER_METHODS, isEmail, MAX_NOTE, paymentText, usd, type BuyerMethod, type BuyerRow, type BuyersData } from "@/lib/buyers/shared";
 import type { TodoMe } from "@/lib/todo/shared";
 import { AccessSheet } from "./AccessSheet";
 import b from "./Buyers.module.css";
@@ -173,7 +173,9 @@ export function BuyersApp({
                               : p.emailError
                                 ? " · email not sent yet (tries again)"
                                 : " · email on its way"
-                            : ""}
+                            : p.receipt && !isEmail(x.email)
+                              ? " · no email: open it and send it yourself"
+                              : ""}
                         </span>
                       </li>
                     ))}
@@ -199,7 +201,9 @@ export function BuyersApp({
             showToast(
               emailed.ok
                 ? { text: `${receipt ?? "The receipt"} emailed to ${paying.name} (${emailed.to}); it's on their buyer page too.` }
-                : { text: `${receipt ?? "The receipt"} is made and on their buyer page; the email didn't go yet (${emailed.error}). It tries again in a few minutes.`, tone: "error" }
+                : emailed.noEmail
+                  ? { text: `${receipt ?? "The receipt"} is made and on their buyer page. ${paying.name} has no email on the account: open the receipt in the list and send it yourself.` }
+                  : { text: `${receipt ?? "The receipt"} is made and on their buyer page; the email didn't go yet (${emailed.error}). It tries again in a few minutes.`, tone: "error" }
             );
           }}
         />
@@ -227,8 +231,10 @@ function PaymentSheet({
   buyer: BuyerRow;
   lastRate: number | null;
   onClose: () => void;
-  onSaved: (data: BuyersData, receipt: string | null, emailed: { ok: true; to: string } | { ok: false; error: string }) => void;
+  onSaved: (data: BuyersData, receipt: string | null, emailed: { ok: true; to: string } | { ok: false; error: string; noEmail?: boolean }) => void;
 }) {
+  // A buyer with a username and no email: the receipt is made and kept for the office to send.
+  const hasEmail = isEmail(buyer.email);
   const previous = buyer.payments[0];
   const [currency, setCurrency] = useState<"USD" | "GHS">(previous?.currency ?? "USD");
   const [amount, setAmount] = useState("");
@@ -249,7 +255,7 @@ function PaymentSheet({
     setSaving(true);
     setError("");
     try {
-      const result = await send<BuyersData & { receipt: string | null; emailed: { ok: true; to: string } | { ok: false; error: string } }>("/api/buyers", "POST", {
+      const result = await send<BuyersData & { receipt: string | null; emailed: { ok: true; to: string } | { ok: false; error: string; noEmail?: boolean } }>("/api/buyers", "POST", {
         buyerId: buyer.id,
         amount: value,
         currency,
@@ -311,7 +317,16 @@ function PaymentSheet({
         </label>
         <input id="bp-note" className={styles.input} value={note} onChange={(e) => setNote(e.target.value)} maxLength={MAX_NOTE} placeholder="e.g. Second instalment" disabled={saving} />
         <p className={styles.sheetNote}>
-          Saving puts it on {buyer.name.split(" ")[0]}&rsquo;s buyer page and emails the receipt to <b>{buyer.email}</b> straight away.
+          {hasEmail ? (
+            <>
+              Saving puts it on {buyer.name.split(" ")[0]}&rsquo;s buyer page and emails the receipt to <b>{buyer.email}</b> straight away.
+            </>
+          ) : (
+            <>
+              Saving puts it on {buyer.name.split(" ")[0]}&rsquo;s buyer page and makes the receipt. There&rsquo;s no email on this account (the login is <b>{buyer.email}</b>), so open the receipt from the
+              list and send it yourself.
+            </>
+          )}
         </p>
         {error && <p className={styles.sheetError}>{error}</p>}
         <div className={styles.sheetButtons}>
@@ -319,7 +334,7 @@ function PaymentSheet({
             Cancel
           </button>
           <button type="button" className={styles.sheetSave} onClick={() => void save()} disabled={saving}>
-            {saving ? "Saving and emailing…" : "Save and email the receipt"}
+            {saving ? (hasEmail ? "Saving and emailing…" : "Saving…") : hasEmail ? "Save and email the receipt" : "Save and make the receipt"}
           </button>
         </div>
       </div>
