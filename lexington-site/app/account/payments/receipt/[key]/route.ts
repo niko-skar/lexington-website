@@ -3,6 +3,7 @@ import { pdfResponse, renderReceipt } from "@/lib/receipts/build";
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
 import { buyerAccountByEmailQuery } from "@/lib/sanity/buyersQueries";
 import type { BuyerAccount } from "@/lib/sanity/buyersTypes";
+import { seesOnlyPlans } from "@/lib/planOptions";
 
 const KEY_RE = /^[A-Za-z0-9_-]{1,40}$/;
 
@@ -20,7 +21,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ key
     const buyer = await getBuyersClient().fetch<BuyerAccount | null>(buyerAccountByEmailQuery, {
       email: session.email,
     });
-    if (!buyer || buyer.role === "admin") return new Response("Receipt not found.", { status: 404 });
+    // No receipts either for a buyer kept to their plans: the payments are closed to them for now.
+    if (!buyer || buyer.role === "admin" || seesOnlyPlans(buyer)) return new Response("Receipt not found.", { status: 404 });
 
     const file = await renderReceipt(buyer, key);
     if (!file) return new Response("Receipt not found.", { status: 404 });

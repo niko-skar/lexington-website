@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { redirect } from "next/navigation";
 
 import { getBuyerSession } from "./session";
@@ -10,19 +11,22 @@ import { unitByNumberQuery } from "@/lib/sanity/queries";
 import type { Unit } from "@/lib/sanity/types";
 import { usdEquivalent } from "@/lib/currency";
 import { splitUnits } from "@/lib/format";
+import { seesOnlyPlans } from "@/lib/planOptions";
+
+/** The account behind a sign-in: asked for once for a page, however many parts of it (the header, the page) need it. */
+export const loadBuyerAccount = cache((email: string) => getBuyersClient().fetch<BuyerAccount | null>(buyerAccountByEmailQuery, { email }));
 
 // Defense in depth alongside middleware.ts -- cheap, and protects against
 // any future matcher misconfiguration. Redirects (rather than returning
 // null) so every /account page can call this without its own guard.
-export async function requireCurrentBuyer(): Promise<{ buyer: BuyerAccount; unit: Unit | null; units: Unit[] }> {
+// `plansPage` is passed by /account/plans alone: an account kept to its plans is sent there from everywhere else.
+export async function requireCurrentBuyer(options: { plansPage?: boolean } = {}): Promise<{ buyer: BuyerAccount; unit: Unit | null; units: Unit[] }> {
   const session = await getBuyerSession();
   if (!session) {
     redirect("/login");
   }
 
-  const buyer = await getBuyersClient().fetch<BuyerAccount | null>(buyerAccountByEmailQuery, {
-    email: session.email,
-  });
+  const buyer = await loadBuyerAccount(session.email);
   if (!buyer) {
     // The account behind this session no longer exists (e.g. deleted) --
     // the cookie itself is still a validly-signed token. Cookies can only
@@ -40,6 +44,10 @@ export async function requireCurrentBuyer(): Promise<{ buyer: BuyerAccount; unit
   // Site to-do accounts (the foreman) only have the list at /todo.
   if (buyer.role === "site") {
     redirect("/todo");
+  }
+  // A buyer kept to their plans (planOptions.only) sees that page and no other.
+  if (!options.plansPage && seesOnlyPlans(buyer)) {
+    redirect("/account/plans");
   }
 
   // One home, or several on one account ("Studio 1, 204B"): each looked up, in the account's order.

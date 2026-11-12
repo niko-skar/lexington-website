@@ -8,6 +8,7 @@ import { createBuyerSession } from "@/lib/auth/session";
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
 import { buyerAccountByEmailQuery } from "@/lib/sanity/buyersQueries";
 import type { BuyerAccount } from "@/lib/sanity/buyersTypes";
+import { seesOnlyPlans } from "@/lib/planOptions";
 import { APP_PAGES } from "@/lib/todo/shared";
 
 export interface LoginState {
@@ -63,5 +64,5 @@ export async function loginAction(
   // The site app (to-do, store, expenses) signs in through this same action (hidden next=/todo...);
   // a buyer still goes to their own portal whichever form they used.
   await createBuyerSession(buyer.email, isAdmin, isSite);
-  redirect(isSite ? (appPage ?? "/todo") : isAdmin && appPage ? appPage : isAdmin ? "/admin/crm" : "/account");
+  redirect(isSite ? (appPage ?? "/todo") : isAdmin && appPage ? appPage : isAdmin ? "/admin/crm" : seesOnlyPlans(buyer) ? "/account/plans" : "/account");
 }

@@ -246,6 +246,12 @@ export const buyerAccount = defineType({
         defineField({ name: "depositPerHomeUSD", title: "Deposit for each home (US$)", type: "number" }),
         defineField({ name: "depositHomes", title: "Number of homes", type: "number" }),
         defineField({
+          name: "only",
+          title: "Show the buyer only the plans",
+          description: "When on, the buyer's login opens the plans and nothing else: no overview, payments, documents or receipts. Nothing is removed from the account. Turn it off to give the whole portal back.",
+          type: "boolean",
+        }),
+        defineField({
           name: "options",
           title: "Plans",
           type: "array",

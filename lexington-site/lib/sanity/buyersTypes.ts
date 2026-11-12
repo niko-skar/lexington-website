@@ -48,6 +48,8 @@ export interface PlanOptionSet {
   intro?: string;
   depositPerHomeUSD?: number;
   depositHomes?: number;
+  /** The buyer sees the plans and nothing else in the portal (lib/planOptions.ts: seesOnlyPlans). */
+  only?: boolean;
   options?: PlanOption[];
 }
 

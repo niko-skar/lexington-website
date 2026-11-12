@@ -1,4 +1,7 @@
 import { logoutAction } from "@/lib/actions/logout";
+import { loadBuyerAccount } from "@/lib/auth/currentBuyer";
+import { getBuyerSession } from "@/lib/auth/session";
+import { seesOnlyPlans } from "@/lib/planOptions";
 import { PortalHeader } from "@/components/PortalHeader";
 
 export const metadata = {
@@ -15,10 +18,25 @@ const NAV_LINKS = [
   { href: "/account/documents", label: "Documents" },
 ];
 
-export default function AccountLayout({ children }: { children: React.ReactNode }) {
+// An account kept to its plans has no other page to go to, so its header carries no links. (The pages
+// themselves turn such a buyer back as well: requireCurrentBuyer.) The account is the same one the page
+// loads -- asked for once.
+async function onlyPlans(): Promise<boolean> {
+  try {
+    const session = await getBuyerSession();
+    if (!session) return false;
+    const buyer = await loadBuyerAccount(session.email);
+    return !!buyer && seesOnlyPlans(buyer);
+  } catch {
+    return false; // the page reports the failure
+  }
+}
+
+export default async function AccountLayout({ children }: { children: React.ReactNode }) {
+  const navLinks = (await onlyPlans()) ? [] : NAV_LINKS;
   return (
     <>
-      <PortalHeader navLinks={NAV_LINKS} signOutAction={logoutAction} />
+      <PortalHeader navLinks={navLinks} signOutAction={logoutAction} />
       {children}
     </>
   );
