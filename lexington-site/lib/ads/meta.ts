@@ -170,6 +170,11 @@ export function leadsOf(actions: readonly MetaAction[] | undefined): LeadCount {
   return { leads: Math.round(Math.max(all, form + site)), form: Math.round(form), site: Math.round(site) };
 }
 
+/** WhatsApp chats an advert started (a click-to-WhatsApp ad's result: someone who wrote to the business). */
+export function chatsOf(actions: readonly MetaAction[] | undefined): number {
+  return Math.round(actionValue(actions, "onsite_conversion.messaging_conversation_started_7d"));
+}
+
 function totalsOf(row: InsightRow, reachKnown: boolean): MetaTotals {
   const spend = Math.round(number(row.spend) * 100) / 100;
   const impressions = Math.round(number(row.impressions));

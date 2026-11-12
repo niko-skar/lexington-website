@@ -159,6 +159,8 @@ export interface AdsetInfo {
   status: "active" | "paused" | "ended";
   /** End date (YYYY-MM-DD) when it has one. */
   endDay: string | null;
+  /** Its ads open a WhatsApp chat (click-to-WhatsApp, 12 Nov 2026), not a lead form. */
+  whatsapp?: boolean;
 }
 
 export interface ManagerInput {
@@ -191,6 +193,8 @@ export interface NewAd {
   /** minimum: the set is short of live ads; evergreen: it needs one without the offer; challenger: this week's new idea. */
   kind: "minimum" | "evergreen" | "challenger";
   reason: string;
+  /** A WhatsApp ad: its button opens a WhatsApp chat. */
+  whatsapp?: boolean;
 }
 
 export interface ManagerPlan {
@@ -336,6 +340,7 @@ export function planManager(input: ManagerInput): ManagerPlan {
       const kind: NewAd["kind"] = keep.length + i < MIN_LIVE ? "minimum" : !evergreen.length && i === 0 ? "evergreen" : "challenger";
       plan.create.push({
         adsetId: set.id,
+        whatsapp: Boolean(set.whatsapp),
         market: set.market ?? "ghana",
         angle,
         withOffer,
@@ -406,6 +411,7 @@ export function adCopyPrompt(args: {
   withOffer: boolean;
   running: string[];
   learnings: string[];
+  whatsapp?: boolean;
 }): string {
   const feet = args.market === "us" || args.market === "canada";
   return [
@@ -413,6 +419,9 @@ export function adCopyPrompt(args: {
     `MARKET: ${MARKET_NAMES[args.market]}${args.market === "ghana" ? " (people in Ghana)" : " (people living there)"}. ${feet ? "Give sizes in square feet as well as m² when you give one." : ""}`,
     `ANGLE: ${ANGLES[args.angle].brief}`,
     args.withOffer ? "The ad MAY carry the banner offer, quoted exactly, with its last day." : "The ad must NOT mention any offer, discount or deadline.",
+    args.whatsapp
+      ? "BUTTON: this ad's button opens a WhatsApp chat with the sales team, not a form. End the text by inviting them to message on WhatsApp (for the prices, the floor plans or a site visit)."
+      : "",
     args.running.length ? `ADS ALREADY RUNNING IN THIS AD SET (say something different):\n${args.running.map((t) => `- ${t}`).join("\n")}` : "",
     args.learnings.length ? `WHAT HAS WORKED SO FAR:\n${args.learnings.map((t) => `- ${t}`).join("\n")}` : "",
     "Write the ad.",
@@ -427,8 +436,17 @@ const dollars = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
  * The ad without Claude: plain sentences built from the facts alone, one per angle. Used when
  * Claude isn't set up or its ad doesn't pass the checks twice.
  */
-export function templateAdCopy(pack: FactPack, market: Market, angle: AngleKey, withOffer: boolean): AdCopy {
+export function templateAdCopy(pack: FactPack, market: Market, angle: AngleKey, withOffer: boolean, whatsapp = false): AdCopy {
+  const copy = templateWords(pack, market, angle, withOffer);
+  if (!whatsapp) return copy;
+  // A WhatsApp ad ends with an invitation to message, not "tap for ...".
+  return { ...copy, primary_text: copy.primary_text.replace(/ Tap [^.]*\.$/, " Message us on WhatsApp for the prices, the floor plans or a site visit.") };
+}
+
+function templateWords(pack: FactPack, market: Market, angle: AngleKey, withOffer: boolean): AdCopy {
   const forSale = pack.units.filter((u) => u.status === "available");
+  // The studios sold out on 4 Nov 2026: the words follow what is still for sale.
+  const studios = forSale.some((u) => /studio/i.test(u.type));
   const lowest = forSale.length ? Math.min(...forSale.map((u) => u.priceUSD)) : null;
   const incl = inclVatSuffix(pack.vat);
   const from = lowest ? `Homes from ${dollars(lowest)}${incl}` : "Homes for sale";
@@ -439,7 +457,7 @@ export function templateAdCopy(pack: FactPack, market: Market, angle: AngleKey, 
     price: {
       primary_text: `${from} at The Lexington, ${where}. ${reserve}${offer} Tap to see the prices and floor plans.`,
       headline: lowest ? `From ${dollars(lowest)}${incl} in East Legon` : "Homes in East Legon",
-      description: "Studios to penthouses",
+      description: studios ? "Studios to penthouses" : "One-bedrooms to penthouses",
     },
     plan: {
       primary_text: `Pay in full, or over up to 18 months, for a home at The Lexington, ${where}. ${reserve}${offer} Tap for a call back.`,
@@ -462,8 +480,8 @@ export function templateAdCopy(pack: FactPack, market: Market, angle: AngleKey, 
       description: "The Lexington, Accra",
     },
     homes: {
-      primary_text: `Studios, one-, two- and three-bedroom apartments and duplex penthouses at The Lexington, ${where}. ${from}. Tap for the floor plans.`,
-      headline: "Studios to duplex penthouses",
+      primary_text: `${studios ? "Studios, one-" : "One-"}, two- and three-bedroom apartments and duplex penthouses at The Lexington, ${where}. ${from}. Tap for the floor plans.`,
+      headline: studios ? "Studios to duplex penthouses" : "One-bedrooms to penthouses",
       description: "The Lexington, Accra",
     },
     abroad: {

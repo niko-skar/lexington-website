@@ -37,7 +37,15 @@ export interface Holder {
   dailyBudget: number;
   /** The last 14 complete days. `leads` counts real leads and may be fractional. */
   last14: { spend: number; leads: number };
+  /** "whatsapp": its ads open a WhatsApp chat, and its results are the chats they start. Otherwise lead forms. */
+  group?: "whatsapp" | "form";
 }
+
+/**
+ * Niko, 12 Nov 2026 ("we can have more facebook leads and such directly contact us through whatsapp from the ads"):
+ * click-to-WhatsApp ads, Ghana and the diaspora, get half of Facebook's money for two weeks; then results decide.
+ */
+export const WHATSAPP_TEST = { share: 0.5, until: "2026-11-26" };
 
 export interface PilotInput {
   /** YYYY-MM-DD, the ad account's day. */
@@ -57,6 +65,8 @@ export interface PilotInput {
   lastChanged: Record<string, string>;
   /** Holders Niko switched back on after the autopilot paused them: not paused again before this day. */
   noPauseUntil: Record<string, string>;
+  /** Until `until`, the WhatsApp ads get this share of Facebook's day (while both kinds run). */
+  whatsappTest?: { share: number; until: string } | null;
 }
 
 export interface PilotChange {
@@ -295,6 +305,24 @@ export function planPilot(input: PilotInput): PilotPlan {
       continue;
     }
 
+    // The WhatsApp test: its ads and the form ads each get their part of Facebook's day, shared out separately.
+    const test = channel === "meta" && input.whatsappTest && input.today < input.whatsappTest.until ? input.whatsappTest : null;
+    const whatsapp = holders.filter((h) => h.group === "whatsapp");
+    const forms = holders.filter((h) => h.group !== "whatsapp");
+    if (test && whatsapp.length && forms.length) {
+      const waDaily = Math.floor(channelDaily * test.share * 100) / 100;
+      notes.push(
+        `Until ${test.until}, ${Math.round(test.share * 100)}% of ${CHANNEL_NAMES[channel]}'s day (${usd(waDaily)}) goes to the WhatsApp ads, the test Niko asked for; then results decide.`
+      );
+      shareOut(channel, whatsapp, waDaily, "the WhatsApp ads");
+      shareOut(channel, forms, Math.floor((channelDaily - waDaily) * 100) / 100, "the form ads");
+    } else {
+      shareOut(channel, holders, channelDaily, CHANNEL_NAMES[channel]);
+    }
+  }
+
+  /** One group's day: pause what spends without real leads while another in it brings them, then share by results. */
+  function shareOut(channel: Channel, holders: Holder[], channelDaily: number, label: string) {
     // Pause what spends without bringing real leads, while something else in the channel does.
     const spend = holders.reduce((s, h) => s + h.last14.spend, 0);
     const leads = holders.reduce((s, h) => s + h.last14.leads, 0);
@@ -325,7 +353,7 @@ export function planPilot(input: PilotInput): PilotPlan {
 
     // Share the channel's day among what keeps running, by real leads per dollar, at least the minimum each.
     if (channelDaily < MIN_DAILY * keep.length) {
-      notes.push(`Today's ${CHANNEL_NAMES[channel]} allowance (${usd(channelDaily)}) is below ${usd(MIN_DAILY)} a campaign: each runs at the minimum.`);
+      notes.push(`Today's ${label} allowance (${usd(channelDaily)}) is below ${usd(MIN_DAILY)} a campaign: each runs at the minimum.`);
     }
     const weights = keep.map((h) => yieldOf(h.last14.spend, h.last14.leads));
     const total = weights.reduce((a, b) => a + b, 0) || 1;
@@ -344,7 +372,7 @@ export function planPilot(input: PilotInput): PilotPlan {
         fromBudget: from,
         toBudget: target,
         cause: "pace",
-        reason: `Keeps the month within ${usd(monthCap)}: ${usd(remaining)} left for ${daysLeft} day${daysLeft === 1 ? "" : "s"}, ${usd(channelDaily)} a day for ${CHANNEL_NAMES[channel]}.`,
+        reason: `Keeps the month within ${usd(monthCap)}: ${usd(remaining)} left for ${daysLeft} day${daysLeft === 1 ? "" : "s"}, ${usd(channelDaily)} a day for ${label}.`,
       });
     });
   }

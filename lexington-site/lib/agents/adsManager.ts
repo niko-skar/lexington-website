@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 
 import { notifyOwner } from "@/lib/alerts/notify";
 import { claudeConfigured, writeWithClaude } from "@/lib/ai/claude";
-import { leadsOf, metaConfig, type MetaConfig } from "@/lib/ads/meta";
+import { chatsOf, leadsOf, metaConfig, type MetaConfig } from "@/lib/ads/meta";
 import { MetaError, metaGraph } from "@/lib/ads/metaGraph";
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
 import { client } from "@/lib/sanity/client";
@@ -134,6 +134,8 @@ interface AdsetRow {
   effective_status?: string;
   end_time?: string;
   targeting?: { geo_locations?: { countries?: string[]; cities?: Array<{ country?: string }>; regions?: Array<{ country?: string }> } };
+  /** "WHATSAPP" for click-to-WhatsApp ad sets. */
+  destination_type?: string;
 }
 
 interface AdRow {
@@ -201,7 +203,7 @@ async function readAccount(config: MetaConfig, nowMs: number): Promise<Account> 
   const [campaigns, adsets, ads, last14, last90] = await Promise.all([
     metaGraph<{ data?: CampaignRow[] }>(config, "GET", `${act}/campaigns`, { fields: "id,name,status,effective_status,stop_time", limit: "200" }),
     metaGraph<{ data?: AdsetRow[] }>(config, "GET", `${act}/adsets`, {
-      fields: "id,name,campaign_id,status,effective_status,end_time,targeting",
+      fields: "id,name,campaign_id,status,effective_status,end_time,targeting,destination_type",
       limit: "200",
     }),
     metaGraph<{ data?: AdRow[] }>(config, "GET", `${act}/ads`, {
@@ -235,8 +237,12 @@ async function readAccount(config: MetaConfig, nowMs: number): Promise<Account> 
         market: marketOf(s),
         status: ended ? "ended" : s.status === "ACTIVE" && campaignOn.get(s.campaign_id ?? "") ? "active" : "paused",
         endDay: s.end_time ? dayIn(tz.timezone_name, Date.parse(s.end_time)) : null,
+        whatsapp: s.destination_type === "WHATSAPP",
       };
     });
+  // An ad in a click-to-WhatsApp set brings WhatsApp chats, not form entries: those are its results.
+  const waSets = new Set(sets.filter((s) => s.whatsapp).map((s) => s.id));
+  const resultsOf = (adsetId: string | undefined, actions: AdInsight["actions"]) => (waSets.has(adsetId ?? "") ? chatsOf(actions) : leadsOf(actions).leads);
   const stats = new Map((last14.data ?? []).map((r) => [r.ad_id ?? "", r]));
   const adList: AdInfo[] = (ads.data ?? [])
     .filter((a) => !GONE.has(a.effective_status ?? a.status ?? ""))
@@ -253,11 +259,11 @@ async function readAccount(config: MetaConfig, nowMs: number): Promise<Account> 
         problem: a.effective_status === "DISAPPROVED" || a.effective_status === "WITH_ISSUES",
         text,
         tag: readTag(a.name ?? ""),
-        last14: { spend: num(s?.spend), leads: leadsOf(s?.actions).leads, frequency: num(s?.frequency) },
+        last14: { spend: num(s?.spend), leads: resultsOf(a.adset_id, s?.actions), frequency: num(s?.frequency) },
       };
     });
   const lifetime = new Map(
-    (last90.data ?? []).map((r) => [r.ad_id ?? "", { spend: num(r.spend), leads: leadsOf(r.actions).leads, adsetId: r.adset_id ?? "", name: r.ad_name ?? "" }])
+    (last90.data ?? []).map((r) => [r.ad_id ?? "", { spend: num(r.spend), leads: resultsOf(r.adset_id, r.actions), adsetId: r.adset_id ?? "", name: r.ad_name ?? "" }])
   );
   return { today, campaigns: campaigns.data ?? [], adsets: sets, ads: adList, lifetime };
 }
@@ -332,7 +338,7 @@ async function writeAd(
   if (claudeConfigured()) {
     let problems: string[] = [];
     for (let attempt = 0; attempt < 2; attempt += 1) {
-      const prompt = adCopyPrompt({ facts: factPackText(pack), market: item.market, angle: item.angle, withOffer: item.withOffer, running, learnings });
+      const prompt = adCopyPrompt({ facts: factPackText(pack), market: item.market, angle: item.angle, withOffer: item.withOffer, running, learnings, whatsapp: item.whatsapp });
       const written = await writeWithClaude<AdCopy>({
         system: AD_COPY_SYSTEM,
         content: [
@@ -356,7 +362,7 @@ async function writeAd(
       if (!problems.length) return { copy, writer: "claude" };
     }
   }
-  const plain = templateAdCopy(pack, item.market, item.angle, item.withOffer);
+  const plain = templateAdCopy(pack, item.market, item.angle, item.withOffer, item.whatsapp);
   const problems = check(plain);
   return problems.length ? { error: `No ad passed the checks (${problems.join("; ")}).` } : { copy: plain, writer: "template" };
 }
@@ -394,11 +400,14 @@ async function makeAd(
     ...(withIg && ctx.igUserId ? { instagram_user_id: ctx.igUserId } : {}),
     link_data: {
       image_hash: hash,
-      link: "https://fb.me/",
+      link: item.whatsapp ? "https://api.whatsapp.com/send" : "https://fb.me/",
       message: written.copy.primary_text,
       name: written.copy.headline,
       description: written.copy.description,
-      call_to_action: { type: "LEARN_MORE", value: { lead_gen_form_id: ctx.formId } },
+      // A click-to-WhatsApp ad (12 Nov 2026) opens a chat with the sales team's WhatsApp; the others open the lead form.
+      ...(item.whatsapp
+        ? { call_to_action: { type: "WHATSAPP_MESSAGE", value: { app_destination: "WHATSAPP" } } }
+        : { call_to_action: { type: "LEARN_MORE", value: { lead_gen_form_id: ctx.formId } } }),
     },
   });
   const act = `act_${ctx.config.accountId}`;

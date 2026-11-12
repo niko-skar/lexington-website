@@ -3,7 +3,7 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 
 import { readGoogleReport, type StoredGoogleReport } from "@/lib/ads/googleStore";
-import { leadsOf, metaConfig, type MetaConfig } from "@/lib/ads/meta";
+import { chatsOf, leadsOf, metaConfig, type MetaConfig } from "@/lib/ads/meta";
 import { MetaError, metaGraph } from "@/lib/ads/metaGraph";
 import { notifyOwner } from "@/lib/alerts/notify";
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
@@ -11,7 +11,7 @@ import { buildStories, shiftDay } from "@/lib/visits/report";
 import { readVisitLogs } from "@/lib/visits/store";
 
 import { checkGoogleHealth, type GoogleFix, type GoogleHealth, type HealthProblem } from "./adsHealthCore";
-import { MIN_DAILY, dayIn, monthStart, pilotSettings, planPilot, usd, type Holder, type PilotChange, type PilotPlan } from "./adsPilotCore";
+import { MIN_DAILY, WHATSAPP_TEST, dayIn, monthStart, pilotSettings, planPilot, usd, type Holder, type PilotChange, type PilotPlan } from "./adsPilotCore";
 import { loadFactPack } from "./facts";
 import { allowedAmounts, longDate, soldOutWords } from "./factsCore";
 
@@ -184,6 +184,8 @@ interface CampaignRow extends BudgetRow {
 interface AdsetRow extends BudgetRow {
   campaign_id?: string;
   end_time?: string;
+  /** "WHATSAPP" for click-to-WhatsApp ad sets. */
+  destination_type?: string;
 }
 
 interface InsightRow {
@@ -230,7 +232,7 @@ async function gatherMeta(config: MetaConfig, nowMs: number, startFor: (today: s
       limit: "500",
     }),
     metaGraph<{ data?: AdsetRow[] }>(config, "GET", `${act}/adsets`, {
-      fields: "id,name,campaign_id,status,effective_status,daily_budget,lifetime_budget,budget_remaining,end_time",
+      fields: "id,name,campaign_id,status,effective_status,daily_budget,lifetime_budget,budget_remaining,end_time,destination_type",
       limit: "500",
     }),
     metaGraph<{ data?: InsightRow[] }>(config, "GET", `${act}/insights`, { level: "campaign", time_range: range(since14), fields: "campaign_id,spend,actions", limit: "500" }),
@@ -240,9 +242,13 @@ async function gatherMeta(config: MetaConfig, nowMs: number, startFor: (today: s
       : Promise.resolve({ data: [] as InsightRow[] }),
   ]);
 
+  // Click-to-WhatsApp ad sets (and their campaigns): their results are the WhatsApp chats they start, not form entries.
+  const waSets = new Set((adsets.data ?? []).filter((a) => a.destination_type === "WHATSAPP").map((a) => a.id));
+  const waCampaigns = new Set((adsets.data ?? []).filter((a) => waSets.has(a.id)).map((a) => a.campaign_id ?? ""));
   const stats = new Map<string, { spend: number; leads: number }>();
-  for (const row of byCampaign.data ?? []) if (row.campaign_id) stats.set(row.campaign_id, { spend: num(row.spend), leads: leadsOf(row.actions).leads });
-  for (const row of byAdset.data ?? []) if (row.adset_id) stats.set(row.adset_id, { spend: num(row.spend), leads: leadsOf(row.actions).leads });
+  for (const row of byCampaign.data ?? [])
+    if (row.campaign_id) stats.set(row.campaign_id, { spend: num(row.spend), leads: waCampaigns.has(row.campaign_id) ? chatsOf(row.actions) : leadsOf(row.actions).leads });
+  for (const row of byAdset.data ?? []) if (row.adset_id) stats.set(row.adset_id, { spend: num(row.spend), leads: waSets.has(row.adset_id) ? chatsOf(row.actions) : leadsOf(row.actions).leads });
 
   const ended = (iso?: string) => Boolean(iso && Date.parse(iso) <= nowMs);
   const daysUntil = (iso?: string) => (iso ? Math.max(1, Math.ceil((Date.parse(iso) - nowMs) / 86_400_000)) : 1);
@@ -261,7 +267,8 @@ async function gatherMeta(config: MetaConfig, nowMs: number, startFor: (today: s
     const budget = budgetOf(row, end);
     if (budget === null) return;
     const s = stats.get(row.id) ?? { spend: 0, leads: 0 };
-    holders.push({ channel: "meta", id: row.id, level, name, status, dailyBudget: budget, last14: { spend: Math.round(s.spend * 100) / 100, leads: s.leads } });
+    const group = waSets.has(row.id) || waCampaigns.has(row.id) ? "whatsapp" : "form";
+    holders.push({ channel: "meta", id: row.id, level, name, status, dailyBudget: budget, last14: { spend: Math.round(s.spend * 100) / 100, leads: s.leads }, group });
   };
 
   const liveSets = (adsets.data ?? []).filter((a) => !GONE.has(a.effective_status ?? a.status ?? ""));
@@ -553,8 +560,10 @@ export async function runAdsPilot(opts: { nowMs?: number } = {}): Promise<PilotR
     if (!googleHold && health?.hold) googleHold = { since: today, reason: health.hold.reason };
     if (googleHold) notes.push(`Google's spending is stopped by the ads health check since ${longDate(googleHold.since)}: ${googleHold.reason}`);
 
-    // Meta counts every form entry; only the ones that aren't cold are results.
-    const metaHolders = meta.holders.map((h) => ({ ...h, last14: { ...h.last14, leads: Math.round(h.last14.leads * share(h) * 100) / 100 } }));
+    // Meta counts every form entry; only the ones that aren't cold are results. (A WhatsApp chat isn't rated: it counts.)
+    const metaHolders = meta.holders.map((h) =>
+      h.group === "whatsapp" ? h : { ...h, last14: { ...h.last14, leads: Math.round(h.last14.leads * share(h) * 100) / 100 } }
+    );
     const holders = [...metaHolders, ...google.holders];
     const byId = new Map(holders.map((h) => [h.id, h]));
 
@@ -585,6 +594,7 @@ export async function runAdsPilot(opts: { nowMs?: number } = {}): Promise<PilotR
       pausedForCap: pausedForCapBefore,
       lastChanged,
       noPauseUntil,
+      whatsappTest: WHATSAPP_TEST,
     });
     notes.push(...plan.notes);
 
