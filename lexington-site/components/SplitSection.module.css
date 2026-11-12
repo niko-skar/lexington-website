@@ -33,6 +33,18 @@
   object-fit: contain;
 }
 
+/* a scanned plan, framed like a plate on the Olympian site */
+.mediaDrawing {
+  padding: 7%;
+  border: 1px solid rgba(21, 24, 26, 0.18);
+  background: var(--paper);
+}
+
+.mediaDrawing img {
+  object-fit: contain;
+  mix-blend-mode: multiply;
+}
+
 .title {
   font-size: var(--fs-600);
   margin-top: var(--space-4);

@@ -14,8 +14,9 @@ interface SplitSectionProps {
   style?: CSSProperties;
   // Photos want a cropped 4:5 fill ("cover"); diagrams like floor plans
   // need the whole image visible, letterboxed within the same box instead
-  // of cropped ("contain").
-  fit?: "cover" | "contain";
+  // of cropped ("contain"). "drawing" is a scanned plan (black ink on white):
+  // whole, framed like a plate, and printed onto the paper.
+  fit?: "cover" | "contain" | "drawing";
 }
 
 export function SplitSection({
@@ -31,7 +32,11 @@ export function SplitSection({
   return (
     <section className="section" style={style}>
       <div className={`wrap ${styles.split} ${reverse ? styles.reverse : ""}`}>
-        <Reveal className={`${styles.media} ${fit === "contain" ? styles.mediaContain : ""}`}>
+        <Reveal
+          className={`${styles.media} ${fit === "contain" ? styles.mediaContain : ""} ${
+            fit === "drawing" ? styles.mediaDrawing : ""
+          }`}
+        >
           <Image
             src={imageUrl}
             alt={imageAlt}

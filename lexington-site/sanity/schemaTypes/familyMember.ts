@@ -5,10 +5,14 @@ export const familyMember = defineType({
   title: "Family member",
   type: "document",
   fields: [
+    // The website shows the family name only — no first names, no family
+    // photos (owner, 12 Nov 2026). Name and photo are for Studio; the site
+    // reads years and bio, and tells the generations apart by order.
     defineField({
       name: "name",
       title: "Name",
       type: "string",
+      description: "Studio only — the website shows the surname alone, never first names.",
       validation: (Rule) => Rule.required(),
     }),
     defineField({
@@ -23,12 +27,14 @@ export const familyMember = defineType({
       title: "Bio",
       type: "text",
       rows: 4,
+      description: "Shown on Our Story. Keep first names out of it.",
       validation: (Rule) => Rule.required(),
     }),
     defineField({
       name: "photo",
       title: "Photo",
       type: "image",
+      description: "Studio only — family photos are not shown on the website.",
       options: { hotspot: true },
     }),
     defineField({

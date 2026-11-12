@@ -1,0 +1,458 @@
+/* Our Story, drawn the way olympiandevelopments.com is: numbered sheets,
+   plates with coordinates, hairlines, a monospace for the labels, and the
+   family told apart by generation. In the Lexington's own colours. */
+
+.statement,
+.lineage,
+.record {
+  --rule: rgba(21, 24, 26, 0.14);
+  --rule-2: rgba(21, 24, 26, 0.26);
+  --muted: #5f666b;
+  --body: #3d4245;
+}
+
+.sheetHead,
+.figLabel,
+.plateTop,
+.plateFoot,
+.figCaption,
+.kicker,
+.years,
+.tags,
+.recordNo,
+.recordMeta,
+.recordSide,
+.outLink,
+.olympianLink {
+  font-family: var(--font-mono), ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  text-transform: uppercase;
+}
+
+/* ---- sheet labels and titles ---- */
+
+.sheetHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--rule);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+}
+
+.sheetNo {
+  color: var(--clay);
+  font-weight: 500;
+}
+
+.sheetNote {
+  color: var(--muted);
+  text-align: right;
+}
+
+.titleRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 4vw;
+  margin-top: clamp(28px, 4vw, 56px);
+}
+
+.bigTitle {
+  font-size: clamp(2.6rem, 1.3rem + 5vw, 6rem);
+  line-height: 0.95;
+  letter-spacing: -0.02em;
+}
+
+.titleLede {
+  font-family: var(--font-serif);
+  font-size: clamp(1.25rem, 1rem + 1vw, 1.9rem);
+  line-height: 1.2;
+  text-align: right;
+  max-width: 15em;
+}
+
+.statementText em,
+.titleLede em,
+.genTitle em {
+  font-style: italic;
+  color: var(--clay);
+}
+
+/* ---- 01 statement ---- */
+
+.statementText {
+  margin-top: clamp(40px, 6vw, 88px);
+  font-family: var(--font-serif);
+  font-size: clamp(1.75rem, 1rem + 2.9vw, 3.6rem);
+  font-weight: 400;
+  line-height: 1.14;
+  letter-spacing: -0.015em;
+  max-width: 24em;
+}
+
+.figures {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: clamp(48px, 7vw, 104px);
+  border-top: 1px solid var(--rule);
+}
+
+.figure {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 24px 20px 0 0;
+}
+
+.figure + .figure {
+  padding-left: 24px;
+  border-left: 1px solid var(--rule);
+}
+
+.figValue {
+  order: -1;
+  font-family: var(--font-serif);
+  /* lining figures: Playfair's old-style 0 reads as an "o" at this size */
+  font-variant-numeric: lining-nums;
+  font-size: clamp(2.6rem, 1.5rem + 3.6vw, 5.2rem);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.figLabel {
+  max-width: 24ch;
+  font-size: 10.5px;
+  line-height: 1.55;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+}
+
+/* ---- 02 lineage ---- */
+
+.generations {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(24px, 3vw, 48px);
+  margin-top: clamp(40px, 5vw, 72px);
+}
+
+.generation {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.plate {
+  display: flex;
+  flex-direction: column;
+  aspect-ratio: 4 / 5;
+  padding: 12px 14px;
+  border: 1px solid var(--rule-2);
+  background: var(--paper);
+}
+
+.plateTop {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+}
+
+.plateBody {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  margin: 10px 0 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.plateBody img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* black ink on white: printed onto the paper */
+.plateDrawing .plateBody img {
+  mix-blend-mode: multiply;
+}
+
+.platePhoto .plateBody img {
+  object-fit: cover;
+}
+
+/* no picture yet: the numeral, on a surveyor's grid */
+.plateNumeral .plateBody {
+  background:
+    linear-gradient(var(--rule) 1px, transparent 1px) 0 0 / 100% 12.5%,
+    linear-gradient(90deg, var(--rule) 1px, transparent 1px) 0 0 / 12.5% 100%;
+  border: 1px solid var(--rule);
+}
+
+.numeral {
+  font-family: var(--font-serif);
+  font-size: clamp(6rem, 3rem + 7vw, 11rem);
+  line-height: 1;
+  color: transparent;
+  -webkit-text-stroke: 1.2px var(--brass);
+}
+
+.plateFoot {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
+
+.plateFoot li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 6px;
+  border-top: 1px solid var(--rule);
+}
+
+.figCaption {
+  margin-top: 10px;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+}
+
+.kicker {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  color: var(--clay);
+}
+
+.genTitle {
+  margin-top: 10px;
+  /* "Second generation" stays on one line in a third of the page */
+  font-size: clamp(1.9rem, 1.1rem + 1.45vw, 2.6rem);
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.years {
+  display: inline-block;
+  margin-top: 16px;
+  padding: 5px 10px;
+  border: 1px solid var(--rule-2);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+}
+
+.bio {
+  margin-top: 16px;
+  max-width: 46ch;
+  font-size: 16px;
+  line-height: 1.65;
+  color: var(--body);
+}
+
+.tags {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.tags li {
+  padding: 5px 11px;
+  border-radius: 999px;
+  background: rgba(21, 24, 26, 0.07);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: var(--body);
+}
+
+/* ---- 03 record ---- */
+
+.recordList {
+  list-style: none;
+  margin-top: clamp(40px, 5vw, 72px);
+  border-top: 1px solid var(--rule-2);
+}
+
+.recordRow {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr) minmax(200px, 280px);
+  gap: 24px;
+  padding: 30px 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.recordNo {
+  padding-top: 12px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.recordName {
+  font-size: clamp(1.6rem, 1.1rem + 1.8vw, 2.8rem);
+  line-height: 1.05;
+}
+
+.recordMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin-top: 12px;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+}
+
+.live {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--clay);
+}
+
+.live::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--clay);
+}
+
+.recordSummary {
+  margin-top: 12px;
+  max-width: 56ch;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--body);
+}
+
+.recordSide {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  padding-top: 12px;
+  text-align: right;
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+}
+
+.recordLink,
+.outLink {
+  color: var(--clay);
+  border-bottom: 1px solid currentColor;
+  padding-bottom: 3px;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.recordLink {
+  margin-top: 6px;
+}
+
+.recordLink:hover,
+.outLink:hover {
+  color: var(--ink);
+}
+
+.outLink {
+  display: inline-block;
+  margin-top: 36px;
+  font-size: 11.5px;
+  letter-spacing: 0.12em;
+}
+
+.olympianLink {
+  display: inline-block;
+  margin-top: 28px;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: #5f666b;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(21, 24, 26, 0.26);
+  padding-bottom: 3px;
+}
+
+.olympianLink:hover {
+  color: var(--clay);
+  border-color: var(--clay);
+}
+
+/* ---- tablets: one generation per row, plate beside the text ---- */
+@media (max-width: 1100px) and (min-width: 881px) {
+  .generations {
+    grid-template-columns: 1fr;
+    gap: 64px;
+  }
+
+  .generation {
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    gap: 48px;
+    align-items: center;
+  }
+}
+
+/* ---- phones ---- */
+@media (max-width: 880px) {
+  .sheetHead {
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .sheetNote {
+    text-align: left;
+  }
+
+  .titleRow {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+  }
+
+  .titleLede {
+    text-align: left;
+  }
+
+  .figures {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .figure:nth-child(3) {
+    padding-left: 0;
+    border-left: 0;
+  }
+
+  .figure:nth-child(n + 3) {
+    margin-top: 24px;
+    border-top: 1px solid var(--rule);
+  }
+
+  .generations {
+    grid-template-columns: 1fr;
+    gap: 72px;
+  }
+
+  .recordRow {
+    grid-template-columns: 34px minmax(0, 1fr);
+    gap: 16px;
+  }
+
+  .recordSide {
+    grid-column: 2;
+    align-items: flex-start;
+    padding-top: 0;
+    text-align: left;
+  }
+}

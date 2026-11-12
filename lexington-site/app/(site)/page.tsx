@@ -2,7 +2,6 @@ import { client } from "@/lib/sanity/client";
 import { urlFor } from "@/lib/sanity/image";
 import {
   amenitiesQuery,
-  familyMembersQuery,
   financingPlanQuery,
   galleryImagesQuery,
   siteSettingsQuery,
@@ -10,7 +9,6 @@ import {
 } from "@/lib/sanity/queries";
 import type {
   Amenity,
-  FamilyMember,
   FinancingPlan,
   GalleryImage,
   SiteSettings,
@@ -19,6 +17,7 @@ import type {
 import { formatUSD } from "@/lib/format";
 import { inclVatSuffix, vatFrom, withVat } from "@/lib/vat";
 import { ESTIMATED_COMPLETION } from "@/lib/seo";
+import { TEMA_PLAN } from "@/lib/olympian";
 
 import { Hero } from "@/components/Hero";
 import { Button } from "@/components/Button";
@@ -32,13 +31,12 @@ import { InteractiveMap } from "@/components/InteractiveMap";
 export const revalidate = 600;
 
 export default async function HomePage() {
-  const [units, images, amenities, financingPlan, siteSettings, familyMembers] = await Promise.all([
+  const [units, images, amenities, financingPlan, siteSettings] = await Promise.all([
     client.fetch<Unit[]>(unitsQuery),
     client.fetch<GalleryImage[]>(galleryImagesQuery),
     client.fetch<Amenity[]>(amenitiesQuery),
     client.fetch<FinancingPlan>(financingPlanQuery),
     client.fetch<SiteSettings>(siteSettingsQuery),
-    client.fetch<FamilyMember[]>(familyMembersQuery),
   ]);
 
   const availableUnits = units.filter((u) => u.status === "available");
@@ -55,10 +53,6 @@ export default async function HomePage() {
   // The page must survive someone clearing out a photo category in Studio.
   const heroImage = exteriorImages[0] ?? images[0];
   const residencesImage = interiorImages[1] ?? interiorImages[0] ?? images[1];
-  // Mikhail founded the family's development legacy in 1960s Tema — his
-  // portrait anchors the "three generations" teaser on the home page.
-  const familyPhotoMember =
-    familyMembers.find((m) => m.name.includes("Mikhail")) ?? familyMembers[0];
 
   const featuredAmenities = amenities
     .filter((a) => a.category === "signature" || a.category === "rooftop")
@@ -213,24 +207,25 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {familyPhotoMember?.photo && (
-        <SplitSection
-          imageUrl={urlFor(familyPhotoMember.photo).width(800).height(1000).url()}
-          imageAlt={familyPhotoMember.name}
-          reverse
-          eyebrow="An Olympian Development"
-          title="Three generations shaping Ghana's landscape."
-        >
-          <p>
-            From city-wide planning in 1960s Tema to a six-bedroom residence
-            in Shiashie, the family behind The Lexington has been building in
-            Ghana since before most of Accra existed as it does today.
-          </p>
-          <Button href="/about" variant="outline-dark">
-            Read Our Story
-          </Button>
-        </SplitSection>
-      )}
+      {/* The family's story is told with the Tema plan, never a family photo
+          (owner, 12 Nov 2026: no photos of the family, surname only). */}
+      <SplitSection
+        imageUrl={TEMA_PLAN.src}
+        imageAlt={TEMA_PLAN.alt}
+        reverse
+        fit="drawing"
+        eyebrow="An Olympian Development"
+        title="Three generations shaping Ghana's landscape."
+      >
+        <p>
+          From city-wide planning in 1960s Tema to a six-bedroom residence
+          in Shiashie, the family behind The Lexington has been building in
+          Ghana since before most of Accra existed as it does today.
+        </p>
+        <Button href="/about" variant="outline-dark">
+          Read Our Story
+        </Button>
+      </SplitSection>
 
       <section className="section sectionAlt" style={{ textAlign: "center" }}>
         <div className="wrap">
