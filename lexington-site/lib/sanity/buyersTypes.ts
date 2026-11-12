@@ -37,6 +37,30 @@ export interface BuyerAccount {
   buyerDetails?: BuyerDetails;
   /** Steps written for this buyer: when there are any, the dashboard shows them instead of the standard ones. */
   nextSteps?: NextStep[];
+  /** Plans the buyer is choosing between, each a 3D model with its price: shown at /account/plans. */
+  planOptions?: PlanOptionSet;
+}
+
+/** The plans a buyer is choosing between (a home drawn more than one way), with the deposit. */
+export interface PlanOptionSet {
+  eyebrow?: string;
+  title?: string;
+  intro?: string;
+  depositPerHomeUSD?: number;
+  depositHomes?: number;
+  options?: PlanOption[];
+}
+
+export interface PlanOption {
+  _key?: string;
+  title: string;
+  /** The 3D model's id (app/account/plans/page.tsx lists the ones the site has). */
+  model: string;
+  homes?: { _key?: string; name: string; areaSqm: number }[];
+  /** The price before this buyer's discount. */
+  listPriceUSD?: number;
+  /** The buyer's price for this plan. */
+  priceUSD: number;
 }
 
 export interface NextStep {

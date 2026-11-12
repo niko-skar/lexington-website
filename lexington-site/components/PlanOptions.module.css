@@ -1,0 +1,420 @@
+/* A buyer's plans to choose between (/account/plans): the 3D model with a switch above it, the sizes and price beside it. */
+.wrap {
+  display: grid;
+  gap: var(--space-6);
+}
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.tab,
+.tabOn {
+  display: grid;
+  gap: 2px;
+  min-width: 150px;
+  padding: 12px 18px;
+  border: 1px solid var(--stone);
+  border-radius: var(--radius);
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.15s var(--ease),
+    background 0.15s var(--ease);
+}
+
+.tab:hover {
+  border-color: var(--ink);
+}
+
+.tabOn {
+  background: var(--navy);
+  border-color: var(--navy);
+  color: var(--paper);
+}
+
+.tab:focus-visible,
+.tabOn:focus-visible,
+.full:focus-visible,
+.rowLink:focus-visible,
+.gate:focus-visible,
+.done:focus-visible {
+  outline: 2px solid var(--brass);
+  outline-offset: 2px;
+}
+
+.tabName {
+  font-family: var(--font-serif);
+  font-size: var(--fs-400);
+}
+
+.tabPrice {
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.8;
+}
+
+.split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-6);
+  align-items: start;
+}
+
+@media (min-width: 980px) {
+  .split {
+    grid-template-columns: minmax(0, 1.75fr) minmax(280px, 1fr);
+  }
+}
+
+.stage {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  border-radius: var(--radius);
+  background: #f6f2ea;
+  border: 1px solid var(--stone);
+}
+
+@media (min-width: 700px) {
+  .stage {
+    aspect-ratio: 4 / 3;
+  }
+}
+
+.poster {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+  transition: opacity 0.7s var(--ease);
+}
+
+.live {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.7s var(--ease);
+}
+
+.stageReady .live {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.stageReady .poster {
+  opacity: 0;
+}
+
+.host {
+  position: absolute;
+  inset: 0;
+}
+
+/* the viewer asks for 320px of height on its own: here the box decides (two classes, so it wins over the viewer's rule) */
+.live .host {
+  min-height: 0;
+}
+
+.badge {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 14px;
+  margin: 0 auto;
+  width: max-content;
+  max-width: calc(100% - 24px);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: rgba(16, 19, 28, 0.82);
+  color: #f1ece2;
+  font-size: 13px;
+}
+
+.spin {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid rgba(241, 236, 226, 0.35);
+  border-top-color: #f1ece2;
+  animation: planSpin 0.9s linear infinite;
+}
+
+@keyframes planSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spin {
+    animation: none;
+  }
+}
+
+.gate {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 16px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.gate span,
+.done {
+  padding: 9px 18px;
+  border-radius: 999px;
+  background: rgba(16, 19, 28, 0.85);
+  color: #f1ece2;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.done {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  border: 0;
+  cursor: pointer;
+}
+
+.foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-top: 10px;
+}
+
+.hint {
+  flex: 1 1 320px;
+  margin: 0;
+  font-size: 13px;
+  color: var(--ink-soft, #5b6267);
+  max-width: 70ch;
+}
+
+.full {
+  padding: 8px 16px;
+  border: 1px solid var(--stone);
+  border-radius: var(--radius);
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.full:hover {
+  border-color: var(--ink);
+}
+
+.panel {
+  background: var(--paper-dim);
+  border: 1px solid var(--stone-lt);
+  border-radius: var(--radius);
+  padding: var(--space-5);
+  display: grid;
+  gap: var(--space-5);
+}
+
+.panelTitle {
+  font-family: var(--font-serif);
+  font-size: var(--fs-500);
+  margin: 0;
+}
+
+.facts,
+.prices {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+
+.prices {
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--stone-lt);
+}
+
+.fact,
+.factTotal,
+.priceRow,
+.saveRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.fact dt,
+.factTotal dt,
+.priceRow dt,
+.saveRow dt {
+  font-size: 14px;
+  color: var(--ink-soft, #5b6267);
+}
+
+.fact dd,
+.factTotal dd,
+.priceRow dd,
+.saveRow dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.factTotal dt,
+.factTotal dd {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.struck {
+  text-decoration: line-through;
+  text-decoration-color: var(--stone);
+  color: var(--ink-soft, #5b6267);
+}
+
+.priceRow dt {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.priceRow dd {
+  font-family: var(--font-serif);
+  font-size: var(--fs-600);
+  line-height: 1.1;
+}
+
+.saveRow dt,
+.saveRow dd {
+  color: var(--sage);
+  font-weight: 600;
+}
+
+.saveRow small {
+  font-weight: 400;
+}
+
+.block {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.blockTitle {
+  font-family: var(--font-serif);
+  font-size: var(--fs-500);
+  margin: 0;
+}
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  min-width: 560px;
+  border-collapse: collapse;
+  font-size: 14.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.table th,
+.table td {
+  padding: 12px 14px;
+  text-align: right;
+  border-bottom: 1px solid var(--stone-lt);
+  white-space: nowrap;
+}
+
+.table th:first-child {
+  text-align: left;
+}
+
+.table thead th {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sage);
+}
+
+.rowOn {
+  background: var(--paper-dim);
+}
+
+.rowLink {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.strong {
+  font-weight: 600;
+}
+
+.deposit {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: var(--space-4);
+}
+
+.depositItem,
+.depositDue {
+  display: grid;
+  gap: 6px;
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--stone-lt);
+  border-radius: var(--radius);
+  background: var(--paper-dim);
+}
+
+.depositItem span,
+.depositDue span {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sage);
+}
+
+.depositItem b,
+.depositDue b {
+  font-family: var(--font-serif);
+  font-size: var(--fs-500);
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+
+.depositDue {
+  border-color: var(--clay);
+}
+
+.note {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ink-soft, #5b6267);
+}

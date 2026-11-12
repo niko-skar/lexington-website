@@ -234,6 +234,54 @@ export const buyerAccount = defineType({
       hidden: ({ document }) => document?.role === "admin" || document?.role === "site",
     }),
     defineField({
+      name: "planOptions",
+      title: "Plans the buyer is choosing between",
+      description: "Optional. When there are plans here, the buyer's portal shows them at /account/plans: each as a 3D model with its sizes, list price, the buyer's price and the deposit.",
+      type: "object",
+      hidden: ({ document }) => document?.role === "admin" || document?.role === "site",
+      fields: [
+        defineField({ name: "eyebrow", title: "Small heading", type: "string" }),
+        defineField({ name: "title", title: "Heading", type: "string" }),
+        defineField({ name: "intro", title: "Introduction", type: "text", rows: 3 }),
+        defineField({ name: "depositPerHomeUSD", title: "Deposit for each home (US$)", type: "number" }),
+        defineField({ name: "depositHomes", title: "Number of homes", type: "number" }),
+        defineField({
+          name: "options",
+          title: "Plans",
+          type: "array",
+          of: [
+            defineArrayMember({
+              type: "object",
+              name: "planOption",
+              fields: [
+                defineField({ name: "title", title: "Name", type: "string", validation: (rule) => rule.required() }),
+                defineField({ name: "model", title: "3D model", description: "The model's id on the website, e.g. u4g1.", type: "string", validation: (rule) => rule.required() }),
+                defineField({
+                  name: "homes",
+                  title: "Homes and sizes",
+                  type: "array",
+                  of: [
+                    defineArrayMember({
+                      type: "object",
+                      name: "planHome",
+                      fields: [
+                        defineField({ name: "name", title: "Home", type: "string" }),
+                        defineField({ name: "areaSqm", title: "Net internal area (m²)", type: "number" }),
+                      ],
+                      preview: { select: { title: "name", subtitle: "areaSqm" } },
+                    }),
+                  ],
+                }),
+                defineField({ name: "listPriceUSD", title: "List price (US$)", type: "number" }),
+                defineField({ name: "priceUSD", title: "The buyer's price (US$)", type: "number", validation: (rule) => rule.required() }),
+              ],
+              preview: { select: { title: "title", subtitle: "priceUSD" } },
+            }),
+          ],
+        }),
+      ],
+    }),
+    defineField({
       name: "buyerDetails",
       title: "Details the buyer sent from the portal",
       type: "object",
