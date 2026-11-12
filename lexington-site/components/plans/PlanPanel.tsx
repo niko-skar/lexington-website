@@ -197,8 +197,8 @@ export function PlanPanel(props: Props) {
         </div>
         {tool === "select" && (
           <p className={s.hint}>
-            Drag a wall, door, window or room name to move it. A door or window can go onto another wall; a wall dragged onto a column is centred on it
-            (hold Shift to place it off centre). Click a wall to drag its round ends. Drag an empty spot to look around.
+            Drag a wall, door, window or room name to move it. A door or window can go onto another wall; a wall dragged over a column sits centred on it or flush
+            on either of its edges (hold Shift to place it anywhere). Click a wall to drag its round ends. Drag an empty spot to look around.
           </p>
         )}
         {tool === "wall" && (
@@ -215,8 +215,9 @@ export function PlanPanel(props: Props) {
               <MmInput value={wallT} min={10} label="Wall thickness" onSave={(v) => onWall(wallKind, v)} />
             </label>
             <p className={s.hint}>
-              Start or end a wall in a column and it is centred on the column and stops at its face. Walls also line up on grid lines, slab edges and
-              other walls, centred or face to face.
+              Start a wall in a column: click its middle and the wall is centred on it, click near one of its edges and the wall sits flush on that edge. It
+              stops at the column&apos;s face. Zoom in if the column is small on screen. Walls also line up on grid lines, slab edges and other walls,
+              centred or face to face.
             </p>
           </div>
         )}

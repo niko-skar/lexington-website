@@ -3,10 +3,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useToast } from "@/components/crm/Toasts";
-import { saveAsBuiltAction } from "@/lib/actions/asbuilt";
+import { openingOnAllFloorsAction, saveAsBuiltAction } from "@/lib/actions/asbuilt";
 import { gridRef, moveText } from "@/lib/asbuilt/format";
 import { boxOf, centreOf, gridLines, linePos } from "@/lib/asbuilt/geometry";
-import { applyChanges, pathOf } from "@/lib/asbuilt/paths";
+import { applyChanges, parsePath, pathOf } from "@/lib/asbuilt/paths";
 import { floorBelow } from "@/lib/asbuilt/setout";
 import {
   DEFAULT_TOLERANCE,
@@ -67,6 +67,18 @@ function reverseOf(entry: LogEntry): Change[] {
     .reverse();
 }
 
+/** A void that was just changed on one floor: does the change go for that floor only, or for all floors? */
+interface AllFloorsAsk {
+  floor: string;
+  key: string;
+  name: string;
+  /** It was taken away (deleted, or marked as not built). */
+  gone: boolean;
+}
+
+/** Voids and ducts run through every slab; stairs and the pool belong to their own floor. */
+const runsThrough = (o: OpeningEl | undefined | null) => Boolean(o) && (o!.kind === "void" || o!.kind === "duct");
+
 function newVoidKey(): string {
   const bytes = new Uint8Array(8);
   crypto.getRandomValues(bytes);
@@ -80,6 +92,7 @@ export function AsBuiltApp({ initialFloors, initialKey, initialTab, realRecord, 
   const [selection, setSelection] = useState<Selection | null>(null);
   const [saving, setSaving] = useState(0);
   const [placing, setPlacing] = useState(false);
+  const [ask, setAsk] = useState<AllFloorsAsk | null>(null);
   const [full, setFull] = useState(false);
   // Another part of the site app came on screen: the plan leaves full screen (it holds the page still).
   if (!active && full) setFull(false);
@@ -159,8 +172,19 @@ export function AsBuiltApp({ initialFloors, initialKey, initialTab, realRecord, 
             toast.show(res.error);
             return false;
           }
+          const was = known.get(key);
           known.set(key, res.floor);
           redraw();
+          // A void runs through the whole building: ask whether this change is for this floor only or for all.
+          const touched = changes
+            .map((c) => parsePath(c.path))
+            .filter((p) => p?.list === "openings" && p.field !== "note" && p.field !== "at")
+            .map((p) => p!.key);
+          if (touched.length) {
+            const now = res.floor.openings.find((o) => o._key === touched[0]);
+            const o = now ?? was?.openings.find((x) => x._key === touched[0]);
+            if (o && runsThrough(o)) setAsk({ floor: key, key: o._key, name: o.name, gone: !now || now.removed === true });
+          }
           const entry = undoOf
             ? null
             : [...(res.floor.log ?? [])].reverse().find((l) => l.text === text.trim().slice(0, 300));
@@ -190,6 +214,45 @@ export function AsBuiltApp({ initialFloors, initialKey, initialTab, realRecord, 
   useEffect(() => {
     saveRef.current = save;
   }, [save]);
+
+  /** Makes one void the same on every floor as it now is on `from` (after any saves still on their way). */
+  const onAllFloors = useCallback(
+    (from: string, key: string, name: string, gone: boolean) => {
+      if (!confirmed.current) confirmed.current = new Map(initialFloors.map((f) => [f.key, f]));
+      const known = confirmed.current;
+      setAsk(null);
+      setSaving((n) => n + 1);
+      const run = async (): Promise<boolean> => {
+        try {
+          const res = await openingOnAllFloorsAction({ floor: from, key });
+          if (!res.ok) {
+            toast.show(res.error);
+            return false;
+          }
+          for (const f of res.floors) known.set(f.key, f);
+          setFloors((all) =>
+            all.map((f) =>
+              pending.current.filter((p) => p.key === f.key).reduce((acc, p) => applyChanges(acc, p.changes), known.get(f.key) ?? f),
+            ),
+          );
+          const left = res.skipped.length ? ` (not on: ${res.skipped.join(", ")})` : "";
+          toast.show(
+            !res.done.length ? `${name} is already the same on every floor${left}` : gone ? `${name}: taken away on all floors${left}` : `${name}: the same on all floors now${left}`,
+          );
+          return true;
+        } catch {
+          toast.show("Couldn't save. Check the connection and try again.");
+          return false;
+        } finally {
+          setSaving((n) => n - 1);
+        }
+      };
+      const done = queue.current.then(run, run);
+      queue.current = done;
+      return done;
+    },
+    [toast, initialFloors],
+  );
 
   const undoEntry = useCallback(
     (key: string, entry: LogEntry) => save(key, reverseOf(entry), `Undid: ${entry.text}`, entry.el, entry._key),
@@ -322,6 +385,11 @@ export function AsBuiltApp({ initialFloors, initialKey, initialTab, realRecord, 
     return `${all.filter((e) => e.actual).length}/${all.length}`;
   };
 
+  // The void that is picked, and how many floors have it: one that isn't on every floor can be put there.
+  const picked = selection?.kind === "box" && selection.list === "openings" ? floor.openings.find((o) => o._key === selection.key) : undefined;
+  const pickedOn = picked && runsThrough(picked) ? floors.filter((f) => f.openings.some((o) => o._key === picked._key)).length : 0;
+  const askFloor = ask ? floors.find((f) => f.key === ask.floor) : undefined;
+
   const panel = selection ? (
     <Sheet
       floor={floor}
@@ -410,6 +478,34 @@ export function AsBuiltApp({ initialFloors, initialKey, initialTab, realRecord, 
       </details>
 
       <ClashNotice floor={floor} tol={settings.tol} onSelect={setSelection} />
+
+      {ask ? (
+        <div className={s.allFloors} role="group" aria-label="This floor or all floors">
+          <p>
+            <b>{ask.name}</b> was {ask.gone ? "taken away" : "changed"} on the {askFloor?.name ?? "floor"}. Voids run through the whole building: is
+            this for this floor only, or for all floors?
+          </p>
+          <div className={s.allFloorsBtns}>
+            <button type="button" className={s.btn} onClick={() => setAsk(null)}>
+              This floor only
+            </button>
+            <button type="button" className={s.btnPrimary} onClick={() => void onAllFloors(ask.floor, ask.key, ask.name, ask.gone)}>
+              All floors
+            </button>
+          </div>
+        </div>
+      ) : picked && pickedOn > 0 && pickedOn < floors.length ? (
+        <div className={s.allFloors} role="group" aria-label="Put this void on all floors">
+          <p>
+            <b>{picked.name}</b> is on {pickedOn} of {floors.length} floors.
+          </p>
+          <div className={s.allFloorsBtns}>
+            <button type="button" className={s.btn} disabled={saving > 0} onClick={() => void onAllFloors(floor.key, picked._key, picked.name, false)}>
+              Put it on all floors
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       <div className={panel ? s.workWithPanel : s.work}>
         <div>

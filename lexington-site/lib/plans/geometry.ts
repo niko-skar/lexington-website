@@ -206,6 +206,46 @@ export function columnAt(spots: ColumnSpot[], p: P, within: number): ColumnSpot 
 
 export const columnAnchor = (c: ColumnSpot, face: "l" | "r" | "t" | "b" | "m"): Anchor => ({ ref: `c:columns:${c.key}:${face}`, d: 0 });
 
+/** A line across a column that a wall built onto it sits on: its middle, or flush on one of its edges. */
+export interface ColumnLine {
+  v: number;
+  anchor: Anchor;
+  /** Goes before the column's name in the hint: "centred on", "on the top edge of". */
+  how: string;
+  edge: "l" | "r" | "t" | "b" | null;
+}
+
+/**
+ * Where a wall `t` thick sits across a column (Niko, 12 Nov 2026: "I should be able to place them on the
+ * edge between the columns in all directions"): centred on it, or with a face flush on either edge.
+ * `axis` is the axis of the wall's centre line (x for a wall down the page), `v` where the hand is on it.
+ * The nearest of the three wins. The edges only count once they are `apart` mm from the middle (far enough
+ * to tell apart on screen), so zoomed out a wall is centred as before. A wall of the structure has no
+ * middle along its length: there a wall is put flush only within its own thickness of an end.
+ */
+export function columnLineAt(c: ColumnSpot, axis: Axis, v: number, t: number, apart: number): ColumnLine | null {
+  const [lo, hi] = axis === "x" ? [c.box.x0, c.box.x1] : [c.box.y0, c.box.y1];
+  const mid = c.mid[axis];
+  const [fLo, fHi] = axis === "x" ? (["l", "r"] as const) : (["t", "b"] as const);
+  const word = { l: "left", r: "right", t: "top", b: "bottom" };
+  const flush = (f: "l" | "r" | "t" | "b"): ColumnLine => {
+    const low = f === fLo;
+    return { v: low ? lo + t / 2 : hi - t / 2, anchor: { ref: `c:columns:${c.key}:${f}`, d: r1(low ? t / 2 : -t / 2) }, how: `on the ${word[f]} edge of`, edge: f };
+  };
+  if (mid === null) {
+    if (hi - lo <= t) return null;
+    if (v <= lo + t) return flush(fLo);
+    if (v >= hi - t) return flush(fHi);
+    return null;
+  }
+  const centred: ColumnLine = { v: mid, anchor: columnAnchor(c, "m"), how: "centred on", edge: null };
+  const gap = (hi - lo - t) / 2; // from the middle line to a flush one
+  if (gap < 10 || gap < apart) return centred;
+  if (v < mid - gap / 2) return flush(fLo);
+  if (v > mid + gap / 2) return flush(fHi);
+  return centred;
+}
+
 /** A column's face on one side, along `axis`: the side `towards` is on (where the wall goes or comes from). */
 export function columnFace(c: ColumnSpot, axis: Axis, towards: number): { v: number; anchor: Anchor } {
   const [lo, hi] = axis === "x" ? [c.box.x0, c.box.x1] : [c.box.y0, c.box.y1];

@@ -2,8 +2,9 @@
 
 import { randomBytes } from "node:crypto";
 
-import { getAt, getItem, parsePath, type ParsedPath } from "@/lib/asbuilt/paths";
-import { floorId, isFloorKey, readFloorForPage, readFloorFull } from "@/lib/asbuilt/store";
+import { linePos } from "@/lib/asbuilt/geometry";
+import { getAt, getItem, parsePath, pathOf, sameValue, type ParsedPath } from "@/lib/asbuilt/paths";
+import { floorId, isFloorKey, readFloorForPage, readFloorFull, readFloors, SEED_FLOORS } from "@/lib/asbuilt/store";
 import type { Change, EdgeFigure, Floor, LogEntry, OpeningEl, OpeningKind } from "@/lib/asbuilt/types";
 import { getAdminSession } from "@/lib/auth/session";
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
@@ -70,10 +71,13 @@ function lineExists(floor: Floor, axis: "x" | "y", id: unknown): id is string {
   return typeof id === "string" && floor.grid.some((g) => g.axis === axis && g.id === id);
 }
 
-function cleanOpening(v: unknown, key: string, floor: Floor): OpeningEl {
+function cleanOpening(v: unknown, key: string, floor: Floor, current: unknown): OpeningEl {
   if (!v || typeof v !== "object") throw new Refused("That opening can't be added.");
   const o = v as Record<string, unknown>;
-  if (o._key !== key || !ADDED_KEY_RE.test(key)) throw new Refused("That opening can't be added.");
+  // A new one made here has a key of its own; one that runs through from another floor keeps that floor's key.
+  // Either way it never takes the place of an opening from this floor's drawings.
+  const drawn = Boolean(current) && (current as OpeningEl).added !== true;
+  if (o._key !== key || drawn || !(ADDED_KEY_RE.test(key) || KEY_RE.test(key))) throw new Refused("That opening can't be added.");
   if (!lineExists(floor, "x", o.x) || !lineExists(floor, "y", o.y))
     throw new Refused("That opening isn't on this floor's grid.");
   const kind = KINDS.includes(o.kind as OpeningKind) ? (o.kind as OpeningKind) : "void";
@@ -102,7 +106,7 @@ function cleanValue(p: ParsedPath, value: unknown, floor: Floor, current: unknow
         throw new Refused("Openings from the drawings can't be deleted: mark them as not built instead.");
       return null;
     }
-    return cleanOpening(value, p.key, floor);
+    return cleanOpening(value, p.key, floor, current);
   }
   if (value === null || value === undefined) return null;
   switch (p.field) {
@@ -243,4 +247,117 @@ export async function saveAsBuiltAction(input: AsBuiltInput): Promise<AsBuiltRes
     return { ok: true, floor: fresh };
   }
   return fail("Someone else changed this floor at the same moment. Reload the page and try again.");
+}
+
+export type AllFloorsResult = { ok: true; floors: Floor[]; done: string[]; skipped: string[] } | { ok: false; error: string };
+
+/** The openings that run through every slab. Stairs and the pool belong to their own floors. */
+const RUNS_THROUGH: OpeningKind[] = ["void", "duct"];
+const r1 = (v: number) => Math.round(v * 10) / 10;
+
+/**
+ * A void runs through the whole building (Niko, 12 Nov 2026: "the voids are to continue throughout the whole
+ * building unless i specifically change one on one floor, it should ask me if it applies to this floor or all
+ * floors"). Makes the opening `key` on every other floor the same as it now is on `floor`: added where it is
+ * missing, moved, resized or renamed where it is there, taken away where it was taken away here. All floors
+ * change together or not at all, and each floor logs it, so it can be undone floor by floor.
+ */
+export async function openingOnAllFloorsAction(input: { floor: string; key: string }): Promise<AllFloorsResult> {
+  const no = (error: string): AllFloorsResult => ({ ok: false, error });
+  if (!(await getAdminSession())) return no("Your sign-in has run out. Sign in again, then try once more.");
+  if (!input || typeof input.floor !== "string" || !isFloorKey(input.floor)) return no("That floor isn't known.");
+  if (typeof input.key !== "string" || !KEY_RE.test(input.key)) return no("That opening isn't known.");
+  const key = input.key;
+  const client = getBuyersClient();
+  const whole = pathOf("openings", key);
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const source = await readFloorFull(input.floor, attempt);
+    if (!source) return no("This floor isn't set up yet. Reload the page.");
+    const src = (source.openings ?? []).find((o) => o._key === key) ?? null;
+    if (src && !RUNS_THROUGH.includes(src.kind)) return no("Only voids and ducts run through every floor.");
+    const srcFaces = src ? (src.actual ?? src.design) : null;
+    const now = new Date().toISOString();
+    const done: string[] = [];
+    const skipped: string[] = [];
+    const tx = client.transaction();
+
+    for (const seedFloor of SEED_FLOORS) {
+      if (seedFloor.key === input.floor) continue;
+      const doc = await readFloorFull(seedFloor.key, attempt);
+      if (!doc || !doc._rev) {
+        skipped.push(seedFloor.name);
+        continue;
+      }
+      const id = floorId(seedFloor.key);
+      const cur = (doc.openings ?? []).find((o) => o._key === key) ?? null;
+      const changes: { path: string; before: unknown; after: unknown }[] = [];
+      let text = "";
+      if (!src || src.removed === true || !srcFaces) {
+        // Taken away here (or marked as not built): it goes from the other floors too.
+        if (!cur || (!cur.added && cur.removed)) continue;
+        if (cur.added) changes.push({ path: whole, before: cur, after: null });
+        else changes.push({ path: pathOf("openings", key, "removed"), before: cur.removed ?? null, after: true });
+        text = `${cur.name}: taken away, as on the ${source.name}`;
+      } else {
+        if (!lineExists(doc, "x", src.x) || !lineExists(doc, "y", src.y)) {
+          skipped.push(seedFloor.name);
+          continue;
+        }
+        if (!cur || cur.added) {
+          const after: OpeningEl = {
+            _key: key,
+            kind: src.kind,
+            name: src.name,
+            x: src.x,
+            y: src.y,
+            design: null,
+            actual: { ...srcFaces },
+            added: true,
+            at: now,
+            ...(src.note ? { note: src.note } : {}),
+          };
+          if (cur && sameValue({ ...cur, at: null }, { ...after, at: null })) continue;
+          changes.push({ path: whole, before: cur, after });
+          text = cur ? `${src.name}: made the same as on the ${source.name}` : `Added ${src.name} by ${src.x}/${src.y}, as on the ${source.name}`;
+        } else {
+          // On this floor's own drawings: it keeps its grid lines, and the faces are measured from them.
+          const dx = (linePos(doc, "x", src.x, "actual") ?? 0) - (linePos(doc, "x", cur.x, "actual") ?? 0);
+          const dy = (linePos(doc, "y", src.y, "actual") ?? 0) - (linePos(doc, "y", cur.y, "actual") ?? 0);
+          const faces = { l: r1(srcFaces.l + dx), r: r1(srcFaces.r + dx), t: r1(srcFaces.t + dy), b: r1(srcFaces.b + dy) };
+          if (!sameValue(cur.actual ?? null, faces))
+            changes.push(
+              { path: pathOf("openings", key, "actual"), before: cur.actual ?? null, after: faces },
+              { path: pathOf("openings", key, "at"), before: cur.at ?? null, after: now },
+            );
+          if (cur.name !== src.name) changes.push({ path: pathOf("openings", key, "name"), before: cur.name, after: src.name });
+          if (cur.kind !== src.kind) changes.push({ path: pathOf("openings", key, "kind"), before: cur.kind, after: src.kind });
+          if (cur.removed) changes.push({ path: pathOf("openings", key, "removed"), before: true, after: null });
+          if (!changes.length) continue;
+          text = `${src.name}: made the same as on the ${source.name}`;
+        }
+      }
+      tx.patch(id, (patch) => patch.ifRevisionId(doc._rev as string).setIfMissing({ log: [], openings: [] }));
+      for (const c of changes) {
+        if (c.after === null) tx.patch(id, (patch) => patch.unset([c.path]));
+        else if (c.path === whole && !c.before) tx.patch(id, (patch) => patch.insert("after", "openings[-1]", [c.after]));
+        else tx.patch(id, (patch) => patch.set({ [c.path]: c.after }));
+      }
+      const entry: LogEntry = { _key: newKey(), at: now, text, el: key, changes: JSON.stringify(changes) };
+      tx.patch(id, (patch) => patch.append("log", [entry]));
+      done.push(seedFloor.name);
+    }
+
+    if (done.length) {
+      try {
+        await tx.commit({ visibility: "sync" });
+      } catch (err) {
+        if (attempt === 0 && isRevisionClash(err)) continue;
+        console.error("as-built all-floors save failed", err);
+        return no("Couldn't save just now. Check the connection and try again.");
+      }
+    }
+    return { ok: true, floors: await readFloors(), done, skipped };
+  }
+  return no("Someone else changed a floor at the same moment. Reload the page and try again.");
 }

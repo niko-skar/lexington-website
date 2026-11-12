@@ -9,6 +9,7 @@ import {
   columnAnchor,
   columnAt,
   columnFace,
+  columnLineAt,
   columnSpots,
   columnUnder,
   isCommon,
@@ -20,6 +21,7 @@ import {
   snapTo,
   wallLines,
   wallRect,
+  type ColumnLine,
   type ColumnSpot,
   type P,
   type PlanAnalysis,
@@ -104,19 +106,28 @@ function snapPoint(floor: Floor, lines: SnapLine[], p: P, reach: number): { pos:
   };
 }
 
-/** Where a wall starts. `col`: it starts in this column, centred on it, and leaves from the face it heads out of. */
+/**
+ * Where a wall starts. `col`: it starts in this column and leaves from the face it heads out of, centred
+ * on the column or flush on the edge that was pressed (Niko, 12 Nov 2026).
+ */
 interface WallStart {
   pos: P;
   pt: PlanPoint;
   col?: ColumnSpot;
+  /** Where in the column the press was: it picks the column's middle or one of its edges. */
+  press?: P;
+  /** The line of the wall that ran into this column: a wall that carries straight on stays on it. */
+  keep?: { axis: Axis; line: ColumnLine };
 }
 
-/** A wall that carries on from a column is centred on it (a wall of the structure: where the last one met it). */
-function centredOn(c: ColumnSpot, at: { pos: P; pt: PlanPoint }): WallStart {
+/** A wall that starts in a column: held on its middle until the way it heads out says which of its lines it takes. */
+function inColumn(c: ColumnSpot, at: { pos: P; pt: PlanPoint }, press: P, keep?: WallStart["keep"]): WallStart {
   return {
     pos: [c.mid.x ?? at.pos[0], c.mid.y ?? at.pos[1]],
     pt: { x: c.mid.x !== null ? columnAnchor(c, "m") : at.pt.x, y: c.mid.y !== null ? columnAnchor(c, "m") : at.pt.y },
     col: c,
+    press,
+    keep,
   };
 }
 
@@ -217,22 +228,27 @@ export function PlanCanvas(props: Props) {
   const reach = view ? SNAP_PX / view.k : 100;
   // A press this close to a column is in it.
   const touch = view ? 4 / view.k : 40;
+  // The edges of a column are told apart from its middle once they are 3 px from it on screen.
+  const apart = view ? 3 / view.k : 1e9;
 
   // ---- drawing walls ----------------------------------------------------------------------------
-  /** Where a wall starts from a press here: in a column, centred on it; else on whatever it lines up on. */
+  /** Where a wall starts from a press here: in a column, on its middle or the edge pressed; else on whatever it lines up on. */
   const startAt = useCallback(
     (p: P): WallStart & { hint: string } => {
       const sp = snapPoint(floor, lines, p, reach);
       const c = columnAt(cols, p, touch);
       if (!c) return { pos: sp.pos, pt: sp.pt, hint: lined(sp.hint) };
-      return { ...centredOn(c, sp), hint: `centred on ${c.name}` };
+      const edges = [columnLineAt(c, "y", p[1], wallT, apart), columnLineAt(c, "x", p[0], wallT, apart)]
+        .filter((l): l is ColumnLine => Boolean(l?.edge))
+        .map((l) => l.how.replace("on the ", "").replace(" edge of", ""));
+      return { ...inColumn(c, sp, p), hint: edges.length ? `on the ${edges.join(" or ")} edge of ${c.name}` : `centred on ${c.name}` };
     },
-    [floor, lines, reach, cols, touch],
+    [floor, lines, reach, cols, touch, wallT, apart],
   );
 
   /** The wall that a press here would finish: `a` where it starts, `pos`/`pt` where it ends, `col` the column it goes into. */
   const wallEndFor = useCallback(
-    (raw: P): { a: { pos: P; pt: PlanPoint }; pos: P; pt: PlanPoint; hint: string; col?: ColumnSpot } | null => {
+    (raw: P): { a: { pos: P; pt: PlanPoint }; pos: P; pt: PlanPoint; hint: string; col?: ColumnSpot; raw: P } | null => {
       if (!start) return null;
       const sc = start.col;
       // Still in the column it starts from: no wall yet.
@@ -240,11 +256,19 @@ export function PlanCanvas(props: Props) {
       const across = Math.abs(raw[0] - start.pos[0]) >= Math.abs(raw[1] - start.pos[1]);
       const axis: Axis = across ? "x" : "y";
       const i = across ? 0 : 1;
-      // From a column it leaves from the face it heads out of, on the column's middle.
+      // From a column it leaves from the face it heads out of. Across the column it takes the line of the
+      // wall that ran into it when it carries straight on, else the middle or the edge that was pressed.
       let a: { pos: P; pt: PlanPoint } = { pos: start.pos, pt: start.pt };
+      let how = "";
       if (sc) {
         const f = columnFace(sc, axis, raw[i]);
-        a = across ? { pos: [f.v, start.pos[1]], pt: { x: f.anchor, y: start.pt.y } } : { pos: [start.pos[0], f.v], pt: { x: start.pt.x, y: f.anchor } };
+        const side: Axis = across ? "y" : "x";
+        const j = across ? 1 : 0;
+        const line = start.keep?.axis === side ? start.keep.line : start.press ? columnLineAt(sc, side, start.press[j], wallT, apart) : null;
+        const cv = line ? line.v : start.pos[j];
+        const ca = line ? line.anchor : across ? start.pt.y : start.pt.x;
+        how = `${line ? line.how : "from"} ${sc.name}`;
+        a = across ? { pos: [f.v, cv], pt: { x: f.anchor, y: ca } } : { pos: [cv, f.v], pt: { x: ca, y: f.anchor } };
       }
       let v = raw[i];
       let anchor: Anchor | null = null;
@@ -277,13 +301,13 @@ export function PlanCanvas(props: Props) {
       const pt: PlanPoint = across
         ? { x: anchor ?? reanchor(floor, "x", a.pt.x, v), y: a.pt.y }
         : { x: a.pt.x, y: anchor ?? reanchor(floor, "y", a.pt.y, v) };
-      return { a, pos, pt, hint: hint || (sc ? `centred on ${sc.name}` : ""), col };
+      return { a, pos, pt, hint: [how, hint].filter(Boolean).join(" · "), col, raw };
     },
-    [start, typed, lines, reach, floor, cols, touch, wallT],
+    [start, typed, lines, reach, floor, cols, touch, wallT, apart],
   );
 
   const finishWall = useCallback(
-    (end: { a: { pos: P; pt: PlanPoint }; pos: P; pt: PlanPoint; col?: ColumnSpot }) => {
+    (end: { a: { pos: P; pt: PlanPoint }; pos: P; pt: PlanPoint; col?: ColumnSpot; raw?: P }) => {
       if (!start) return;
       if (Math.hypot(end.pos[0] - end.a.pos[0], end.pos[1] - end.a.pos[1]) < 20) {
         setStart(null);
@@ -291,8 +315,14 @@ export function PlanCanvas(props: Props) {
       }
       const wall = makeWall(end.a.pt, end.pt, end.a.pos, end.pos, wallKind, wallT);
       onCommit({ ...plan, walls: [...plan.walls, wall] }, "Wall drawn");
-      // The next wall carries on from this end; from a column it went into, centred on that column.
-      setStart(end.col ? centredOn(end.col, end) : { pos: end.pos, pt: end.pt });
+      // The next wall carries on from this end. From a column it went into: straight on stays on this wall's
+      // line, a turn takes the column's middle or the edge that was clicked.
+      const across = Math.abs(end.pos[0] - end.a.pos[0]) >= Math.abs(end.pos[1] - end.a.pos[1]);
+      const keep: WallStart["keep"] = {
+        axis: across ? "y" : "x",
+        line: { v: across ? end.pos[1] : end.pos[0], anchor: across ? end.pt.y : end.pt.x, how: "carrying on from", edge: null },
+      };
+      setStart(end.col ? inColumn(end.col, end, end.raw ?? end.pos, keep) : { pos: end.pos, pt: end.pt });
       setTyped("");
     },
     [start, wallKind, wallT, plan, onCommit],
@@ -426,7 +456,7 @@ export function PlanCanvas(props: Props) {
     if (tool === "wall") {
       if (!start) {
         const st = startAt(p);
-        setStart({ pos: st.pos, pt: st.pt, col: st.col });
+        setStart({ pos: st.pos, pt: st.pt, col: st.col, press: st.press });
       } else if (start.col && columnAt([start.col], p, 0)) {
         // A click in the column it started from: no wall, the chain stops.
         setStart(null);
@@ -542,7 +572,7 @@ export function PlanCanvas(props: Props) {
     const drag = dragRef.current;
     if (!drag) {
       if (tool === "wall" && !start) setHint(startAt(p).hint);
-      else if (tool === "wall" && start) setHint(wallEndFor(p)?.hint ?? (start.col ? `centred on ${start.col.name}` : ""));
+      else if (tool === "wall" && start) setHint(wallEndFor(p)?.hint ?? (start.col ? `starts in ${start.col.name}` : ""));
       else {
         // What a press here would pick up: anything movable (Move), a door or window (Door, Window).
         const within = 8 / view.k;
@@ -566,14 +596,14 @@ export function PlanCanvas(props: Props) {
       const raw = w.c + (p[i] - drag.start[i]);
       if (!drag.moved && Math.abs(p[i] - drag.start[i]) < 4 / view.k) return;
       drag.moved = true;
-      // Over a column it runs into: centred on the column (Shift: lined up on anything else).
+      // Over a column it runs into: centred on the column or flush on either of its edges, whichever is
+      // nearest (Shift: lined up on anything else).
       const c = e.shiftKey ? null : columnUnder(cols, drag.along, raw, w.s0, w.s1);
-      const mid = c ? c.mid[drag.along] : null;
-      const sn: SnapLine | null =
-        c && mid !== null ? { axis: drag.along, v: mid, anchor: columnAnchor(c, "m"), what: "", rank: 4 } : snapCentre(drag.lines, drag.along, raw, reach, w.t);
+      const cl = c ? columnLineAt(c, drag.along, raw, w.t, apart) : null;
+      const sn: SnapLine | null = cl ? { axis: drag.along, v: cl.v, anchor: cl.anchor, what: "", rank: 4 } : snapCentre(drag.lines, drag.along, raw, reach, w.t);
       const baseWall = drag.base.walls.find((x) => x._key === drag.key)!;
       const anchor = sn ? sn.anchor : reanchor(floor, drag.along, drag.along === "x" ? baseWall.a.x : baseWall.a.y, r1(raw));
-      setHint([`moved ${fmt(Math.abs((sn ? sn.v : r1(raw)) - w.c))} mm`, c ? `centred on ${c.name}` : lined(sn?.what ?? "")].filter(Boolean).join(" · "));
+      setHint([`moved ${fmt(Math.abs((sn ? sn.v : r1(raw)) - w.c))} mm`, c && cl ? `${cl.how} ${c.name}` : lined(sn?.what ?? "")].filter(Boolean).join(" · "));
       drag.last = moveWall(drag.base, floor, drag.key, anchor, drag.attached);
       onPreview(drag.last);
       return;
@@ -678,6 +708,12 @@ export function PlanCanvas(props: Props) {
   const litColumns =
     tool === "wall" && hover
       ? [start?.col, start ? preview?.col : columnAt(cols, hover, touch)].filter((c, i, all): c is ColumnSpot => Boolean(c) && all.findIndex((x) => x?.key === c?.key) === i)
+      : [];
+  // Before the press: the edge of the column a wall started here would sit on.
+  const edgeColumn = tool === "wall" && hover && !start ? columnAt(cols, hover, touch) : null;
+  const litEdges =
+    edgeColumn && hover
+      ? [columnLineAt(edgeColumn, "x", hover[0], wallT, apart), columnLineAt(edgeColumn, "y", hover[1], wallT, apart)].filter((l): l is ColumnLine => Boolean(l?.edge))
       : [];
   const selWall = selection?.kind === "wall" ? wallsByKey.get(selection.key) : undefined;
   const selOpening = selection?.kind === "opening" ? plan.openings.find((o) => o._key === selection.key) : undefined;
@@ -811,6 +847,15 @@ export function PlanCanvas(props: Props) {
           {litColumns.map((c) => (
             <rect key={`lit${c.key}`} x={c.box.x0} y={c.box.y0} width={c.box.x1 - c.box.x0} height={c.box.y1 - c.box.y0} className={s.columnOn} strokeWidth={stroke * 2} />
           ))}
+          {edgeColumn &&
+            litEdges.map((l) => {
+              const b = edgeColumn.box;
+              const down = l.edge === "l" || l.edge === "r";
+              const at = l.edge === "l" ? b.x0 : l.edge === "r" ? b.x1 : l.edge === "t" ? b.y0 : b.y1;
+              return (
+                <line key={`edge${l.edge}`} x1={down ? at : b.x0} y1={down ? b.y0 : at} x2={down ? at : b.x1} y2={down ? b.y1 : at} className={s.columnOn} strokeWidth={stroke * 6} data-edge={l.edge ?? undefined} />
+              );
+            })}
 
           {/* Doors and windows. */}
           {plan.openings.map((o) => {
@@ -996,7 +1041,7 @@ export function PlanCanvas(props: Props) {
         <div className={s.toolTip}>
           {start
             ? "Click where the wall ends · type a length and press Enter · Esc or double-click to stop"
-            : "Click where the wall starts · in a column, the wall is centred on it"}
+            : "Click where the wall starts · in a column: its middle for a centred wall, near an edge for a wall flush on that edge"}
         </div>
       )}
     </div>
