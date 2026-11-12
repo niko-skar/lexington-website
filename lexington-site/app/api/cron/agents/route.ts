@@ -1,3 +1,4 @@
+import { followUpQuietChats } from "@/lib/agents/chat";
 import { draftMissingReplies } from "@/lib/agents/leadReply";
 import { metaLeadsConfigured, pollMetaLeads } from "@/lib/agents/metaLeads";
 import { notifyOwner } from "@/lib/alerts/notify";
@@ -25,6 +26,8 @@ export async function GET(request: Request) {
   try {
     const meta = metaLeadsConfigured() ? await pollMetaLeads() : null;
     const drafted = await draftMissingReplies(4);
+    // Once an hour (the run in the hour's first ten minutes): the site-visit follow-up to chats that went quiet.
+    const followUps = process.env.VERCEL_ENV !== "production" || new Date().getUTCMinutes() < 10 ? await followUpQuietChats() : null;
 
     if (meta?.added.length) {
       const ids = meta.added.map((a) => a.id);
@@ -56,7 +59,7 @@ export async function GET(request: Request) {
       });
     }
 
-    return Response.json({ meta, drafted });
+    return Response.json({ meta, drafted, followUps });
   } catch (err) {
     console.error("Agents run failed:", err);
     return new Response("Agents run failed.", { status: 500 });

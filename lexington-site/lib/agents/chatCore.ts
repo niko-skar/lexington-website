@@ -56,6 +56,8 @@ export interface ChatThread {
   lockedUntil?: string | null;
   /** The last time Niko was emailed about this chat (at most one email an hour). */
   notifiedAt?: string | null;
+  /** When the chat's one follow-up went (a site-visit invitation after it went quiet, 12 Nov 2026). */
+  followedUpAt?: string | null;
 }
 
 export const OWNER_QUIET_HOURS = 12;
@@ -97,6 +99,66 @@ export function formStarterContacts(text: string): { name: string; phone: string
   const phone = line(/^\s*(?:phone number|phone|mobile|whatsapp(?: number)?)\s*:\s*(\+?[\d][\d\s().-]{6,})\s*$/im);
   const name = line(/^\s*(?:full name|name)\s*:\s*(.+?)\s*$/im);
   return { name: name.slice(0, 120), phone: phone.replace(/\s+/g, " ").slice(0, 40), email: email.toLowerCase().slice(0, 160) };
+}
+
+// ---- one follow-up when a chat goes quiet ------------------------------------------------------------------
+// Niko, 12 Nov 2026: "none of these leads are going anywhere, you've responded to all of them and we're getting nothing
+// ... ask if they'd like to schedule a site visit". Most lead-form chats stopped after the assistant's first answer. A
+// chat where the assistant spoke last now gets ONE more message, a site-visit invitation with two free times, 3 to 20
+// hours after the person's last message: Meta lets a Page write to someone only within 24 hours of their last message.
+
+export const FOLLOW_UP_AFTER_HOURS = 3;
+export const FOLLOW_UP_BEFORE_HOURS = 20;
+
+/**
+ * Whether a chat gets its follow-up now: the assistant answered last, the person has been quiet 3 to 20 hours, no visit
+ * is booked, Niko hasn't written in it, it wasn't handed over, and it hasn't had one yet. Pure.
+ */
+export function followUpDue(thread: ChatThread, nowMs: number, visitBooked: boolean): boolean {
+  if (visitBooked || thread.followedUpAt || thread.optedOut || thread.handedOver) return false;
+  // WhatsApp isn't connected yet; its 24 hours work the same way once it is.
+  if (thread.channel === "whatsapp") return false;
+  if (thread.ownerActiveUntil && Date.parse(thread.ownerActiveUntil) > nowMs) return false;
+  if (thread.lockedUntil && Date.parse(thread.lockedUntil) > nowMs) return false;
+  if (thread.messages.some((m) => m.from === "owner")) return false;
+  if (thread.messages[thread.messages.length - 1]?.from !== "agent") return false;
+  const theirs = [...thread.messages].reverse().find((m) => m.from === "them");
+  if (!theirs) return false;
+  const quietMs = nowMs - Date.parse(theirs.at);
+  return quietMs >= FOLLOW_UP_AFTER_HOURS * 3_600_000 && quietMs <= FOLLOW_UP_BEFORE_HOURS * 3_600_000;
+}
+
+/** Their first name for the follow-up: from the lead form's answers, else the chat's name (never "Instagram contact"). */
+export function followUpFirstName(thread: ChatThread): string {
+  const starter = thread.messages.find((m) => m.from === "them" && /filled out (?:your|the) form/i.test(m.text));
+  const full = (starter && formStarterContacts(starter.text).name) || (thread.name && !PLACEHOLDER_NAME.test(thread.name) ? thread.name : "");
+  const first = full.trim().split(/\s+/)[0] ?? "";
+  return first && first === first.toLowerCase() ? first.charAt(0).toUpperCase() + first.slice(1) : first;
+}
+
+/** They told the lead form they live outside Ghana ("USA or Canada", "UK or Europe", "Somewhere else"). */
+export function livesAbroad(thread: ChatThread): boolean {
+  for (const m of thread.messages) {
+    if (m.from !== "them") continue;
+    const home = /^\s*where do you live\??\s*:\s*(.+?)\s*$/im.exec(m.text)?.[1] ?? "";
+    if (home) return !/ghana|accra|kumasi|tema/i.test(home);
+  }
+  return false;
+}
+
+/**
+ * The follow-up's words: a site visit at one of two free times (worded "Friday 13 November at 10:00"), or for someone
+ * abroad a video call or a visit when they are next in Accra; the booking page is its one link. Pure.
+ */
+export function followUpText(opts: { first: string; abroad: boolean; times: string[]; link: string }): string {
+  const hi = opts.first ? `Hi ${opts.first}, ` : "Hi, ";
+  if (opts.abroad) {
+    return `${hi}would you like a video call with our team to see the homes at The Lexington, or to come and see the site when you are next in Accra? You can pick a visit time here: ${opts.link}`;
+  }
+  if (opts.times.length >= 2) {
+    return `${hi}would you like to come and see The Lexington in person? We can show you round on ${opts.times[0]} or ${opts.times[1]} (Accra time). Just reply with the one that suits you, or pick another time here: ${opts.link}`;
+  }
+  return `${hi}would you like to come and see The Lexington in person? Pick a time that suits you here: ${opts.link}`;
 }
 
 /** The prospect a chat makes, by the chat: however many of its messages arrive at once, there is only one. */
@@ -173,7 +235,7 @@ Write like a helpful person on the sales team: warm, plain and short. One to thr
 
 HOME CARDS
 - When they ask about homes, prices, sizes, floor plans or what is available, put up to three unit numbers in "cards": available units from the FACTS that fit what they told you (budget, type, what the home is for). Each card is sent as a picture right after your message: the unit's floor plan, floor, type, size and website price.
-- Your words then only introduce the cards (for example "Here are three homes within your budget.") and ask one useful question. Don't repeat what the cards show.
+- Your words then only introduce the cards (for example "Here are three homes within your budget.") and end with the site-visit invitation (below). Don't repeat what the cards show.
 - Leave "cards" empty when no card helps: a question about the location, the building's progress, a viewing or paying, or homes you already sent.
 - The cards show the website prices. If the FACTS list an offer running now, you may mention it in a few words; never work out discounted prices yourself.
 
@@ -182,6 +244,12 @@ THE FACTS ARE ONLY WHAT YOU ARE GIVEN
 - Only offer units whose status is available. Only use links that appear in the FACTS block.
 - Never write bank or account details. Never name the developer company. The only rooftop amenity is the Private Resident's Rooftop Garden; the swimming pool is not on the roof.
 - If they ask whether they are talking to a person or a machine, say plainly that you are The Lexington's assistant and that the sales team reads every message and can take over.
+
+EVERY CHAT IS HEADING FOR A SITE VISIT
+- Until they have a visit booked or have said they don't want one, end your reply by inviting them to come and see the site, naming two of the free times listed under SITE VISITS in the FACTS (a weekday and a Saturday work well), for example "Would you like to come and see it? We can show you round tomorrow at 10:00 or Saturday at 11:00." Then add the booking link from the FACTS for any other time ("or pick another time here: ..."), unless your message already has a link. Offer other times than the ones already offered in this chat; if they let your last invitation pass, keep this one to a short line. Leave the invitation out only when it makes no sense: they said no to a visit, you are booking one, or you are handing over.
+- If they live outside Ghana, invite them instead to a video call with the team or to a visit when they are next in Accra (a video call is for the team: hand over when they want one).
+- A lead form's chat starts with their message "I filled out your form", which holds their answers: thank them by first name, put up to three homes that fit their answers in "cards", and end with the site-visit invitation. Ask nothing else in that reply.
+- When they ask about one kind of home (studios, one-, two- or three-bedroom homes, penthouses), you may give the link from the FACTS that shows only that kind, cheapest first: it is then the one link in that message.
 
 SITE VISITS (you can book them)
 - When they want to see the site or a home, offer a visit: suggest one or two of the free times listed under SITE VISITS in the FACTS that fit what they said, or ask which day suits them. Visits are Monday to Saturday, 8am to 6pm, Accra time.

@@ -192,8 +192,9 @@ export function templateReply(ctx: LeadContext, pack: FactPack, picks: UnitFact[
     "- whether you would pay in full or on a payment plan,",
     "- and when you would like to buy?",
     "",
-    `You are welcome to come and see the site, Monday to Saturday from 8am to 6pm. Pick a time that suits you here: ${pack.links.visit}`,
-    "We can also walk you through it on a video call.",
+    "Would you like to come and see the site? Our team shows it Monday to Saturday, 8am to 6pm.",
+    `Pick a time that suits you here: ${pack.links.visit}`,
+    "If you are abroad, we can walk you through it on a video call instead.",
     "",
     "Kind regards,",
     "The Lexington sales team",
@@ -210,7 +211,7 @@ export function templateReply(ctx: LeadContext, pack: FactPack, picks: UnitFact[
       ? `${offer.endsOn ? `Until ${longDate(offer.endsOn).replace(/ \d{4}$/, "")}: ` : ""}${offer.fullPaymentPct}% off paying in full, or ${offer.planPct}% off on a payment plan.`
       : "",
     `All homes and prices: ${pack.links.residences}`,
-    "What budget do you have in mind, and would you pay in full or on a plan?",
+    `Would you like to come and see the site? Pick a time that suits you here: ${pack.links.visit}`,
     "- The Lexington sales team",
   ]
     .filter(Boolean)
@@ -238,8 +239,8 @@ THE FACTS ARE ONLY WHAT YOU ARE GIVEN
 - Never say or hint that the reply was written by AI.
 
 WHAT TO WRITE
-- email_subject and email_body: 90 to 180 words of plain text in short paragraphs (no markdown; a list line starts with "- "). Greet them by first name. Answer what they actually asked first. Then suggest up to three available units that fit them, one line each: unit number, type, floor, size, list price, and the offer prices while an offer runs, followed by the unit's link on the next line. The SUGGESTED UNITS block lists good choices; use them unless their words point to better ones. Mention the reservation fee and that unit's reserve link only if they seem ready to go ahead. Then ask at most three short questions that help the team understand them (budget, paying in full or on a plan, when they want to buy, to live in or to rent out), skipping anything they already told you. Offer a site visit with the booking link from the FACTS (they pick a time that suits them, Monday to Saturday, 8am to 6pm), or a video call. End with "Kind regards," then "The Lexington sales team" and the phone number, each on its own line.
-- whatsapp_text: the same reply in at most 70 words as one paragraph, with at most one link (the site-visit booking link when they seem keen to see it).
+- email_subject and email_body: 90 to 180 words of plain text in short paragraphs (no markdown; a list line starts with "- "). Greet them by first name. Answer what they actually asked first. Then suggest up to three available units that fit them, one line each: unit number, type, floor, size, list price, and the offer prices while an offer runs, followed by the unit's link on the next line. The SUGGESTED UNITS block lists good choices; use them unless their words point to better ones. Mention the reservation fee and that unit's reserve link only if they seem ready to go ahead. Then ask at most three short questions that help the team understand them (budget, paying in full or on a plan, when they want to buy, to live in or to rent out), skipping anything they already told you. When they want one kind of home, you may add the FACTS link that shows only that kind, cheapest first. Before signing off, ask whether they would like to come and see the site, with the booking link from the FACTS (they pick a time that suits them, Monday to Saturday, 8am to 6pm); someone abroad can have a video call instead. End with "Kind regards," then "The Lexington sales team" and the phone number, each on its own line.
+- whatsapp_text: the same reply in at most 70 words as one paragraph, ending with the question whether they would like to come and see the site, with the site-visit booking link as its one link.
 - Give sizes in square metres; when the person is in the USA or Canada (a +1 phone number, or they say so) add square feet in brackets, copied from the facts.
 - Write in the language they wrote in.
 

@@ -9,8 +9,8 @@ import { samePerson } from "@/lib/crmMatch";
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
 import { SITE_URL } from "@/lib/seo";
 import { googleMapsUrl } from "@/lib/maps";
-import { VISIT_PLACE, dayLabel, rangeLabel, slotDay, slotFromText, slotLabel, timeLabel, type SlotKey } from "@/lib/siteVisits/shared";
-import { bookVisit, freeVisitSlots } from "@/lib/siteVisits/store";
+import { VISIT_PLACE, dayLabel, rangeLabel, slotDay, slotFromText, slotLabel, timeLabel, twoFreeTimes, type SlotKey } from "@/lib/siteVisits/shared";
+import { VISIT_PREFIX, bookVisit, freeVisitSlots } from "@/lib/siteVisits/store";
 import { cardVersion } from "@/lib/unitCard";
 import { NO_VAT, type Vat } from "@/lib/vat";
 
@@ -19,17 +19,22 @@ import {
   CHANNEL_NAMES,
   CHAT_SCHEMA,
   CHAT_SYSTEM,
+  FOLLOW_UP_BEFORE_HOURS,
   HANDOVER_WORDS,
   OWNER_QUIET_HOURS,
   PLACEHOLDER_NAME,
   chatLeadId,
   chatProblems,
   chatPrompt,
+  followUpDue,
+  followUpFirstName,
+  followUpText,
   formStarterContacts,
   handoverTopic,
   holdingMessage,
   introLine,
   joinRecords,
+  livesAbroad,
   pickCards,
   quietReason,
   tooChatty,
@@ -689,6 +694,63 @@ export async function handleChatEvent(ev: ChatEvent, nowMs = Date.now()): Promis
   } catch (error) {
     console.error("[chat] the message couldn't be handled:", error instanceof Error ? error.message : error);
   }
+}
+
+// ---- one follow-up when a chat goes quiet (the rules are in chatCore.ts) ------------------------------------
+
+/**
+ * Sends the site-visit follow-up to each chat that is due one, at most `max` a run (the agents' run calls this once an
+ * hour). A chat gets one at most, ever: it is marked before the message goes. Never throws.
+ */
+export async function followUpQuietChats(nowMs = Date.now(), max = 5): Promise<{ sent: string[]; failed: string[] }> {
+  const done = { sent: [] as string[], failed: [] as string[] };
+  if (!chatAgentOn()) return done;
+  try {
+    // One read: the pause switch, the chats the assistant answered in the last 20 hours, and who has a visit.
+    const since = new Date(nowMs - FOLLOW_UP_BEFORE_HOURS * 3_600_000).toISOString();
+    const data = await getBuyersClient().fetch<{ paused: boolean | null; threads: ChatThread[]; visits: Array<{ threadId?: string; leadId?: string }> }>(
+      `{
+        "paused": *[_id == $switchId][0].paused,
+        "threads": *[_type == "chatThread" && string::startsWith(_id, $prefix) && !defined(followedUpAt) && optedOut != true && messages[-1].from == "agent" && messages[-1].at > $since],
+        "visits": *[_type == "siteVisit" && string::startsWith(_id, $vp)]{ threadId, leadId }
+      }`,
+      { switchId: SWITCH_ID, prefix: `${PROD ? "chat" : "chat-dev"}.`, since, vp: VISIT_PREFIX }
+    );
+    if (data.paused) return done;
+    const booked = new Set(data.visits.flatMap((v) => [v.threadId, v.leadId]).filter((x): x is string => Boolean(x)));
+    const due = data.threads.filter((t) => followUpDue(t, nowMs, booked.has(t._id) || Boolean(t.leadId && booked.has(t.leadId)))).slice(0, max);
+    if (!due.length) return done;
+    const free = await freeVisitSlots(nowMs, 8).catch(() => [] as SlotKey[]);
+    const times = twoFreeTimes(free, nowMs).map((k) => slotLabel(k));
+    for (const thread of due) {
+      const text = followUpText({ first: followUpFirstName(thread), abroad: livesAbroad(thread), times, link: `${SITE_URL}/visit` });
+      // Marked first, so no later run can send it again.
+      let claimed = false;
+      await updateThread(
+        thread._id,
+        (t) => {
+          if (!followUpDue(t, nowMs, false)) return null;
+          claimed = true;
+          return { ...t, followedUpAt: new Date(nowMs).toISOString() };
+        },
+        () => thread
+      );
+      if (!claimed) continue;
+      try {
+        const mid = await send(thread, { text });
+        const at = new Date().toISOString();
+        await updateThread(thread._id, (t) => ({ ...t, messages: keepLast([...t.messages, { _key: newKey(), from: "agent", text, at, mid }]) }), () => thread);
+        await leadNote(thread.leadId, `${CHANNEL_NAMES[thread.channel]}, assistant (follow-up): ${text}`);
+        done.sent.push(thread._id);
+      } catch (error) {
+        console.error(`[chat] the follow-up to ${thread._id} couldn't be sent:`, error instanceof Error ? error.message : error);
+        done.failed.push(thread._id);
+      }
+    }
+  } catch (error) {
+    console.error("[chat] the follow-ups failed:", error instanceof Error ? error.message : error);
+  }
+  return done;
 }
 
 // ---- for the Connect page and the daily check ---------------------------------------------------------

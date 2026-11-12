@@ -167,6 +167,24 @@ export function freeTimesText(free: readonly SlotKey[], nowMs: number, days = 7)
     });
 }
 
+/** The hours offered first: mid-morning, then early afternoon, then the rest. */
+const GOOD_HOURS = [10, 11, 14, 9, 15, 12, 16, 13, 8, 17];
+
+/**
+ * Two free hours to offer someone (the chat's follow-up, 12 Nov 2026): a good hour on the first day with any from
+ * tomorrow on, and one on the Saturday after it within the week (else on the next day with any). Pure.
+ */
+export function twoFreeTimes(free: readonly SlotKey[], nowMs: number): SlotKey[] {
+  const tomorrow = slotKey(nowMs + DAY).slice(0, 10);
+  const weekOut = slotKey(nowMs + 7 * DAY).slice(0, 10);
+  const days = byDay(free.filter((k) => slotDay(k) >= tomorrow));
+  if (!days.length) return [];
+  const good = (slots: SlotKey[]) => GOOD_HOURS.map((h) => slots.find((k) => slotHour(k) === h)).find((k) => k !== undefined) ?? slots[0];
+  const saturday = (day: string) => dayDate(day).getUTCDay() === 6;
+  const second = days.slice(1).find((d) => saturday(d.day) && d.day <= weekOut) ?? days[1];
+  return second ? [good(days[0].slots), good(second.slots)] : [good(days[0].slots)];
+}
+
 // ---- the site app's list ------------------------------------------------------------------------------
 
 export interface VisitRow {

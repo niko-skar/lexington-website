@@ -48,7 +48,7 @@ import {
  */
 
 const LIVE = process.env.VERCEL_ENV === "production";
-const VISIT_PREFIX = LIVE ? "sitevisit-live-" : "sitevisit-dev-";
+export const VISIT_PREFIX = LIVE ? "sitevisit-live-" : "sitevisit-dev-";
 const SLOT_PREFIX = LIVE ? "visitslot-live-" : "visitslot-dev-";
 const FROM = "The Lexington <sales@lexington.com.gh>";
 const DAY = 86_400_000;

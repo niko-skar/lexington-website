@@ -100,6 +100,8 @@ export interface FactPack {
   contact: { phone: string; email: string; office: string };
   address: string;
   links: { residences: string; reserve: string; gallery: string; amenities: string; progress: string; contact: string; visit: string };
+  /** The Residences page showing one kind of home only, cheapest first (/residences?type=2-bed): the kinds still available. */
+  typeLinks?: Array<{ label: string; url: string }>;
   /** The site-visit hours free to book now (only the chat assistant is given them: it can book one). */
   visits?: { free: SlotKey[]; nowMs: number };
 }
@@ -255,7 +257,25 @@ export function buildFactPack(raw: RawFacts, today: string): FactPack {
       contact: `${SITE_URL}/contact`,
       visit: `${SITE_URL}/visit`,
     },
+    typeLinks: typeLinksFor(units),
   };
+}
+
+/** The words the Residences page takes for one kind of home (components/UnitFinder.tsx), and what to call them. */
+const TYPE_LINKS: Array<[RegExp, string, string]> = [
+  [/^studio/i, "studio", "studios"],
+  [/^one\b/i, "1-bed", "one-bedroom homes"],
+  [/^two\b/i, "2-bed", "two-bedroom homes"],
+  [/^three\b/i, "3-bed", "three-bedroom homes"],
+  [/penthouse/i, "penthouse", "penthouses"],
+];
+
+/** A link for each kind of home that still has one available: the Residences page showing only that kind, cheapest first. */
+export function typeLinksFor(units: ReadonlyArray<{ type: string; status: string }>): Array<{ label: string; url: string }> {
+  return TYPE_LINKS.filter(([kind]) => units.some((u) => kind.test(u.type) && u.status === "available")).map(([, word, label]) => ({
+    label,
+    url: `${SITE_URL}/residences?type=${word}`,
+  }));
 }
 
 /** The pack as the plain text Claude is given. Everything a reply may say is in here. */
@@ -366,6 +386,9 @@ export function factPackText(pack: FactPack): string {
         u.status === "available" ? `${u.link} (reserve: ${u.reserveLink})${u.has3D ? " (has a 3D plan)" : ""}` : "-",
       ].join(" | ")
     );
+  }
+  if (pack.typeLinks?.length) {
+    add(`- One kind of home only, cheapest first: ${pack.typeLinks.map((t) => `${t.label} ${t.url}`).join(" · ")}`);
   }
   add("");
 
