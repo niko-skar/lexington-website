@@ -52,6 +52,21 @@ export interface Holder {
  */
 export const WHATSAPP_TEST = { share: 0.5, until: "2026-11-26" };
 
+/**
+ * A WhatsApp campaign: one with a click-to-WhatsApp ad set, or one named for WhatsApp ("LEX whatsapp form · Ghana", made
+ * 13 Nov 2026 because Meta won't mix the form's goal with the chat's in one campaign). Its form ad sets use the buyers'
+ * form that ends on WhatsApp.
+ */
+export function whatsappCampaignIds(
+  campaigns: ReadonlyArray<{ id: string; name?: string }>,
+  adsets: ReadonlyArray<{ campaign_id?: string; destination_type?: string }>
+): Set<string> {
+  return new Set([
+    ...adsets.filter((a) => a.destination_type === "WHATSAPP").map((a) => a.campaign_id ?? ""),
+    ...campaigns.filter((c) => /whatsapp/i.test(c.name ?? "")).map((c) => c.id),
+  ]);
+}
+
 export interface PilotInput {
   /** YYYY-MM-DD, the ad account's day. */
   today: string;

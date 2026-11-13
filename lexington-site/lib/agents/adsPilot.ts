@@ -11,7 +11,7 @@ import { buildStories, shiftDay } from "@/lib/visits/report";
 import { readVisitLogs } from "@/lib/visits/store";
 
 import { checkGoogleHealth, type GoogleFix, type GoogleHealth, type HealthProblem } from "./adsHealthCore";
-import { MIN_DAILY, WHATSAPP_TEST, dayIn, monthStart, pilotSettings, planPilot, usd, type Holder, type PilotChange, type PilotPlan } from "./adsPilotCore";
+import { MIN_DAILY, WHATSAPP_TEST, dayIn, monthStart, pilotSettings, planPilot, usd, whatsappCampaignIds, type Holder, type PilotChange, type PilotPlan } from "./adsPilotCore";
 import { loadFactPack } from "./facts";
 import { allowedAmounts, longDate, soldOutWords } from "./factsCore";
 
@@ -242,11 +242,11 @@ async function gatherMeta(config: MetaConfig, nowMs: number, startFor: (today: s
       : Promise.resolve({ data: [] as InsightRow[] }),
   ]);
 
-  // The WhatsApp campaigns (12 Nov 2026): those with a click-to-WhatsApp ad set, and every ad set in them, make up the
-  // WhatsApp side of the test. Since 13 Nov their ads open the buyers' form first, which ends with a WhatsApp button
-  // (Niko: "we're getting too many leads that are businesses trying to contact us to sell their goods"). A chat started
-  // is no longer a result: sellers start them too. Only form entries count, everywhere, and the CRM rates them below.
-  const waCampaigns = new Set((adsets.data ?? []).filter((a) => a.destination_type === "WHATSAPP").map((a) => a.campaign_id ?? ""));
+  // The WhatsApp campaigns (12 Nov 2026), and every ad set in them, make up the WhatsApp side of the test. Since 13 Nov
+  // their ads open the buyers' form first, which ends with a WhatsApp button (Niko: "we're getting too many leads that are
+  // businesses trying to contact us to sell their goods"). A chat started is no longer a result: sellers start them too.
+  // Only form entries count, everywhere, and the CRM rates them below.
+  const waCampaigns = whatsappCampaignIds(campaigns.data ?? [], adsets.data ?? []);
   const waSets = new Set((adsets.data ?? []).filter((a) => a.destination_type === "WHATSAPP" || waCampaigns.has(a.campaign_id ?? "")).map((a) => a.id));
   const stats = new Map<string, { spend: number; leads: number }>();
   for (const row of byCampaign.data ?? []) if (row.campaign_id) stats.set(row.campaign_id, { spend: num(row.spend), leads: leadsOf(row.actions).leads });

@@ -31,7 +31,7 @@ import {
   type NewAd,
 } from "./adsManagerCore";
 import { pilotSettings, readPilotSwitch, realShares } from "./adsPilot";
-import { dayIn, type Holder } from "./adsPilotCore";
+import { dayIn, whatsappCampaignIds, type Holder } from "./adsPilotCore";
 import { factCheck } from "./factcheck";
 import { loadFactPack } from "./facts";
 import { allowedAmounts, factPackText, soldOutWords, type FactPack } from "./factsCore";
@@ -227,9 +227,9 @@ async function readAccount(config: MetaConfig, nowMs: number): Promise<Account> 
 
   const GONE = new Set(["DELETED", "ARCHIVED"]);
   const campaignOn = new Map((campaigns.data ?? []).map((c) => [c.id, c.status === "ACTIVE" && !GONE.has(c.effective_status ?? "")]));
-  // The WhatsApp campaigns: those with a click-to-WhatsApp ad set. Their other ad sets are the buyers' form that ends on
+  // The WhatsApp campaigns (adsPilotCore.whatsappCampaignIds): their form ad sets are the buyers' form that ends on
   // WhatsApp (13 Nov 2026), and their ads use that form.
-  const waCampaigns = new Set((adsets.data ?? []).filter((s) => s.destination_type === "WHATSAPP").map((s) => s.campaign_id ?? ""));
+  const waCampaigns = whatsappCampaignIds(campaigns.data ?? [], adsets.data ?? []);
   const sets: AdsetInfo[] = (adsets.data ?? [])
     .filter((s) => !GONE.has(s.effective_status ?? s.status ?? ""))
     .map((s) => {
