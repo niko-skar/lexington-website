@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import styles from "@/components/crm/Crm.module.css";
 import { ConfirmSubmitButton } from "@/components/crm/ConfirmSubmitButton";
+import { CopyNumber } from "@/components/crm/CopyNumber";
 import { openTasksOf } from "@/components/crm/data";
 import { NotesPanel, StepsPanel } from "@/components/crm/LeadPanels";
 import { CreateBuyerFromLeadForm, LeadDetailsForm } from "@/components/crm/LeadForms";
@@ -78,6 +79,7 @@ export default async function ProspectPage({ params }: { params: Promise<{ id: s
             <a className={styles.btn} href={phoneHref(lead.phone)}>
               Call {lead.phone}
             </a>
+            <CopyNumber phone={lead.phone} />
           </>
         )}
         {lead.email && (

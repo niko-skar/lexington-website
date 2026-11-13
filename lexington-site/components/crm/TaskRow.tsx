@@ -13,6 +13,7 @@ import {
 import { addDaysISO, daysUntil, dueLabel, dueState, firstName } from "@/lib/crm";
 import { phoneHref, whatsappUrl } from "@/lib/format";
 import type { Lead, LeadTask } from "@/lib/sanity/crmTypes";
+import { CopyNumber } from "./CopyNumber";
 import styles from "./Crm.module.css";
 import { useFollowUp } from "./FollowUp";
 import { StageSelect } from "./StageSelect";
@@ -176,6 +177,7 @@ export function TaskRow({
             <a className={styles.btn} href={phoneHref(lead.phone)}>
               Call
             </a>
+            <CopyNumber phone={lead.phone} />
           </>
         )}
         {!showLead && (

@@ -6,6 +6,7 @@ import { useState } from "react";
 import { SOURCES, STAGES, dueLabel, dueState, paymentLabel, sourceLabel } from "@/lib/crm";
 import { phoneHref, whatsappUrl } from "@/lib/format";
 import type { Lead } from "@/lib/sanity/crmTypes";
+import { CopyNumber } from "./CopyNumber";
 import styles from "./Crm.module.css";
 import { StageSelect } from "./StageSelect";
 import { nextTaskOf, unitLine } from "./data";
@@ -140,6 +141,7 @@ export function AllView({
                       <a className={styles.btn} href={phoneHref(lead.phone)}>
                         Call
                       </a>
+                      <CopyNumber phone={lead.phone} />
                     </>
                   )}
                   <Link href={`/admin/crm/${lead._id}`} className={styles.btn}>
