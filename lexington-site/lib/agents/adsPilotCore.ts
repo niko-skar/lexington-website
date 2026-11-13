@@ -37,13 +37,18 @@ export interface Holder {
   dailyBudget: number;
   /** The last 14 complete days. `leads` counts real leads and may be fractional. */
   last14: { spend: number; leads: number };
-  /** "whatsapp": its ads open a WhatsApp chat, and its results are the chats they start. Otherwise lead forms. */
+  /**
+   * "whatsapp": a WhatsApp campaign (its ads open the buyers' form that ends with a WhatsApp button; until 13 Nov they
+   * opened the chat straight away). Otherwise the lead forms. Either way the results are form entries that aren't cold.
+   */
   group?: "whatsapp" | "form";
 }
 
 /**
  * Niko, 12 Nov 2026 ("we can have more facebook leads and such directly contact us through whatsapp from the ads"):
  * click-to-WhatsApp ads, Ghana and the diaspora, get half of Facebook's money for two weeks; then results decide.
+ * 13 Nov 2026 ("can you make a form to fill before they reach whatsapp that would qualify them?"): the WhatsApp side's
+ * ads open a short buyers' form first; only its entries count as results.
  */
 export const WHATSAPP_TEST = { share: 0.5, until: "2026-11-26" };
 

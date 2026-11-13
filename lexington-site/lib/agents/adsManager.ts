@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 
 import { notifyOwner } from "@/lib/alerts/notify";
 import { claudeConfigured, writeWithClaude } from "@/lib/ai/claude";
-import { chatsOf, leadsOf, metaConfig, type MetaConfig } from "@/lib/ads/meta";
+import { leadsOf, metaConfig, type MetaConfig } from "@/lib/ads/meta";
 import { MetaError, metaGraph } from "@/lib/ads/metaGraph";
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
 import { client } from "@/lib/sanity/client";
@@ -18,6 +18,7 @@ import {
   adCopyProblems,
   adCopyPrompt,
   adName,
+  isWaFormName,
   planManager,
   readTag,
   templateAdCopy,
@@ -226,6 +227,9 @@ async function readAccount(config: MetaConfig, nowMs: number): Promise<Account> 
 
   const GONE = new Set(["DELETED", "ARCHIVED"]);
   const campaignOn = new Map((campaigns.data ?? []).map((c) => [c.id, c.status === "ACTIVE" && !GONE.has(c.effective_status ?? "")]));
+  // The WhatsApp campaigns: those with a click-to-WhatsApp ad set. Their other ad sets are the buyers' form that ends on
+  // WhatsApp (13 Nov 2026), and their ads use that form.
+  const waCampaigns = new Set((adsets.data ?? []).filter((s) => s.destination_type === "WHATSAPP").map((s) => s.campaign_id ?? ""));
   const sets: AdsetInfo[] = (adsets.data ?? [])
     .filter((s) => !GONE.has(s.effective_status ?? s.status ?? ""))
     .map((s) => {
@@ -238,11 +242,11 @@ async function readAccount(config: MetaConfig, nowMs: number): Promise<Account> 
         status: ended ? "ended" : s.status === "ACTIVE" && campaignOn.get(s.campaign_id ?? "") ? "active" : "paused",
         endDay: s.end_time ? dayIn(tz.timezone_name, Date.parse(s.end_time)) : null,
         whatsapp: s.destination_type === "WHATSAPP",
+        ...(s.destination_type !== "WHATSAPP" && waCampaigns.has(s.campaign_id ?? "") && { waForm: true }),
       };
     });
-  // An ad in a click-to-WhatsApp set brings WhatsApp chats, not form entries: those are its results.
-  const waSets = new Set(sets.filter((s) => s.whatsapp).map((s) => s.id));
-  const resultsOf = (adsetId: string | undefined, actions: AdInsight["actions"]) => (waSets.has(adsetId ?? "") ? chatsOf(actions) : leadsOf(actions).leads);
+  // Results are form entries only: a WhatsApp chat started isn't one any more (sellers start them too, 13 Nov 2026).
+  const resultsOf = (actions: AdInsight["actions"]) => leadsOf(actions).leads;
   const stats = new Map((last14.data ?? []).map((r) => [r.ad_id ?? "", r]));
   const adList: AdInfo[] = (ads.data ?? [])
     .filter((a) => !GONE.has(a.effective_status ?? a.status ?? ""))
@@ -259,11 +263,11 @@ async function readAccount(config: MetaConfig, nowMs: number): Promise<Account> 
         problem: a.effective_status === "DISAPPROVED" || a.effective_status === "WITH_ISSUES",
         text,
         tag: readTag(a.name ?? ""),
-        last14: { spend: num(s?.spend), leads: resultsOf(a.adset_id, s?.actions), frequency: num(s?.frequency) },
+        last14: { spend: num(s?.spend), leads: resultsOf(s?.actions), frequency: num(s?.frequency) },
       };
     });
   const lifetime = new Map(
-    (last90.data ?? []).map((r) => [r.ad_id ?? "", { spend: num(r.spend), leads: resultsOf(r.adset_id, r.actions), adsetId: r.adset_id ?? "", name: r.ad_name ?? "" }])
+    (last90.data ?? []).map((r) => [r.ad_id ?? "", { spend: num(r.spend), leads: resultsOf(r.actions), adsetId: r.adset_id ?? "", name: r.ad_name ?? "" }])
   );
   return { today, campaigns: campaigns.data ?? [], adsets: sets, ads: adList, lifetime };
 }
@@ -338,7 +342,7 @@ async function writeAd(
   if (claudeConfigured()) {
     let problems: string[] = [];
     for (let attempt = 0; attempt < 2; attempt += 1) {
-      const prompt = adCopyPrompt({ facts: factPackText(pack), market: item.market, angle: item.angle, withOffer: item.withOffer, running, learnings, whatsapp: item.whatsapp });
+      const prompt = adCopyPrompt({ facts: factPackText(pack), market: item.market, angle: item.angle, withOffer: item.withOffer, running, learnings, whatsapp: item.whatsapp, waForm: item.waForm });
       const written = await writeWithClaude<AdCopy>({
         system: AD_COPY_SYSTEM,
         content: [
@@ -362,7 +366,7 @@ async function writeAd(
       if (!problems.length) return { copy, writer: "claude" };
     }
   }
-  const plain = templateAdCopy(pack, item.market, item.angle, item.withOffer, item.whatsapp);
+  const plain = templateAdCopy(pack, item.market, item.angle, item.withOffer, item.whatsapp, item.waForm);
   const problems = check(plain);
   return problems.length ? { error: `No ad passed the checks (${problems.join("; ")}).` } : { copy: plain, writer: "template" };
 }
@@ -374,6 +378,8 @@ interface Context {
   pack: FactPack;
   pageId: string;
   formId: string;
+  /** The buyers' form that ends with a WhatsApp button, for the WhatsApp campaigns' form ad sets. */
+  waFormId: string | null;
   igUserId: string | null;
   pictures: Picture[];
   used: Map<string, number>;
@@ -388,6 +394,8 @@ async function makeAd(
   learnings: string[],
   inSet: Set<string>
 ): Promise<{ adId: string; name: string; words: string; picture: string }> {
+  const formId = item.waForm ? ctx.waFormId : ctx.formId;
+  if (!formId) throw new Error('No active lead form with "WhatsApp" in its name, for the WhatsApp campaign\'s form ads.');
   const written = await writeAd(ctx.pack, item, running, learnings);
   if ("error" in written) throw new Error(written.error);
   const picture = choosePicture(ctx.pictures, item.angle, ctx.used, inSet);
@@ -404,10 +412,11 @@ async function makeAd(
       message: written.copy.primary_text,
       name: written.copy.headline,
       description: written.copy.description,
-      // A click-to-WhatsApp ad (12 Nov 2026) opens a chat with the sales team's WhatsApp; the others open the lead form.
+      // A click-to-WhatsApp ad (12 Nov 2026) opens a chat with the sales team's WhatsApp; the others open a lead form (in
+      // the WhatsApp campaigns, the buyers' form that ends with a WhatsApp button).
       ...(item.whatsapp
         ? { call_to_action: { type: "WHATSAPP_MESSAGE", value: { app_destination: "WHATSAPP" } } }
-        : { call_to_action: { type: "LEARN_MORE", value: { lead_gen_form_id: ctx.formId } } }),
+        : { call_to_action: { type: "LEARN_MORE", value: { lead_gen_form_id: formId } } }),
     },
   });
   const act = `act_${ctx.config.accountId}`;
@@ -632,12 +641,25 @@ export async function runAdsManager(opts: { mode?: "full" | "guard"; nowMs?: num
     let ctx: Context | null = null;
     if (needsAds) {
       const forms = (await listLeadForms()).filter((f) => f.status === "ACTIVE");
-      const form = forms.find((f) => /qualif/i.test(f.name)) ?? forms[0];
+      // The usual form ("Qualified"), and the buyers' form that ends on WhatsApp, for the WhatsApp campaigns (13 Nov 2026).
+      const usual = forms.filter((f) => !isWaFormName(f.name));
+      const form = usual.find((f) => /qualif/i.test(f.name)) ?? usual[0];
+      const waForm = forms.find((f) => isWaFormName(f.name)) ?? null;
       if (!form) errors.push("No active lead form on the Page, so no new ads could be made.");
       else {
         const used = new Map<string, number>();
         for (const e of keep.experiments) used.set(e.picture, (used.get(e.picture) ?? 0) + 1);
-        ctx = { config, pack, pageId, formId: form.id, igUserId: process.env.META_IG_USER_ID?.trim() || null, pictures: await pictures(), used, today };
+        ctx = {
+          config,
+          pack,
+          pageId,
+          formId: form.id,
+          waFormId: waForm?.id ?? null,
+          igUserId: process.env.META_IG_USER_ID?.trim() || null,
+          pictures: await pictures(),
+          used,
+          today,
+        };
       }
     }
 

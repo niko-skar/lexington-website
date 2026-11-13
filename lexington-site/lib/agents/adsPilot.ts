@@ -3,7 +3,7 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 
 import { readGoogleReport, type StoredGoogleReport } from "@/lib/ads/googleStore";
-import { chatsOf, leadsOf, metaConfig, type MetaConfig } from "@/lib/ads/meta";
+import { leadsOf, metaConfig, type MetaConfig } from "@/lib/ads/meta";
 import { MetaError, metaGraph } from "@/lib/ads/metaGraph";
 import { notifyOwner } from "@/lib/alerts/notify";
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
@@ -242,13 +242,15 @@ async function gatherMeta(config: MetaConfig, nowMs: number, startFor: (today: s
       : Promise.resolve({ data: [] as InsightRow[] }),
   ]);
 
-  // Click-to-WhatsApp ad sets (and their campaigns): their results are the WhatsApp chats they start, not form entries.
-  const waSets = new Set((adsets.data ?? []).filter((a) => a.destination_type === "WHATSAPP").map((a) => a.id));
-  const waCampaigns = new Set((adsets.data ?? []).filter((a) => waSets.has(a.id)).map((a) => a.campaign_id ?? ""));
+  // The WhatsApp campaigns (12 Nov 2026): those with a click-to-WhatsApp ad set, and every ad set in them, make up the
+  // WhatsApp side of the test. Since 13 Nov their ads open the buyers' form first, which ends with a WhatsApp button
+  // (Niko: "we're getting too many leads that are businesses trying to contact us to sell their goods"). A chat started
+  // is no longer a result: sellers start them too. Only form entries count, everywhere, and the CRM rates them below.
+  const waCampaigns = new Set((adsets.data ?? []).filter((a) => a.destination_type === "WHATSAPP").map((a) => a.campaign_id ?? ""));
+  const waSets = new Set((adsets.data ?? []).filter((a) => a.destination_type === "WHATSAPP" || waCampaigns.has(a.campaign_id ?? "")).map((a) => a.id));
   const stats = new Map<string, { spend: number; leads: number }>();
-  for (const row of byCampaign.data ?? [])
-    if (row.campaign_id) stats.set(row.campaign_id, { spend: num(row.spend), leads: waCampaigns.has(row.campaign_id) ? chatsOf(row.actions) : leadsOf(row.actions).leads });
-  for (const row of byAdset.data ?? []) if (row.adset_id) stats.set(row.adset_id, { spend: num(row.spend), leads: waSets.has(row.adset_id) ? chatsOf(row.actions) : leadsOf(row.actions).leads });
+  for (const row of byCampaign.data ?? []) if (row.campaign_id) stats.set(row.campaign_id, { spend: num(row.spend), leads: leadsOf(row.actions).leads });
+  for (const row of byAdset.data ?? []) if (row.adset_id) stats.set(row.adset_id, { spend: num(row.spend), leads: leadsOf(row.actions).leads });
 
   const ended = (iso?: string) => Boolean(iso && Date.parse(iso) <= nowMs);
   const daysUntil = (iso?: string) => (iso ? Math.max(1, Math.ceil((Date.parse(iso) - nowMs) / 86_400_000)) : 1);
@@ -560,10 +562,8 @@ export async function runAdsPilot(opts: { nowMs?: number } = {}): Promise<PilotR
     if (!googleHold && health?.hold) googleHold = { since: today, reason: health.hold.reason };
     if (googleHold) notes.push(`Google's spending is stopped by the ads health check since ${longDate(googleHold.since)}: ${googleHold.reason}`);
 
-    // Meta counts every form entry; only the ones that aren't cold are results. (A WhatsApp chat isn't rated: it counts.)
-    const metaHolders = meta.holders.map((h) =>
-      h.group === "whatsapp" ? h : { ...h, last14: { ...h.last14, leads: Math.round(h.last14.leads * share(h) * 100) / 100 } }
-    );
+    // Meta counts every form entry; only the ones that aren't cold are results (the WhatsApp side's too, since 13 Nov).
+    const metaHolders = meta.holders.map((h) => ({ ...h, last14: { ...h.last14, leads: Math.round(h.last14.leads * share(h) * 100) / 100 } }));
     const holders = [...metaHolders, ...google.holders];
     const byId = new Map(holders.map((h) => [h.id, h]));
 

@@ -58,13 +58,25 @@ export interface ChatThread {
   notifiedAt?: string | null;
   /** When the chat's one follow-up went (a site-visit invitation after it went quiet, 12 Nov 2026). */
   followedUpAt?: string | null;
+  /** When it turned out they sell or offer us something rather than want a home (13 Nov 2026): no more replies. */
+  seller?: string | null;
 }
 
 export const OWNER_QUIET_HOURS = 12;
 const MAX_REPLIES_PER_HOUR = 8;
 
+// ---- sellers and suppliers ---------------------------------------------------------------------------------
+// Niko, 13 Nov 2026: "we're getting too many leads that are businesses trying to contact us to sell their goods". Someone
+// selling or offering us something gets one short answer pointing to the sales email, no homes, no visit invitation, no
+// follow-up and no handover; the chat then stays quiet and their record leaves the pipeline (Lost).
+
+export const SALES_EMAIL = "sales@lexington.com.gh";
+export const SELLER_REPLY = `Thank you for reaching out. Please send the details by email to ${SALES_EMAIL} and the team will look at them.`;
+export const SELLER_LOST_REASON = "Selling to us, not a buyer";
+
 /** Why the agent doesn't answer this chat now, or null when it should. */
 export function quietReason(thread: ChatThread, nowMs: number): string | null {
+  if (thread.seller) return `A seller or supplier: they were asked to email ${SALES_EMAIL}.`;
   if (thread.optedOut) return "They asked not to get replies.";
   if (thread.ownerActiveUntil && Date.parse(thread.ownerActiveUntil) > nowMs) return "You are answering this chat yourself.";
   if (thread.handedOver && nowMs - Date.parse(thread.handedOver.at) < OWNER_QUIET_HOURS * 3_600_000) return "It was handed over to you.";
@@ -115,7 +127,7 @@ export const FOLLOW_UP_BEFORE_HOURS = 20;
  * is booked, Niko hasn't written in it, it wasn't handed over, and it hasn't had one yet. Pure.
  */
 export function followUpDue(thread: ChatThread, nowMs: number, visitBooked: boolean): boolean {
-  if (visitBooked || thread.followedUpAt || thread.optedOut || thread.handedOver) return false;
+  if (visitBooked || thread.followedUpAt || thread.optedOut || thread.handedOver || thread.seller) return false;
   // WhatsApp isn't connected yet; its 24 hours work the same way once it is.
   if (thread.channel === "whatsapp") return false;
   if (thread.ownerActiveUntil && Date.parse(thread.ownerActiveUntil) > nowMs) return false;
@@ -266,9 +278,14 @@ HAND OVER TO THE SALES TEAM (handover: true) when they:
 - ask anything the FACTS don't answer: say the team will come back to them on it.
 When you hand over, your reply still answers what the FACTS can, then says the team will be in touch soon.
 
+SELLERS AND SUPPLIERS (this comes before everything above)
+- Someone selling or offering us something (building materials, furniture, appliances, solar, security, cleaning, marketing, websites, loans, a job application, a business partnership or any other product or service) is not a buyer: seller is true. Your reply is then exactly: "${SELLER_REPLY}" No cards, no site-visit invitation, no handover (handover false, topic "none"), temperature "cold".
+- An estate agent who wants to bring buyers is not a seller. When you can't tell, seller is false and you ask once whether they are looking to buy a home at The Lexington.
+
 ALSO
 - Learn who they are as you go: ask for their name and a WhatsApp number or email only when it helps (once is enough), and never ask again for what they already told you.
-- temperature: "hot" for a clear sign they want to act soon (a specific unit, a viewing, how to pay or reserve, buying within a month); "warm" for genuine interest; "cold" for spam, agents selling something, or just browsing.
+- temperature: "hot" for a clear sign they want to act soon (a specific unit, a viewing, how to pay or reserve, buying within a month); "warm" for genuine interest; "cold" for spam, sellers and suppliers, or just browsing.
+- seller: true only for someone selling or offering us something (see SELLERS AND SUPPLIERS), else false.
 - name, email, phone, interest, budget: what they have told you so far in this chat (empty when not said). interest is the unit type or unit they want.
 - topic: what kind of question needs the team: viewing, payment, price, legal, complaint, person, unknown, or none. A visit you booked yourself is "none".
 - visit_time: the free time you booked, as "YYYY-MM-DD HH:00", or "".`;
@@ -288,8 +305,9 @@ export const CHAT_SCHEMA = {
     budget: { type: "string" },
     cards: { type: "array", items: { type: "string" } },
     visit_time: { type: "string" },
+    seller: { type: "boolean" },
   },
-  required: ["reply", "handover", "topic", "handover_reason", "temperature", "name", "email", "phone", "interest", "budget", "cards", "visit_time"],
+  required: ["reply", "handover", "topic", "handover_reason", "temperature", "name", "email", "phone", "interest", "budget", "cards", "visit_time", "seller"],
   additionalProperties: false,
 } as const;
 
@@ -308,6 +326,8 @@ export interface ChatOut {
   budget: string;
   /** A free site-visit hour they said yes to ("2026-11-13 10:00"), or "": the code books it (lib/siteVisits). */
   visit_time: string;
+  /** They sell or offer us something: the fixed answer (SELLER_REPLY) goes instead, and the chat goes quiet. */
+  seller?: boolean;
 }
 
 /** The conversation for Claude: the facts, then the last messages, oldest first. */

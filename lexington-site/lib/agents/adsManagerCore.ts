@@ -161,6 +161,11 @@ export interface AdsetInfo {
   endDay: string | null;
   /** Its ads open a WhatsApp chat (click-to-WhatsApp, 12 Nov 2026), not a lead form. */
   whatsapp?: boolean;
+  /**
+   * A form ad set in a WhatsApp campaign (13 Nov 2026): its ads open the buyers' form (type of home, budget, when, where),
+   * which ends with a "Chat on WhatsApp" button, so sellers don't reach the chat.
+   */
+  waForm?: boolean;
 }
 
 export interface ManagerInput {
@@ -195,6 +200,8 @@ export interface NewAd {
   reason: string;
   /** A WhatsApp ad: its button opens a WhatsApp chat. */
   whatsapp?: boolean;
+  /** An ad for the buyers' form that ends with a WhatsApp button (13 Nov 2026). */
+  waForm?: boolean;
 }
 
 export interface ManagerPlan {
@@ -341,6 +348,7 @@ export function planManager(input: ManagerInput): ManagerPlan {
       plan.create.push({
         adsetId: set.id,
         whatsapp: Boolean(set.whatsapp),
+        ...(set.waForm && { waForm: true }),
         market: set.market ?? "ghana",
         angle,
         withOffer,
@@ -412,6 +420,7 @@ export function adCopyPrompt(args: {
   running: string[];
   learnings: string[];
   whatsapp?: boolean;
+  waForm?: boolean;
 }): string {
   const feet = args.market === "us" || args.market === "canada";
   return [
@@ -419,9 +428,11 @@ export function adCopyPrompt(args: {
     `MARKET: ${MARKET_NAMES[args.market]}${args.market === "ghana" ? " (people in Ghana)" : " (people living there)"}. ${feet ? "Give sizes in square feet as well as m² when you give one." : ""}`,
     `ANGLE: ${ANGLES[args.angle].brief}`,
     args.withOffer ? "The ad MAY carry the banner offer, quoted exactly, with its last day." : "The ad must NOT mention any offer, discount or deadline.",
-    args.whatsapp
-      ? "BUTTON: this ad's button opens a WhatsApp chat with the sales team, not a form. End the text by inviting them to message on WhatsApp (for the prices, the floor plans or a site visit)."
-      : "",
+    args.waForm
+      ? `BUTTON: this ad's button opens a short form for people buying a home (${WA_FORM_STEPS}), which ends with a WhatsApp chat with the sales team. Make clear the ad is for people looking to buy a home, and end the text by inviting them to tap, answer four quick questions and chat with the sales team on WhatsApp.`
+      : args.whatsapp
+        ? "BUTTON: this ad's button opens a WhatsApp chat with the sales team, not a form. Make clear the ad is for people looking to buy a home, and end the text by inviting them to message on WhatsApp (for the prices, the floor plans or a site visit)."
+        : "",
     args.running.length ? `ADS ALREADY RUNNING IN THIS AD SET (say something different):\n${args.running.map((t) => `- ${t}`).join("\n")}` : "",
     args.learnings.length ? `WHAT HAS WORKED SO FAR:\n${args.learnings.map((t) => `- ${t}`).join("\n")}` : "",
     "Write the ad.",
@@ -436,12 +447,20 @@ const dollars = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
  * The ad without Claude: plain sentences built from the facts alone, one per angle. Used when
  * Claude isn't set up or its ad doesn't pass the checks twice.
  */
-export function templateAdCopy(pack: FactPack, market: Market, angle: AngleKey, withOffer: boolean, whatsapp = false): AdCopy {
+export function templateAdCopy(pack: FactPack, market: Market, angle: AngleKey, withOffer: boolean, whatsapp = false, waForm = false): AdCopy {
   const copy = templateWords(pack, market, angle, withOffer);
+  // The buyers' form that ends on WhatsApp: says who it is for and what happens next.
+  if (waForm) return { ...copy, primary_text: copy.primary_text.replace(/ Tap [^.]*\.$/, ` ${WA_FORM_INVITE}`) };
   if (!whatsapp) return copy;
   // A WhatsApp ad ends with an invitation to message, not "tap for ...".
   return { ...copy, primary_text: copy.primary_text.replace(/ Tap [^.]*\.$/, " Message us on WhatsApp for the prices, the floor plans or a site visit.") };
 }
+
+/** The buyers' form in front of WhatsApp (form "Lexington - home buyers, then WhatsApp chat", 13 Nov 2026). */
+export const WA_FORM_STEPS = "the type of home, the budget, when they want to buy and where they live";
+export const WA_FORM_INVITE = "Buying a home? Tap, answer four quick questions and chat with our sales team on WhatsApp.";
+/** Which of the Page's lead forms is the buyers' form that ends on WhatsApp, and which is the usual one. */
+export const isWaFormName = (name: string) => /whatsapp/i.test(name);
 
 function templateWords(pack: FactPack, market: Market, angle: AngleKey, withOffer: boolean): AdCopy {
   const forSale = pack.units.filter((u) => u.status === "available");

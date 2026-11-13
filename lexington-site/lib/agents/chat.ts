@@ -23,6 +23,8 @@ import {
   HANDOVER_WORDS,
   OWNER_QUIET_HOURS,
   PLACEHOLDER_NAME,
+  SELLER_LOST_REASON,
+  SELLER_REPLY,
   chatLeadId,
   chatProblems,
   chatPrompt,
@@ -376,6 +378,29 @@ async function learnAbout(leadId: string | null | undefined, out: ChatOut, threa
   return set.email || set.phone ? joinSamePerson(leadId, thread._id, thread.channel) : leadId;
 }
 
+/**
+ * A seller or supplier's record leaves the pipeline: a new one becomes Lost ("Selling to us, not a buyer"), so it isn't
+ * counted or chased as a buyer. A record already further along (a real prospect who wrote again) is left as it is.
+ */
+async function sellerOutOfPipeline(leadId: string | null | undefined): Promise<void> {
+  if (!leadId) return;
+  const buyers = getBuyersClient();
+  try {
+    const lead = await buyers.fetch<{ stage?: string } | null>(`*[_type == "lead" && _id == $id][0]{ stage }`, { id: leadId });
+    if (!lead || (lead.stage && lead.stage !== "new")) return;
+    await buyers
+      .patch(leadId)
+      .set({ stage: "lost", lostReason: SELLER_LOST_REASON })
+      .setIfMissing({ notes: [] })
+      .append("notes", [
+        { _key: newKey(), at: new Date().toISOString(), kind: "system", text: "Selling or offering us something, not a buyer: the assistant asked them to email sales@lexington.com.gh and won't answer again." },
+      ])
+      .commit();
+  } catch (error) {
+    console.error("[chat] the seller's record wasn't updated:", error instanceof Error ? error.message : error);
+  }
+}
+
 async function handoverTask(leadId: string | null | undefined, name: string, channel: ChatChannel, why: string): Promise<void> {
   if (!leadId) return;
   const now = new Date().toISOString();
@@ -405,6 +430,8 @@ interface Drafted {
   vat?: Vat;
   /** A free site-visit hour they said yes to: booked before the reply goes (lib/siteVisits). */
   book?: SlotKey | null;
+  /** They sell or offer us something (SELLER_REPLY): the chat then goes quiet and their record leaves the pipeline. */
+  seller?: boolean;
 }
 
 // Problems another go can fix: too long, or prices in its words that belong on the cards.
@@ -441,6 +468,8 @@ async function draft(thread: ChatThread, nowMs: number): Promise<Drafted> {
       if (!problems.length || !problems.every((p) => STYLE_ONLY.test(p))) break;
     }
   }
+  // Someone selling us something: the one fixed answer, nothing else (no homes, no visit, no handover).
+  if (out?.seller) return { text: SELLER_REPLY, cards: [], handover: false, topic: "none", reason: "", out, vat: pack.vat, book: null, seller: true };
   const loop = tooChatty(thread, nowMs);
   const topic: HandoverTopic = forced !== "none" ? forced : out?.handover ? out.topic === "none" ? "unknown" : out.topic : problems.length || loop ? "unknown" : "none";
   const handover = topic !== "none";
@@ -645,6 +674,7 @@ export async function handleChatEvent(ev: ChatEvent, nowMs = Date.now()): Promis
             id,
             (t) => {
               if (mid) t.messages = keepLast([...t.messages, { _key: key, from: "agent", text: d.text, at: now, mid }]);
+              if (mid && d.seller) t.seller = now;
               if (d.handover || sendError) t.handedOver = { at: now, reason: sendError ? `the reply couldn't be sent (${sendError})` : d.reason };
               return t;
             },
@@ -667,6 +697,10 @@ export async function handleChatEvent(ev: ChatEvent, nowMs = Date.now()): Promis
         if (d.out) {
           const joinedId = await learnAbout(thread.leadId, d.out, thread);
           if (joinedId && joinedId !== thread.leadId) thread = { ...thread, leadId: joinedId };
+        }
+        if (mid && d.seller) {
+          await sellerOutOfPipeline(thread.leadId);
+          break;
         }
 
         if (d.handover || sendError) {
