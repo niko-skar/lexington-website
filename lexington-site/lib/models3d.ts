@@ -34,6 +34,19 @@ export const MODELS: Record<string, Model3D> = {
     levels: ["main"],
     posters: { main: { wide: "/3d/u204b-plan.jpg?v=1", phone: "/3d/u204b-plan-m.jpg?v=1" } },
   },
+  // The 3rd floor's two studios (16 Nov 2026): 304B on the north side, 305B on the south side.
+  "304B": {
+    viewerId: "u3n",
+    name: "studio 304B",
+    levels: ["main"],
+    posters: { main: { wide: "/3d/u3n-plan.jpg?v=1", phone: "/3d/u3n-plan-m.jpg?v=1" } },
+  },
+  "305B": {
+    viewerId: "u3s",
+    name: "studio 305B",
+    levels: ["main"],
+    posters: { main: { wide: "/3d/u3s-plan.jpg?v=1", phone: "/3d/u3s-plan-m.jpg?v=1" } },
+  },
 };
 
 export function has3DModel(unitNumber: string): boolean {
