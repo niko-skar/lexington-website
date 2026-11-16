@@ -98,7 +98,7 @@ export function UnitDetailModal({
           <StatusBadge status={unit.status} />
         </div>
 
-        {/* The units with a 3D model (PH2b, 405B) get their 3D plan as the first thing under the price. */}
+        {/* The units with a 3D model (PH2b, 405B, 204B) get their 3D plan as the first thing under the price. */}
         {has3D && (
           <>
             <div className={styles.planLabel}>3D floor plan</div>

@@ -26,7 +26,13 @@ export const MODELS: Record<string, Model3D> = {
     viewerId: "u405b",
     name: "apartment 405B",
     levels: ["main"],
-    posters: { main: { wide: "/3d/u405b-plan.jpg?v=1", phone: "/3d/u405b-plan-m.jpg?v=1" } },
+    posters: { main: { wide: "/3d/u405b-plan.jpg?v=2", phone: "/3d/u405b-plan-m.jpg?v=2" } }, // v2: shot with the live view's own lens
+  },
+  "204B": {
+    viewerId: "u204b",
+    name: "studio 204B",
+    levels: ["main"],
+    posters: { main: { wide: "/3d/u204b-plan.jpg?v=1", phone: "/3d/u204b-plan-m.jpg?v=1" } },
   },
 };
 
