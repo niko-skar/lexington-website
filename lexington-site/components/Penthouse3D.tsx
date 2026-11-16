@@ -14,7 +14,7 @@ import styles from "./Penthouse3D.module.css";
 // The 3D models are one self-contained script in /public/3d (built from the penthouse-3d project). It is only
 // downloaded when someone asks for it, so the page itself stays as light as before.
 // Bump the number after the script is rebuilt so browsers fetch the new one.
-const VIEWER_SRC = "/3d/ph2b.iife.js?v=13"; // v13 (16 Nov 2026): PH2b, 405B, 204B and the 3rd floor's studios 304B and 305B (penthouse-3d: src/site.js, build-site.mjs)
+const VIEWER_SRC = "/3d/ph2b.iife.js?v=14"; // v14 (16 Nov 2026): PH2b, 405B, 204B, the 3rd floor's studios 304B and 305B, and the 1st floor's homes 101A-109B (penthouse-3d: src/site.js, build-site.mjs)
 const POSTER_SRC = "/3d/ph2b-poster.jpg";
 
 // The units with a 3D model live in lib/models3d.ts (the server reads the same list).

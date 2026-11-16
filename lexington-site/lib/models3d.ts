@@ -47,6 +47,61 @@ export const MODELS: Record<string, Model3D> = {
     levels: ["main"],
     posters: { main: { wide: "/3d/u3s-plan.jpg?v=1", phone: "/3d/u3s-plan-m.jpg?v=1" } },
   },
+  // The 1st floor's nine homes (16 Nov 2026): 101A and 104B are one-bedroom apartments, the rest studios.
+  "101A": {
+    viewerId: "u1fg",
+    name: "apartment 101A",
+    levels: ["main"],
+    posters: { main: { wide: "/3d/u1fg-plan.jpg?v=1", phone: "/3d/u1fg-plan-m.jpg?v=1" } },
+  },
+  "102B": {
+    viewerId: "u1a",
+    name: "studio 102B",
+    levels: ["main"],
+    posters: { main: { wide: "/3d/u1a-plan.jpg?v=1", phone: "/3d/u1a-plan-m.jpg?v=1" } },
+  },
+  "103B": {
+    viewerId: "u1e",
+    name: "studio 103B",
+    levels: ["main"],
+    posters: { main: { wide: "/3d/u1e-plan.jpg?v=1", phone: "/3d/u1e-plan-m.jpg?v=1" } },
+  },
+  "104B": {
+    viewerId: "u1b",
+    name: "apartment 104B",
+    levels: ["main"],
+    posters: { main: { wide: "/3d/u1b-plan.jpg?v=1", phone: "/3d/u1b-plan-m.jpg?v=1" } },
+  },
+  "105B": {
+    viewerId: "u1f",
+    name: "studio 105B",
+    levels: ["main"],
+    posters: { main: { wide: "/3d/u1f-plan.jpg?v=1", phone: "/3d/u1f-plan-m.jpg?v=1" } },
+  },
+  "106B": {
+    viewerId: "u1c",
+    name: "studio 106B",
+    levels: ["main"],
+    posters: { main: { wide: "/3d/u1c-plan.jpg?v=1", phone: "/3d/u1c-plan-m.jpg?v=1" } },
+  },
+  "107B": {
+    viewerId: "u1g",
+    name: "studio 107B",
+    levels: ["main"],
+    posters: { main: { wide: "/3d/u1g-plan.jpg?v=1", phone: "/3d/u1g-plan-m.jpg?v=1" } },
+  },
+  "108B": {
+    viewerId: "u1d",
+    name: "studio 108B",
+    levels: ["main"],
+    posters: { main: { wide: "/3d/u1d-plan.jpg?v=1", phone: "/3d/u1d-plan-m.jpg?v=1" } },
+  },
+  "109B": {
+    viewerId: "u1h",
+    name: "studio 109B",
+    levels: ["main"],
+    posters: { main: { wide: "/3d/u1h-plan.jpg?v=1", phone: "/3d/u1h-plan-m.jpg?v=1" } },
+  },
 };
 
 export function has3DModel(unitNumber: string): boolean {
