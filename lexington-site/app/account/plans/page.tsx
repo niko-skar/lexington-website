@@ -2,9 +2,10 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { PlanOptions, type DepositView, type PlanOptionView } from "@/components/PlanOptions";
+import { PlanPicker, type PlanPickView } from "@/components/PlanPicker";
 import styles from "@/components/Portal.module.css";
 import { balanceFor, requireCurrentBuyer } from "@/lib/auth/currentBuyer";
-import { PLAN_MODELS, seesOnlyPlans, shownPlanOptions } from "@/lib/planOptions";
+import { PICK_MODELS, PLAN_MODELS, seesOnlyPlans, shownPlanOptions, shownPlanPicks } from "@/lib/planOptions";
 
 export const metadata = {
   title: "Your Plans | The Lexington",
@@ -31,7 +32,21 @@ export default async function AccountPlansPage() {
       priceUSD: o.priceUSD,
     };
   });
-  if (!options.length) redirect("/account");
+  // Homes to pick from (16 Nov 2026): when the account has them, the page is the picker and the older plans are not shown.
+  const picks: PlanPickView[] = shownPlanPicks(buyer).map((p, i) => ({
+    key: p._key ?? String(i),
+    title: p.title,
+    floorLabel: p.floorLabel ?? "",
+    group: p.group === "studio" ? "studio" : "home",
+    model: p.model,
+    poster: PICK_MODELS[p.model].poster,
+    insideSqm: p.insideSqm,
+    balconySqm: typeof p.balconySqm === "number" && p.balconySqm > 0 ? p.balconySqm : 0,
+    listPriceUSD: typeof p.listPriceUSD === "number" && p.listPriceUSD > 0 ? p.listPriceUSD : null,
+    priceUSD: p.priceUSD,
+    preselected: p.preselected === true,
+  }));
+  if (!options.length && !picks.length) redirect("/account");
 
   const perHome = set?.depositPerHomeUSD ?? 0;
   const homeCount = set?.depositHomes ?? 0;
@@ -41,13 +56,13 @@ export default async function AccountPlansPage() {
   return (
     <main className={styles.page}>
       <div className={styles.eyebrow}>{set?.eyebrow || "Your plans"}</div>
-      <h1 className={styles.title}>{set?.title || "Choose your plan"}</h1>
+      <h1 className={styles.title}>{set?.title || (picks.length ? "Choose your homes" : "Choose your plan")}</h1>
       {set?.intro && (
         <p className={styles.lead} style={{ marginTop: "calc(var(--space-5) * -1)" }}>
           {set.intro}
         </p>
       )}
-      <PlanOptions options={options} deposit={deposit} />
+      {picks.length ? <PlanPicker picks={picks} /> : <PlanOptions options={options} deposit={deposit} />}
       <p className={styles.lead} style={{ marginTop: "var(--space-7)" }}>
         {/* A plain <a> to the public site, not <Link>: a full page load, so the tag manager those pages load can't follow Back into the portal. */}
         Questions, or ready to choose? <a href="/contact">Talk to us</a>

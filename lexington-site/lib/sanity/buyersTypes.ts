@@ -51,6 +51,27 @@ export interface PlanOptionSet {
   /** The buyer sees the plans and nothing else in the portal (lib/planOptions.ts: seesOnlyPlans). */
   only?: boolean;
   options?: PlanOption[];
+  /** Homes the buyer can pick from, each with its own 3D model and price (the page adds up the ticked ones). */
+  picks?: PlanPick[];
+}
+
+export interface PlanPick {
+  _key?: string;
+  title: string;
+  /** e.g. "4th floor". */
+  floorLabel?: string;
+  /** "home" for the main home, "studio" for the studios listed under it. */
+  group?: "home" | "studio";
+  /** The 3D model's id (lib/planOptions.ts lists the ones the site has). */
+  model: string;
+  insideSqm: number;
+  balconySqm?: number;
+  /** The price before this buyer's discount. */
+  listPriceUSD?: number;
+  /** The buyer's price for this home. */
+  priceUSD: number;
+  /** Ticked when the page opens. */
+  preselected?: boolean;
 }
 
 export interface PlanOption {

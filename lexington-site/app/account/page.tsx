@@ -31,13 +31,15 @@ export default async function AccountOverviewPage() {
       <div className={styles.eyebrow}>Welcome back</div>
       <h1 className={styles.title}>{buyer.name}</h1>
 
-      {(buyer.planOptions?.options?.length ?? 0) > 0 && (
+      {((buyer.planOptions?.options?.length ?? 0) > 0 || (buyer.planOptions?.picks?.length ?? 0) > 0) && (
         <section className={styles.section} aria-labelledby="your-plans">
           <h2 id="your-plans" className={styles.sectionTitle}>
             Your Plans
           </h2>
           <p className={styles.lead}>
-            Your home is drawn {buyer.planOptions?.options?.length === 2 ? "two ways" : "more than one way"}. See each plan in 3D, with its size and your price.
+            {(buyer.planOptions?.picks?.length ?? 0) > 0
+              ? "See each home in 3D, tick the ones you want, and your price adds up."
+              : `Your home is drawn ${buyer.planOptions?.options?.length === 2 ? "two ways" : "more than one way"}. See each plan in 3D, with its size and your price.`}
           </p>
           <Link href="/account/plans" className={styles.stepLink}>
             Open your plans in 3D

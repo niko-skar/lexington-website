@@ -285,6 +285,30 @@ export const buyerAccount = defineType({
             }),
           ],
         }),
+        defineField({
+          name: "picks",
+          title: "Homes to pick from",
+          description: "Optional. When there are homes here, the plans page lets the buyer open each one in 3D, tick the ones they want and see the price add up (the plans above are then not shown).",
+          type: "array",
+          of: [
+            defineArrayMember({
+              type: "object",
+              name: "planPick",
+              fields: [
+                defineField({ name: "title", title: "Name", type: "string", validation: (rule) => rule.required() }),
+                defineField({ name: "floorLabel", title: "Floor (as shown)", description: "e.g. 4th floor", type: "string" }),
+                defineField({ name: "group", title: "List", type: "string", options: { list: [{ title: "Main home", value: "home" }, { title: "Studio", value: "studio" }], layout: "radio" } }),
+                defineField({ name: "model", title: "3D model", description: "The model's id on the website, e.g. u4t.", type: "string", validation: (rule) => rule.required() }),
+                defineField({ name: "insideSqm", title: "Inside (m²)", type: "number", validation: (rule) => rule.required() }),
+                defineField({ name: "balconySqm", title: "Balcony (m²)", type: "number" }),
+                defineField({ name: "listPriceUSD", title: "List price (US$)", type: "number" }),
+                defineField({ name: "priceUSD", title: "The buyer's price (US$)", type: "number", validation: (rule) => rule.required() }),
+                defineField({ name: "preselected", title: "Ticked when the page opens", type: "boolean" }),
+              ],
+              preview: { select: { title: "title", subtitle: "floorLabel" } },
+            }),
+          ],
+        }),
       ],
     }),
     defineField({
