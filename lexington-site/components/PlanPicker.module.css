@@ -1,22 +1,123 @@
-/* Homes a buyer picks from (/account/plans): the list of homes with a tick each, and the selection's price.
-   The 3D box and the panel beside it use PlanOptions.module.css. */
+/* Homes a buyer picks from (/account/plans). Wide screens: the 3D view stays on the left while the cards scroll on the
+   right. Narrow screens: the 3D view first, the cards under it. The price is always in a bar at the bottom.
+   The 3D box itself uses PlanOptions.module.css. */
+.wrap {
+  display: grid;
+  gap: var(--space-5);
+}
+
+/* ---- the three steps ---- */
+.steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 22px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+  color: var(--slate, #5b6470);
+}
+
+.steps li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.steps b {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--navy);
+  color: var(--paper);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- two columns on a wide screen ---- */
+.layout {
+  display: grid;
+  gap: var(--space-6);
+  align-items: start;
+}
+
+@media (min-width: 1000px) {
+  .layout {
+    grid-template-columns: minmax(0, 1.2fr) minmax(360px, 0.8fr);
+  }
+  .viewer {
+    position: sticky;
+    top: 16px;
+  }
+}
+
+/* ---- the 3D view ---- */
+.viewer {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.viewHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 6px 16px;
+}
+
 .showing {
-  margin: 0 0 4px;
+  margin: 0 0 2px;
   font-size: 12px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--slate, #5b6470);
 }
 
-.floor {
-  margin: -6px 0 var(--space-4);
+.viewTitle {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: var(--fs-500, 1.5rem);
+  font-weight: 500;
+  line-height: 1.15;
+}
+
+.viewTitle span {
+  font-family: var(--font-sans, inherit);
+  font-size: 14px;
   color: var(--slate, #5b6470);
+  white-space: nowrap;
+}
+
+.viewPrice {
+  display: grid;
+  justify-items: end;
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.viewPrice span {
+  font-size: 13px;
+  color: var(--slate, #5b6470);
+}
+
+.viewPrice b {
+  font-family: var(--font-serif);
+  font-size: var(--fs-500, 1.5rem);
+  font-weight: 500;
+}
+
+.viewActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .add,
 .addOn {
-  width: 100%;
-  margin-top: var(--space-4);
+  flex: 1 1 220px;
   padding: 12px 16px;
   border: 1px solid var(--navy);
   border-radius: var(--radius);
@@ -34,13 +135,19 @@
 
 .add:focus-visible,
 .addOn:focus-visible,
-.view:focus-visible {
+.cardView:focus-visible,
+.barText:focus-visible,
+.pick:focus-within,
+.pickOn:focus-within {
   outline: 2px solid var(--brass);
   outline-offset: 2px;
 }
 
-.group + .group {
-  margin-top: var(--space-5);
+/* ---- the homes ---- */
+.chooser {
+  display: grid;
+  gap: var(--space-5);
+  min-width: 0;
 }
 
 .groupTitle {
@@ -48,7 +155,7 @@
   flex-wrap: wrap;
   align-items: baseline;
   gap: 10px;
-  margin: var(--space-4) 0 10px;
+  margin: 0 0 10px;
   font-family: var(--font-serif);
   font-size: var(--fs-400);
   font-weight: 500;
@@ -60,62 +167,98 @@
   color: var(--slate, #5b6470);
 }
 
-.items {
+.cards {
   display: grid;
-  gap: 8px;
+  gap: 10px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.item {
+.card {
   display: grid;
-  grid-template-columns: 1fr auto;
-  align-items: center;
-  gap: 8px 16px;
-  padding: 12px 14px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: stretch;
   border: 1px solid var(--stone);
   border-radius: var(--radius);
   background: var(--paper);
+  overflow: hidden;
+  transition:
+    border-color 0.15s var(--ease),
+    box-shadow 0.15s var(--ease);
 }
 
-.itemOn {
-  border-color: var(--navy);
-  box-shadow: inset 3px 0 0 var(--navy);
+.cardViewing {
+  border-color: var(--brass);
+  box-shadow: 0 0 0 1px var(--brass);
 }
 
-.itemViewing {
-  background: color-mix(in srgb, var(--brass) 8%, var(--paper));
+.cardOn {
+  background: color-mix(in srgb, var(--navy) 5%, var(--paper));
 }
 
-.tick {
-  display: flex;
-  align-items: center;
+.cardView {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
   gap: 12px;
+  align-items: center;
   min-width: 0;
+  padding: 10px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
   cursor: pointer;
 }
 
-.tick input {
-  width: 20px;
-  height: 20px;
-  flex: none;
-  accent-color: var(--navy);
+.thumb {
+  width: 96px;
+  height: 72px;
+  border-radius: calc(var(--radius) - 2px);
+  background: #f6f2ea;
+  object-fit: cover;
 }
 
-.name {
+.cardText {
   display: grid;
+  gap: 3px;
+  justify-items: start;
   min-width: 0;
 }
 
-.name span,
-.size {
-  font-size: 13px;
-  color: var(--slate, #5b6470);
+.chip {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--brass) 18%, var(--paper));
+  font-size: 12px;
 }
 
 .size {
+  font-size: 13px;
+  color: var(--slate, #5b6470);
   font-variant-numeric: tabular-nums;
+}
+
+.see {
+  font-size: 12px;
+  color: var(--navy);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.cardViewing .see {
+  color: var(--ink);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.buy {
+  display: grid;
+  align-content: center;
+  justify-items: end;
+  gap: 8px;
+  padding: 10px 12px 10px 4px;
 }
 
 .money {
@@ -129,55 +272,60 @@
   color: var(--slate, #5b6470);
 }
 
-.view {
-  padding: 8px 12px;
-  border: 1px solid var(--stone);
-  border-radius: var(--radius);
-  background: transparent;
-  color: var(--ink);
-  font: inherit;
+.money b {
+  font-size: 1.05rem;
+}
+
+/* "Select" is a real checkbox, drawn as a button. */
+.pick,
+.pickOn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border: 1px solid var(--navy);
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--navy);
   font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
-  white-space: nowrap;
+  user-select: none;
 }
 
-.view:hover {
-  border-color: var(--ink);
+.pickOn {
+  background: var(--navy);
+  color: var(--paper);
 }
 
-.view[aria-pressed="true"] {
-  border-color: var(--brass);
-  color: var(--ink);
+.pick input,
+.pickOn input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--brass);
 }
 
-/* Wide screens: one line per home. */
-@media (min-width: 760px) {
-  .item {
-    grid-template-columns: minmax(200px, 1.4fr) minmax(170px, 1fr) minmax(110px, auto) auto;
+@media (max-width: 420px) {
+  .cardView {
+    grid-template-columns: 72px minmax(0, 1fr);
+    gap: 10px;
+  }
+  .thumb {
+    width: 72px;
+    height: 56px;
   }
 }
 
-/* Narrow screens: name and price on the first line, size and the 3D button on the second. */
-@media (max-width: 759px) {
-  .size {
-    grid-column: 1;
-    grid-row: 2;
-    padding-left: 32px;
-  }
-  .money {
-    grid-column: 2;
-    grid-row: 1;
-  }
-  .view {
-    grid-column: 2;
-    grid-row: 2;
-  }
+/* ---- the selection, in full ---- */
+.total {
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--stone);
 }
 
 .summary {
   display: grid;
   gap: var(--space-4);
-  max-width: 560px;
 }
 
 .lines {
@@ -220,4 +368,74 @@
 
 .saved {
   color: var(--slate, #5b6470);
+}
+
+/* ---- always on screen: the selection and its price ---- */
+.bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0 calc(var(--space-4) * -1);
+  padding: 12px var(--space-4) calc(12px + env(safe-area-inset-bottom, 0px));
+  background: var(--navy);
+  color: var(--paper);
+  border-radius: var(--radius) var(--radius) 0 0;
+  box-shadow: 0 -6px 18px rgba(20, 30, 45, 0.18);
+}
+
+.barText {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.barCount {
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+
+.barNames {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.barPrice {
+  display: grid;
+  justify-items: end;
+  flex: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.barLabel {
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+
+.barPrice b {
+  font-family: var(--font-serif);
+  font-size: var(--fs-500, 1.5rem);
+  font-weight: 500;
+  line-height: 1.1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card {
+    transition: none;
+  }
 }

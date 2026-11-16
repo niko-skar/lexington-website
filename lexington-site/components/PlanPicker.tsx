@@ -7,10 +7,13 @@ import po from "./PlanOptions.module.css";
 import styles from "./PlanPicker.module.css";
 
 // Homes a buyer can pick from (Niko, 16 Nov 2026: a buyer who wants separate homes on different floors looks at each one
-// in 3D, ticks the ones he wants and sees his price add up). The models are one self-contained script in /public/3d,
-// built from the penthouse-3d project (build-offerpick.mjs); it is only downloaded on this page.
-// Bump the number after the script is rebuilt so browsers fetch the new one.
-const VIEWER_SRC = "/3d/offerpick.iife.js?v=1";
+// in 3D, ticks the ones he wants and sees his price add up). Laid out so it explains itself (his word, later that day:
+// "make it better and more intuitive to use"): the homes are cards with a picture; a tap on a card shows that home in
+// the 3D view, which stays beside the cards on a wide screen; "Select" on a card adds it; the price is always on screen
+// in a bar at the bottom.
+// The models are one self-contained script in /public/3d, built from the penthouse-3d project (build-offerpick.mjs); it
+// is only downloaded on this page. Bump the number after the script is rebuilt so browsers fetch the new one.
+const VIEWER_SRC = "/3d/offerpick.iife.js?v=2";
 
 export interface PlanPickView {
   key: string;
@@ -20,7 +23,7 @@ export interface PlanPickView {
   group: "home" | "studio";
   /** The model's id in the 3D script. */
   model: string;
-  /** The home seen from straight above: shown until the 3D view is ready. */
+  /** The home seen from straight above: shown until the 3D view is ready, and on its card. */
   poster: string;
   insideSqm: number;
   balconySqm: number;
@@ -81,7 +84,8 @@ export function PlanPicker({ picks }: { picks: PlanPickView[] }) {
   const [chosen, setChosen] = useState<string[]>(() => picks.filter((p) => p.preselected).map((p) => p.key));
   const viewing = picks.find((p) => p.key === viewKey) ?? picks[0];
   const liveRef = useRef<HTMLDivElement>(null);
-  const stageRef = useRef<HTMLDivElement>(null);
+  const viewerBoxRef = useRef<HTMLElement>(null);
+  const totalRef = useRef<HTMLElement>(null);
   const viewerRef = useRef<Viewer | null>(null);
   // Which model the 3D view is showing ("" while it loads), and one that could not start.
   const [ready, setReady] = useState("");
@@ -142,7 +146,9 @@ export function PlanPicker({ picks }: { picks: PlanPickView[] }) {
   const show = (key: string) => {
     setViewKey(key);
     setLocked(true);
-    stageRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    // On a narrow screen the 3D view is above the cards: bring it back into sight.
+    const box = viewerBoxRef.current;
+    if (box && box.getBoundingClientRect().top < 0) box.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   const mine = picks.filter((p) => isChosen(p.key));
@@ -156,9 +162,33 @@ export function PlanPicker({ picks }: { picks: PlanPickView[] }) {
   ].filter((g) => g.items.length > 0);
 
   return (
-    <div className={po.wrap}>
-      <div className={po.split}>
-        <div ref={stageRef}>
+    <div className={styles.wrap}>
+      <ol className={styles.steps} aria-label="How this page works">
+        <li>
+          <b>1</b> Tap a home to see it in 3D
+        </li>
+        <li>
+          <b>2</b> Press Select on the homes you want
+        </li>
+        <li>
+          <b>3</b> Your price is at the bottom of the screen
+        </li>
+      </ol>
+
+      <div className={styles.layout}>
+        <section ref={viewerBoxRef} className={styles.viewer} aria-label="3D view">
+          <div className={styles.viewHead}>
+            <div>
+              <p className={styles.showing}>Showing in 3D</p>
+              <h2 className={styles.viewTitle}>
+                {viewing.title} <span>{viewing.floorLabel}</span>
+              </h2>
+            </div>
+            <p className={styles.viewPrice}>
+              <span>{sizeOf(viewing)}</span>
+              <b>{formatUSD(viewing.priceUSD)}</b>
+            </p>
+          </div>
           <div className={`${po.stage} ${isReady ? po.stageReady : ""}`} role="region" aria-label={`3D model of ${viewing.title}, ${viewing.floorLabel}`}>
             {/* eslint-disable-next-line @next/next/no-img-element -- a plain picture behind the 3D view, swapped with the home */}
             <img key={viewing.poster} className={po.poster} src={viewing.poster} alt={`${viewing.title} seen from straight above`} />
@@ -181,130 +211,115 @@ export function PlanPicker({ picks }: { picks: PlanPickView[] }) {
               </button>
             )}
           </div>
-          <div className={po.foot}>
-            <p className={po.hint}>
-              Drag to turn it, scroll to zoom, and use the buttons to step inside or switch day and night. An illustrative model: furniture and
-              finishes are indicative, and dimensions are approximate.
-            </p>
+          <div className={styles.viewActions}>
+            <button type="button" className={isChosen(viewing.key) ? styles.addOn : styles.add} aria-pressed={isChosen(viewing.key)} onClick={() => toggle(viewing.key)}>
+              {isChosen(viewing.key) ? "In your selection ✓" : "Add to your selection"}
+            </button>
             {isReady && (
               <button type="button" className={po.full} onClick={() => viewerRef.current?.toggleFullscreen?.()}>
                 Full screen
               </button>
             )}
           </div>
-        </div>
+          <p className={po.hint}>
+            Drag to turn it, scroll to zoom, and use the buttons to step inside or switch day and night. An illustrative model: furniture and finishes
+            are indicative, and dimensions are approximate.
+          </p>
+        </section>
 
-        <aside className={po.panel} aria-label={`${viewing.title}: size and price`}>
-          <p className={styles.showing}>Now showing</p>
-          <h2 className={po.panelTitle}>{viewing.title}</h2>
-          <p className={styles.floor}>{viewing.floorLabel}</p>
-          <dl className={po.facts}>
-            <div className={po.fact}>
-              <dt>Inside</dt>
-              <dd>{sqm(viewing.insideSqm)}</dd>
+        <section className={styles.chooser} aria-label="The homes to choose from">
+          {groups.map((g) => (
+            <div key={g.name} className={styles.group}>
+              <h2 className={styles.groupTitle}>
+                {g.name}
+                {g.note && <span className={styles.groupNote}>{g.note}</span>}
+              </h2>
+              <ul className={styles.cards}>
+                {g.items.map((p) => (
+                  <li key={p.key} className={`${styles.card} ${isChosen(p.key) ? styles.cardOn : ""} ${p.key === viewing.key ? styles.cardViewing : ""}`}>
+                    <button type="button" className={styles.cardView} aria-pressed={p.key === viewing.key} onClick={() => show(p.key)}>
+                      {/* eslint-disable-next-line @next/next/no-img-element -- a small plain picture of the home from above */}
+                      <img className={styles.thumb} src={p.poster} alt="" loading="lazy" />
+                      <span className={styles.cardText}>
+                        <b>{p.title}</b>
+                        <span className={styles.chip}>{p.floorLabel}</span>
+                        <span className={styles.size}>{sizeOf(p)}</span>
+                        <span className={styles.see}>{p.key === viewing.key ? "Showing in 3D" : "View in 3D"}</span>
+                      </span>
+                    </button>
+                    <div className={styles.buy}>
+                      <span className={styles.money}>
+                        {savingOf(p.listPriceUSD, p.priceUSD) > 0 && <s>{formatUSD(p.listPriceUSD ?? 0)}</s>}
+                        <b>{formatUSD(p.priceUSD)}</b>
+                      </span>
+                      <label className={isChosen(p.key) ? styles.pickOn : styles.pick}>
+                        <input type="checkbox" checked={isChosen(p.key)} onChange={() => toggle(p.key)} />
+                        <span>{isChosen(p.key) ? "Selected" : "Select"}</span>
+                      </label>
+                    </div>
+                  </li>
+                ))}
+              </ul>
             </div>
-            {viewing.balconySqm > 0 && (
-              <div className={po.fact}>
-                <dt>Balcony</dt>
-                <dd>{sqm(viewing.balconySqm)}</dd>
+          ))}
+
+          <section ref={totalRef} className={styles.total} aria-labelledby="pick-total">
+            <h2 id="pick-total" className={styles.groupTitle}>
+              Your selection
+            </h2>
+            {mine.length === 0 ? (
+              <p className={po.note}>Nothing ticked yet. Press Select on a home to see your price.</p>
+            ) : (
+              <div className={styles.summary}>
+                <ul className={styles.lines}>
+                  {mine.map((p) => (
+                    <li key={p.key}>
+                      <span>
+                        {p.title}, {p.floorLabel.toLowerCase()}
+                      </span>
+                      <b>{formatUSD(p.priceUSD)}</b>
+                    </li>
+                  ))}
+                </ul>
+                <dl className={styles.totals}>
+                  {totalList !== null && totalSaving > 0 && (
+                    <div>
+                      <dt>List price</dt>
+                      <dd className={po.struck}>{formatUSD(totalList)}</dd>
+                    </div>
+                  )}
+                  <div className={styles.grand}>
+                    <dt>Your price{mine.length > 1 ? ` for the ${mine.length} homes` : ""}</dt>
+                    <dd>{formatUSD(total)}</dd>
+                  </div>
+                  {totalList !== null && totalSaving > 0 && (
+                    <div className={styles.saved}>
+                      <dt>Your discount</dt>
+                      <dd>
+                        −{formatUSD(totalSaving)} <small>({Math.round((totalSaving / totalList) * 1000) / 10}% off)</small>
+                      </dd>
+                    </div>
+                  )}
+                </dl>
               </div>
             )}
-          </dl>
-          <dl className={po.prices}>
-            {savingOf(viewing.listPriceUSD, viewing.priceUSD) > 0 && (
-              <div className={po.fact}>
-                <dt>List price</dt>
-                <dd className={po.struck}>{formatUSD(viewing.listPriceUSD ?? 0)}</dd>
-              </div>
-            )}
-            <div className={po.priceRow}>
-              <dt>Your price</dt>
-              <dd>{formatUSD(viewing.priceUSD)}</dd>
-            </div>
-          </dl>
-          <button type="button" className={isChosen(viewing.key) ? styles.addOn : styles.add} aria-pressed={isChosen(viewing.key)} onClick={() => toggle(viewing.key)}>
-            {isChosen(viewing.key) ? "In your selection ✓" : "Add to your selection"}
-          </button>
-        </aside>
+          </section>
+        </section>
       </div>
 
-      <section className={po.block} aria-labelledby="pick-homes">
-        <h2 id="pick-homes" className={po.blockTitle}>
-          The homes to choose from
-        </h2>
-        <p className={po.note}>Open any home in 3D, then tick the ones you want. Your price adds up below.</p>
-        {groups.map((g) => (
-          <div key={g.name} className={styles.group}>
-            <h3 className={styles.groupTitle}>
-              {g.name}
-              {g.note && <span className={styles.groupNote}>{g.note}</span>}
-            </h3>
-            <ul className={styles.items}>
-              {g.items.map((p) => (
-                <li key={p.key} className={`${styles.item} ${isChosen(p.key) ? styles.itemOn : ""} ${p.key === viewing.key ? styles.itemViewing : ""}`}>
-                  <label className={styles.tick}>
-                    <input type="checkbox" checked={isChosen(p.key)} onChange={() => toggle(p.key)} />
-                    <span className={styles.name}>
-                      <b>{p.title}</b>
-                      <span>{p.floorLabel}</span>
-                    </span>
-                  </label>
-                  <span className={styles.size}>{sizeOf(p)}</span>
-                  <span className={styles.money}>
-                    {savingOf(p.listPriceUSD, p.priceUSD) > 0 && <s>{formatUSD(p.listPriceUSD ?? 0)}</s>}
-                    <b>{formatUSD(p.priceUSD)}</b>
-                  </span>
-                  <button type="button" className={styles.view} aria-pressed={p.key === viewing.key} onClick={() => show(p.key)}>
-                    {p.key === viewing.key ? "Showing in 3D" : "View in 3D"}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
-      </section>
-
-      <section className={po.block} aria-labelledby="pick-total" aria-live="polite">
-        <h2 id="pick-total" className={po.blockTitle}>
-          Your selection
-        </h2>
-        {mine.length === 0 ? (
-          <p className={po.note}>Nothing ticked yet. Tick a home above to see your price.</p>
-        ) : (
-          <div className={styles.summary}>
-            <ul className={styles.lines}>
-              {mine.map((p) => (
-                <li key={p.key}>
-                  <span>
-                    {p.title}, {p.floorLabel.toLowerCase()}
-                  </span>
-                  <b>{formatUSD(p.priceUSD)}</b>
-                </li>
-              ))}
-            </ul>
-            <dl className={styles.totals}>
-              {totalList !== null && totalSaving > 0 && (
-                <div>
-                  <dt>List price</dt>
-                  <dd className={po.struck}>{formatUSD(totalList)}</dd>
-                </div>
-              )}
-              <div className={styles.grand}>
-                <dt>Your price{mine.length > 1 ? ` for the ${mine.length} homes` : ""}</dt>
-                <dd>{formatUSD(total)}</dd>
-              </div>
-              {totalList !== null && totalSaving > 0 && (
-                <div className={styles.saved}>
-                  <dt>Your discount</dt>
-                  <dd>
-                    −{formatUSD(totalSaving)} <small>({Math.round((totalSaving / totalList) * 1000) / 10}% off)</small>
-                  </dd>
-                </div>
-              )}
-            </dl>
+      {/* Always on screen: what is selected and what it comes to. */}
+      <div className={styles.bar} role="status" aria-live="polite">
+        <button type="button" className={styles.barText} onClick={() => totalRef.current?.scrollIntoView({ behavior: "smooth", block: "center" })}>
+          <span className={styles.barCount}>{mine.length === 0 ? "No home selected yet" : mine.length === 1 ? "1 home selected" : `${mine.length} homes selected`}</span>
+          <span className={styles.barNames}>{mine.length === 0 ? "Press Select on a home" : mine.map((p) => (p.group === "studio" ? `${p.title} (${p.floorLabel.toLowerCase()})` : p.title)).join(" + ")}</span>
+        </button>
+        {mine.length > 0 && (
+          <div className={styles.barPrice}>
+            <span className={styles.barLabel}>Total</span>
+            <b>{formatUSD(total)}</b>
           </div>
         )}
-      </section>
+      </div>
     </div>
   );
 }
