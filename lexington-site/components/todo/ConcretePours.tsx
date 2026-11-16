@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 
 import { estimate, ESTIMATE_KINDS, KIND_NAMES, type EstimateInput, type PourOrder } from "@/lib/concrete/estimate";
-import { addDays, dayWords as pourDayWords, type PourCubes, type PourPhoto } from "@/lib/concrete/pourExtras";
+import { addDays, dayWords as pourDayWords, UNDO_POURED_DAYS, type PourCubes, type PourPhoto } from "@/lib/concrete/pourExtras";
 import { type ConcreteData, type PourBooking, type PourInfo, type Truck } from "@/lib/concrete/shared";
 import { ghanaDay } from "@/lib/store/shared";
 import type { TodoMe } from "@/lib/todo/shared";
@@ -210,8 +210,21 @@ const noCubes = (pourId: string): PourCubes => ({ pourId, taken: null, takenAt: 
 /**
  * The pours poured these last weeks, newest first: their cubes' tests (due 7, 14 and 28 days after) and their pre-pour
  * photos. A pour with a test due, or poured in the last three days, opens by itself; the others fold to one line.
+ * `trucks` are the page's: a pour one of them brought was poured by its waybill, not by a tap.
  */
-export function PouredPours({ info, me, onData, onToast }: { info: PourInfo; me: TodoMe; onData: (data: ConcreteData) => void; onToast: (text: string, error?: boolean) => void }) {
+export function PouredPours({
+  info,
+  trucks,
+  me,
+  onData,
+  onToast,
+}: {
+  info: PourInfo;
+  trucks: Truck[];
+  me: TodoMe;
+  onData: (data: ConcreteData) => void;
+  onToast: (text: string, error?: boolean) => void;
+}) {
   const poured = info.pours.filter((b) => b.phase === "poured" && b.poured).sort((a, b) => (b.poured ?? "").localeCompare(a.poured ?? "") || a.what.localeCompare(b.what));
   if (!poured.length) return null;
   return (
@@ -220,7 +233,16 @@ export function PouredPours({ info, me, onData, onToast }: { info: PourInfo; me:
         Poured <span>cubes and photos</span>
       </h2>
       {poured.map((b) => (
-        <PouredCard key={b.id} booking={b} cubes={info.cubes?.find((c) => c.pourId === b.id) ?? noCubes(b.id)} photos={info.photos ?? []} me={me} onData={onData} onToast={onToast} />
+        <PouredCard
+          key={b.id}
+          booking={b}
+          cubes={info.cubes?.find((c) => c.pourId === b.id) ?? noCubes(b.id)}
+          photos={info.photos ?? []}
+          byTruck={trucks.some((t) => t.pourId === b.id)}
+          me={me}
+          onData={onData}
+          onToast={onToast}
+        />
       ))}
     </section>
   );
@@ -230,6 +252,7 @@ function PouredCard({
   booking: b,
   cubes,
   photos,
+  byTruck,
   me,
   onData,
   onToast,
@@ -237,6 +260,8 @@ function PouredCard({
   booking: PourBooking;
   cubes: PourCubes;
   photos: PourPhoto[];
+  /** A truck's waybill marked it poured (deleting that truck is what puts it back). */
+  byTruck: boolean;
   me: TodoMe;
   onData: (data: ConcreteData) => void;
   onToast: (text: string, error?: boolean) => void;
@@ -246,6 +271,24 @@ function PouredCard({
   const [open, setOpen] = useState(due);
   const count = photos.filter((p) => p.pourId === b.id).length;
   const words = pourDayWords(b.poured!);
+  // "Poured" tapped by mistake (Niko, 16 Nov 2026): back to booked, while nothing says it really was poured (no
+  // truck, no cubes) and it's within three days (lib/concrete/pours.ts pourUndone checks the same).
+  const canUndo = !byTruck && !(cubes.taken ?? 0) && !cubes.tests.some((t) => t.average !== null || t.form) && (b.poured ?? "") >= addDays(today, -UNDO_POURED_DAYS);
+  const [armed, setArmed] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const undo = async () => {
+    if (!armed) return setArmed(true);
+    setBusy(true);
+    try {
+      onData(await send<ConcreteData>("/api/concrete/pours", "POST", { action: "notPoured", id: b.id }));
+      onToast(`Not poured: ${b.what} is back with the pours booked.`);
+    } catch (e) {
+      onToast(errorText(e), true);
+    } finally {
+      setBusy(false);
+      setArmed(false);
+    }
+  };
   return (
     <article className={`${ps.card} ${ps.cardPoured}`} aria-label={`Poured: ${b.what}`}>
       <div className={ps.top}>
@@ -259,6 +302,11 @@ function PouredCard({
         <>
           <PourCubesCard pour={b} cubes={cubes} onData={onData} onToast={onToast} />
           <PourPhotos pourId={b.id} photos={photos} me={me} onData={onData} onToast={onToast} />
+          {canUndo && (
+            <button type="button" className={armed ? `${ps.pouredLeft} ${styles.dangerArmed}` : ps.pouredLeft} onClick={() => void undo()} disabled={busy}>
+              {busy ? "Saving…" : armed ? "Tap again: not poured, back to booked" : "Not poured? Undo"}
+            </button>
+          )}
         </>
       ) : (
         <p className={ps.line}>

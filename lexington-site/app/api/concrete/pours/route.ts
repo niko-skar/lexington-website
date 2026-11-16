@@ -1,5 +1,5 @@
 import { addPourPhoto, attachCubeForm, deletePourPhoto, setCubeResult, setCubes } from "@/lib/concrete/pourFiles";
-import { bookPour, changePour, deletePour, orderPour, pourDone, tickPour } from "@/lib/concrete/pours";
+import { bookPour, changePour, deletePour, orderPour, pourDone, pourUndone, tickPour } from "@/lib/concrete/pours";
 import { concreteData } from "@/lib/concrete/server";
 import { errorResponse, readJson, requireTodoUser, TodoError } from "@/lib/todo/server";
 
@@ -10,7 +10,8 @@ export const dynamic = "force-dynamic";
  * volume?, checklist?, curer?, estimate? }, changed { action: "change", id, ..., estimate? (null takes it off) }, its
  * order to the concrete company sent or copied { action: "order", id, order } (lib/concrete/estimate.ts),
  * a check ticked { action: "tick", id, key, ok },
- * poured by hand { action: "poured", id, day? } or taken off { action: "delete", id }; its photos { action: "photo",
+ * poured by hand { action: "poured", id, day? }, "poured" tapped by mistake undone { action: "notPoured", id } or taken
+ * off { action: "delete", id }; its photos { action: "photo",
  * pourId, kind, previewId, original: { url, pathname, bytes?, width?, height? }, takenAt? } and { action: "photoDelete",
  * id }; its cubes { action: "cubes", pourId, taken?, target? }, a test's results { action: "cubeResult", pourId, age,
  * testedOn, strengths } or the lab's form { action: "cubeForm", pourId, age, formId }. Anyone who opens Concrete.
@@ -24,6 +25,7 @@ export async function POST(request: Request): Promise<Response> {
     else if (body.action === "change") await changePour(me, body.id, body);
     else if (body.action === "order") await orderPour(me, body.id, body.order);
     else if (body.action === "tick") await tickPour(me, body.id, body.key, body.ok);
+    else if (body.action === "notPoured") await pourUndone(me, body.id);
     else if (body.action === "poured") await pourDone(me, body.id, body.day);
     else if (body.action === "delete") await deletePour(me, body.id);
     else if (body.action === "photo") await addPourPhoto(me, body);

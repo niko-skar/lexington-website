@@ -329,7 +329,7 @@ export function ConcreteApp({
             ))}
 
             {data.pours && <BookedPours info={data.pours} me={me} onData={putData} onToast={(text, error) => showToast({ text, tone: error ? "error" : undefined })} onOrder={onOrder} />}
-            {data.pours && <PouredPours info={data.pours} me={me} onData={putData} onToast={(text, error) => showToast({ text, tone: error ? "error" : undefined })} />}
+            {data.pours && <PouredPours info={data.pours} trucks={data.trucks} me={me} onData={putData} onToast={(text, error) => showToast({ text, tone: error ? "error" : undefined })} />}
 
             {!days.includes(today) && (
               <section className={styles.group}>

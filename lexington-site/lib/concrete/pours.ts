@@ -9,6 +9,7 @@ import { cleanText, TodoError } from "@/lib/todo/server";
 import type { TodoMe } from "@/lib/todo/shared";
 import { checkEstimate, checkOrder, dropEstimate, lastOrder, pourEstimates, saveEstimate, saveOrderDoc } from "./estimateServer";
 import { cancelPourOrder, concretePrice, pourOrders, syncPourOrder, type PourForOrder } from "./pourOrder";
+import { UNDO_POURED_DAYS } from "./pourExtras";
 import { pourCubes, pourPhotos } from "./pourFiles";
 import type { PourBooking, PourCheck, PourInfo, Truck } from "./shared";
 
@@ -415,6 +416,28 @@ export async function pourDone(me: TodoMe, id: unknown, dayValue: unknown): Prom
   const day = dayValue === undefined ? (p.planned ?? ghanaDay()) : cleanDay(dayValue);
   await markPoured(me.name, state, key, day);
   if (p.planned !== day) await saveRollcallRecord(me.name, "pours", key, "update", { planned: day });
+}
+
+/**
+ * "Poured" tapped by mistake (Niko, 16 Nov 2026: "The column pour scheduled for today i accidentally said it was
+ * poured, can you undo it for me", then "yes add the undo button"): the pour is back before its pour, booked as it
+ * was, and its curing is stopped, exactly as when a truck logged by mistake is deleted. Only a pour marked by hand:
+ * one a truck brought goes back when that truck is deleted, and one with its cubes in, or poured more than three days
+ * ago (its curing is on Payday by then), really was poured.
+ */
+export async function pourUndone(me: TodoMe, id: unknown): Promise<void> {
+  const state = await rollcallState();
+  const { id: key, p } = pourOf(state, id);
+  if (p.phase !== "poured") return;
+  if ((p.poured ?? "") < addDays(ghanaDay(), -UNDO_POURED_DAYS)) throw new TodoError(409, "It was poured more than three days ago: its curing is on Payday already. Tell the office.");
+  const trucks = await getBuyersClient().fetch<number>(`count(*[_type == "concreteTruck" && string::startsWith(_id, $prefix) && pourId == $pour])`, {
+    prefix: TRUCK_PREFIX,
+    pour: key,
+  });
+  if (trucks > 0) throw new TodoError(409, "A truck's waybill marked it poured. If that truck never came, delete the truck: the pour goes back to booked.");
+  const [cubes] = await pourCubes([{ id: key, poured: p.poured ?? null }]);
+  if (cubes && ((cubes.taken ?? 0) > 0 || cubes.tests.some((t) => t.average !== null || t.form))) throw new TodoError(409, "Its cubes are in already, so it was poured.");
+  await saveRollcallRecord(me.name, "pours", key, "update", { phase: "check", poured: null, start: null, days: null });
 }
 
 /**

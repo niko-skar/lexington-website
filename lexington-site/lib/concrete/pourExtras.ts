@@ -65,6 +65,9 @@ export interface PourCubes {
   tests: CubeTest[];
 }
 
+/** How many days after its pour day a "Poured" tapped by mistake can still be undone (lib/concrete/pours.ts pourUndone). */
+export const UNDO_POURED_DAYS = 3;
+
 export const addDays = (day: string, n: number) => new Date(Date.parse(`${day}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
 /** "Today", "Tomorrow", "Yesterday", else "Tue 4 Nov". */
 export const dayWords = (day: string) => {
