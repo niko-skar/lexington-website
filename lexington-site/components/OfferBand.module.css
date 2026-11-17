@@ -42,6 +42,17 @@
   color: var(--paper);
 }
 
+/* The smaller discounts that follow the offer ("From 1 December: …"). */
+.after {
+  margin-top: 10px;
+  padding-top: 10px;
+  max-width: 62ch;
+  border-top: 1px solid rgba(247, 244, 236, 0.28);
+  font-size: var(--fs-300);
+  line-height: 1.5;
+  color: var(--brass-lt);
+}
+
 .actions {
   display: flex;
   flex-wrap: wrap;

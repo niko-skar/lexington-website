@@ -16,9 +16,12 @@ export const SITE_NAME = "The Lexington";
 export const SITE_TITLE =
   "The Lexington — Shiashie, East Legon | An Olympian Development";
 
-/** The site-wide description (search results, share previews, structured data): the lowest price with the VAT in it while VAT is on. */
-export function siteDescription(vat: Vat = NO_VAT): string {
-  return `The Lexington: eight storeys of studio to three-bedroom residences and a penthouse duplex in Shiashie, East Legon, Accra. From ${formatUSD(withVat(PRICE_FROM_USD, vat))}${inclVatSuffix(vat)}. An Olympian Development.`;
+/**
+ * The site-wide description (search results, share previews, structured data): the lowest price with the VAT in it
+ * while VAT is on. `fromUSD`: the cheapest home still for sale, before VAT (lib/fromPrice.ts reads it from the units).
+ */
+export function siteDescription(vat: Vat = NO_VAT, fromUSD: number = PRICE_FROM_USD): string {
+  return `The Lexington: eight storeys of studio to three-bedroom residences and a penthouse duplex in Shiashie, East Legon, Accra. From ${formatUSD(withVat(fromUSD, vat))}${inclVatSuffix(vat)}. An Olympian Development.`;
 }
 
 /**
@@ -33,8 +36,12 @@ export const POSTAL_ADDRESS = {
   addressCountry: "GH",
 } as const;
 
-/** Lowest published unit price, used for the AggregateOffer in structured data. */
-export const PRICE_FROM_USD = 72000;
+/**
+ * Only a fallback, for when the units can't be read: the "from" price is the cheapest home still for sale
+ * (lib/fromPrice.ts). This fixed figure said US$72,000 (US$86,400 with VAT) in search results and share previews
+ * long after those studios had sold (fixed 17 Nov 2026; then 108B, US$66,000 before VAT, was the cheapest).
+ */
+export const PRICE_FROM_USD = 66000;
 
 /** The estimated completion the home page shows ("Dec 2027"); the lead responder quotes the same, as an estimate. */
 export const ESTIMATED_COMPLETION = { month: "Dec", monthName: "December", year: 2027 } as const;

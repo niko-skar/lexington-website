@@ -62,9 +62,10 @@ export const financingPlan = defineType({
       name: "upfrontDiscountTiers",
       title: "Upfront cash payment discounts",
       description:
-        "Applies only to buyers paying a percentage of the total price upfront in cash — not tied to the self-finance installment schedule.",
+        "No longer shown on the website (17 Nov 2026): the Invest page's Discounts table now follows the offer in Site settings → Current offer, so the page, the replies and the ads give the same discounts.",
       type: "array",
       of: [defineArrayMember(upfrontDiscountTier)],
+      hidden: true,
     }),
     defineField({
       name: "mortgageRows",

@@ -1,10 +1,10 @@
+import { lowestPriceUSD } from "@/lib/fromPrice";
 import { client } from "@/lib/sanity/client";
 import { siteSettingsQuery } from "@/lib/sanity/queries";
 import type { SiteSettings } from "@/lib/sanity/types";
 import { vatFrom, withVat } from "@/lib/vat";
 import {
   POSTAL_ADDRESS,
-  PRICE_FROM_USD,
   SITE_NAME,
   SITE_URL,
   siteDescription,
@@ -19,7 +19,7 @@ import {
  * Phone and email come from Sanity so they can't drift from the contact page.
  */
 export default async function StructuredData() {
-  const settings = await client.fetch<SiteSettings>(siteSettingsQuery);
+  const [settings, fromUSD] = await Promise.all([client.fetch<SiteSettings>(siteSettingsQuery), lowestPriceUSD()]);
   const vat = vatFrom(settings);
 
   // schema.org wants a dialable string; Sanity stores it formatted for humans
@@ -41,7 +41,7 @@ export default async function StructuredData() {
       "@type": "ApartmentComplex",
       "@id": `${SITE_URL}/#development`,
       name: SITE_NAME,
-      description: siteDescription(vat),
+      description: siteDescription(vat, fromUSD),
       url: SITE_URL,
       numberOfFloors: 8,
       address: { "@type": "PostalAddress", ...POSTAL_ADDRESS },
@@ -51,9 +51,9 @@ export default async function StructuredData() {
       makesOffer: {
         "@type": "AggregateOffer",
         priceCurrency: "USD",
-        lowPrice: withVat(PRICE_FROM_USD, vat),
+        lowPrice: withVat(fromUSD, vat),
         ...(vat.on
-          ? { priceSpecification: { "@type": "PriceSpecification", minPrice: withVat(PRICE_FROM_USD, vat), priceCurrency: "USD", valueAddedTaxIncluded: true } }
+          ? { priceSpecification: { "@type": "PriceSpecification", minPrice: withVat(fromUSD, vat), priceCurrency: "USD", valueAddedTaxIncluded: true } }
           : {}),
         availability: "https://schema.org/PreOrder",
         category: "Residential apartments for sale",

@@ -32,7 +32,7 @@ export interface RawFacts {
     status: string;
     minPackageTier?: string | null;
   }>;
-  promoBanner?: { enabled?: boolean; message?: string } | null;
+  promoBanner?: OfferSettings | null;
   contact: { phone: string; email: string; office: string };
   tiers: Array<{ key: string; name: string; ratePerSqm: number; badge?: string | null }>;
   mortgage: { note?: string; rows?: Array<{ milestone: string; timeframe: string; option1: string }> } | null;
@@ -55,6 +55,18 @@ export interface OfferFact {
   /** The banner still shows it, but its last day has passed. */
   ended: boolean;
 }
+
+/** Site settings → "Current offer": the offer's words, and the words of the one that follows it. */
+export interface OfferSettings {
+  enabled?: boolean | null;
+  message?: string | null;
+  /** The offer that takes over by itself the day after the current one's last day (Niko, 17 Nov 2026: Phase 1's
+   *  15% / 8% ends 30 November, then "10% full payment, 5% payment plan from 1 Dec"). */
+  next?: string | null;
+}
+
+/** The next offer, while the current one still runs: its words and its first day. */
+export type NextOfferFact = OfferFact & { startsOn: string };
 
 export interface UnitFact {
   unitNumber: string;
@@ -87,6 +99,8 @@ export interface FactPack {
   units: UnitFact[];
   /** The offer the website banner shows now, or null when none runs. */
   offer: OfferFact | null;
+  /** While the offer runs: the one that takes over the day after its last day (smaller discounts), if one is set. */
+  nextOffer?: NextOfferFact | null;
   /** VAT on the prices: while on, every price here already has the VAT in it, as the website shows it. */
   vat: Vat;
   reservationFeeUSD: number;
@@ -146,10 +160,18 @@ export function parseOffer(message: string | undefined | null, enabled: boolean 
     const month = MONTHS.findIndex((m) => m.startsWith(end[2].toLowerCase().slice(0, 3)));
     const day = Number(end[1]);
     if (month >= 0 && day >= 1 && day <= 31) {
-      const year = end[3] ? Number(end[3]) : Number(today.slice(0, 4));
-      const iso = `${year}-${pad(month + 1)}-${pad(day)}`;
-      // A real calendar day only ("31 September" is not one).
-      if (new Date(`${iso}T00:00:00Z`).toISOString().slice(0, 10) === iso) endsOn = iso;
+      // Without a year, the one that puts the day nearest today, as adsHealthCore's pastDeadlines reads it:
+      // "ends 30th of November" read in January is the November just gone, not next November (otherwise an
+      // offer left in Site settings would come back to life on 1 January).
+      const thisYear = Number(today.slice(0, 4));
+      const years = end[3] ? [Number(end[3])] : [thisYear - 1, thisYear, thisYear + 1];
+      const away = (iso: string) => Math.abs(Date.parse(`${iso}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`));
+      endsOn =
+        years
+          .map((year) => `${year}-${pad(month + 1)}-${pad(day)}`)
+          // A real calendar day only ("31 September" is not one).
+          .filter((iso) => new Date(`${iso}T00:00:00Z`).toISOString().slice(0, 10) === iso)
+          .sort((a, b) => away(a) - away(b))[0] ?? null;
     }
   }
 
@@ -161,6 +183,39 @@ export function parseOffer(message: string | undefined | null, enabled: boolean 
     endsOn,
     ended: endsOn !== null && endsOn < today,
   };
+}
+
+/** The day after an ISO day (YYYY-MM-DD). */
+export function dayAfter(iso: string): string {
+  const d = new Date(`${iso}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + 1);
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * The offer that applies today, and the one that follows it. The current offer runs to its last day;
+ * from the day after, the next one (Site settings → "Offer after the last day") takes over by itself,
+ * on the website, in the replies, the chat and the adverts, so nobody has to change anything at
+ * midnight. Switching the offer off stops both. Without a next offer, nothing changes: the current
+ * one is simply over after its last day.
+ */
+export function offerSchedule(
+  settings: OfferSettings | null | undefined,
+  today: string
+): { now: OfferFact | null; next: NextOfferFact | null } {
+  const current = parseOffer(settings?.message, settings?.enabled, today);
+  const nextWords = settings?.next?.trim();
+  // A next offer starts the day after the current one's last day, so it needs that day.
+  if (!current?.endsOn || !nextWords) return { now: current, next: null };
+  const startsOn = dayAfter(current.endsOn);
+  let following = parseOffer(nextWords, settings?.enabled, today);
+  if (!following) return { now: current, next: null };
+  // Its own last day, written without a year, is the first such day after it starts ("ends 31st of March").
+  if (following.endsOn && following.endsOn < startsOn && !/\b20\d{2}\b/.test(nextWords)) {
+    const endsOn = `${Number(following.endsOn.slice(0, 4)) + 1}${following.endsOn.slice(4)}`;
+    following = { ...following, endsOn, ended: endsOn < today };
+  }
+  return current.ended ? { now: following, next: null } : { now: current, next: { ...following, startsOn } };
 }
 
 /** A price less a percentage, to the whole dollar. */
@@ -190,9 +245,11 @@ export function longDate(iso: string): string {
 const STATUSES = ["available", "reserved", "sold"] as const;
 
 export function buildFactPack(raw: RawFacts, today: string): FactPack {
-  const parsed = parseOffer(raw.promoBanner?.message, raw.promoBanner?.enabled, today);
-  // An offer whose last day has passed is not offered to anyone, whatever the banner still says.
-  const offer = parsed && !parsed.ended ? parsed : null;
+  const schedule = offerSchedule(raw.promoBanner, today);
+  // An offer whose last day has passed is not offered to anyone, whatever the banner still says
+  // (unless a next offer has taken over from it: offerSchedule).
+  const offer = schedule.now && !schedule.now.ended ? schedule.now : null;
+  const nextOffer = offer ? schedule.next : null;
   // Every price as the website shows it: with the VAT in it while VAT is on (Niko, 28 Oct 2026).
   const vat = raw.vat ?? NO_VAT;
   const shown = (usd: number) => withVat(usd, vat);
@@ -229,6 +286,7 @@ export function buildFactPack(raw: RawFacts, today: string): FactPack {
     today,
     units,
     offer,
+    nextOffer,
     vat,
     reservationFeeUSD: RESERVATION_FEE_USD,
     finishes: raw.tiers.map((t) => ({ name: t.name, ratePerSqm: shown(t.ratePerSqm), badge: t.badge ?? null })),
@@ -303,6 +361,16 @@ export function factPackText(pack: FactPack): string {
       add(`- Payment plan${o.planMonths ? ` of up to ${o.planMonths} months` : ""}: ${o.planPct}% off the list price (the "offer price, plan" column below).`);
     }
     if (o.endsOn) add(`- Last day: ${longDate(o.endsOn)}.`);
+    const n = pack.nextOffer;
+    if (n) {
+      const terms =
+        n.fullPaymentPct != null && n.planPct != null
+          ? `${n.fullPaymentPct}% off paying in full, or ${n.planPct}% off on a payment plan`
+          : `"${n.text}"`;
+      add(
+        `- From ${longDate(n.startsOn)} the discounts are smaller: ${terms} (the website says so too). You may say this to show why the current offer is worth taking now; never work out prices for it.`
+      );
+    }
   } else {
     add("CURRENT OFFER: none is running now. Do not mention any discount.");
   }
@@ -435,11 +503,13 @@ export function soldOutWords(pack: FactPack): string[] {
     .map(([, word]) => word);
 }
 
-/** Every percentage the pack holds: the offer's, and the mortgage terms'. */
+/** Every percentage the pack holds: the offer's (and the next offer's), and the mortgage terms'. */
 export function allowedPercents(pack: FactPack): Set<number> {
   const pcts = new Set<number>([100]);
-  if (pack.offer?.fullPaymentPct != null) pcts.add(pack.offer.fullPaymentPct);
-  if (pack.offer?.planPct != null) pcts.add(pack.offer.planPct);
+  for (const o of [pack.offer, pack.nextOffer]) {
+    if (o?.fullPaymentPct != null) pcts.add(o.fullPaymentPct);
+    if (o?.planPct != null) pcts.add(o.planPct);
+  }
   // While VAT is on, its rate and its parts may be named.
   if (pack.vat.on) for (const p of [pack.vat.rate, 15, 2.5]) pcts.add(p);
   const mortgageText = [pack.mortgage?.note ?? "", ...(pack.mortgage?.steps ?? [])].join(" ");

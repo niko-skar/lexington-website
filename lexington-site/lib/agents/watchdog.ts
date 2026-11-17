@@ -19,7 +19,7 @@ import { chatSummary } from "./chat";
 import { CHANNEL_NAMES } from "./chatCore";
 import { pilotSettings, readPilotRun, readPilotSwitch } from "./adsPilot";
 import { usd } from "./adsPilotCore";
-import { parseOffer } from "./factsCore";
+import { offerSchedule, type OfferSettings } from "./factsCore";
 import { metaLeadsConfigured, readMetaLeadsState } from "./metaLeads";
 import { staleFindings, type StaleItem } from "./adsHealthCore";
 import { findStaleCopy } from "./staleCopy";
@@ -303,7 +303,7 @@ export async function runWatchdog(opts: { email: boolean; nowMs?: number }): Pro
       gatherGoogle(today),
       gatherSite(today),
       gatherCrm(today, nowMs),
-      client.fetch<{ promoBanner?: { enabled?: boolean; message?: string } } | null>(`*[_type == "siteSettings"][0]{ promoBanner }`),
+      client.fetch<{ promoBanner?: OfferSettings } | null>(`*[_type == "siteSettings"][0]{ promoBanner }`),
       readMetaLeadsState(),
       gatherPilot().catch((): PilotWatch | null => null),
       chatSummary(nowMs)
@@ -311,6 +311,7 @@ export async function runWatchdog(opts: { email: boolean; nowMs?: number }): Pro
         .catch(() => null),
     ]);
 
+    const offers = offerSchedule(settings?.promoBanner, today);
     const findings = checkAll({
       today,
       nowMs,
@@ -318,7 +319,8 @@ export async function runWatchdog(opts: { email: boolean; nowMs?: number }): Pro
       google,
       site,
       crm,
-      offer: parseOffer(settings?.promoBanner?.message, settings?.promoBanner?.enabled, today),
+      offer: offers.now,
+      nextOffer: offers.next,
       metaLeads: { configured: metaLeadsConfigured(), lastOkAt: leadsState?.lastOkAt ?? null, lastError: leadsState?.lastError ?? null },
       pilot,
       chats,

@@ -148,15 +148,16 @@ export function factCheck(text: string, pack: FactPack, theirWords = ""): string
     }
   }
 
-  // ---- dates: only the offer's last day and the estimated completion
+  // ---- dates: only the offer's last day (and the next offer's first), and the estimated completion
+  const offerDays = [pack.offer?.endsOn, pack.nextOffer?.startsOn, pack.nextOffer?.endsOn].filter((d): d is string => Boolean(d));
   const years = new Set<number>([ESTIMATED_COMPLETION.year, Number(pack.today.slice(0, 4))]);
   for (const slot of pack.visits?.free ?? []) years.add(Number(slot.slice(0, 4)));
-  if (pack.offer?.endsOn) years.add(Number(pack.offer.endsOn.slice(0, 4)));
+  for (const day of offerDays) years.add(Number(day.slice(0, 4)));
   for (const m of text.matchAll(/\b(20\d{2})\b/g)) {
     if (!years.has(Number(m[1]))) flag(`Mentions the year ${m[1]}: check the date.`);
   }
   const months = new Set<string>([ESTIMATED_COMPLETION.monthName, MONTH_NAMES[Number(pack.today.slice(5, 7)) - 1]]);
-  if (pack.offer?.endsOn) months.add(MONTH_NAMES[Number(pack.offer.endsOn.slice(5, 7)) - 1]);
+  for (const day of offerDays) months.add(MONTH_NAMES[Number(day.slice(5, 7)) - 1]);
   // The site-visit times the chat assistant was given (they can run into next month).
   for (const slot of pack.visits?.free ?? []) months.add(MONTH_NAMES[Number(slot.slice(5, 7)) - 1]);
   for (const m of text.matchAll(new RegExp(`\\b(${MONTH_NAMES.join("|")})\\b`, "g"))) {

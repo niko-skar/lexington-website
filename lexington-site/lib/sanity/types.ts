@@ -97,7 +97,8 @@ export interface MortgageRow {
 export interface FinancingPlan {
   _id: string;
   selfFinanceRows: SelfFinanceRow[];
-  upfrontDiscountTiers: UpfrontDiscountTier[];
+  /** No longer shown (17 Nov 2026): the Invest page's Discounts table follows the offer in Site settings. */
+  upfrontDiscountTiers?: UpfrontDiscountTier[];
   mortgageRows: MortgageRow[];
   mortgageNote: string;
   buyToRent: {
@@ -120,7 +121,8 @@ export interface PageIntroContent {
 
 export interface SiteSettings {
   _id: string;
-  promoBanner?: { enabled: boolean; message: string };
+  /** The offer, and the one that takes over the day after its last day (lib/agents/factsCore.ts offerSchedule). */
+  promoBanner?: { enabled: boolean; message: string; next?: string | null };
   /** VAT on prices (see lib/vat.ts): off until The Lexington is VAT-registered. */
   vat?: { on?: boolean | null; rate?: number | null } | null;
   contactPhone: string;

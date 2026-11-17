@@ -30,7 +30,7 @@
 import { inclVatSuffix } from "@/lib/vat";
 
 import { VAT_ON_TOP } from "./factcheck";
-import type { FactPack } from "./factsCore";
+import { parseOffer, type FactPack } from "./factsCore";
 
 export type Market = "ghana" | "us" | "uk" | "canada";
 
@@ -115,6 +115,11 @@ export function quotesOffer(text: string): boolean {
   return /\b\d{1,2}\s?%|\bdiscount|\boffer\b|\bpromo|\bphase 1 pricing/i.test(text);
 }
 
+/** The discounts an ad's own words give: the percentages before "off" ("15% off with full payment"). */
+export function discountsQuoted(text: string): number[] {
+  return [...text.matchAll(/(\d{1,2}(?:\.\d+)?)\s?%\s*off\b/gi)].map((m) => Number(m[1]));
+}
+
 /**
  * A price as ads gave it before VAT was in every price (Niko, 28 Oct 2026: "I want the full amount of vat
  * added everywhere we show a price"): "+ VAT" after it, or a figure that is not one of today's prices,
@@ -172,8 +177,8 @@ export interface ManagerInput {
   today: string;
   adsets: AdsetInfo[];
   ads: AdInfo[];
-  /** The banner's offer, when it is switched on and readable. */
-  offer: { endsOn: string | null; ended: boolean } | null;
+  /** The banner's offer, when it is switched on and readable (pcts: its full-payment and plan discounts). */
+  offer: { endsOn: string | null; ended: boolean; pcts?: number[] } | null;
   /** When each ad set last got a new ad from the manager. */
   lastNew: Record<string, string>;
   /** How each angle has done, over the ads the manager made (spend and real leads). */
@@ -262,8 +267,14 @@ export function planManager(input: ManagerInput): ManagerPlan {
   const offerLive = Boolean(input.offer && !input.offer.ended && input.offer.endsOn && daysBetween(input.today, input.offer.endsOn) > 2);
   const offerOver = (ad: AdInfo) => {
     if (ad.tag?.offerUntil) return ad.tag.offerUntil < input.today;
-    // Made by hand: it quotes an offer, and the banner has none running.
-    return quotesOffer(ad.text) && (!input.offer || input.offer.ended);
+    // Made by hand: it quotes an offer, and the banner has none running,
+    if (!quotesOffer(ad.text)) return false;
+    if (!input.offer || input.offer.ended) return true;
+    // or the last day its own words give has passed ("Offer ends 30 November"),
+    if (parseOffer(ad.text, true, input.today)?.ended) return true;
+    // or its discounts are not the running offer's (Phase 1's 15% / 8% once 10% / 5% took over on 1 Dec 2026).
+    const running = input.offer.pcts ?? [];
+    return running.length > 0 && discountsQuoted(ad.text).some((p) => !running.includes(p));
   };
   const sets = input.adsets.filter((s) => s.status === "active");
   const prices = input.prices?.length ? new Set(input.prices) : null;

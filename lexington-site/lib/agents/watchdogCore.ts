@@ -115,6 +115,8 @@ export interface WatchInput {
   };
   /** The banner's offer as written (even if its last day has passed), or null. */
   offer: OfferFact | null;
+  /** The offer set to take over the day after the current one's last day, if any. */
+  nextOffer?: { startsOn: string; text: string } | null;
   metaLeads: { configured: boolean; lastOkAt: string | null; lastError: string | null };
   pilot?: PilotWatch | null;
   /** The chat agent: chats in the last day, and those handed to Niko that he hasn't answered. */
@@ -339,7 +341,9 @@ export function checkAll(input: WatchInput): Finding[] {
         level: "watch",
         area: "Offer",
         title: `The offer on the website ends on ${longDate(offer.endsOn)}${left === 0 ? " (today)" : left === 1 ? " (tomorrow)" : ` (in ${left} days)`}.`,
-        detail: "Decide what comes next: the banner, the adverts and the posts all quote it.",
+        detail: input.nextOffer
+          ? `From ${longDate(input.nextOffer.startsOn)} the next offer takes over by itself on the website, in the replies and the chat: "${input.nextOffer.text}". Adverts, forms and posts written with the current offer need new words.`
+          : "Decide what comes next: the banner, the adverts and the posts all quote it.",
       });
     }
   }

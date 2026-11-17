@@ -1,7 +1,8 @@
 import { extrasFor } from "@/lib/extras";
 import { formatUSD } from "@/lib/format";
 import { inclVatSuffix, vatFrom, withVat } from "@/lib/vat";
-import { PRICE_FROM_USD, pageMetadata } from "@/lib/seo";
+import { pageMetadata } from "@/lib/seo";
+import { lowestPriceUSD } from "@/lib/fromPrice";
 import { client } from "@/lib/sanity/client";
 import { urlFor } from "@/lib/sanity/image";
 import {
@@ -22,14 +23,14 @@ import { VatNote } from "@/components/Vat";
 
 export const revalidate = 600;
 
-// The search snippet names the lowest price: with the VAT in it while VAT is on, like every price.
+// The search snippet names the lowest price of a home still for sale: with the VAT in it while VAT is on, like every price.
 export async function generateMetadata() {
-  const settings = await client.fetch<SiteSettings>(siteSettingsQuery);
+  const [settings, fromUSD] = await Promise.all([client.fetch<SiteSettings>(siteSettingsQuery), lowestPriceUSD()]);
   const vat = vatFrom(settings);
   return pageMetadata({
     path: "/residences",
     title: "Residences & Floor Plans | The Lexington",
-    description: `Studio, one, two and three-bedroom residences and a penthouse duplex in Shiashie, East Legon. Live floor plans, availability and pricing from ${formatUSD(withVat(PRICE_FROM_USD, vat))}${inclVatSuffix(vat)}.`,
+    description: `Studio, one, two and three-bedroom residences and a penthouse duplex in Shiashie, East Legon. Live floor plans, availability and pricing from ${formatUSD(withVat(fromUSD, vat))}${inclVatSuffix(vat)}.`,
   });
 }
 

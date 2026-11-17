@@ -1,4 +1,5 @@
-import { parseOffer } from "@/lib/agents/factsCore";
+import { offerSchedule } from "@/lib/agents/factsCore";
+import { dayMonth, nextOfferLine } from "@/lib/offerText";
 import { pageMetadata } from "@/lib/seo";
 import { client } from "@/lib/sanity/client";
 import { urlFor } from "@/lib/sanity/image";
@@ -38,18 +39,29 @@ export default async function InvestPage() {
   const vat = vatFrom(siteSettings);
   const rentalImage = images.find((i) => i.category === "interior");
   // The current offer (site settings → "Current offer"): shown while it is switched on and its last day
-  // has not passed (Accra is on UTC), the same test the lead replies and the ads use.
-  const offer = parseOffer(
-    siteSettings.promoBanner?.message,
-    siteSettings.promoBanner?.enabled,
-    new Date().toISOString().slice(0, 10)
-  );
+  // has not passed (Accra is on UTC), the same test the lead replies and the ads use. From the day after
+  // its last day, the next offer set there takes over by itself (Niko, 17 Nov 2026: 15% / 8% until
+  // 30 November, then "10% full payment, 5% payment plan from 1 Dec").
+  const schedule = offerSchedule(siteSettings.promoBanner, new Date().toISOString().slice(0, 10));
+  const offer = schedule.now && !schedule.now.ended ? schedule.now : null;
+  const next = offer ? schedule.next : null;
+  // The Discounts table: one column for the offer, and one for the smaller discounts that follow it.
+  const columns = offer ? [offer, ...(next ? [next] : [])] : [];
+  const discountRows = offer
+    ? [
+        { label: "Paying in full", pcts: columns.map((o) => o.fullPaymentPct) },
+        {
+          label: `On a flexible payment plan${(offer.planMonths ?? next?.planMonths) ? `, up to ${offer.planMonths ?? next?.planMonths} months` : ""}`,
+          pcts: columns.map((o) => o.planPct),
+        },
+      ].filter((row) => row.pcts.some((p) => p != null))
+    : [];
 
   return (
     <>
       <PageIntro {...siteSettings.investIntro} />
 
-      {offer && !offer.ended && <OfferBand message={offer.text} />}
+      {offer && <OfferBand message={offer.text} limited={Boolean(offer.endsOn)} after={next ? nextOfferLine(next) : null} />}
 
       <section className="section sectionStone" style={{ paddingTop: "clamp(32px, 4vw, 56px)" }}>
         <div className="wrap">
@@ -124,32 +136,49 @@ export default async function InvestPage() {
             </table>
           </div>
 
-          <div className="eyebrow" style={{ marginTop: 56 }}>
-            Pay Upfront, Save More
-          </div>
-          <p style={{ marginTop: 12, color: "#555", maxWidth: 620, fontSize: 15 }}>
-            These discounts apply only to buyers paying a percentage of the
-            total price upfront in cash — separate from the self-finance and
-            mortgage installment schedules above.
-          </p>
-          <div className={planTableStyles.tableScroll} style={{ marginTop: 20 }}>
-            <table className={planTableStyles.table}>
-              <thead>
-                <tr>
-                  <th>Upfront Cash Payment</th>
-                  <th>Discount</th>
-                </tr>
-              </thead>
-              <tbody>
-                {financingPlan.upfrontDiscountTiers.map((tier) => (
-                  <tr key={tier.upfrontPayment}>
-                    <td>{tier.upfrontPayment}</td>
-                    <td className={planTableStyles.discount}>{tier.discount}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          {/* The discounts come from the offer in Site settings, the same words the replies, the chat and the ads
+              use (the old upfront-payment tiers, 12.5% down to 5%, contradicted the offer and are no longer shown). */}
+          {discountRows.length > 0 && offer && (
+            <>
+              <div className="eyebrow" style={{ marginTop: 56 }}>
+                Discounts
+              </div>
+              <p style={{ marginTop: 12, color: "#555", maxWidth: 620, fontSize: 15 }}>
+                {next && offer.endsOn
+                  ? `Off the list price. The current offer runs until ${dayMonth(offer.endsOn)}; from ${dayMonth(next.startsOn)} the discounts are smaller.`
+                  : "Off the list price, for paying in full or on a flexible payment plan."}
+              </p>
+              <div className={planTableStyles.tableScroll} style={{ marginTop: 20 }}>
+                <table className={planTableStyles.table}>
+                  <thead>
+                    <tr>
+                      <th>How you pay</th>
+                      {next && offer.endsOn ? (
+                        <>
+                          <th>Until {dayMonth(offer.endsOn)}</th>
+                          <th>From {dayMonth(next.startsOn)}</th>
+                        </>
+                      ) : (
+                        <th>Discount</th>
+                      )}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {discountRows.map((row) => (
+                      <tr key={row.label}>
+                        <td>{row.label}</td>
+                        {row.pcts.map((p, i) => (
+                          <td key={i} className={planTableStyles.discount}>
+                            {p != null ? `${p}%` : "—"}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
         </div>
       </section>
 

@@ -607,7 +607,13 @@ export async function runAdsManager(opts: { mode?: "full" | "guard"; nowMs?: num
       today,
       adsets: account.adsets,
       ads,
-      offer: pack.offer ? { endsOn: pack.offer.endsOn, ended: pack.offer.ended } : null,
+      offer: pack.offer
+        ? {
+            endsOn: pack.offer.endsOn,
+            ended: pack.offer.ended,
+            pcts: [pack.offer.fullPaymentPct, pack.offer.planPct].filter((p): p is number => p != null),
+          }
+        : null,
       lastNew: keep.lastNew,
       angleResults: results,
       markets: ["ghana", "us", "uk", "canada"],

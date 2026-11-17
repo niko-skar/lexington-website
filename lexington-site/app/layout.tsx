@@ -10,6 +10,7 @@ import { urlFor } from "@/lib/sanity/image";
 import { galleryImagesQuery, siteSettingsQuery } from "@/lib/sanity/queries";
 import type { GalleryImage, SiteSettings } from "@/lib/sanity/types";
 import { SITE_TITLE, SITE_URL, siteDescription } from "@/lib/seo";
+import { lowestPriceUSD } from "@/lib/fromPrice";
 import { vatFrom } from "@/lib/vat";
 
 import "./globals.css";
@@ -30,11 +31,12 @@ const inter = Inter({
 // openGraph/twitter — so this block applies site-wide as-is, and every page
 // keeps the same branded share preview rather than only the home page.
 export async function generateMetadata(): Promise<Metadata> {
-  const [images, settings] = await Promise.all([
+  const [images, settings, fromUSD] = await Promise.all([
     client.fetch<GalleryImage[]>(galleryImagesQuery),
     client.fetch<SiteSettings>(siteSettingsQuery),
+    lowestPriceUSD(),
   ]);
-  const description = siteDescription(vatFrom(settings));
+  const description = siteDescription(vatFrom(settings), fromUSD);
   const heroImage = images.find((i) => i.category === "exterior");
   const ogImageUrl = heroImage
     ? urlFor(heroImage.image).width(1200).height(630).fit("crop").url()

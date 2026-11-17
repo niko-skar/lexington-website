@@ -14,6 +14,7 @@ import type {
   SiteSettings,
   Unit,
 } from "@/lib/sanity/types";
+import { offerSchedule } from "@/lib/agents/factsCore";
 import { formatUSD } from "@/lib/format";
 import { inclVatSuffix, vatFrom, withVat } from "@/lib/vat";
 import { ESTIMATED_COMPLETION } from "@/lib/seo";
@@ -64,6 +65,10 @@ export default async function HomePage() {
   const reservationAmount =
     financingPlan?.selfFinanceRows?.[0]?.option1 ?? "$10,000";
   const projectedYield = financingPlan?.buyToRent?.projectedYieldPct ?? 11;
+  // "Discounts of up to …": the biggest discount of the offer running today (Site settings → Current offer;
+  // 15% until 30 Nov 2026, then 10%). No offer, no discount line.
+  const offerNow = offerSchedule(siteSettings.promoBanner, new Date().toISOString().slice(0, 10)).now;
+  const upToPct = offerNow && !offerNow.ended ? Math.max(offerNow.fullPaymentPct ?? 0, offerNow.planPct ?? 0) : 0;
 
   return (
     <>
@@ -238,8 +243,8 @@ export default async function HomePage() {
             </h2>
             <p style={{ maxWidth: 560, margin: "18px auto 0", color: "#555", fontSize: 16.5 }}>
               {vatFrom(siteSettings).on ? `The ${reservationAmount} deposit includes VAT. ` : ""}
-              Flexible self-finance and mortgage payment plans are available,
-              with early-payment discounts of up to 15%.
+              Flexible self-finance and mortgage payment plans are available
+              {upToPct > 0 ? `, with early-payment discounts of up to ${upToPct}%.` : "."}
             </p>
             <div style={{ marginTop: 32, display: "flex", flexWrap: "wrap", gap: 12, justifyContent: "center" }}>
               <Button href="/reserve" variant="clay">

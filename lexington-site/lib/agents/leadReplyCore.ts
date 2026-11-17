@@ -183,7 +183,13 @@ export function templateReply(ctx: LeadContext, pack: FactPack, picks: UnitFact[
     lines.push(`These ${what} are available now:`, ...picks.map((u) => unitLine(u, feet, pack.vat)), "");
   }
   lines.push(`You can see every available home, with floor plans and prices, here: ${pack.links.residences}`, "");
-  if (offer) lines.push(`${offer.text}`, "");
+  // While the offer runs, the smaller discounts that follow it (they make the deadline real).
+  const next = pack.nextOffer;
+  const after =
+    next?.fullPaymentPct != null && next.planPct != null
+      ? ` From ${longDate(next.startsOn).replace(/ \d{4}$/, "")}: ${next.fullPaymentPct}% off with full payment, or ${next.planPct}% off on a payment plan.`
+      : "";
+  if (offer) lines.push(`${offer.text}${after}`, "");
   lines.push(
     `A ${formatUSD(pack.reservationFeeUSD)} reservation${feeVatSuffix(pack.vat)} holds a home: ${picks[0]?.reserveLink ?? pack.links.reserve}`,
     "",
