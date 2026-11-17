@@ -5,7 +5,7 @@ import { useEffect, type ReactNode } from "react";
 import type { PackageTier, Unit } from "@/lib/sanity/types";
 import { trackAction } from "@/lib/visits/client";
 import { formatFloor, formatUSD } from "@/lib/format";
-import { formatArea, type AreaUnit } from "@/lib/area";
+import { balconyOf, formatArea, splitArea, type AreaUnit } from "@/lib/area";
 import { useAreaUnit } from "./useAreaUnit";
 import { floorTierName, isTierClamped, priceAtTier, tierAddon } from "@/lib/pricing";
 import { withVat, type Vat } from "@/lib/vat";
@@ -25,7 +25,15 @@ interface CompareModalProps {
 const baseRows: { label: string; render: (u: Unit, area: AreaUnit) => ReactNode }[] = [
   { label: "Floor", render: (u) => formatFloor(u.floor) },
   { label: "Type", render: (u) => u.bedroomType },
-  { label: "Area", render: (u, area) => formatArea(u.areaSqm, area) },
+  {
+    label: "Area",
+    render: (u, area) => {
+      const balcony = balconyOf(u);
+      if (balcony === 0) return formatArea(u.areaSqm, area);
+      const parts = splitArea(u.areaSqm, balcony, area);
+      return `${formatArea(u.areaSqm, area)} (${parts.internal} internal + ${parts.balcony} balcony)`;
+    },
+  },
   { label: "Status", render: (u) => <StatusBadge status={u.status} /> },
 ];
 

@@ -53,11 +53,30 @@ export interface PlanOptionSet {
   options?: PlanOption[];
   /** Homes the buyer can pick from, each with its own 3D model and price (the page adds up the ticked ones). */
   picks?: PlanPick[];
+  /** The homes to pick from are on the account's first page too (and stay at /account/plans). */
+  front?: boolean;
+  /** The picker has a "Confirm my selection" button: the selection is saved here and Niko gets an alert. */
+  confirm?: boolean;
+  /** How many homes the buyer is choosing: the button needs exactly this many ticked. Absent = any number. */
+  pickCount?: number;
+  /** The selection the buyer last sent with the button. */
+  chosen?: PlanChoice;
+}
+
+/** What a buyer sent with "Confirm my selection": the homes as they were shown, so a later price change can't rewrite it. */
+export interface PlanChoice {
+  at: string;
+  /** The `_key`s of the picks. */
+  keys: string[];
+  homes: { _key?: string; title: string; floorLabel?: string; unitNumber?: string; listPriceUSD?: number; priceUSD: number }[];
+  totalUSD: number;
 }
 
 export interface PlanPick {
   _key?: string;
   title: string;
+  /** The home's number on the website, when it is one of the listed homes (e.g. "204B"). */
+  unitNumber?: string;
   /** e.g. "4th floor". */
   floorLabel?: string;
   /** "home" for the main home, "studio" for the studios listed under it. */

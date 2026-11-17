@@ -2,10 +2,10 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { PlanOptions, type DepositView, type PlanOptionView } from "@/components/PlanOptions";
-import { PlanPicker, type PlanPickView } from "@/components/PlanPicker";
+import { PlanPicker } from "@/components/PlanPicker";
 import styles from "@/components/Portal.module.css";
 import { balanceFor, requireCurrentBuyer } from "@/lib/auth/currentBuyer";
-import { PICK_MODELS, PLAN_MODELS, seesOnlyPlans, shownPlanOptions, shownPlanPicks } from "@/lib/planOptions";
+import { PLAN_MODELS, planPickerSetup, seesOnlyPlans, shownPlanOptions } from "@/lib/planOptions";
 
 export const metadata = {
   title: "Your Plans | The Lexington",
@@ -33,19 +33,8 @@ export default async function AccountPlansPage() {
     };
   });
   // Homes to pick from (16 Nov 2026): when the account has them, the page is the picker and the older plans are not shown.
-  const picks: PlanPickView[] = shownPlanPicks(buyer).map((p, i) => ({
-    key: p._key ?? String(i),
-    title: p.title,
-    floorLabel: p.floorLabel ?? "",
-    group: p.group === "studio" ? "studio" : "home",
-    model: p.model,
-    poster: PICK_MODELS[p.model].poster,
-    insideSqm: p.insideSqm,
-    balconySqm: typeof p.balconySqm === "number" && p.balconySqm > 0 ? p.balconySqm : 0,
-    listPriceUSD: typeof p.listPriceUSD === "number" && p.listPriceUSD > 0 ? p.listPriceUSD : null,
-    priceUSD: p.priceUSD,
-    preselected: p.preselected === true,
-  }));
+  // Some accounts can send their selection with a button (17 Nov 2026): lib/actions/planPicks.ts.
+  const { picks, viewer, confirm } = planPickerSetup(buyer);
   if (!options.length && !picks.length) redirect("/account");
 
   const perHome = set?.depositPerHomeUSD ?? 0;
@@ -62,10 +51,10 @@ export default async function AccountPlansPage() {
           {set.intro}
         </p>
       )}
-      {picks.length ? <PlanPicker picks={picks} /> : <PlanOptions options={options} deposit={deposit} />}
+      {picks.length ? <PlanPicker picks={picks} viewer={viewer} confirm={confirm} /> : <PlanOptions options={options} deposit={deposit} />}
       <p className={styles.lead} style={{ marginTop: "var(--space-7)" }}>
         {/* A plain <a> to the public site, not <Link>: a full page load, so the tag manager those pages load can't follow Back into the portal. */}
-        Questions, or ready to choose? <a href="/contact">Talk to us</a>
+        {confirm ? "Questions?" : "Questions, or ready to choose?"} <a href="/contact">Talk to us</a>
         {only ? (
           "."
         ) : (

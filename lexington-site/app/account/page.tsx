@@ -1,8 +1,10 @@
 import Link from "next/link";
 
+import { PlanPicker } from "@/components/PlanPicker";
 import { requireCurrentBuyer, balanceFor } from "@/lib/auth/currentBuyer";
 import { formatUSD, formatFloor, splitUnits } from "@/lib/format";
 import { formatGHS, formatMethod, usdEquivalent } from "@/lib/currency";
+import { picksOnFirstPage, planPickerSetup } from "@/lib/planOptions";
 import styles from "@/components/Portal.module.css";
 
 export const metadata = {
@@ -25,13 +27,27 @@ export default async function AccountOverviewPage() {
   const detailsSent = buyer.buyerDetails?.submittedAt;
   // Steps written for this buyer replace the standard ones; a step with an amount ticks itself once the payments reach it.
   const ownSteps = (buyer.nextSteps ?? []).filter((s) => s?.title);
+  // Homes to pick from, right here on the first page (Niko, 17 Nov 2026: a buyer swapping one of his studios should see
+  // the selection as soon as he signs in). Other accounts with plans get the link to /account/plans as before.
+  const front = picksOnFirstPage(buyer) ? planPickerSetup(buyer) : null;
+  const set = buyer.planOptions;
 
   return (
     <main className={styles.page}>
       <div className={styles.eyebrow}>Welcome back</div>
       <h1 className={styles.title}>{buyer.name}</h1>
 
-      {((buyer.planOptions?.options?.length ?? 0) > 0 || (buyer.planOptions?.picks?.length ?? 0) > 0) && (
+      {front && (
+        <section className={styles.section} aria-labelledby="your-picks">
+          <h2 id="your-picks" className={styles.sectionTitle}>
+            {set?.title || "Choose your homes"}
+          </h2>
+          {set?.intro && <p className={styles.lead}>{set.intro}</p>}
+          <PlanPicker picks={front.picks} viewer={front.viewer} confirm={front.confirm} />
+        </section>
+      )}
+
+      {!front && ((buyer.planOptions?.options?.length ?? 0) > 0 || (buyer.planOptions?.picks?.length ?? 0) > 0) && (
         <section className={styles.section} aria-labelledby="your-plans">
           <h2 id="your-plans" className={styles.sectionTitle}>
             Your Plans

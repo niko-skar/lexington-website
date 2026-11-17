@@ -8,7 +8,7 @@ import { trackAction } from "@/lib/visits/client";
 import { urlFor } from "@/lib/sanity/image";
 import { formatFloor, formatUSD } from "@/lib/format";
 import { VatTag } from "./Vat";
-import { formatArea } from "@/lib/area";
+import { balconyOf, formatArea, splitArea } from "@/lib/area";
 import { useAreaUnit } from "./useAreaUnit";
 import { floorTierName, isTierClamped, priceAtTier, tierAddon } from "@/lib/pricing";
 import { withVat, type Vat } from "@/lib/vat";
@@ -53,6 +53,10 @@ export function UnitDetailModal({
     trackAction("unit", unit.unitNumber);
   }, [unit.unitNumber]);
 
+  // Homes whose record says how much of the size is balcony show the internal area and the balcony separately.
+  const balconySqm = balconyOf(unit);
+  const areas = balconySqm > 0 ? splitArea(unit.areaSqm, balconySqm, areaUnit) : null;
+
   const has3D = has3DModel(unit.unitNumber);
   const clamped = isTierClamped(unit, selectedTier, tiers);
   const addon = tierAddon(unit, selectedTier, tiers);
@@ -81,6 +85,22 @@ export function UnitDetailModal({
             <div className={styles.meta}>
               Floor {formatFloor(unit.floor)} · {unit.bedroomType} · {formatArea(unit.areaSqm, areaUnit)}
             </div>
+            {areas && (
+              <dl className={styles.areas}>
+                <div>
+                  <dt>Internal area</dt>
+                  <dd>{areas.internal}</dd>
+                </div>
+                <div>
+                  <dt>Balcony</dt>
+                  <dd>{areas.balcony}</dd>
+                </div>
+                <div>
+                  <dt>Total area</dt>
+                  <dd>{formatArea(unit.areaSqm, areaUnit)}</dd>
+                </div>
+              </dl>
+            )}
             <div className={styles.price}>
               {formatUSD(shown)}
               <VatTag vat={vat} />

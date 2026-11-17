@@ -36,9 +36,18 @@ export const unit = defineType({
     }),
     defineField({
       name: "areaSqm",
-      title: "Area (sqm)",
+      title: "Total area (sqm)",
+      description: "The size the unit list shows: the inside of the home plus its balcony.",
       type: "number",
       validation: (Rule) => Rule.required().positive(),
+    }),
+    defineField({
+      name: "balconySqm",
+      title: "Of which balcony (sqm)",
+      description:
+        "How much of the total area is balcony. The floor plan pop-up then shows the internal area and the balcony separately. Leave empty when the home has no balcony or its size is not known.",
+      type: "number",
+      validation: (Rule) => Rule.min(0),
     }),
     defineField({
       name: "priceUSD",

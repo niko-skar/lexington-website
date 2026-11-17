@@ -48,6 +48,29 @@
   font-size: 14.5px;
 }
 
+/* Internal area, balcony and total, side by side under the home's line. */
+.areas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 22px;
+  margin: 8px 0 6px;
+  font-size: 13.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.areas dt {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #777;
+}
+
+.areas dd {
+  margin: 1px 0 0;
+  color: var(--ink);
+  font-weight: 600;
+}
+
 .price {
   margin-top: 4px;
   font-family: var(--font-serif);
@@ -123,4 +146,35 @@
 .locationText {
   font-size: 13.5px;
   color: #555;
+}
+
+/* On a phone the home's lines get the pop-up's full width, and the status sits beside the number. */
+@media (max-width: 560px) {
+  .head {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    column-gap: 12px;
+  }
+
+  .head > div:first-child {
+    display: contents;
+  }
+
+  .head > :last-child {
+    grid-row: 1;
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .unitNumber {
+    grid-row: 1;
+    grid-column: 1;
+  }
+
+  .meta,
+  .areas,
+  .price {
+    grid-column: 1 / -1;
+  }
 }

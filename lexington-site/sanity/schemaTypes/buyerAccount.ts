@@ -296,6 +296,7 @@ export const buyerAccount = defineType({
               name: "planPick",
               fields: [
                 defineField({ name: "title", title: "Name", type: "string", validation: (rule) => rule.required() }),
+                defineField({ name: "unitNumber", title: "Unit number on the website", description: "Optional, e.g. 204B. It goes into your alert when the buyer confirms.", type: "string" }),
                 defineField({ name: "floorLabel", title: "Floor (as shown)", description: "e.g. 4th floor", type: "string" }),
                 defineField({ name: "group", title: "List", type: "string", options: { list: [{ title: "Main home", value: "home" }, { title: "Studio", value: "studio" }], layout: "radio" } }),
                 defineField({ name: "model", title: "3D model", description: "The model's id on the website, e.g. u4t.", type: "string", validation: (rule) => rule.required() }),
@@ -307,6 +308,55 @@ export const buyerAccount = defineType({
               ],
               preview: { select: { title: "title", subtitle: "floorLabel" } },
             }),
+          ],
+        }),
+        defineField({
+          name: "front",
+          title: "Show the homes to pick from on the buyer's first page",
+          description: "When on, the buyer sees the homes to pick from as soon as they sign in, at the top of their first page. The rest of their portal stays.",
+          type: "boolean",
+        }),
+        defineField({
+          name: "confirm",
+          title: "Let the buyer confirm a selection",
+          description: "When on, the homes to pick from have a \"Confirm my selection\" button. Pressing it saves the selection below and sends you an alert. Nothing else changes: the website, the account and the agreement stay yours to update.",
+          type: "boolean",
+        }),
+        defineField({
+          name: "pickCount",
+          title: "How many homes the buyer chooses",
+          description: "Optional. The button then needs exactly this many homes ticked.",
+          type: "number",
+          validation: (rule) => rule.integer().min(1),
+        }),
+        defineField({
+          name: "chosen",
+          title: "The selection the buyer sent",
+          type: "object",
+          readOnly: true,
+          fields: [
+            defineField({ name: "at", title: "Sent", type: "datetime" }),
+            defineField({ name: "totalUSD", title: "Total at the buyer's prices (US$)", type: "number" }),
+            defineField({
+              name: "homes",
+              title: "Homes",
+              type: "array",
+              of: [
+                defineArrayMember({
+                  type: "object",
+                  name: "chosenHome",
+                  fields: [
+                    defineField({ name: "title", title: "Name", type: "string" }),
+                    defineField({ name: "floorLabel", title: "Floor", type: "string" }),
+                    defineField({ name: "unitNumber", title: "Unit number", type: "string" }),
+                    defineField({ name: "listPriceUSD", title: "List price (US$)", type: "number" }),
+                    defineField({ name: "priceUSD", title: "The buyer's price (US$)", type: "number" }),
+                  ],
+                  preview: { select: { title: "title", subtitle: "floorLabel" } },
+                }),
+              ],
+            }),
+            defineField({ name: "keys", title: "Keys of the homes", type: "array", of: [{ type: "string" }] }),
           ],
         }),
       ],
