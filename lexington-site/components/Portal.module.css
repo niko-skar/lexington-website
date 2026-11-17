@@ -453,3 +453,44 @@
   opacity: 0.6;
   cursor: wait;
 }
+
+/* ---- the buyer's own home in 3D at the top of the first page (accounts with home3d) ----
+   Wide screens: the name on the left, the 3D box beside it, so the model is on screen without scrolling.
+   Narrow screens: the name, then the model. The box itself is the Residences page's (Penthouse3D.module.css). */
+.homeTop {
+  display: grid;
+  gap: var(--space-5);
+  margin-bottom: var(--space-8);
+}
+
+.homeTop .title {
+  margin-bottom: var(--space-5);
+}
+
+.homeTop .sectionTitle {
+  margin-bottom: var(--space-3);
+}
+
+/* (The grid's own gap separates the text from the model.) */
+.homeTop .lead {
+  margin-bottom: 0;
+}
+
+.home3d {
+  min-width: 0;
+}
+
+@media (min-width: 900px) {
+  .homeTop {
+    grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.3fr);
+    gap: var(--space-7);
+    align-items: start;
+  }
+}
+
+@media (max-width: 640px) {
+  /* That box is drawn for the unit pop-up, where it reaches over the pop-up's side padding: here it keeps to the page. */
+  .home3d [role="region"] {
+    margin-inline: 0;
+  }
+}

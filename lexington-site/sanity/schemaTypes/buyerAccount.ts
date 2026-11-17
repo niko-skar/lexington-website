@@ -226,6 +226,13 @@ export const buyerAccount = defineType({
       ],
     }),
     defineField({
+      name: "home3d",
+      title: "Show the buyer's home in 3D on their first page",
+      description: "When on, the buyer sees the 3D model of their home as soon as they sign in. Only works for a home that has a 3D model on the Residences page.",
+      type: "boolean",
+      hidden: ({ document }) => document?.role === "admin" || document?.role === "site",
+    }),
+    defineField({
       name: "nextSteps",
       title: "Next steps written for this buyer",
       description: "Optional. When there are steps here, the buyer's dashboard shows them instead of the standard next steps.",
