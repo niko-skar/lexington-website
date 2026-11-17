@@ -28,6 +28,7 @@ export interface RawFacts {
     bedroomType: string;
     floor: number;
     areaSqm: number;
+    balconySqm?: number | null;
     priceUSD: number;
     status: string;
     minPackageTier?: string | null;
@@ -66,6 +67,9 @@ export interface UnitFact {
   floorName: string;
   areaSqm: number;
   areaSqft: number;
+  /** How much of the size is balcony (0 when the home has none or it is not known); the rest is the internal area. */
+  balconySqm: number;
+  balconySqft: number;
   /** The list price as the website shows it: with the VAT in it while VAT is on. */
   priceUSD: number;
   status: "available" | "reserved" | "sold";
@@ -211,6 +215,8 @@ export function buildFactPack(raw: RawFacts, today: string): FactPack {
       floorName: floorName(u.floor),
       areaSqm: u.areaSqm,
       areaSqft: sqft(u.areaSqm),
+      balconySqm: typeof u.balconySqm === "number" && u.balconySqm > 0 && u.balconySqm < u.areaSqm ? u.balconySqm : 0,
+      balconySqft: typeof u.balconySqm === "number" && u.balconySqm > 0 && u.balconySqm < u.areaSqm ? sqft(u.balconySqm) : 0,
       priceUSD: shown(u.priceUSD),
       status,
       fullPaymentPriceUSD: open && offer?.fullPaymentPct != null ? discounted(shown(u.priceUSD), offer.fullPaymentPct) : null,
@@ -378,7 +384,7 @@ export function factPackText(pack: FactPack): string {
         u.unitNumber,
         u.typeLine,
         u.floorName,
-        `${u.areaSqm} m² (${u.areaSqft} sq ft)`,
+        `${u.areaSqm} m² (${u.areaSqft} sq ft)${u.balconySqm > 0 ? ` total: ${u.areaSqm - u.balconySqm} m² (${u.areaSqft - u.balconySqft} sq ft) internal + a ${u.balconySqm} m² (${u.balconySqft} sq ft) balcony` : ""}`,
         `${formatUSD(u.priceUSD)}${u.baseFinish !== "Standard" ? ` (${u.baseFinish} finish)` : ""}`,
         u.fullPaymentPriceUSD != null ? formatUSD(u.fullPaymentPriceUSD) : "-",
         u.planPriceUSD != null ? formatUSD(u.planPriceUSD) : "-",
@@ -454,6 +460,14 @@ export function allowedAreas(pack: FactPack): { sqm: Set<number>; sqft: Set<numb
   for (const u of pack.units.filter((x) => x.status === "available")) {
     sqm.add(u.areaSqm);
     sqftSet.add(u.areaSqft);
+    if (u.balconySqm > 0) {
+      // The internal area and the balcony are sizes the website shows too.
+      sqm.add(u.areaSqm - u.balconySqm);
+      sqm.add(u.balconySqm);
+      sqftSet.add(u.areaSqft - u.balconySqft);
+      sqftSet.add(sqft(u.areaSqm - u.balconySqm));
+      sqftSet.add(u.balconySqft);
+    }
   }
   for (const e of pack.extras) for (const m of e.matchAll(/(\d+)[–-](\d+)\s*sqm/g)) [m[1], m[2]].forEach((n) => sqm.add(Number(n)));
   return { sqm, sqft: sqftSet };

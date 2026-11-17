@@ -11,7 +11,10 @@ export interface Unit {
   unitNumber: string;
   floor: number;
   bedroomType: BedroomType;
+  // The size the list shows: the inside of the home plus its balcony.
   areaSqm: number;
+  // How much of areaSqm is balcony. Absent when the home has none or its size is not known.
+  balconySqm?: number;
   priceUSD: number;
   status: UnitStatus;
   notes?: string;

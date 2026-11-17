@@ -17,6 +17,22 @@ export function formatRatePerArea(ratePerSqm: number, unit: AreaUnit = "sqm") {
   return `$${(ratePerSqm / SQFT_PER_SQM).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
+// How much of a home's listed size is balcony, when its record says so (0 when it does not).
+export function balconyOf(home: { areaSqm: number; balconySqm?: number | null }) {
+  const b = home.balconySqm;
+  return typeof b === "number" && b > 0 && b < home.areaSqm ? b : 0;
+}
+
+// A home's listed size split into the inside and the balcony: { internal: "31 sqm", balcony: "2 sqm" }. In square feet
+// the inside is the total less the balcony, so the two always add up to the size the list shows.
+export function splitArea(totalSqm: number, balconySqm: number, unit: AreaUnit = "sqm") {
+  if (unit === "sqm") return { internal: formatArea(totalSqm - balconySqm), balcony: formatArea(balconySqm) };
+  const total = Math.round(totalSqm * SQFT_PER_SQM);
+  const balcony = Math.round(balconySqm * SQFT_PER_SQM);
+  const feet = (v: number) => `${v.toLocaleString("en-US")} sq ft`;
+  return { internal: feet(total - balcony), balcony: feet(balcony) };
+}
+
 export function areaUnitLabel(unit: AreaUnit) {
   return unit === "sqft" ? "sq ft" : "sqm";
 }
