@@ -13,7 +13,7 @@ import styles from "./PlanPicker.module.css";
 // in a bar at the bottom.
 // The models are one self-contained script in /public/3d, built from the penthouse-3d project (build-offerpick.mjs); it
 // is only downloaded on this page. Bump the number after the script is rebuilt so browsers fetch the new one.
-const VIEWER_SRC = "/3d/offerpick.iife.js?v=2";
+const VIEWER_SRC = "/3d/offerpick.iife.js?v=3";
 
 export interface PlanPickView {
   key: string;

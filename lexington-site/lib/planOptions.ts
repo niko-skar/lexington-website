@@ -13,6 +13,8 @@ export const PICK_MODELS: Record<string, { poster: string }> = {
   u5s: { poster: "/3d/u5s-plan.jpg" },
   u3n: { poster: "/3d/u3n-plan.jpg" },
   u3s: { poster: "/3d/u3s-plan.jpg" },
+  u1a: { poster: "/3d/u1a-plan.jpg" }, // 102B on the 1st floor (the same model as on the Residences page)
+  u1d: { poster: "/3d/u1d-plan.jpg" }, // 108B on the 1st floor
 };
 
 /** The plans on an account that the site can show: each needs a name, a 3D model the site has, and a price. */
