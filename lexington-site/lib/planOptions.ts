@@ -13,9 +13,9 @@ export const PICK_MODELS: Record<string, { poster: string }> = {
   u5n: { poster: "/3d/u5n-plan.jpg" },
   u5s: { poster: "/3d/u5s-plan.jpg" },
   u3n: { poster: "/3d/u3n-plan.jpg" },
-  u3s: { poster: "/3d/u3s-plan.jpg" },
+  u3s: { poster: "/3d/u3s-plan.jpg?v=2" },
   u1a: { poster: "/3d/u1a-plan.jpg" }, // 102B on the 1st floor (the same model as on the Residences page)
-  u1d: { poster: "/3d/u1d-plan.jpg" }, // 108B on the 1st floor
+  u1d: { poster: "/3d/u1d-plan.jpg?v=2" }, // 108B on the 1st floor (v2: the TV wall, the plain wall behind the bed)
 };
 
 // The one-floor homes of the Residences page (lib/models3d.ts), by the model's id. When every home a buyer picks from

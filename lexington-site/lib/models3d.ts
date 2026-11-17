@@ -10,7 +10,7 @@ export type PlanLevel = "lower" | "upper" | "main";
 // browsers fetch the new one. Kept here, beside the list of what is in it, because two places load it: the Residences
 // page (components/Penthouse3D.tsx) and a buyer's homes to pick from (components/PlanPicker.tsx).
 // v14 (16 Nov 2026): PH2b, 405B, 204B, the 3rd floor's studios 304B and 305B, and the 1st floor's homes 101A-109B.
-export const SITE_VIEWER_SRC = "/3d/ph2b.iife.js?v=14";
+export const SITE_VIEWER_SRC = "/3d/ph2b.iife.js?v=15"; // v15 (17 Nov 2026): new layouts of 103B, 105B, 106B, 108B; the cooker hood's chimney
 
 export interface Model3D {
   viewerId: string;
@@ -52,7 +52,7 @@ export const MODELS: Record<string, Model3D> = {
     viewerId: "u3s",
     name: "studio 305B",
     levels: ["main"],
-    posters: { main: { wide: "/3d/u3s-plan.jpg?v=1", phone: "/3d/u3s-plan-m.jpg?v=1" } },
+    posters: { main: { wide: "/3d/u3s-plan.jpg?v=2", phone: "/3d/u3s-plan-m.jpg?v=2" } },
   },
   // The 1st floor's nine homes (16 Nov 2026): 101A and 104B are one-bedroom apartments, the rest studios.
   "101A": {
@@ -71,7 +71,7 @@ export const MODELS: Record<string, Model3D> = {
     viewerId: "u1e",
     name: "studio 103B",
     levels: ["main"],
-    posters: { main: { wide: "/3d/u1e-plan.jpg?v=1", phone: "/3d/u1e-plan-m.jpg?v=1" } },
+    posters: { main: { wide: "/3d/u1e-plan.jpg?v=2", phone: "/3d/u1e-plan-m.jpg?v=2" } },
   },
   "104B": {
     viewerId: "u1b",
@@ -83,13 +83,13 @@ export const MODELS: Record<string, Model3D> = {
     viewerId: "u1f",
     name: "studio 105B",
     levels: ["main"],
-    posters: { main: { wide: "/3d/u1f-plan.jpg?v=1", phone: "/3d/u1f-plan-m.jpg?v=1" } },
+    posters: { main: { wide: "/3d/u1f-plan.jpg?v=2", phone: "/3d/u1f-plan-m.jpg?v=2" } },
   },
   "106B": {
     viewerId: "u1c",
     name: "studio 106B",
     levels: ["main"],
-    posters: { main: { wide: "/3d/u1c-plan.jpg?v=1", phone: "/3d/u1c-plan-m.jpg?v=1" } },
+    posters: { main: { wide: "/3d/u1c-plan.jpg?v=2", phone: "/3d/u1c-plan-m.jpg?v=2" } },
   },
   "107B": {
     viewerId: "u1g",
@@ -101,7 +101,7 @@ export const MODELS: Record<string, Model3D> = {
     viewerId: "u1d",
     name: "studio 108B",
     levels: ["main"],
-    posters: { main: { wide: "/3d/u1d-plan.jpg?v=1", phone: "/3d/u1d-plan-m.jpg?v=1" } },
+    posters: { main: { wide: "/3d/u1d-plan.jpg?v=2", phone: "/3d/u1d-plan-m.jpg?v=2" } },
   },
   "109B": {
     viewerId: "u1h",
