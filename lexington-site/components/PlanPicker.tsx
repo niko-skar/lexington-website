@@ -20,7 +20,7 @@ import styles from "./PlanPicker.module.css";
 // Since 17 Nov 2026 an account can also have a "Confirm my selection" button (`confirm`): it sends the ticked homes
 // to Niko (lib/actions/planPicks.ts) and the page says so; a different selection can be sent afterwards.
 const VIEWERS: Record<PickViewer, { src: string; global: "LEXPICK" | "PH2B" }> = {
-  pick: { src: "/3d/offerpick.iife.js?v=3", global: "LEXPICK" },
+  pick: { src: "/3d/offerpick.iife.js?v=4", global: "LEXPICK" },
   site: { src: SITE_VIEWER_SRC, global: "PH2B" },
 };
 

@@ -9,7 +9,7 @@ export const PLAN_MODELS: Record<string, { poster: string }> = {
 
 // The 3D models in /public/3d/offerpick.iife.js (homes a buyer picks from), and each one's picture from straight above.
 export const PICK_MODELS: Record<string, { poster: string }> = {
-  u4t: { poster: "/3d/u4t-plan.jpg?v=2" }, // v2: with the guest WC
+  u4t: { poster: "/3d/u4t-plan.jpg?v=3" }, // v3 (17 Nov 2026): bedroom 2 has its own en-suite, the guest WC is 0.8 m longer
   u5n: { poster: "/3d/u5n-plan.jpg" },
   u5s: { poster: "/3d/u5s-plan.jpg" },
   u3n: { poster: "/3d/u3n-plan.jpg" },
