@@ -8,7 +8,7 @@ interface SplitSectionProps {
   imageUrl: string;
   imageAlt: string;
   reverse?: boolean;
-  eyebrow: string;
+  eyebrow: ReactNode;
   title: string;
   children: ReactNode;
   style?: CSSProperties;

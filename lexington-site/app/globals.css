@@ -162,6 +162,21 @@ a {
   text-decoration: none;
 }
 
+/* "Olympian Developments" links to olympiandevelopments.com (owner, 17 Nov 2026): the words keep their own
+   look and show a thin underline on hover or keyboard focus. */
+.devLink {
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.25em;
+  transition: text-decoration-color 0.2s ease;
+}
+
+.devLink:hover,
+.devLink:focus-visible {
+  text-decoration-color: currentColor;
+}
+
 ul,
 ol {
   list-style: none;

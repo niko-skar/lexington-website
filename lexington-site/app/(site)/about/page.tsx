@@ -81,7 +81,10 @@ export default async function AboutPage() {
               <span className={styles.sheetNote}>The family behind The Lexington</span>
             </div>
             <p className={styles.statementText}>
-              Olympian Developments is the {FAMILY} family&rsquo;s <em>development company.</em> The family&rsquo;s
+              <a href={OLYMPIAN_URL} target="_blank" rel="noopener" className="devLink">
+                Olympian Developments
+              </a>{" "}
+              is the {FAMILY} family&rsquo;s <em>development company.</em> The family&rsquo;s
               work in Ghana runs back to the <em>1960s</em> — from the planning of a city to eight storeys rising in
               East Legon.
             </p>

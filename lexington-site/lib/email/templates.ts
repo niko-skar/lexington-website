@@ -1,4 +1,5 @@
 import { splitUnits, unitsText } from "@/lib/format";
+import { OLYMPIAN_URL } from "@/lib/olympian";
 import type { SiteSettings } from "@/lib/sanity/types";
 
 // Table-based layout, inline styles only — Outlook (Word rendering engine)
@@ -43,7 +44,7 @@ function shell(siteSettings: SiteSettings, bodyHtml: string) {
         The&nbsp;Lexington
       </div>
       <div style="font-family:${FONT_SANS}; font-size:11px; letter-spacing:2px; text-transform:uppercase; color:#d9c29a; margin-top:8px;">
-        An Olympian Development
+        <a href="${OLYMPIAN_URL}" style="color:#d9c29a; text-decoration:none;">An Olympian Development</a>
       </div>
     </td>
   </tr>

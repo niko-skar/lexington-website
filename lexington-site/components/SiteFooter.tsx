@@ -5,6 +5,7 @@ import { siteSettingsQuery } from "@/lib/sanity/queries";
 import type { SiteSettings } from "@/lib/sanity/types";
 import { googleMapsUrl, LEXINGTON_COORDS } from "@/lib/maps";
 import { phoneHref, whatsappUrl } from "@/lib/format";
+import { OLYMPIAN_URL } from "@/lib/olympian";
 import styles from "./SiteFooter.module.css";
 
 // Muted, desaturated theme so the map thumbnail sits quietly in the dark
@@ -42,7 +43,11 @@ export async function SiteFooter() {
           <div>
             <div className={styles.brand}>
               The Lexington
-              <small>An Olympian Development</small>
+              <small>
+                <a href={OLYMPIAN_URL} target="_blank" rel="noopener" className="devLink">
+                  An Olympian Development
+                </a>
+              </small>
             </div>
             <a
               className={styles.mapThumb}
@@ -90,7 +95,11 @@ export async function SiteFooter() {
         </div>
         <div className={styles.bottom}>
           <span>
-            © {new Date().getFullYear()} Olympian Developments. All rights reserved.{" "}
+            © {new Date().getFullYear()}{" "}
+            <a href={OLYMPIAN_URL} target="_blank" rel="noopener" className="devLink">
+              Olympian Developments
+            </a>
+            . All rights reserved.{" "}
             <Link href="/privacy">Privacy Policy</Link> · <Link href="/terms">Terms of Use</Link>
           </span>
           <a href={googleMapsUrl()} target="_blank" rel="noopener noreferrer">

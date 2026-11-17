@@ -1,4 +1,5 @@
 import { lowestPriceUSD } from "@/lib/fromPrice";
+import { OLYMPIAN_URL } from "@/lib/olympian";
 import { client } from "@/lib/sanity/client";
 import { siteSettingsQuery } from "@/lib/sanity/queries";
 import type { SiteSettings } from "@/lib/sanity/types";
@@ -32,7 +33,7 @@ export default async function StructuredData() {
     "@type": "Organization",
     "@id": `${SITE_URL}/#developer`,
     name: "Olympian Developments",
-    url: SITE_URL,
+    url: OLYMPIAN_URL,
   };
 
   const graph = [

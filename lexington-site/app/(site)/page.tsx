@@ -18,7 +18,7 @@ import { offerSchedule } from "@/lib/agents/factsCore";
 import { formatUSD } from "@/lib/format";
 import { inclVatSuffix, vatFrom, withVat } from "@/lib/vat";
 import { ESTIMATED_COMPLETION } from "@/lib/seo";
-import { TEMA_PLAN } from "@/lib/olympian";
+import { OLYMPIAN_URL, TEMA_PLAN } from "@/lib/olympian";
 
 import { Hero } from "@/components/Hero";
 import { Button } from "@/components/Button";
@@ -219,7 +219,11 @@ export default async function HomePage() {
         imageAlt={TEMA_PLAN.alt}
         reverse
         fit="drawing"
-        eyebrow="An Olympian Development"
+        eyebrow={
+          <a href={OLYMPIAN_URL} target="_blank" rel="noopener" className="devLink">
+            An Olympian Development
+          </a>
+        }
         title="Three generations shaping Ghana's landscape."
       >
         <p>
