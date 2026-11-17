@@ -1,8 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, useTransition } from "react";
 
+import { confirmPlanPicksAction } from "@/lib/actions/planPicks";
 import { formatUSD } from "@/lib/format";
+import { SITE_VIEWER_SRC } from "@/lib/models3d";
+import { portalDay, type PickConfirmView, type PickViewer, type PlanPickView } from "@/lib/planOptions";
 import po from "./PlanOptions.module.css";
 import styles from "./PlanPicker.module.css";
 
@@ -13,24 +16,15 @@ import styles from "./PlanPicker.module.css";
 // in a bar at the bottom.
 // The models are one self-contained script in /public/3d, built from the penthouse-3d project (build-offerpick.mjs); it
 // is only downloaded on this page. Bump the number after the script is rebuilt so browsers fetch the new one.
-const VIEWER_SRC = "/3d/offerpick.iife.js?v=3";
+// When every home is one of the Residences page's, that page's own script shows them instead (lib/planOptions.ts).
+// Since 17 Nov 2026 an account can also have a "Confirm my selection" button (`confirm`): it sends the ticked homes
+// to Niko (lib/actions/planPicks.ts) and the page says so; a different selection can be sent afterwards.
+const VIEWERS: Record<PickViewer, { src: string; global: "LEXPICK" | "PH2B" }> = {
+  pick: { src: "/3d/offerpick.iife.js?v=3", global: "LEXPICK" },
+  site: { src: SITE_VIEWER_SRC, global: "PH2B" },
+};
 
-export interface PlanPickView {
-  key: string;
-  title: string;
-  floorLabel: string;
-  /** "home" for the main home, "studio" for the studios listed under it. */
-  group: "home" | "studio";
-  /** The model's id in the 3D script. */
-  model: string;
-  /** The home seen from straight above: shown until the 3D view is ready, and on its card. */
-  poster: string;
-  insideSqm: number;
-  balconySqm: number;
-  listPriceUSD: number | null;
-  priceUSD: number;
-  preselected: boolean;
-}
+export type { PlanPickView } from "@/lib/planOptions";
 
 interface Viewer {
   dispose: () => void;
@@ -40,25 +34,29 @@ interface ViewerApi {
   mountUnit: (host: HTMLElement, id: string, options: Record<string, unknown>) => Promise<Viewer>;
 }
 
-let pending: Promise<ViewerApi> | null = null;
+const pending: Partial<Record<PickViewer, Promise<ViewerApi>>> = {};
 
-function loadViewer(): Promise<ViewerApi> {
-  const w = window as unknown as { LEXPICK?: ViewerApi };
-  if (w.LEXPICK) return Promise.resolve(w.LEXPICK);
-  if (!pending) {
-    pending = new Promise<ViewerApi>((resolve, reject) => {
-      const script = document.createElement("script");
-      script.src = VIEWER_SRC;
-      script.async = true;
-      script.onload = () => (w.LEXPICK ? resolve(w.LEXPICK) : reject(new Error("3D viewer did not start")));
-      script.onerror = () => {
-        pending = null;
-        reject(new Error("3D viewer could not be loaded"));
-      };
-      document.head.appendChild(script);
-    });
-  }
-  return pending;
+function loadViewer(kind: PickViewer): Promise<ViewerApi> {
+  const { src, global } = VIEWERS[kind];
+  const w = window as unknown as Partial<Record<"LEXPICK" | "PH2B", ViewerApi>>;
+  const ready = w[global];
+  if (ready) return Promise.resolve(ready);
+  pending[kind] ??= new Promise<ViewerApi>((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = src;
+    script.async = true;
+    script.onload = () => {
+      const api = w[global];
+      if (api) resolve(api);
+      else reject(new Error("3D viewer did not start"));
+    };
+    script.onerror = () => {
+      delete pending[kind];
+      reject(new Error("3D viewer could not be loaded"));
+    };
+    document.head.appendChild(script);
+  });
+  return pending[kind];
 }
 
 // Touch screens: a finger on the 3D view turns the model instead of scrolling the page, so there it starts "locked"
@@ -78,10 +76,15 @@ function useCoarsePointer() {
 const sqm = (v: number) => `${v.toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} m²`;
 const sizeOf = (p: PlanPickView) => (p.balconySqm > 0 ? `${sqm(p.insideSqm)} + ${sqm(p.balconySqm)} balcony` : sqm(p.insideSqm));
 const savingOf = (list: number | null, price: number) => (list && list > price ? list - price : 0);
+const sameSet = (a: string[], b: string[]) => a.length === b.length && a.every((k) => b.includes(k));
 
-export function PlanPicker({ picks }: { picks: PlanPickView[] }) {
+export function PlanPicker({ picks, viewer = "pick", confirm = null }: { picks: PlanPickView[]; viewer?: PickViewer; confirm?: PickConfirmView | null }) {
   const [viewKey, setViewKey] = useState(picks[0].key);
-  const [chosen, setChosen] = useState<string[]>(() => picks.filter((p) => p.preselected).map((p) => p.key));
+  // Ticked when the page opens: what the buyer last sent, or else the homes marked on the account.
+  const [chosen, setChosen] = useState<string[]>(() => confirm?.sent?.keys ?? picks.filter((p) => p.preselected).map((p) => p.key));
+  const [sent, setSent] = useState(confirm?.sent ?? null);
+  const [sending, startSending] = useTransition();
+  const [problem, setProblem] = useState("");
   const viewing = picks.find((p) => p.key === viewKey) ?? picks[0];
   const liveRef = useRef<HTMLDivElement>(null);
   const viewerBoxRef = useRef<HTMLElement>(null);
@@ -103,7 +106,7 @@ export function PlanPicker({ picks }: { picks: PlanPickView[] }) {
     let cancelled = false;
     let errored = false;
 
-    loadViewer()
+    loadViewer(viewer)
       .then((api) =>
         api.mountUnit(host, viewing.model, {
           initialView: "top", // the plan view, from straight above
@@ -136,7 +139,7 @@ export function PlanPicker({ picks }: { picks: PlanPickView[] }) {
       viewerRef.current = null;
       host.remove();
     };
-  }, [viewing.model]);
+  }, [viewing.model, viewer]);
 
   const isReady = ready === viewing.model;
   const isFailed = failed === viewing.model;
@@ -156,6 +159,36 @@ export function PlanPicker({ picks }: { picks: PlanPickView[] }) {
   const allListed = mine.every((p) => p.listPriceUSD !== null);
   const totalList = allListed ? mine.reduce((sum, p) => sum + (p.listPriceUSD ?? 0), 0) : null;
   const totalSaving = savingOf(totalList, total);
+  // A page of studios only says "studio"; one with a main home says "home".
+  const one = picks.every((p) => p.group === "studio") ? "studio" : "home";
+  const many = (n: number) => `${n} ${one}${n === 1 ? "" : "s"}`;
+  const nameOf = (p: PlanPickView) => p.unitNumber || p.title;
+
+  // The "Confirm my selection" button, on accounts that have one.
+  const need = confirm?.count ?? null;
+  const countOk = need ? mine.length === need : mine.length > 0;
+  const isSent = !!sent && sameSet(sent.keys, chosen);
+  const sentNames = sent ? picks.filter((p) => sent.keys.includes(p.key)).map(nameOf).join(" + ") : "";
+  const countHint = !need
+    ? `Select a ${one} first.`
+    : mine.length < need
+      ? `Select ${need - mine.length} more ${one}${need - mine.length === 1 ? "" : "s"} to confirm.`
+      : `Please keep ${many(need)}: untick ${mine.length - need}.`;
+  const sendLabel = sending ? "Sending…" : isSent ? "Sent ✓" : sent ? "Send my new selection" : "Confirm my selection";
+  const send = () => {
+    if (sending || isSent || !countOk) return;
+    setProblem("");
+    startSending(async () => {
+      try {
+        const result = await confirmPlanPicksAction(chosen);
+        if (result.status === "ok" && result.keys && result.at) setSent({ keys: result.keys, at: result.at });
+        else setProblem(result.message ?? "Sorry, your selection could not be sent. Please try again, or contact us.");
+      } catch {
+        setProblem("Sorry, your selection could not be sent. Please check your connection and try again.");
+      }
+    });
+  };
+
   const groups: { name: string; note?: string; items: PlanPickView[] }[] = [
     { name: "Your home", items: picks.filter((p) => p.group === "home") },
     { name: "Studios", note: "Lower floors cost less.", items: picks.filter((p) => p.group === "studio") },
@@ -165,15 +198,24 @@ export function PlanPicker({ picks }: { picks: PlanPickView[] }) {
     <div className={styles.wrap}>
       <ol className={styles.steps} aria-label="How this page works">
         <li>
-          <b>1</b> Tap a home to see it in 3D
+          <b>1</b> Tap a {one} to see it in 3D
         </li>
         <li>
-          <b>2</b> Press Select on the homes you want
+          <b>2</b> Press Select on {need ? `your ${many(need)}` : `the ${one}s you want`}
         </li>
         <li>
-          <b>3</b> Your price is at the bottom of the screen
+          <b>3</b> {confirm ? "Press Confirm at the bottom to send it to us" : "Your price is at the bottom of the screen"}
         </li>
       </ol>
+
+      {confirm && sent && (
+        <p className={styles.sentBox} role="status">
+          <b>
+            ✓ You sent us your selection on {portalDay(sent.at)}: {sentNames}.
+          </b>{" "}
+          We will be in touch to update your agreement. To change it, choose again below and press &ldquo;Send my new selection&rdquo;.
+        </p>
+      )}
 
       <div className={styles.layout}>
         <section ref={viewerBoxRef} className={styles.viewer} aria-label="3D view">
@@ -268,7 +310,7 @@ export function PlanPicker({ picks }: { picks: PlanPickView[] }) {
               Your selection
             </h2>
             {mine.length === 0 ? (
-              <p className={po.note}>Nothing ticked yet. Press Select on a home to see your price.</p>
+              <p className={po.note}>Nothing ticked yet. Press Select on a {one} to see your price.</p>
             ) : (
               <div className={styles.summary}>
                 <ul className={styles.lines}>
@@ -289,7 +331,7 @@ export function PlanPicker({ picks }: { picks: PlanPickView[] }) {
                     </div>
                   )}
                   <div className={styles.grand}>
-                    <dt>Your price{mine.length > 1 ? ` for the ${mine.length} homes` : ""}</dt>
+                    <dt>Your price{mine.length > 1 ? ` for the ${many(mine.length)}` : ""}</dt>
                     <dd>{formatUSD(total)}</dd>
                   </div>
                   {totalList !== null && totalSaving > 0 && (
@@ -303,21 +345,49 @@ export function PlanPicker({ picks }: { picks: PlanPickView[] }) {
                 </dl>
               </div>
             )}
+            {confirm && (
+              <div className={styles.confirm}>
+                <button type="button" className={styles.confirmBtn} disabled={sending || isSent || !countOk} onClick={send}>
+                  {sendLabel}
+                </button>
+                {problem ? (
+                  <p className={styles.confirmProblem} role="alert">
+                    {problem}
+                  </p>
+                ) : isSent ? (
+                  <p className={styles.confirmNote} role="status">
+                    Thank you. We have your selection and will be in touch to update your agreement.
+                  </p>
+                ) : !countOk ? (
+                  <p className={styles.confirmNote}>{countHint}</p>
+                ) : (
+                  <p className={styles.confirmNote}>
+                    {sent ? "This replaces the selection you sent before. " : ""}Pressing the button sends your selection to us. We will then be in touch to
+                    update your agreement.
+                  </p>
+                )}
+              </div>
+            )}
           </section>
         </section>
       </div>
 
       {/* Always on screen: what is selected and what it comes to. */}
-      <div className={styles.bar} role="status" aria-live="polite">
+      <div className={confirm ? `${styles.bar} ${styles.barConfirm}` : styles.bar} role="status" aria-live="polite">
         <button type="button" className={styles.barText} onClick={() => totalRef.current?.scrollIntoView({ behavior: "smooth", block: "center" })}>
-          <span className={styles.barCount}>{mine.length === 0 ? "No home selected yet" : mine.length === 1 ? "1 home selected" : `${mine.length} homes selected`}</span>
-          <span className={styles.barNames}>{mine.length === 0 ? "Press Select on a home" : mine.map((p) => (p.group === "studio" ? `${p.title} (${p.floorLabel.toLowerCase()})` : p.title)).join(" + ")}</span>
+          <span className={styles.barCount}>{mine.length === 0 ? `No ${one} selected yet` : `${many(mine.length)} selected`}</span>
+          <span className={styles.barNames}>{mine.length === 0 ? `Press Select on a ${one}` : mine.map((p) => (p.group === "studio" ? `${p.title} (${p.floorLabel.toLowerCase()})` : p.title)).join(" + ")}</span>
         </button>
         {mine.length > 0 && (
           <div className={styles.barPrice}>
             <span className={styles.barLabel}>Total</span>
             <b>{formatUSD(total)}</b>
           </div>
+        )}
+        {confirm && (
+          <button type="button" className={styles.barBtn} disabled={sending || isSent || !countOk} onClick={send} title={!countOk ? countHint : undefined}>
+            {!countOk && need ? (mine.length < need ? `Select ${need - mine.length} more` : `Keep only ${need}`) : sendLabel}
+          </button>
         )}
       </div>
     </div>

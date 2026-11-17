@@ -5,6 +5,13 @@
 // Plain data (no browser code), so the server can read it too: the lead responder links these units' 3D plans.
 export type PlanLevel = "lower" | "upper" | "main";
 
+// The models are one self-contained script in /public/3d (built from the penthouse-3d project: src/site.js,
+// build-site.mjs), only downloaded when someone asks for a 3D view. Bump the number after the script is rebuilt so
+// browsers fetch the new one. Kept here, beside the list of what is in it, because two places load it: the Residences
+// page (components/Penthouse3D.tsx) and a buyer's homes to pick from (components/PlanPicker.tsx).
+// v14 (16 Nov 2026): PH2b, 405B, 204B, the 3rd floor's studios 304B and 305B, and the 1st floor's homes 101A-109B.
+export const SITE_VIEWER_SRC = "/3d/ph2b.iife.js?v=14";
+
 export interface Model3D {
   viewerId: string;
   name: string;
