@@ -23,7 +23,7 @@
     "bcryptjs": "^3.0.3",
     "fflate": "0.8.2",
     "jose": "^6.2.12",
-    "next": "^16.4.3",
+    "next": "^16.4.5",
     "next-sanity": "^13.1.1",
     "pdf-lib": "^1.17.1",
     "react": "^19.2.9",
@@ -40,7 +40,7 @@
     "@types/react-dom": "^19",
     "@types/web-push": "^3.6.4",
     "eslint": "^9",
-    "eslint-config-next": "^16.4.3",
+    "eslint-config-next": "^16.4.5",
     "tsx": "^4.23.0",
     "typescript": "^5"
   },
