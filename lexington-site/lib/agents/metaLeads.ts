@@ -93,6 +93,8 @@ interface GraphLead {
   ad_id?: string;
   form_id?: string;
   is_organic?: boolean;
+  /** Where it was filled in: "fb" or "ig". */
+  platform?: string;
 }
 
 /** "what's_your_budget?" -> "What's your budget?" */
@@ -127,6 +129,7 @@ export function readLead(lead: GraphLead, formName: string): MetaFormLead {
   const name = take("full_name", "name") || [first, last].filter(Boolean).join(" ");
   const email = take("email", "work_email");
   const phone = take("phone_number", "phone", "whatsapp_number");
+  const inboxUrl = take("inbox_url");
   const answers = [...fields.entries()]
     .filter(([k, v]) => v && !NOT_QUESTIONS.has(k))
     .map(([k, v]) => ({ question: questionWords(k), answer: answerWords(v) }));
@@ -141,6 +144,8 @@ export function readLead(lead: GraphLead, formName: string): MetaFormLead {
     campaignId: lead.campaign_id ?? "",
     adsetId: lead.adset_id ?? "",
     adId: lead.ad_id ?? "",
+    ...(lead.platform === "fb" || lead.platform === "ig" ? { platform: lead.platform } : {}),
+    ...(/^https:\/\/business\.facebook\.com\//.test(inboxUrl) ? { inboxUrl: inboxUrl.slice(0, 300) } : {}),
     answers,
   };
 }
@@ -266,7 +271,7 @@ export async function pollMetaLeads(nowMs = Date.now()): Promise<MetaLeadsResult
       const leads = await graphGet<{ data?: GraphLead[] }>(
         `${form.id}/leads`,
         {
-          fields: "id,created_time,field_data,ad_name,campaign_name,campaign_id,adset_id,ad_id,form_id,is_organic",
+          fields: "id,created_time,field_data,ad_name,campaign_name,campaign_id,adset_id,ad_id,form_id,is_organic,platform",
           filtering: JSON.stringify([{ field: "time_created", operator: "GREATER_THAN", value: fromUnix }]),
           limit: "100",
         },

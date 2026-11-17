@@ -287,7 +287,7 @@ const visitTaskText = (name: string, slot: string) => `Site visit: show ${firstN
  * Finds (or makes) their record in Prospects and puts the visit on it: a line in the timeline, the visit as a step on
  * its day, and a new enquiry moves on to "Contacted". Answers the record's id and the step's key.
  */
-async function putOnRecord(v: { name: string; email: string; phone: string; slot: string; source: VisitSource; interest: string; people: number | null; note: string; leadId?: string | null; leadSource?: string }): Promise<{ leadId: string | null; taskKey: string }> {
+async function putOnRecord(v: { name: string; email: string; phone: string; slot: string; source: VisitSource; interest: string; people: number | null; note: string; leadId?: string | null; leadSource?: string; adSource?: string }): Promise<{ leadId: string | null; taskKey: string }> {
   const taskKey = newKey();
   // A preview build (the test version Niko tries before it goes live) never writes to Prospects.
   if (process.env.VERCEL_ENV === "preview") return { leadId: null, taskKey };
@@ -305,12 +305,13 @@ async function putOnRecord(v: { name: string; email: string; phone: string; slot
     const client = buyers();
     const leadId = v.leadId || (await samePerson(v.email, v.phone));
     if (leadId) {
-      const lead = await client.fetch<{ _id: string; stage?: string; phone?: string; email?: string; interest?: string } | null>(`*[_id == $id][0]{ _id, stage, phone, email, interest }`, { id: leadId });
+      const lead = await client.fetch<{ _id: string; stage?: string; phone?: string; email?: string; interest?: string; adSource?: string } | null>(`*[_id == $id][0]{ _id, stage, phone, email, interest, adSource }`, { id: leadId });
       if (lead) {
         const set: Record<string, unknown> = {};
         if (!lead.phone && v.phone) set.phone = v.phone;
         if (!lead.email && v.email) set.email = v.email;
         if (!lead.interest && v.interest && v.interest !== "Not sure yet") set.interest = v.interest;
+        if (!lead.adSource && v.adSource) set.adSource = v.adSource;
         // Someone new, or written off, who books a visit is a live prospect in touch with us.
         if (!lead.stage || lead.stage === "new" || lead.stage === "lost") set.stage = "contacted";
         await client
@@ -332,6 +333,7 @@ async function putOnRecord(v: { name: string; email: string; phone: string; slot
       ...(v.email && { email: v.email }),
       ...(v.phone && { phone: v.phone }),
       source: v.leadSource ?? "website",
+      ...(v.adSource && { adSource: v.adSource }),
       stage: "contacted",
       ...(v.interest && v.interest !== "Not sure yet" && { interest: v.interest }),
       paymentPreference: "undecided",
@@ -371,6 +373,8 @@ export interface NewVisit {
   source: VisitSource;
   /** For a brand-new prospect: the CRM's source key (meta_ads, google_ads, website...). */
   leadSource?: string;
+  /** The advert's tag the visitor came with (utm_source), kept on the prospect. */
+  adSource?: string;
   /** Already known (a chat's prospect). */
   leadId?: string | null;
   threadId?: string;
@@ -429,6 +433,7 @@ export async function bookVisit(input: NewVisit, nowMs = Date.now()): Promise<Bo
     note: doc.note ?? "",
     leadId: input.leadId,
     leadSource: input.leadSource,
+    adSource: input.adSource,
   });
   await buyers()
     .patch(id)

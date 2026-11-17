@@ -248,6 +248,10 @@ export interface MetaFormLead {
   campaignId?: string;
   adsetId?: string;
   adId?: string;
+  /** Where it was filled in: "fb" (Facebook) or "ig" (Instagram). */
+  platform?: "fb" | "ig";
+  /** Meta's link to the Messenger chat the form opened, if it opened one. */
+  inboxUrl?: string;
   /** Every other question on the form, as asked. */
   answers: Array<{ question: string; answer: string }>;
 }
@@ -280,6 +284,8 @@ export async function saveMetaLead(input: MetaFormLead): Promise<{ id: string; i
       ...(input.campaignId && { metaCampaignId: input.campaignId }),
       ...(input.adsetId && { metaAdsetId: input.adsetId }),
       ...(input.adId && { metaAdId: input.adId }),
+      ...(input.platform && { metaPlatform: input.platform }),
+      ...(input.inboxUrl && { metaInboxUrl: input.inboxUrl }),
     };
     const said = answers.length ? `: ${answers.map((a) => `${a.question}: ${a.answer}`).join("; ")}` : "";
     const entry = { _key: newKey(), at: now, kind: "system" as const, text: `Facebook / Instagram lead form${where ? ` (${where})` : ""}${said}`.slice(0, 3000) };

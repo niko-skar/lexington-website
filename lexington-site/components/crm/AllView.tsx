@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useState } from "react";
 
-import { SOURCES, STAGES, dueLabel, dueState, paymentLabel, sourceLabel } from "@/lib/crm";
+import { SOURCES, STAGES, dueLabel, dueState, paymentLabel } from "@/lib/crm";
+import { originLabel } from "@/lib/crmOrigin";
 import { phoneHref, whatsappUrl } from "@/lib/format";
 import type { Lead } from "@/lib/sanity/crmTypes";
 import { CopyNumber } from "./CopyNumber";
@@ -118,7 +119,7 @@ export function AllView({
                   </div>
                   <div className={styles.rowMeta}>
                     <span>{unitLine(lead)}</span>
-                    <span>{sourceLabel(lead.source)}</span>
+                    <span>{originLabel(lead)}</span>
                     <span>{paymentLabel(lead.paymentPreference)}</span>
                   </div>
                   {lead.context && <div className={styles.rowContext}>{lead.context}</div>}

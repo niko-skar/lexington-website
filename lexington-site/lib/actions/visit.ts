@@ -71,7 +71,9 @@ export async function submitVisit(_prev: VisitFormState, formData: FormData): Pr
     return { status: "error", message: "We've had a lot of bookings from this connection. Please try again in a little while, or call or WhatsApp us." };
   }
 
-  const result = await bookVisit({ slot, name, phone, email, people, interest, note, source: "website", leadSource: leadSourceFrom(utm) });
+  // The tag itself too: Instagram's own links say "ig", so the CRM can tell Facebook from Instagram.
+  const adSource = utm.toLowerCase().replace(/[^a-z0-9_.-]/g, "").slice(0, 40);
+  const result = await bookVisit({ slot, name, phone, email, people, interest, note, source: "website", leadSource: leadSourceFrom(utm), adSource });
   if (!result.ok) {
     if (result.reason === "taken") {
       return {

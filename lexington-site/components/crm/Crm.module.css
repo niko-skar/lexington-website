@@ -1097,3 +1097,21 @@
   font-size: 14px;
   line-height: 1.5;
 }
+
+/* The link straight to their Messenger or Instagram chat (17 Nov 2026). */
+.btnChat {
+  composes: btn;
+  border-color: var(--navy);
+  background: var(--navy);
+  color: var(--paper);
+}
+
+.btnChat:hover {
+  border-color: var(--navy-deep);
+  background: var(--navy-deep);
+}
+
+.inlineLink {
+  color: var(--clay);
+  text-decoration: underline;
+}

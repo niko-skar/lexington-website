@@ -70,6 +70,16 @@ export interface Lead {
   metaAdId?: string;
   /** Their lead form answers, as asked. */
   formAnswers?: Array<{ _key: string; question: string; answer: string }>;
+  /** Meta's word on where they filled in the lead form: "fb" (Facebook) or "ig" (Instagram). */
+  metaPlatform?: string;
+  /** Meta's link to their Messenger chat, when the lead form opened one. */
+  metaInboxUrl?: string;
+  /** The advert's tag when they came to the website from one (utm_source: "ig", "facebook"...). */
+  adSource?: string;
+  /** Their chat with the assistant (a chatThread id). */
+  chatThread?: string;
+  /** In lists only: that chat's channel. */
+  chatChannel?: string;
 }
 
 export interface UnitOption {
