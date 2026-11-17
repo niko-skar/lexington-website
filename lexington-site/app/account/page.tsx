@@ -1,9 +1,11 @@
 import Link from "next/link";
 
+import { Unit3DPlan } from "@/components/Penthouse3D";
 import { PlanPicker } from "@/components/PlanPicker";
 import { requireCurrentBuyer, balanceFor } from "@/lib/auth/currentBuyer";
 import { formatUSD, formatFloor, splitUnits } from "@/lib/format";
 import { formatGHS, formatMethod, usdEquivalent } from "@/lib/currency";
+import { MODELS } from "@/lib/models3d";
 import { picksOnFirstPage, planPickerSetup } from "@/lib/planOptions";
 import styles from "@/components/Portal.module.css";
 
@@ -31,11 +33,34 @@ export default async function AccountOverviewPage() {
   // the selection as soon as he signs in). Other accounts with plans get the link to /account/plans as before.
   const front = picksOnFirstPage(buyer) ? planPickerSetup(buyer) : null;
   const set = buyer.planOptions;
+  // The buyer's own home in 3D, beside their name, the moment they sign in (Niko, 17 Nov 2026, for a buyer moved to a
+  // studio he had not seen). Set on the account (`home3d`); shows the first of the account's homes that has a 3D model
+  // on the Residences page, in that page's own 3D box.
+  const home3d = buyer.home3d === true ? (units.find((u) => MODELS[u.unitNumber]) ?? null) : null;
 
   return (
     <main className={styles.page}>
-      <div className={styles.eyebrow}>Welcome back</div>
-      <h1 className={styles.title}>{buyer.name}</h1>
+      {home3d ? (
+        <div className={styles.homeTop}>
+          <div>
+            <div className={styles.eyebrow}>Welcome back</div>
+            <h1 className={styles.title}>{buyer.name}</h1>
+            <h2 className={styles.sectionTitle}>Your home in 3D</h2>
+            <p className={styles.lead}>
+              {home3d.bedroomType} {home3d.unitNumber} · Floor {formatFloor(home3d.floor)} · {home3d.areaSqm} sqm. Turn it, zoom in, or step inside and
+              walk around.
+            </p>
+          </div>
+          <div className={styles.home3d}>
+            <Unit3DPlan unitNumber={home3d.unitNumber} startLevel={MODELS[home3d.unitNumber].levels[0]} />
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className={styles.eyebrow}>Welcome back</div>
+          <h1 className={styles.title}>{buyer.name}</h1>
+        </>
+      )}
 
       {front && (
         <section className={styles.section} aria-labelledby="your-picks">

@@ -39,6 +39,8 @@ export interface BuyerAccount {
   nextSteps?: NextStep[];
   /** Plans the buyer is choosing between, each a 3D model with its price: shown at /account/plans. */
   planOptions?: PlanOptionSet;
+  /** The buyer's own home in 3D at the top of the first page, when it has a model on the Residences page (lib/models3d.ts). */
+  home3d?: boolean;
 }
 
 /** The plans a buyer is choosing between (a home drawn more than one way), with the deposit. */
