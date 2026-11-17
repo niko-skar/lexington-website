@@ -1,7 +1,8 @@
 import { defineQuery } from "next-sanity";
 
-export const buyerAccountByEmailQuery = defineQuery(`
-  *[_type == "buyerAccount" && lower(email) == $email][0]{
+// What the buyer portal reads of an account. One shape, whoever asks for it: the buyer's own sign-in (by email or
+// username) or an admin looking at the portal as the buyer sees it (by id; lib/auth/portalView.ts).
+const PORTAL_ACCOUNT = `{
     ...,
     signedAgreements[]{
       label,
@@ -14,7 +15,14 @@ export const buyerAccountByEmailQuery = defineQuery(`
       "fileUrl": current.asset->url,
       "fillBaseUrl": fillBase.asset->url
     }
-  }
+  }`;
+
+export const buyerAccountByEmailQuery = defineQuery(`
+  *[_type == "buyerAccount" && lower(email) == $email][0]${PORTAL_ACCOUNT}
+`);
+
+export const buyerPortalAccountByIdQuery = defineQuery(`
+  *[_type == "buyerAccount" && _id == $id][0]${PORTAL_ACCOUNT}
 `);
 
 export const buyerAccountsQuery = defineQuery(`

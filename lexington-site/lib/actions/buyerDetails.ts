@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { notifyOwner } from "@/lib/alerts/notify";
 import { requireCurrentBuyer } from "@/lib/auth/currentBuyer";
+import { VIEW_ONLY_MESSAGE } from "@/lib/auth/portalView";
 import { fillContract, markerValues, type BuyerDetailsInput } from "@/lib/contracts/fill";
 import { noteOnLead } from "@/lib/crmIntake";
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
@@ -33,7 +34,8 @@ const oneLine = (s: string) =>
     .join(", ");
 
 export async function saveBuyerDetailsAction(_prev: DetailsFormState, formData: FormData): Promise<DetailsFormState> {
-  const { buyer } = await requireCurrentBuyer();
+  const { buyer, viewing } = await requireCurrentBuyer();
+  if (viewing) return { status: "error", message: VIEW_ONLY_MESSAGE };
   const draft = buyer.contractDraft;
   if (!draft?.fillBaseUrl) {
     return { status: "error", message: "There is nothing to fill in on your account yet. Please contact us." };

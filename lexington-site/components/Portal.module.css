@@ -562,3 +562,49 @@
   outline: 2px solid var(--sage);
   outline-offset: 2px;
 }
+
+/* ---- "View portal": an admin looking at a buyer's portal as the buyer sees it (lib/auth/portalView.ts) ---- */
+.viewLink {
+  display: inline-block;
+  padding: 5px 12px;
+  border: 1px solid var(--navy);
+  border-radius: var(--radius);
+  color: var(--navy);
+  font-weight: 600;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.viewLink:hover {
+  background: var(--navy);
+  color: var(--paper);
+}
+
+.viewBand {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px 20px;
+  padding: 10px var(--edge-pad);
+  background: var(--brass);
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.viewBand p {
+  margin: 0;
+}
+
+.viewBand button {
+  flex: none;
+  padding: 6px 14px;
+  border: 1px solid var(--ink);
+  border-radius: var(--radius);
+  background: var(--ink);
+  color: var(--paper);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}

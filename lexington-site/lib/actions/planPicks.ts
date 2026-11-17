@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 
 import { notifyOwner } from "@/lib/alerts/notify";
 import { requireCurrentBuyer } from "@/lib/auth/currentBuyer";
+import { VIEW_ONLY_MESSAGE } from "@/lib/auth/portalView";
 import { noteOnLead } from "@/lib/crmIntake";
 import { formatUSD } from "@/lib/format";
 import { planPickerSetup, portalDay } from "@/lib/planOptions";
@@ -30,7 +31,8 @@ const newKey = () => randomBytes(6).toString("hex");
 
 export async function confirmPlanPicksAction(picked: string[]): Promise<PickConfirmState> {
   // `plansPage`: a buyer kept to the plans page may press the button too.
-  const { buyer } = await requireCurrentBuyer({ plansPage: true });
+  const { buyer, viewing } = await requireCurrentBuyer({ plansPage: true });
+  if (viewing) return { status: "error", message: VIEW_ONLY_MESSAGE };
   const { picks, confirm } = planPickerSetup(buyer);
   if (!confirm) return { status: "error", message: "A selection can't be sent from this page. Please contact us." };
 

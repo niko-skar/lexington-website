@@ -33,6 +33,7 @@ export default async function AdminPage() {
                 <th>Name</th>
                 <th>Unit</th>
                 <th></th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
@@ -41,6 +42,15 @@ export default async function AdminPage() {
                   <td>{b.email}</td>
                   <td>{b.name}</td>
                   <td>{b.role === "admin" ? "Admin account" : b.role === "site" ? "Site app only" : b.unitNumber}</td>
+                  <td>
+                    {/* The buyer's portal as they see it, in a new tab (lib/auth/portalView.ts). A plain <a>: this
+                        link must only ever be followed by a click, never fetched ahead of one. */}
+                    {b.role !== "admin" && b.role !== "site" && (
+                      <a href={`/admin/view/${b._id}`} target="_blank" rel="noopener" className={styles.viewLink}>
+                        View portal
+                      </a>
+                    )}
+                  </td>
                   <td>
                     <Link href={`/admin/${b._id}`} style={{ color: "var(--clay)" }}>
                       Reset password

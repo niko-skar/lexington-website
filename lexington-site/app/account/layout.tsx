@@ -1,7 +1,8 @@
 import { logoutAction } from "@/lib/actions/logout";
-import { loadBuyerAccount } from "@/lib/auth/currentBuyer";
-import { getBuyerSession } from "@/lib/auth/session";
+import { stopPortalViewAction } from "@/lib/actions/portalView";
+import { portalAccount } from "@/lib/auth/currentBuyer";
 import { seesOnlyPlans } from "@/lib/planOptions";
+import styles from "@/components/Portal.module.css";
 import { PortalHeader } from "@/components/PortalHeader";
 
 export const metadata = {
@@ -21,22 +22,32 @@ const NAV_LINKS = [
 // An account kept to its plans has no other page to go to, so its header carries no links. (The pages
 // themselves turn such a buyer back as well: requireCurrentBuyer.) The account is the same one the page
 // loads -- asked for once.
-async function onlyPlans(): Promise<boolean> {
+// `viewing`: an admin is looking at this buyer's portal as the buyer sees it (lib/auth/portalView.ts). A band above the
+// header says so, and the header's Sign Out ends the look instead of signing the admin out.
+async function frame(): Promise<{ onlyPlans: boolean; viewing: string | null }> {
   try {
-    const session = await getBuyerSession();
-    if (!session) return false;
-    const buyer = await loadBuyerAccount(session.email);
-    return !!buyer && seesOnlyPlans(buyer);
+    const { buyer, viewing } = await portalAccount();
+    return { onlyPlans: !!buyer && seesOnlyPlans(buyer), viewing: viewing && buyer ? buyer.name : null };
   } catch {
-    return false; // the page reports the failure
+    return { onlyPlans: false, viewing: null }; // the page reports the failure
   }
 }
 
 export default async function AccountLayout({ children }: { children: React.ReactNode }) {
-  const navLinks = (await onlyPlans()) ? [] : NAV_LINKS;
+  const { onlyPlans, viewing } = await frame();
+  const navLinks = onlyPlans ? [] : NAV_LINKS;
   return (
     <>
-      <PortalHeader navLinks={navLinks} signOutAction={logoutAction} />
+      {viewing && (
+        <form action={stopPortalViewAction} className={styles.viewBand}>
+          <p>
+            <b>Admin view.</b> This is {viewing}&rsquo;s portal as they see it. You are not signed in as them: buttons that save or send do nothing
+            here.
+          </p>
+          <button type="submit">Back to Admin</button>
+        </form>
+      )}
+      <PortalHeader navLinks={navLinks} signOutAction={viewing ? stopPortalViewAction : logoutAction} />
       {children}
     </>
   );
