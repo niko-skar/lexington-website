@@ -57,6 +57,9 @@ export const MARKET_CITIES: Record<"uk" | "canada", Array<{ q: string; country: 
 
 export type AngleKey = "price" | "plan" | "location" | "progress" | "amenities" | "homes" | "abroad";
 
+/** The longest payment plan on offer (Niko, 17 Nov 2026: "from now on 12 month payment plan is all we offer"). */
+export const PLAN_MONTHS = 12;
+
 /** What each kind of ad leads with. The copywriter gets the brief; the picture comes from the matching gallery. */
 export const ANGLES: Record<AngleKey, { brief: string; pictures: Array<"exterior" | "interior" | "amenity" | "progress" | "floorplan">; markets?: Market[] }> = {
   price: {
@@ -64,7 +67,7 @@ export const ANGLES: Record<AngleKey, { brief: string; pictures: Array<"exterior
     pictures: ["exterior", "interior"],
   },
   plan: {
-    brief: "Lead with how to pay: in full, or on a plan of up to 18 months, or with a mortgage, and that $10,000 reserves a home.",
+    brief: `Lead with how to pay: in full, or on a plan of up to ${PLAN_MONTHS} months, or with a mortgage, and that $10,000 reserves a home.`,
     pictures: ["exterior", "interior"],
   },
   location: {
@@ -490,8 +493,8 @@ function templateWords(pack: FactPack, market: Market, angle: AngleKey, withOffe
       description: studios ? "Studios to penthouses" : "One-bedrooms to penthouses",
     },
     plan: {
-      primary_text: `Pay in full, or over up to 18 months, for a home at The Lexington, ${where}. ${reserve}${offer} Tap for a call back.`,
-      headline: "Pay over up to 18 months",
+      primary_text: `Pay in full, or over up to ${PLAN_MONTHS} months, for a home at The Lexington, ${where}. ${reserve}${offer} Tap for a call back.`,
+      headline: `Pay over up to ${PLAN_MONTHS} months`,
       description: "The Lexington, Accra",
     },
     location: {
@@ -542,5 +545,7 @@ export function adCopyProblems(copy: AdCopy, opts: { withOffer: boolean; soldOut
   if (!opts.withOffer && quotesOffer(all)) out.push("It mentions an offer or discount, which this ad may not.");
   const sold = mentionsSoldOut(all, opts.soldOut ?? []);
   if (sold) out.push(`It offers ${sold}s, and none is left for sale.`);
+  for (const m of all.matchAll(/\b(\d{1,2})[\s-]*months?\b/gi))
+    if (Number(m[1]) !== PLAN_MONTHS) out.push(`It says ${m[1]} months: payment plans run up to ${PLAN_MONTHS} months.`);
   return out;
 }

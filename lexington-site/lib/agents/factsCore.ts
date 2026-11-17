@@ -144,7 +144,7 @@ const pad = (n: number) => String(n).padStart(2, "0");
 /**
  * The offer in the website banner, read from its words, e.g. "Phase 1 pricing ends
  * 31st of October — 15% off with full payment or 8% off with flexible payment plans
- * up to 18 months." A number the words don't clearly give stays null (and is then
+ * up to 12 months." A number the words don't clearly give stays null (and is then
  * never quoted as a sum). Null when the banner is off or empty.
  */
 export function parseOffer(message: string | undefined | null, enabled: boolean | undefined | null, today: string): OfferFact | null {

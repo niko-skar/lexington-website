@@ -22,7 +22,7 @@ export const siteSettings = defineType({
       name: "promoBanner",
       title: "Current offer",
       description:
-        "The offer shown at the top of the Invest page and in its Discounts table, and on the home page. The lead replies, the chat, the ads and daily posts also read it, so keep this shape: \"Phase 1 pricing ends 30th of November 2026 — 15% off with full payment or 8% off with flexible payment plans up to 18 months.\" The last day (write the year) and the percentages are taken from these words. Switch it off and the page, the replies and the ads stop mentioning an offer.",
+        "The offer shown at the top of the Invest page and in its Discounts table, and on the home page. The lead replies, the chat, the ads and daily posts also read it, so keep this shape: \"Phase 1 pricing ends 30th of November 2026 — 15% off with full payment or 8% off with flexible payment plans up to 12 months.\" The last day (write the year) and the percentages are taken from these words. Switch it off and the page, the replies and the ads stop mentioning an offer.",
       type: "object",
       group: "banner",
       fields: [
@@ -32,7 +32,7 @@ export const siteSettings = defineType({
           name: "next",
           title: "Offer after the last day",
           description:
-            "Optional. Takes over by itself the day after the offer above ends, everywhere the offer is used; until then the Invest page shows it as \"From 1 December\". Same shape, without a last day: \"Save up to 10% — 10% off with full payment or 5% off with flexible payment plans up to 18 months.\" Leave it empty and no offer runs after the last day.",
+            "Optional. Takes over by itself the day after the offer above ends, everywhere the offer is used; until then the Invest page shows it as \"From 1 December\". Same shape, without a last day: \"Save up to 10% — 10% off with full payment or 5% off with flexible payment plans up to 12 months.\" Leave it empty and no offer runs after the last day.",
           type: "string",
         }),
       ],

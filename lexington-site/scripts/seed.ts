@@ -696,8 +696,8 @@ async function seedSiteSettings() {
     promoBanner: {
       enabled: true,
       message:
-        "⚡UPDATE⚡ Phase 1 pricing ends 30th of November 2026 — 15% off with full payment or 8% off with flexible payment plans up to 18 months.",
-      next: "Save up to 10% — 10% off with full payment or 5% off with flexible payment plans up to 18 months.",
+        "⚡UPDATE⚡ Phase 1 pricing ends 30th of November 2026 — 15% off with full payment or 8% off with flexible payment plans up to 12 months.",
+      next: "Save up to 10% — 10% off with full payment or 5% off with flexible payment plans up to 12 months.",
     },
     contactPhone: "+233 (0)244 30 5262",
     contactEmail: "sales@lexington.com.gh",
@@ -762,8 +762,8 @@ async function seedSiteSettings() {
       promoBanner: {
         enabled: true,
         message:
-          "⚡UPDATE⚡ Phase 1 pricing ends 30th of November 2026 — 15% off with full payment or 8% off with flexible payment plans up to 18 months.",
-        next: "Save up to 10% — 10% off with full payment or 5% off with flexible payment plans up to 18 months.",
+          "⚡UPDATE⚡ Phase 1 pricing ends 30th of November 2026 — 15% off with full payment or 8% off with flexible payment plans up to 12 months.",
+        next: "Save up to 10% — 10% off with full payment or 5% off with flexible payment plans up to 12 months.",
       },
     })
     .commit();
