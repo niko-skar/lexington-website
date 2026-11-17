@@ -1,3 +1,4 @@
+import { PaymentPlan } from "@/components/PaymentPlan";
 import { requireCurrentBuyer, balanceFor } from "@/lib/auth/currentBuyer";
 import { formatUSD } from "@/lib/format";
 import { formatGHS, formatMethod, usdEquivalent } from "@/lib/currency";
@@ -52,6 +53,8 @@ export default async function AccountPaymentsPage() {
           be fully up to date — contact us if this looks wrong.
         </p>
       )}
+
+      {(buyer.paymentPlan?.length ?? 0) > 0 && <PaymentPlan plan={buyer.paymentPlan ?? []} totalPaidUSD={totalPaidUSD} />}
 
       {payments.length > 0 ? (
         <div className={styles.tableWrap}>

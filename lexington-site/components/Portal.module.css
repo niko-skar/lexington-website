@@ -494,3 +494,71 @@
     margin-inline: 0;
   }
 }
+
+/* ---- a buyer's payment plan (components/PaymentPlan.tsx): the next payment above the list, then every payment ---- */
+.planNext {
+  background: var(--paper-dim);
+  border: 1px solid var(--stone-lt);
+  border-left: 3px solid var(--sage);
+  border-radius: var(--radius);
+  padding: var(--space-5);
+  margin-bottom: var(--space-5);
+}
+
+.planNextLate {
+  border-left-color: var(--clay);
+}
+
+.planNextText {
+  margin-top: 8px;
+  font-size: var(--fs-200);
+  color: var(--ink);
+}
+
+.planPaid td {
+  color: var(--sage);
+}
+
+.planCurrent td {
+  font-weight: 600;
+}
+
+.planLate {
+  color: var(--clay) !important;
+}
+
+.planTotal td {
+  border-top: 1px solid var(--stone-lt);
+  font-weight: 600;
+}
+
+/* ---- the switch between a buyer's homes in 3D (components/HomesIn3D.tsx) ---- */
+.homeSwitch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: var(--space-4);
+}
+
+.homeSwitch button {
+  font: inherit;
+  font-size: var(--fs-200);
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid var(--stone-lt);
+  border-radius: 999px;
+  padding: 8px 14px;
+  min-height: 36px;
+  cursor: pointer;
+}
+
+.homeSwitch button[aria-pressed="true"] {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper-dim);
+}
+
+.homeSwitch button:focus-visible {
+  outline: 2px solid var(--sage);
+  outline-offset: 2px;
+}

@@ -41,6 +41,22 @@ export interface BuyerAccount {
   planOptions?: PlanOptionSet;
   /** The buyer's own home in 3D at the top of the first page, when it has a model on the Residences page (lib/models3d.ts). */
   home3d?: boolean;
+  /** The buyer's payment plan (deposits, then monthly payments): the portal marks each one paid as the payments come in. */
+  paymentPlan?: PaymentPlanItem[];
+  /** The full deposit: once the payments reach it, the account's reserved homes switch to sold on the website by
+   *  themselves (lib/buyers/depositSales.ts, run by the 5-minute cron) and Niko gets an alert. */
+  soldAtPaidUSD?: number;
+  /** When that switch happened (set by the cron). */
+  soldAt?: string;
+}
+
+/** One payment of a buyer's plan. The payments fill the plan from the top. */
+export interface PaymentPlanItem {
+  _key?: string;
+  label: string;
+  /** YYYY-MM-DD */
+  dueDate: string;
+  amountUSD: number;
 }
 
 /** The plans a buyer is choosing between (a home drawn more than one way), with the deposit. */

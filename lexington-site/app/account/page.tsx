@@ -1,6 +1,7 @@
 import Link from "next/link";
 
-import { Unit3DPlan } from "@/components/Penthouse3D";
+import { HomesIn3D } from "@/components/HomesIn3D";
+import { PaymentPlan } from "@/components/PaymentPlan";
 import { PlanPicker } from "@/components/PlanPicker";
 import { requireCurrentBuyer, balanceFor } from "@/lib/auth/currentBuyer";
 import { formatUSD, formatFloor, splitUnits } from "@/lib/format";
@@ -36,7 +37,9 @@ export default async function AccountOverviewPage() {
   // The buyer's own home in 3D, beside their name, the moment they sign in (Niko, 17 Nov 2026, for a buyer moved to a
   // studio he had not seen). Set on the account (`home3d`); shows the first of the account's homes that has a 3D model
   // on the Residences page, in that page's own 3D box.
-  const home3d = buyer.home3d === true ? (units.find((u) => MODELS[u.unitNumber]) ?? null) : null;
+  // (17 Nov 2026: every one of the account's homes that has a model, with a switch between them.)
+  const homes3d = buyer.home3d === true ? units.filter((u) => MODELS[u.unitNumber]) : [];
+  const home3d = homes3d[0] ?? null;
 
   return (
     <main className={styles.page}>
@@ -45,14 +48,15 @@ export default async function AccountOverviewPage() {
           <div>
             <div className={styles.eyebrow}>Welcome back</div>
             <h1 className={styles.title}>{buyer.name}</h1>
-            <h2 className={styles.sectionTitle}>Your home in 3D</h2>
+            <h2 className={styles.sectionTitle}>{homes3d.length > 1 ? "Your homes in 3D" : "Your home in 3D"}</h2>
             <p className={styles.lead}>
-              {home3d.bedroomType} {home3d.unitNumber} · Floor {formatFloor(home3d.floor)} · {home3d.areaSqm} sqm. Turn it, zoom in, or step inside and
-              walk around.
+              {homes3d.length > 1
+                ? `${homes3d.map((u) => `${u.bedroomType} ${u.unitNumber}, floor ${formatFloor(u.floor)}, ${u.areaSqm} sqm`).join("; ")}. Pick one, then turn it, zoom in, or step inside and walk around.`
+                : `${home3d.bedroomType} ${home3d.unitNumber} · Floor ${formatFloor(home3d.floor)} · ${home3d.areaSqm} sqm. Turn it, zoom in, or step inside and walk around.`}
             </p>
           </div>
           <div className={styles.home3d}>
-            <Unit3DPlan unitNumber={home3d.unitNumber} startLevel={MODELS[home3d.unitNumber].levels[0]} />
+            <HomesIn3D homes={homes3d.map((u) => ({ unitNumber: u.unitNumber, label: `${u.bedroomType} ${u.unitNumber}`, startLevel: MODELS[u.unitNumber].levels[0] }))} />
           </div>
         </div>
       ) : (
@@ -228,6 +232,8 @@ export default async function AccountOverviewPage() {
           fully up to date — contact us if this looks wrong.
         </p>
       )}
+
+      {(buyer.paymentPlan?.length ?? 0) > 0 && <PaymentPlan plan={buyer.paymentPlan ?? []} totalPaidUSD={totalPaidUSD} />}
 
       <div className={styles.section}>
         <h2 className={styles.sectionTitle}>Most Recent Payment</h2>

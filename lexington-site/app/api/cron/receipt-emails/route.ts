@@ -1,3 +1,4 @@
+import { settleDepositSales } from "@/lib/buyers/depositSales";
 import { emailPendingReceipts } from "@/lib/receipts/email";
 
 export const maxDuration = 60;
@@ -14,7 +15,15 @@ export async function GET(request: Request) {
 
   try {
     const summary = await emailPendingReceipts();
-    return Response.json(summary);
+    // A buyer whose payments reach the full deposit: their reserved homes switch to sold (lib/buyers/depositSales.ts).
+    let sales: unknown = [];
+    try {
+      sales = await settleDepositSales();
+    } catch (err) {
+      console.error("Deposit sales check failed:", err);
+      sales = "failed";
+    }
+    return Response.json({ ...summary, sales });
   } catch (err) {
     console.error("Receipt email run failed:", err);
     return new Response("Receipt email run failed.", { status: 500 });

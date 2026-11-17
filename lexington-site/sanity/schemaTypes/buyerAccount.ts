@@ -233,6 +233,41 @@ export const buyerAccount = defineType({
       hidden: ({ document }) => document?.role === "admin" || document?.role === "site",
     }),
     defineField({
+      name: "paymentPlan",
+      title: "Payment plan",
+      description:
+        "Optional. The buyer's first page and payments page list these payments in order with their due dates, and mark each one paid as the payments come in (they fill the plan from the top). Amounts in US dollars.",
+      type: "array",
+      of: [
+        defineArrayMember({
+          type: "object",
+          name: "planPayment",
+          fields: [
+            defineField({ name: "label", title: "What it is", type: "string", validation: (r) => r.required() }),
+            defineField({ name: "dueDate", title: "Due by", type: "date", validation: (r) => r.required() }),
+            defineField({ name: "amountUSD", title: "Amount (US$)", type: "number", validation: (r) => r.required().positive() }),
+          ],
+          preview: { select: { title: "label", subtitle: "dueDate" } },
+        }),
+      ],
+      hidden: ({ document }) => document?.role === "admin" || document?.role === "site",
+    }),
+    defineField({
+      name: "soldAtPaidUSD",
+      title: "Mark the homes sold when the payments reach (US$)",
+      description:
+        "Optional. Put the full deposit here. While the payments are below it, keep the account's homes 'reserved' on the website; once they reach it, the homes switch to 'sold' by themselves (within 5 minutes) and you get an alert.",
+      type: "number",
+      hidden: ({ document }) => document?.role === "admin" || document?.role === "site",
+    }),
+    defineField({
+      name: "soldAt",
+      title: "Homes switched to sold",
+      type: "datetime",
+      readOnly: true,
+      hidden: ({ document }) => !document?.soldAt,
+    }),
+    defineField({
       name: "nextSteps",
       title: "Next steps written for this buyer",
       description: "Optional. When there are steps here, the buyer's dashboard shows them instead of the standard next steps.",

@@ -10,7 +10,7 @@ export type PlanLevel = "lower" | "upper" | "main";
 // browsers fetch the new one. Kept here, beside the list of what is in it, because two places load it: the Residences
 // page (components/Penthouse3D.tsx) and a buyer's homes to pick from (components/PlanPicker.tsx).
 // v14 (16 Nov 2026): PH2b, 405B, 204B, the 3rd floor's studios 304B and 305B, and the 1st floor's homes 101A-109B.
-export const SITE_VIEWER_SRC = "/3d/ph2b.iife.js?v=15"; // v15 (17 Nov 2026): new layouts of 103B, 105B, 106B, 108B; the cooker hood's chimney
+export const SITE_VIEWER_SRC = "/3d/ph2b.iife.js?v=16"; // v16 (17 Nov 2026): 405B as the two-bedroom its buyer chose, the 5th floor's studios 504B and 505B. (v15, 17 Nov 2026: new layouts of 103B, 105B, 106B, 108B; the cooker hood's chimney)
 
 export interface Model3D {
   viewerId: string;
@@ -29,11 +29,25 @@ export const MODELS: Record<string, Model3D> = {
       upper: { wide: "/3d/ph2b-plan-upper.jpg", phone: "/3d/ph2b-plan-upper-m.jpg" },
     },
   },
+  // 405B (17 Nov 2026): the two-bedroom home its buyer chose (penthouse-3d u4t), in place of the old three-bedroom concept.
   "405B": {
-    viewerId: "u405b",
+    viewerId: "u4t",
     name: "apartment 405B",
     levels: ["main"],
-    posters: { main: { wide: "/3d/u405b-plan.jpg?v=2", phone: "/3d/u405b-plan-m.jpg?v=2" } }, // v2: shot with the live view's own lens
+    posters: { main: { wide: "/3d/u4t-plan.jpg?v=3", phone: "/3d/u4t-plan-m.jpg?v=3" } },
+  },
+  // The 5th floor's two studios (17 Nov 2026): 504B on the north side, 505B on the south side (the old 505B is 506B).
+  "504B": {
+    viewerId: "u5n",
+    name: "studio 504B",
+    levels: ["main"],
+    posters: { main: { wide: "/3d/u5n-plan.jpg?v=1", phone: "/3d/u5n-plan-m.jpg?v=1" } },
+  },
+  "505B": {
+    viewerId: "u5s",
+    name: "studio 505B",
+    levels: ["main"],
+    posters: { main: { wide: "/3d/u5s-plan.jpg?v=1", phone: "/3d/u5s-plan-m.jpg?v=1" } },
   },
   "204B": {
     viewerId: "u204b",
