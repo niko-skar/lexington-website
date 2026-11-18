@@ -10,7 +10,7 @@ import { buildFactPack, type FactPack, type RawFacts } from "./factsCore";
 // time (never a cached copy: a unit reserved this morning must not be offered).
 const FACTS_QUERY = `{
   "units": *[_type == "unit"] | order(floor asc, unitNumber asc) {
-    unitNumber, bedroomType, floor, areaSqm, balconySqm, priceUSD, status, minPackageTier
+    unitNumber, bedroomType, floor, areaSqm, balconySqm, terraceSqm, priceUSD, status, minPackageTier
   },
   "settings": *[_type == "siteSettings"][0]{ promoBanner, contactPhone, contactEmail, officeAddress, vat },
   "tiers": *[_type == "packageTiers"][0].tiers[]{ key, name, ratePerSqm, badge },

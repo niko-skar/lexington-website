@@ -8,7 +8,7 @@ import { trackAction } from "@/lib/visits/client";
 import { urlFor } from "@/lib/sanity/image";
 import { formatFloor, formatUSD } from "@/lib/format";
 import { VatTag } from "./Vat";
-import { balconyOf, formatArea, splitArea } from "@/lib/area";
+import { balconyOf, formatArea, splitArea, terraceOf } from "@/lib/area";
 import { useAreaUnit } from "./useAreaUnit";
 import { floorTierName, isTierClamped, priceAtTier, tierAddon } from "@/lib/pricing";
 import { withVat, type Vat } from "@/lib/vat";
@@ -53,9 +53,10 @@ export function UnitDetailModal({
     trackAction("unit", unit.unitNumber);
   }, [unit.unitNumber]);
 
-  // Homes whose record says how much of the size is balcony show the internal area and the balcony separately.
+  // Homes whose record says how much of the size is balcony (or roof terrace) show the internal area and those separately.
   const balconySqm = balconyOf(unit);
-  const areas = balconySqm > 0 ? splitArea(unit.areaSqm, balconySqm, areaUnit) : null;
+  const terraceSqm = terraceOf(unit);
+  const areas = balconySqm > 0 || terraceSqm > 0 ? splitArea(unit.areaSqm, balconySqm, areaUnit, terraceSqm) : null;
 
   const has3D = has3DModel(unit.unitNumber);
   const clamped = isTierClamped(unit, selectedTier, tiers);
@@ -91,10 +92,18 @@ export function UnitDetailModal({
                   <dt>Internal area</dt>
                   <dd>{areas.internal}</dd>
                 </div>
-                <div>
-                  <dt>Balcony</dt>
-                  <dd>{areas.balcony}</dd>
-                </div>
+                {balconySqm > 0 && (
+                  <div>
+                    <dt>Balcony</dt>
+                    <dd>{areas.balcony}</dd>
+                  </div>
+                )}
+                {terraceSqm > 0 && (
+                  <div>
+                    <dt>Terrace</dt>
+                    <dd>{areas.terrace}</dd>
+                  </div>
+                )}
                 <div>
                   <dt>Total area</dt>
                   <dd>{formatArea(unit.areaSqm, areaUnit)}</dd>

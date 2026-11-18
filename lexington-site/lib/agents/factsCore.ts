@@ -29,6 +29,7 @@ export interface RawFacts {
     floor: number;
     areaSqm: number;
     balconySqm?: number | null;
+    terraceSqm?: number | null;
     priceUSD: number;
     status: string;
     minPackageTier?: string | null;
@@ -82,6 +83,9 @@ export interface UnitFact {
   /** How much of the size is balcony (0 when the home has none or it is not known); the rest is the internal area. */
   balconySqm: number;
   balconySqft: number;
+  /** How much of the size is roof terrace (0 when the home has none). */
+  terraceSqm: number;
+  terraceSqft: number;
   /** The list price as the website shows it: with the VAT in it while VAT is on. */
   priceUSD: number;
   status: "available" | "reserved" | "sold";
@@ -274,6 +278,8 @@ export function buildFactPack(raw: RawFacts, today: string): FactPack {
       areaSqft: sqft(u.areaSqm),
       balconySqm: typeof u.balconySqm === "number" && u.balconySqm > 0 && u.balconySqm < u.areaSqm ? u.balconySqm : 0,
       balconySqft: typeof u.balconySqm === "number" && u.balconySqm > 0 && u.balconySqm < u.areaSqm ? sqft(u.balconySqm) : 0,
+      terraceSqm: terraceOfRaw(u),
+      terraceSqft: terraceOfRaw(u) > 0 ? sqft(terraceOfRaw(u)) : 0,
       priceUSD: shown(u.priceUSD),
       status,
       fullPaymentPriceUSD: open && offer?.fullPaymentPct != null ? discounted(shown(u.priceUSD), offer.fullPaymentPct) : null,
@@ -452,7 +458,7 @@ export function factPackText(pack: FactPack): string {
         u.unitNumber,
         u.typeLine,
         u.floorName,
-        `${u.areaSqm} m² (${u.areaSqft} sq ft)${u.balconySqm > 0 ? ` total: ${u.areaSqm - u.balconySqm} m² (${u.areaSqft - u.balconySqft} sq ft) internal + a ${u.balconySqm} m² (${u.balconySqft} sq ft) balcony` : ""}`,
+        `${u.areaSqm} m² (${u.areaSqft} sq ft)${u.balconySqm > 0 || u.terraceSqm > 0 ? ` total: ${u.areaSqm - u.balconySqm - u.terraceSqm} m² (${u.areaSqft - u.balconySqft - u.terraceSqft} sq ft) internal${u.balconySqm > 0 ? ` + a ${u.balconySqm} m² (${u.balconySqft} sq ft) balcony` : ""}${u.terraceSqm > 0 ? ` + a ${u.terraceSqm} m² (${u.terraceSqft} sq ft) roof terrace` : ""}` : ""}`,
         `${formatUSD(u.priceUSD)}${u.baseFinish !== "Standard" ? ` (${u.baseFinish} finish)` : ""}`,
         u.fullPaymentPriceUSD != null ? formatUSD(u.fullPaymentPriceUSD) : "-",
         u.planPriceUSD != null ? formatUSD(u.planPriceUSD) : "-",
@@ -523,6 +529,13 @@ export function allowedPercents(pack: FactPack): Set<number> {
   return pcts;
 }
 
+// A unit record's roof terrace (m2), when it says so and it fits in the listed size with the balcony (18 Nov 2026, PH2b).
+function terraceOfRaw(u: { areaSqm: number; balconySqm?: number | null; terraceSqm?: number | null }): number {
+  const b = typeof u.balconySqm === "number" && u.balconySqm > 0 && u.balconySqm < u.areaSqm ? u.balconySqm : 0;
+  const t = u.terraceSqm;
+  return typeof t === "number" && t > 0 && t + b < u.areaSqm ? t : 0;
+}
+
 /** Every size the pack holds, in m² and in sq ft (the unit sizes and the storage ranges). */
 export function allowedAreas(pack: FactPack): { sqm: Set<number>; sqft: Set<number> } {
   const sqm = new Set<number>();
@@ -530,13 +543,13 @@ export function allowedAreas(pack: FactPack): { sqm: Set<number>; sqft: Set<numb
   for (const u of pack.units.filter((x) => x.status === "available")) {
     sqm.add(u.areaSqm);
     sqftSet.add(u.areaSqft);
-    if (u.balconySqm > 0) {
-      // The internal area and the balcony are sizes the website shows too.
-      sqm.add(u.areaSqm - u.balconySqm);
-      sqm.add(u.balconySqm);
-      sqftSet.add(u.areaSqft - u.balconySqft);
-      sqftSet.add(sqft(u.areaSqm - u.balconySqm));
-      sqftSet.add(u.balconySqft);
+    if (u.balconySqm > 0 || u.terraceSqm > 0) {
+      // The internal area, the balcony and the roof terrace are sizes the website shows too.
+      sqm.add(u.areaSqm - u.balconySqm - u.terraceSqm);
+      sqftSet.add(u.areaSqft - u.balconySqft - u.terraceSqft);
+      sqftSet.add(sqft(u.areaSqm - u.balconySqm - u.terraceSqm));
+      if (u.balconySqm > 0) { sqm.add(u.balconySqm); sqftSet.add(u.balconySqft); }
+      if (u.terraceSqm > 0) { sqm.add(u.terraceSqm); sqftSet.add(u.terraceSqft); }
     }
   }
   for (const e of pack.extras) for (const m of e.matchAll(/(\d+)[–-](\d+)\s*sqm/g)) [m[1], m[2]].forEach((n) => sqm.add(Number(n)));

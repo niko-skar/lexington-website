@@ -37,7 +37,7 @@ export const unit = defineType({
     defineField({
       name: "areaSqm",
       title: "Total area (sqm)",
-      description: "The size the unit list shows: the inside of the home plus its balcony.",
+      description: "The size the unit list shows: the inside of the home plus its balcony and roof terrace.",
       type: "number",
       validation: (Rule) => Rule.required().positive(),
     }),
@@ -46,6 +46,14 @@ export const unit = defineType({
       title: "Of which balcony (sqm)",
       description:
         "How much of the total area is balcony. The floor plan pop-up then shows the internal area and the balcony separately. Leave empty when the home has no balcony or its size is not known.",
+      type: "number",
+      validation: (Rule) => Rule.min(0),
+    }),
+    defineField({
+      name: "terraceSqm",
+      title: "Of which terrace (sqm)",
+      description:
+        "How much of the total area is roof terrace (a penthouse's). The floor plan pop-up then shows it on its own line. Leave empty when the home has none.",
       type: "number",
       validation: (Rule) => Rule.min(0),
     }),

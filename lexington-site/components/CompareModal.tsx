@@ -5,7 +5,7 @@ import { useEffect, type ReactNode } from "react";
 import type { PackageTier, Unit } from "@/lib/sanity/types";
 import { trackAction } from "@/lib/visits/client";
 import { formatFloor, formatUSD } from "@/lib/format";
-import { balconyOf, formatArea, splitArea, type AreaUnit } from "@/lib/area";
+import { balconyOf, formatArea, splitArea, terraceOf, type AreaUnit } from "@/lib/area";
 import { useAreaUnit } from "./useAreaUnit";
 import { floorTierName, isTierClamped, priceAtTier, tierAddon } from "@/lib/pricing";
 import { withVat, type Vat } from "@/lib/vat";
@@ -29,9 +29,10 @@ const baseRows: { label: string; render: (u: Unit, area: AreaUnit) => ReactNode 
     label: "Area",
     render: (u, area) => {
       const balcony = balconyOf(u);
-      if (balcony === 0) return formatArea(u.areaSqm, area);
-      const parts = splitArea(u.areaSqm, balcony, area);
-      return `${formatArea(u.areaSqm, area)} (${parts.internal} internal + ${parts.balcony} balcony)`;
+      const terrace = terraceOf(u);
+      if (balcony === 0 && terrace === 0) return formatArea(u.areaSqm, area);
+      const parts = splitArea(u.areaSqm, balcony, area, terrace);
+      return `${formatArea(u.areaSqm, area)} (${parts.internal} internal${balcony > 0 ? ` + ${parts.balcony} balcony` : ""}${terrace > 0 ? ` + ${parts.terrace} terrace` : ""})`;
     },
   },
   { label: "Status", render: (u) => <StatusBadge status={u.status} /> },

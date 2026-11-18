@@ -15,6 +15,8 @@ export interface Unit {
   areaSqm: number;
   // How much of areaSqm is balcony. Absent when the home has none or its size is not known.
   balconySqm?: number;
+  // How much of areaSqm is roof terrace (PH2b). Absent when the home has none.
+  terraceSqm?: number;
   priceUSD: number;
   status: UnitStatus;
   notes?: string;

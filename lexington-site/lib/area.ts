@@ -23,14 +23,22 @@ export function balconyOf(home: { areaSqm: number; balconySqm?: number | null })
   return typeof b === "number" && b > 0 && b < home.areaSqm ? b : 0;
 }
 
-// A home's listed size split into the inside and the balcony: { internal: "31 sqm", balcony: "2 sqm" }. In square feet
-// the inside is the total less the balcony, so the two always add up to the size the list shows.
-export function splitArea(totalSqm: number, balconySqm: number, unit: AreaUnit = "sqm") {
-  if (unit === "sqm") return { internal: formatArea(totalSqm - balconySqm), balcony: formatArea(balconySqm) };
+// How much of a home's listed size is roof terrace, when its record says so (0 when it does not). PH2b, 18 Nov 2026.
+export function terraceOf(home: { areaSqm: number; balconySqm?: number | null; terraceSqm?: number | null }) {
+  const t = home.terraceSqm;
+  return typeof t === "number" && t > 0 && t + balconyOf(home) < home.areaSqm ? t : 0;
+}
+
+// A home's listed size split into the inside, the balcony and the roof terrace: { internal: "31 sqm", balcony: "2 sqm",
+// terrace: "0 sqm" }. In square feet the inside is the total less the outside parts, so they always add up to the size the
+// list shows.
+export function splitArea(totalSqm: number, balconySqm: number, unit: AreaUnit = "sqm", terraceSqm = 0) {
+  if (unit === "sqm") return { internal: formatArea(totalSqm - balconySqm - terraceSqm), balcony: formatArea(balconySqm), terrace: formatArea(terraceSqm) };
   const total = Math.round(totalSqm * SQFT_PER_SQM);
   const balcony = Math.round(balconySqm * SQFT_PER_SQM);
+  const terrace = Math.round(terraceSqm * SQFT_PER_SQM);
   const feet = (v: number) => `${v.toLocaleString("en-US")} sq ft`;
-  return { internal: feet(total - balcony), balcony: feet(balcony) };
+  return { internal: feet(total - balcony - terrace), balcony: feet(balcony), terrace: feet(terrace) };
 }
 
 export function areaUnitLabel(unit: AreaUnit) {
