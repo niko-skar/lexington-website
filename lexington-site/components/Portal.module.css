@@ -480,6 +480,15 @@
   min-width: 0;
 }
 
+/* A 3D page made for one buyer (the account's home3dPage), in a frame the same place. */
+.home3dFrame {
+  display: block;
+  width: 100%;
+  height: clamp(420px, 68vh, 680px);
+  border: 1px solid var(--stone-lt);
+  background: #eef0ee;
+}
+
 @media (min-width: 900px) {
   .homeTop {
     grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.3fr);

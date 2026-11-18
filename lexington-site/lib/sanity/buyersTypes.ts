@@ -41,6 +41,9 @@ export interface BuyerAccount {
   planOptions?: PlanOptionSet;
   /** The buyer's own home in 3D at the top of the first page, when it has a model on the Residences page (lib/models3d.ts). */
   home3d?: boolean;
+  /** A 3D page made for this buyer alone (a page of the site under /3d/p/), shown at the top of their first page in a
+   *  frame, in place of `home3d` (18 Nov 2026: Armstrong's 5th-floor lock-off homes). */
+  home3dPage?: Home3DPage;
   /** The buyer's payment plan (deposits, then monthly payments): the portal marks each one paid as the payments come in. */
   paymentPlan?: PaymentPlanItem[];
   /** The full deposit: once the payments reach it, the account's reserved homes switch to sold on the website by
@@ -48,6 +51,16 @@ export interface BuyerAccount {
   soldAtPaidUSD?: number;
   /** When that switch happened (set by the cron). */
   soldAt?: string;
+}
+
+/** A buyer's own 3D page: where it is on the site, and what the first page says about it. */
+export interface Home3DPage {
+  /** A path on this site under /3d/p/, e.g. /3d/p/lockoff-5f-37efec0c22a3.html */
+  src?: string;
+  /** The heading above it, e.g. "Your homes in 3D". */
+  title?: string;
+  /** One or two sentences under the heading. */
+  caption?: string;
 }
 
 /** One payment of a buyer's plan. The payments fill the plan from the top. */

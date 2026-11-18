@@ -40,10 +40,30 @@ export default async function AccountOverviewPage() {
   // (17 Nov 2026: every one of the account's homes that has a model, with a switch between them.)
   const homes3d = buyer.home3d === true ? units.filter((u) => MODELS[u.unitNumber]) : [];
   const home3d = homes3d[0] ?? null;
+  // A 3D page made for this buyer alone, in a frame (18 Nov 2026: Armstrong's 5th-floor lock-off homes). Only a page of
+  // this site under /3d/p/ (next.config.ts lets the site frame those, nobody else).
+  const ownPage = buyer.home3dPage?.src && /^\/3d\/p\/[A-Za-z0-9._-]+\.html$/.test(buyer.home3dPage.src) ? buyer.home3dPage : null;
 
   return (
     <main className={styles.page}>
-      {home3d ? (
+      {ownPage?.src ? (
+        <div className={styles.homeTop}>
+          <div>
+            <div className={styles.eyebrow}>Welcome back</div>
+            <h1 className={styles.title}>{buyer.name}</h1>
+            <h2 className={styles.sectionTitle}>{ownPage.title || "Your home in 3D"}</h2>
+            {ownPage.caption && <p className={styles.lead}>{ownPage.caption}</p>}
+            <p className={styles.lead}>
+              <a className={styles.inlineLink} href={ownPage.src} target="_blank" rel="noopener">
+                Open it full screen
+              </a>
+            </p>
+          </div>
+          <div className={styles.home3d}>
+            <iframe className={styles.home3dFrame} src={ownPage.src} title={ownPage.title || "Your home in 3D"} loading="eager" allow="fullscreen" />
+          </div>
+        </div>
+      ) : home3d ? (
         <div className={styles.homeTop}>
           <div>
             <div className={styles.eyebrow}>Welcome back</div>

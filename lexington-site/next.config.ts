@@ -45,6 +45,17 @@ const nextConfig: NextConfig = {
         headers: [{ key: "Permissions-Policy", value: "camera=(self), microphone=(), geolocation=()" }],
       },
       {
+        // A buyer's own 3D page (public/3d/p/*.html, 18 Nov 2026: Armstrong's 5th-floor lock-off homes) shows inside
+        // their portal's frame (app/account/page.tsx, the account's `home3dPage`): this site may frame it, nobody else,
+        // and search engines leave it alone. Later entries win.
+        source: "/3d/p/:path*",
+        headers: [
+          { key: "Content-Security-Policy", value: "frame-ancestors 'self'; object-src 'none'; base-uri 'self';" },
+          { key: "X-Frame-Options", value: "SAMEORIGIN" },
+          { key: "X-Robots-Tag", value: "noindex, nofollow" },
+        ],
+      },
+      {
         // The site roll call's own page (public/todo/rollcall.html: just the app, no records; it asks
         // /api/rollcall for those, signed in) shows inside the app's frame at /todo/rollcall (2 Nov 2026,
         // components/todo/RollcallPart.tsx): this site may frame it, nobody else. Later entries win.

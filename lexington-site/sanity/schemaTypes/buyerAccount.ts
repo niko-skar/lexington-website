@@ -233,6 +233,25 @@ export const buyerAccount = defineType({
       hidden: ({ document }) => document?.role === "admin" || document?.role === "site",
     }),
     defineField({
+      name: "home3dPage",
+      title: "The buyer's own 3D page (made for them)",
+      description:
+        "Optional. A 3D page made for this buyer alone (a page of the site under /3d/p/). When set, it shows at the top of their first page instead of the Residences model.",
+      type: "object",
+      hidden: ({ document }) => document?.role === "admin" || document?.role === "site",
+      fields: [
+        defineField({
+          name: "src",
+          title: "Page on the site",
+          description: "e.g. /3d/p/lockoff-5f-37efec0c22a3.html",
+          type: "string",
+          validation: (rule) => rule.regex(/^\/3d\/p\/[A-Za-z0-9._-]+\.html$/, { name: "a page under /3d/p/" }),
+        }),
+        defineField({ name: "title", title: "Heading", type: "string" }),
+        defineField({ name: "caption", title: "Text under the heading", type: "text", rows: 2 }),
+      ],
+    }),
+    defineField({
       name: "paymentPlan",
       title: "Payment plan",
       description:
