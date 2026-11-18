@@ -81,6 +81,8 @@ export interface PlanOptionSet {
   depositHomes?: number;
   /** The buyer sees the plans and nothing else in the portal (lib/planOptions.ts: seesOnlyPlans). */
   only?: boolean;
+  /** The plans' sizes are estimates: the page shows them rounded, "about 161 m²". */
+  approxSizes?: boolean;
   options?: PlanOption[];
   /** Homes the buyer can pick from, each with its own 3D model and price (the page adds up the ticked ones). */
   picks?: PlanPick[];
@@ -130,6 +132,8 @@ export interface PlanOption {
   /** The 3D model's id (app/account/plans/page.tsx lists the ones the site has). */
   model: string;
   homes?: { _key?: string; name: string; areaSqm: number }[];
+  /** Both homes together, when that is not just the sum of their sizes (sizes rounded from an estimate, 18 Nov 2026). */
+  totalSqm?: number;
   /** The price before this buyer's discount. */
   listPriceUSD?: number;
   /** The buyer's price for this plan. */

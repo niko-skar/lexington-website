@@ -21,13 +21,15 @@ export default async function AccountPlansPage() {
   const set = buyer.planOptions;
   const options: PlanOptionView[] = shownPlanOptions(buyer).map((o, i) => {
     const homes = (o.homes ?? []).filter((h) => h?.name && typeof h.areaSqm === "number").map((h) => ({ name: h.name, areaSqm: h.areaSqm }));
+    const sum = Math.round(homes.reduce((s, h) => s + h.areaSqm, 0) * 100) / 100;
     return {
       key: o._key ?? String(i),
       title: o.title,
       model: o.model,
+      script: PLAN_MODELS[o.model].script,
       poster: PLAN_MODELS[o.model].poster,
       homes,
-      totalSqm: Math.round(homes.reduce((sum, h) => sum + h.areaSqm, 0) * 100) / 100,
+      totalSqm: typeof o.totalSqm === "number" && o.totalSqm > 0 ? o.totalSqm : sum,
       listPriceUSD: typeof o.listPriceUSD === "number" && o.listPriceUSD > 0 ? o.listPriceUSD : null,
       priceUSD: o.priceUSD,
     };
@@ -51,7 +53,7 @@ export default async function AccountPlansPage() {
           {set.intro}
         </p>
       )}
-      {picks.length ? <PlanPicker picks={picks} viewer={viewer} confirm={confirm} /> : <PlanOptions options={options} deposit={deposit} />}
+      {picks.length ? <PlanPicker picks={picks} viewer={viewer} confirm={confirm} /> : <PlanOptions options={options} deposit={deposit} approx={set?.approxSizes === true} />}
       <p className={styles.lead} style={{ marginTop: "var(--space-7)" }}>
         {/* A plain <a> to the public site, not <Link>: a full page load, so the tag manager those pages load can't follow Back into the portal. */}
         {confirm ? "Questions?" : "Questions, or ready to choose?"} <a href="/contact">Talk to us</a>

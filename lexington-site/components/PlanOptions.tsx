@@ -3,19 +3,25 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { formatUSD } from "@/lib/format";
+import type { PlanScript } from "@/lib/planOptions";
 import { attachViewerKeys } from "@/lib/viewerKeys";
 import styles from "./PlanOptions.module.css";
 
-// The plans a buyer is choosing between, each as a 3D model (Niko, 12 Nov 2026). The models are one self-contained
-// script in /public/3d, built from the penthouse-3d project (build-offer4f.mjs); it is only downloaded on this page.
-// Bump the number after the script is rebuilt so browsers fetch the new one.
-const VIEWER_SRC = "/3d/offer4f.iife.js?v=1";
+// The plans a buyer is choosing between, each as a 3D model (Niko, 12 Nov 2026). The models are in self-contained scripts
+// in /public/3d, built from the penthouse-3d project (build-offer4f.mjs, build-offerlock.mjs); only the one a plan needs is
+// downloaded, and only on this page. Bump the number after a script is rebuilt so browsers fetch the new one.
+const SCRIPTS: Record<PlanScript, { src: string; global: string }> = {
+  offer4f: { src: "/3d/offer4f.iife.js?v=1", global: "LEX4F" },
+  lock: { src: "/3d/offerlock.iife.js?v=1", global: "LEXLOCK" }, // (Armstrong's lock-off, 18 Nov 2026)
+};
 
 export interface PlanOptionView {
   key: string;
   title: string;
   /** The model's id in the 3D script. */
   model: string;
+  /** Which script the model is in. */
+  script: PlanScript;
   /** The plan seen from straight above: shown until the 3D view is ready. */
   poster: string;
   homes: { name: string; areaSqm: number }[];
@@ -39,25 +45,31 @@ interface ViewerApi {
   mountUnit: (host: HTMLElement, id: string, options: Record<string, unknown>) => Promise<Viewer>;
 }
 
-let pending: Promise<ViewerApi> | null = null;
+const pending: Partial<Record<PlanScript, Promise<ViewerApi>>> = {};
 
-function loadViewer(): Promise<ViewerApi> {
-  const w = window as unknown as { LEX4F?: ViewerApi };
-  if (w.LEX4F) return Promise.resolve(w.LEX4F);
-  if (!pending) {
-    pending = new Promise<ViewerApi>((resolve, reject) => {
+function loadViewer(which: PlanScript): Promise<ViewerApi> {
+  const { src, global } = SCRIPTS[which];
+  const w = window as unknown as Record<string, ViewerApi | undefined>;
+  const ready = w[global];
+  if (ready) return Promise.resolve(ready);
+  if (!pending[which]) {
+    pending[which] = new Promise<ViewerApi>((resolve, reject) => {
       const script = document.createElement("script");
-      script.src = VIEWER_SRC;
+      script.src = src;
       script.async = true;
-      script.onload = () => (w.LEX4F ? resolve(w.LEX4F) : reject(new Error("3D viewer did not start")));
+      script.onload = () => {
+        const api = w[global];
+        if (api) resolve(api);
+        else reject(new Error("3D viewer did not start"));
+      };
       script.onerror = () => {
-        pending = null;
+        delete pending[which];
         reject(new Error("3D viewer could not be loaded"));
       };
       document.head.appendChild(script);
     });
   }
-  return pending;
+  return pending[which];
 }
 
 // Touch screens: a finger on the 3D view turns the model instead of scrolling the page, so there it starts "locked"
@@ -74,11 +86,14 @@ function useCoarsePointer() {
   );
 }
 
-const sqm = (v: number) => `${v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} m²`;
+const sqmExact = (v: number) => `${v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} m²`;
+// Sizes that are estimates (Armstrong's lock-off, 18 Nov 2026) show rounded: "about 161 m²".
+const sqmAbout = (v: number) => `about ${Math.round(v).toLocaleString("en-US")} m²`;
 const saving = (o: PlanOptionView) => (o.listPriceUSD && o.listPriceUSD > o.priceUSD ? o.listPriceUSD - o.priceUSD : 0);
 const percent = (o: PlanOptionView) => (o.listPriceUSD ? Math.round((saving(o) / o.listPriceUSD) * 1000) / 10 : 0);
 
-export function PlanOptions({ options, deposit }: { options: PlanOptionView[]; deposit: DepositView | null }) {
+export function PlanOptions({ options, deposit, approx = false }: { options: PlanOptionView[]; deposit: DepositView | null; approx?: boolean }) {
+  const sqm = approx ? sqmAbout : sqmExact;
   const [key, setKey] = useState(options[0].key);
   const option = options.find((o) => o.key === key) ?? options[0];
   const liveRef = useRef<HTMLDivElement>(null);
@@ -100,7 +115,7 @@ export function PlanOptions({ options, deposit }: { options: PlanOptionView[]; d
     let errored = false;
     let detachKeys: (() => void) | null = null;
 
-    loadViewer()
+    loadViewer(option.script)
       .then((api) =>
         api.mountUnit(host, option.model, {
           initialView: "top", // the plan view, from straight above
@@ -135,7 +150,7 @@ export function PlanOptions({ options, deposit }: { options: PlanOptionView[]; d
       viewerRef.current = null;
       host.remove();
     };
-  }, [option.model]);
+  }, [option.model, option.script]);
 
   const isReady = ready === option.model;
   const isFailed = failed === option.model;
@@ -179,8 +194,9 @@ export function PlanOptions({ options, deposit }: { options: PlanOptionView[]; d
           </div>
           <div className={styles.foot}>
             <p className={styles.hint}>
-              Drag to turn it, scroll to zoom, and use the buttons to step inside or switch day and night. An illustrative model: furniture and
-              finishes are indicative, and dimensions are approximate.
+              Drag to turn it, scroll to zoom, and use the buttons to step inside or switch day and night.
+              {option.script === "lock" && " The switch at the top of the view opens the connecting panel: two homes, or one."} An illustrative
+              model: furniture and finishes are indicative, and dimensions are approximate.
             </p>
             {isReady && (
               <button type="button" className={styles.full} onClick={() => viewerRef.current?.toggleFullscreen?.()}>

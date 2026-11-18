@@ -313,6 +313,12 @@ export const buyerAccount = defineType({
           type: "boolean",
         }),
         defineField({
+          name: "approxSizes",
+          title: "Sizes are estimates",
+          description: "When on, the plans page shows the sizes rounded, as \"about 161 m²\".",
+          type: "boolean",
+        }),
+        defineField({
           name: "options",
           title: "Plans",
           type: "array",
@@ -338,6 +344,12 @@ export const buyerAccount = defineType({
                       preview: { select: { title: "name", subtitle: "areaSqm" } },
                     }),
                   ],
+                }),
+                defineField({
+                  name: "totalSqm",
+                  title: "Both homes together (m²)",
+                  description: "Optional. Only when it is not simply the sum of the sizes above (e.g. sizes rounded from an estimate).",
+                  type: "number",
                 }),
                 defineField({ name: "listPriceUSD", title: "List price (US$)", type: "number" }),
                 defineField({ name: "priceUSD", title: "The buyer's price (US$)", type: "number", validation: (rule) => rule.required() }),

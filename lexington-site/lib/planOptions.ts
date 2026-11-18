@@ -1,10 +1,16 @@
 import { MODELS } from "@/lib/models3d";
 import type { BuyerAccount, PlanOption, PlanPick } from "@/lib/sanity/buyersTypes";
 
-// The 3D models in /public/3d/offer4f.iife.js, and each one's picture from straight above.
-export const PLAN_MODELS: Record<string, { poster: string }> = {
-  u4g1: { poster: "/3d/u4g1-plan.jpg" },
-  u4g2: { poster: "/3d/u4g2-plan.jpg" },
+// The 3D models a plans page can show, each one's picture from straight above, and the script it is in: /public/3d/offer4f.iife.js
+// (Guyman's two plans, 12 Nov 2026) or /public/3d/offerlock.iife.js (Armstrong's 5th-floor lock-off in three sizes, 18 Nov 2026:
+// two homes that open into one through a connecting panel; that script adds the panel's switch to the view).
+export type PlanScript = "offer4f" | "lock";
+export const PLAN_MODELS: Record<string, { poster: string; script: PlanScript }> = {
+  u4g1: { poster: "/3d/u4g1-plan.jpg", script: "offer4f" },
+  u4g2: { poster: "/3d/u4g2-plan.jpg", script: "offer4f" },
+  u5la: { poster: "/3d/u5la-plan.jpg", script: "lock" },
+  u5lb: { poster: "/3d/u5lb-plan.jpg", script: "lock" },
+  u5lc: { poster: "/3d/u5lc-plan.jpg", script: "lock" },
 };
 
 // The 3D models in /public/3d/offerpick.iife.js (homes a buyer picks from), and each one's picture from straight above.
