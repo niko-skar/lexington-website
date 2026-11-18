@@ -17,7 +17,7 @@ import styles from "./Penthouse3D.module.css";
 // The script's address and its version number are in lib/models3d.ts (SITE_VIEWER_SRC): bump the number THERE after the
 // script is rebuilt, so browsers fetch the new one (a buyer's homes to pick from load the same script).
 const VIEWER_SRC = SITE_VIEWER_SRC;
-const POSTER_SRC = "/3d/ph2b-poster.jpg";
+const POSTER_SRC = "/3d/ph2b-poster.jpg?v=2"; // v2 (18 Nov 2026): PH2b's new layout
 
 // The units with a 3D model live in lib/models3d.ts (the server reads the same list).
 export { has3DModel, type PlanLevel } from "@/lib/models3d";
