@@ -19,35 +19,64 @@ import { opensRollcall } from "@/lib/rollcall/shared";
 import type { OpenArrival } from "@/lib/store/deliveries";
 import type { StoreData, StoreItem } from "@/lib/store/shared";
 import { FINANCE_SECTIONS, isFinance, PAGE_SECTIONS, sectionHref, type FinanceSection, type PageSection, type TodoList, type TodoMe, type TodoTask } from "@/lib/todo/shared";
-import { AlertsApp } from "./AlertsApp";
-import { AnalysisApp } from "./AnalysisApp";
 import { send, startPolling } from "./api";
 import type { AsBuiltData } from "./AsBuiltPart";
 import type { UpdatesData } from "./UpdatesPart";
-import { BuyersApp } from "./BuyersApp";
-import { CashflowApp } from "./CashflowApp";
-import { ConcreteApp } from "./ConcreteApp";
-import { Dashboard } from "./Dashboard";
+import { Dashboard, type FirstHome } from "./Dashboard";
 import type { ExpensePrefill } from "./ExpenseForm";
-import { ExpensesApp } from "./ExpensesApp";
-import { OrdersApp } from "./OrdersApp";
 import { usePhoneAlerts } from "./PhoneAlerts";
 import { onUploads, resumeUploads, waitingUploads } from "./photoQueue";
-import { RollcallPart, rollcallTabOf, type RollcallTab } from "./RollcallPart";
+import { rollcallTabOf, type RollcallTab } from "./rollcallTab";
 import { appClass, FinanceTabs, SiteNav, type NavItem, type View } from "./SiteChrome";
-import { SpendingApp } from "./SpendingApp";
-import { SteelApp } from "./SteelApp";
-import { StoreApp } from "./StoreApp";
-import { SuppliersApp, type BillPayment, type BillPrefill } from "./SuppliersApp";
-import { TodoApp } from "./TodoApp";
-import { VisitsApp } from "./VisitsApp";
+import type { BillPayment, BillPrefill } from "./SuppliersApp";
 import styles from "./Todo.module.css";
 import { useSheetGestures } from "./useSheetGestures";
 
+// Each part's code is fetched when it is first needed, not all at once when the app opens (18 Nov 2026, Niko: "The app
+// takes forever to load on my phone": the phone used to download and start every part's code, about 1.3 MB, before the
+// home page could show). A page that opens on a part brings that part's code with it; the others' code follows quietly
+// once the first part is on screen (PART_CODE below), so the first tap on them is quick too.
+const AlertsApp = dynamic(() => import("./AlertsApp").then((m) => m.AlertsApp), { loading: () => <Opening /> });
+const AnalysisApp = dynamic(() => import("./AnalysisApp").then((m) => m.AnalysisApp), { loading: () => <Opening /> });
+const BuyersApp = dynamic(() => import("./BuyersApp").then((m) => m.BuyersApp), { loading: () => <Opening /> });
+const CashflowApp = dynamic(() => import("./CashflowApp").then((m) => m.CashflowApp), { loading: () => <Opening /> });
+const ConcreteApp = dynamic(() => import("./ConcreteApp").then((m) => m.ConcreteApp), { loading: () => <Opening /> });
+const ExpensesApp = dynamic(() => import("./ExpensesApp").then((m) => m.ExpensesApp), { loading: () => <Opening /> });
+const OrdersApp = dynamic(() => import("./OrdersApp").then((m) => m.OrdersApp), { loading: () => <Opening /> });
+const RollcallPart = dynamic(() => import("./RollcallPart").then((m) => m.RollcallPart), { loading: () => <Opening /> });
+const SpendingApp = dynamic(() => import("./SpendingApp").then((m) => m.SpendingApp), { loading: () => <Opening /> });
+const SteelApp = dynamic(() => import("./SteelApp").then((m) => m.SteelApp), { loading: () => <Opening /> });
+const StoreApp = dynamic(() => import("./StoreApp").then((m) => m.StoreApp), { loading: () => <Opening /> });
+const SuppliersApp = dynamic(() => import("./SuppliersApp").then((m) => m.SuppliersApp), { loading: () => <Opening /> });
+const TodoApp = dynamic(() => import("./TodoApp").then((m) => m.TodoApp), { loading: () => <Opening /> });
+const VisitsApp = dynamic(() => import("./VisitsApp").then((m) => m.VisitsApp), { loading: () => <Opening /> });
 // The as-built record's screen is big (the plan, its panels): fetched only when the office opens that part. Site updates
 // (the website's progress reporter) too: the office only, now and then.
 const AsBuiltPart = dynamic(() => import("./AsBuiltPart").then((m) => m.AsBuiltPart), { loading: () => null });
 const UpdatesPart = dynamic(() => import("./UpdatesPart").then((m) => m.UpdatesPart), { loading: () => null });
+
+/** While a part's code is still coming (only on a first tap before it arrived quietly). */
+function Opening() {
+  return <p className={styles.loading}>Loading…</p>;
+}
+
+/** Each part's code, fetched quietly after the first part is on screen (the same files the parts above open with). */
+const PART_CODE: Partial<Record<View, () => Promise<unknown>>> = {
+  todo: () => import("./TodoApp"),
+  store: () => import("./StoreApp"),
+  expenses: () => import("./ExpensesApp"),
+  alerts: () => import("./AlertsApp"),
+  concrete: () => import("./ConcreteApp"),
+  buyers: () => import("./BuyersApp"),
+  steel: () => import("./SteelApp"),
+  suppliers: () => import("./SuppliersApp"),
+  spending: () => import("./SpendingApp"),
+  orders: () => import("./OrdersApp"),
+  cashflow: () => import("./CashflowApp"),
+  analysis: () => import("./AnalysisApp"),
+  visits: () => import("./VisitsApp"),
+  rollcall: () => import("./RollcallPart"),
+};
 /** Parts read only when they're opened (not quietly after the app opens): the as-built record is big; Site updates is rare. */
 const ON_OPENING: readonly PageSection[] = ["asbuilt", "updates"];
 
@@ -240,10 +269,13 @@ export function SiteApp({
   openDebit,
   seenAlert,
   startedOffline,
+  firstHome,
 }: {
   me: TodoMe;
   section: View;
   initial: SiteData;
+  /** Opened on the home page: its figures come with the page (app/todo/page.tsx). */
+  firstHome?: FirstHome;
   initialList?: TodoList;
   /** Opened from a phone alert: the alert to show. */
   openAlert?: string;
@@ -301,10 +333,20 @@ export function SiteApp({
     );
   }, [seenAlert, hasAlerts]);
 
-  // The other parts, fetched quietly once the first one is on screen.
+  // The other parts, fetched quietly once the first one is on screen: the home page says when its figures are.
+  const [firstShown, setFirstShown] = useState(first !== "home");
+  const onHomeReady = useCallback(() => setFirstShown(true), []);
   useEffect(() => {
+    if (!firstShown) return;
     let live = true;
     const timer = setTimeout(async () => {
+      // Their code first (small files, one after another), then their figures.
+      for (const s of [...PAGE_SECTIONS, "rollcall" as const]) {
+        const code = PART_CODE[s];
+        if (!live || !code || s === first || !(s === "rollcall" ? opensRollcall(me.sections) : me.sections.includes(s)) || ON_OPENING.includes(s as PageSection)) continue;
+        await code().catch(() => undefined);
+      }
+      if (!live) return;
       // The roll call's page loads in its frame meanwhile, so the first tap on it is instant too.
       if (opensRollcall(me.sections)) setOpened((o) => (o.includes("rollcall") ? o : [...o, "rollcall"]));
       for (const s of PAGE_SECTIONS) {
@@ -323,9 +365,9 @@ export function SiteApp({
       live = false;
       clearTimeout(timer);
     };
-    // Once per app start.
+    // Once per app start, when the first part is on screen.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [firstShown]);
 
   const go = useCallback(
     (item: NavItem, push = true) => {
@@ -411,6 +453,8 @@ export function SiteApp({
           <Dashboard
             me={me}
             active={section === "home"}
+            firstHome={first === "home" ? firstHome : undefined}
+            onReady={onHomeReady}
             onGo={go}
             onRollcall={(tab) => {
               setRcAsk({ tab, at: Date.now() });

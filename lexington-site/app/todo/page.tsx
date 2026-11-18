@@ -2,7 +2,9 @@ import { redirect } from "next/navigation";
 
 import { SiteApp } from "@/components/todo/SiteApp";
 import { TodoSignIn } from "@/components/todo/TodoSignIn";
+import { getDashboard } from "@/lib/dashboard/server";
 import { opensRollcall } from "@/lib/rollcall/shared";
+import { ghanaDay } from "@/lib/store/shared";
 import { getTodoUser } from "@/lib/todo/server";
 import { isPageSection, sectionHref } from "@/lib/todo/shared";
 
@@ -28,5 +30,9 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   if (!pages.length && rollcall) redirect("/todo/rollcall");
   if (pages.length === 1 && !rollcall) redirect(sectionHref(pages[0]));
   if (!pages.length) return <p style={{ padding: 24 }}>This login doesn&rsquo;t open anything yet. Ask the office.</p>;
-  return <SiteApp me={me} section="home" initial={{}} startedOffline={false} />;
+  // The tiles' figures come with the page (18 Nov 2026, Niko: "The app takes forever to load on my phone"): the page
+  // starts at once and the figures follow in the same answer, instead of the phone asking for them once its code has
+  // started. A failure here just leaves the phone to ask, as before.
+  const figures = getDashboard(me).catch(() => null);
+  return <SiteApp me={me} section="home" initial={{}} firstHome={{ today: ghanaDay(), figures }} startedOffline={false} />;
 }

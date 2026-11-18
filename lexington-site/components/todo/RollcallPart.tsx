@@ -6,6 +6,7 @@ import { rollcallAccess } from "@/lib/rollcall/shared";
 import { ghanaDay } from "@/lib/store/shared";
 import type { TodoMe } from "@/lib/todo/shared";
 import { AccessSheet } from "./AccessSheet";
+import { isRollcallTab as isTab, type RollcallTab } from "./rollcallTab";
 import rc from "./Rollcall.module.css";
 import { SiteHeader, SiteMenu } from "./SiteChrome";
 import styles from "./Todo.module.css";
@@ -16,14 +17,8 @@ import styles from "./Todo.module.css";
 // Today · Payday · Workers as the header's tabs like the store's, in the app's fonts and colours (the page borrows
 // them), and stays loaded while another part is on screen, so coming back to it is instant.
 
-export type RollcallTab = "today" | "week" | "workers";
+export type { RollcallTab } from "./rollcallTab";
 const TAB_NAMES: Record<RollcallTab, string> = { today: "Today", week: "Payday", workers: "Workers" };
-const isTab = (v: unknown): v is RollcallTab => v === "today" || v === "week" || v === "workers";
-/** The tab an address asks for: /todo/rollcall#week is Payday. */
-export const rollcallTabOf = (hash: string): RollcallTab | null => {
-  const t = hash.replace(/^#/, "");
-  return isTab(t) ? t : null;
-};
 const longDay = (day: string) => new Date(`${day}T12:00:00Z`).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short", timeZone: "UTC" });
 
 export function RollcallPart({

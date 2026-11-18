@@ -1,11 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, use, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
 import type { DashboardData, SlotCount } from "@/lib/dashboard/server";
 import { isPageSection, sectionHref, type Section, type TodoMe } from "@/lib/todo/shared";
 import { AccessSheet } from "./AccessSheet";
-import type { RollcallTab } from "./RollcallPart";
+import type { RollcallTab } from "./rollcallTab";
 import { startPolling } from "./api";
 import home from "./Dashboard.module.css";
 import { SiteHeader, SiteMenu, type View } from "./SiteChrome";
@@ -254,6 +254,19 @@ function tiles(d: DashboardData, unread: number): Tile[] {
   return out;
 }
 
+/** The home page's figures as the page brings them (app/todo/page.tsx): today's date, and the figures on their way. */
+export interface FirstHome {
+  today: string;
+  figures: Promise<DashboardData | null>;
+}
+
+/** The figures that came with the page: waits for them ("Loading…" meanwhile), shows them, and hands them over. */
+function FromPage({ figures, show, onFigures }: { figures: Promise<DashboardData | null>; show: (d: DashboardData) => ReactNode; onFigures: (d: DashboardData | null) => void }) {
+  const d = use(figures);
+  useEffect(() => onFigures(d), [d, onFigures]);
+  return d ? show(d) : <p className={styles.loading}>Loading…</p>;
+}
+
 export function Dashboard({
   me,
   active,
@@ -261,9 +274,15 @@ export function Dashboard({
   onRollcall,
   onStoreTab,
   unread,
+  firstHome,
+  onReady,
 }: {
   me: TodoMe;
   active: boolean;
+  /** Opened on the home page: its figures come with the page (18 Nov 2026: the app was slow to open on a phone). */
+  firstHome?: FirstHome;
+  /** The figures are on screen: the app then loads its other parts quietly. */
+  onReady?: () => void;
   onGo: (view: View) => void;
   /** The roll call's tiles open it in the app, on their tab. */
   onRollcall: (tab: RollcallTab) => void;
@@ -291,9 +310,12 @@ export function Dashboard({
     }
   }, []);
 
+  // The page brought the first figures: no need to ask again the moment it opens (only when coming back to it).
+  const pageBrought = useRef(Boolean(firstHome));
   useEffect(() => {
     if (!active) return;
-    const first = setTimeout(() => void refresh(), 0);
+    const first = pageBrought.current ? undefined : setTimeout(() => void refresh(), 0);
+    pageBrought.current = false;
     const stop = startPolling(refresh, 30_000, 120_000);
     return () => {
       clearTimeout(first);
@@ -301,23 +323,25 @@ export function Dashboard({
     };
   }, [active, refresh]);
 
-  const list = data ? tiles(data, data.alerts ? unread : 0) : [];
+  // Once the figures are on screen, the app may load its other parts.
+  const told = useRef(false);
+  useEffect(() => {
+    if (!data || told.current) return;
+    told.current = true;
+    onReady?.();
+  }, [data, onReady]);
+  const fromPage = useCallback(
+    (d: DashboardData | null) => {
+      if (d) setData((now) => now ?? d);
+      else void refresh(); // the page couldn't bring them: ask now
+    },
+    [refresh]
+  );
 
-  return (
-    <>
-      <SiteHeader eyebrow="The Lexington" title={data ? longDay(data.today) : "Today"} sub={`Hello, ${me.name.split(" ")[0]}`} onMenu={() => setMenuOpen(true)} />
-      {offline && (
-        <div className={styles.banner} role="status">
-          No signal: the figures will come when it&rsquo;s back.
-        </div>
-      )}
-      <main className={styles.main}>
-        {!data ? (
-          <p className={styles.loading}>Loading…</p>
-        ) : (
-          <div className={home.tiles}>
-            {/* Every part opens here at once; the roll call's tiles on their tab. */}
-            {list.map((t) => (
+  const showTiles = (d: DashboardData) => (
+    <div className={home.tiles}>
+      {/* Every part opens here at once; the roll call's tiles on their tab. */}
+      {tiles(d, d.alerts ? unread : 0).map((t) => (
               <a
                 key={t.key ?? t.section}
                 href={`${sectionHref(t.section)}${t.tab ? `#${t.tab}` : ""}`}
@@ -341,7 +365,31 @@ export function Dashboard({
                 {t.small && <span className={home.small}>{t.small}</span>}
               </a>
             ))}
-          </div>
+    </div>
+  );
+
+  return (
+    <>
+      <SiteHeader
+        eyebrow="The Lexington"
+        title={data ? longDay(data.today) : firstHome ? longDay(firstHome.today) : "Today"}
+        sub={`Hello, ${me.name.split(" ")[0]}`}
+        onMenu={() => setMenuOpen(true)}
+      />
+      {offline && (
+        <div className={styles.banner} role="status">
+          No signal: the figures will come when it&rsquo;s back.
+        </div>
+      )}
+      <main className={styles.main}>
+        {data ? (
+          showTiles(data)
+        ) : firstHome ? (
+          <Suspense fallback={<p className={styles.loading}>Loading…</p>}>
+            <FromPage figures={firstHome.figures} show={showTiles} onFigures={fromPage} />
+          </Suspense>
+        ) : (
+          <p className={styles.loading}>Loading…</p>
         )}
       </main>
       {menuOpen && <SiteMenu me={me} onClose={() => setMenuOpen(false)} onRefresh={() => void refresh()} onLogins={() => setAccessOpen(true)} />}
