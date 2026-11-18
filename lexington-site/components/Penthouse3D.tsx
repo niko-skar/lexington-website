@@ -6,6 +6,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { pushEvent } from "@/lib/analytics";
 import { formatArea } from "@/lib/area";
 import { MODELS, SITE_VIEWER_SRC, type PlanLevel } from "@/lib/models3d";
+import { attachViewerKeys } from "@/lib/viewerKeys";
 import { useAreaUnit } from "./useAreaUnit";
 import { Reveal } from "./Reveal";
 import { useDialog } from "./useDialog";
@@ -108,6 +109,7 @@ export function Penthouse3DModal({ onClose }: { onClose: () => void }) {
     host.className = styles.host;
     stage.appendChild(host);
     let viewer: Viewer | null = null;
+    let detachKeys: (() => void) | null = null;
     let cancelled = false;
 
     loadViewer()
@@ -125,7 +127,10 @@ export function Penthouse3DModal({ onClose }: { onClose: () => void }) {
       )
       .then((v) => {
         if (cancelled) v.dispose();
-        else viewer = v;
+        else {
+          viewer = v;
+          detachKeys = attachViewerKeys(host, v, { always: true }); // full screen: the keys always move it
+        }
       })
       .catch(() => {
         if (!cancelled) setFailed(true);
@@ -133,6 +138,7 @@ export function Penthouse3DModal({ onClose }: { onClose: () => void }) {
 
     return () => {
       cancelled = true;
+      detachKeys?.();
       viewer?.dispose();
       host.remove();
     };
@@ -186,6 +192,7 @@ export function Unit3DPlan({ unitNumber, startLevel }: { unitNumber: string; sta
     live.appendChild(host);
     let cancelled = false;
     let errored = false;
+    let detachKeys: (() => void) | null = null;
     track("plan_open", unitNumber);
 
     loadViewer()
@@ -212,6 +219,7 @@ export function Unit3DPlan({ unitNumber, startLevel }: { unitNumber: string; sta
           return;
         }
         viewerRef.current = v;
+        detachKeys = attachViewerKeys(host, v);
         if (errored) setPhase("failed");
         else {
           setPhase("ready");
@@ -224,6 +232,7 @@ export function Unit3DPlan({ unitNumber, startLevel }: { unitNumber: string; sta
 
     return () => {
       cancelled = true;
+      detachKeys?.();
       viewerRef.current?.dispose();
       viewerRef.current = null;
       host.remove();

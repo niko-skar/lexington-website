@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { formatUSD } from "@/lib/format";
+import { attachViewerKeys } from "@/lib/viewerKeys";
 import styles from "./PlanOptions.module.css";
 
 // The plans a buyer is choosing between, each as a 3D model (Niko, 12 Nov 2026). The models are one self-contained
@@ -97,6 +98,7 @@ export function PlanOptions({ options, deposit }: { options: PlanOptionView[]; d
     live.appendChild(host);
     let cancelled = false;
     let errored = false;
+    let detachKeys: (() => void) | null = null;
 
     loadViewer()
       .then((api) =>
@@ -118,6 +120,7 @@ export function PlanOptions({ options, deposit }: { options: PlanOptionView[]; d
           return;
         }
         viewerRef.current = v;
+        detachKeys = attachViewerKeys(host, v);
         if (errored) setFailed(option.model);
         else setReady(option.model);
       })
@@ -127,6 +130,7 @@ export function PlanOptions({ options, deposit }: { options: PlanOptionView[]; d
 
     return () => {
       cancelled = true;
+      detachKeys?.();
       viewerRef.current?.dispose();
       viewerRef.current = null;
       host.remove();

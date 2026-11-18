@@ -6,6 +6,7 @@ import { confirmPlanPicksAction } from "@/lib/actions/planPicks";
 import { formatUSD } from "@/lib/format";
 import { SITE_VIEWER_SRC } from "@/lib/models3d";
 import { portalDay, type PickConfirmView, type PickViewer, type PlanPickView } from "@/lib/planOptions";
+import { attachViewerKeys } from "@/lib/viewerKeys";
 import po from "./PlanOptions.module.css";
 import styles from "./PlanPicker.module.css";
 
@@ -105,6 +106,7 @@ export function PlanPicker({ picks, viewer = "pick", confirm = null }: { picks: 
     live.appendChild(host);
     let cancelled = false;
     let errored = false;
+    let detachKeys: (() => void) | null = null;
 
     loadViewer(viewer)
       .then((api) =>
@@ -126,6 +128,7 @@ export function PlanPicker({ picks, viewer = "pick", confirm = null }: { picks: 
           return;
         }
         viewerRef.current = v;
+        detachKeys = attachViewerKeys(host, v);
         if (errored) setFailed(viewing.model);
         else setReady(viewing.model);
       })
@@ -135,6 +138,7 @@ export function PlanPicker({ picks, viewer = "pick", confirm = null }: { picks: 
 
     return () => {
       cancelled = true;
+      detachKeys?.();
       viewerRef.current?.dispose();
       viewerRef.current = null;
       host.remove();
