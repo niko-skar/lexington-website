@@ -296,7 +296,7 @@
   inset: 0;
   z-index: 300;
   /* the picture from the page stays behind while the 3D view downloads and starts */
-  background: linear-gradient(rgba(16, 19, 28, 0.55), rgba(16, 19, 28, 0.55)), #10131c url("/3d/ph2b-poster.jpg?v=2") center / cover no-repeat;
+  background: linear-gradient(rgba(16, 19, 28, 0.55), rgba(16, 19, 28, 0.55)), #10131c url("/3d/ph2b-poster-v2.jpg") center / cover no-repeat;
 }
 
 .stage {
