@@ -5,10 +5,10 @@ import { TodoError, errorResponse, readJson, requireTodoUser } from "@/lib/todo/
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-/** GET /api/site-visits: the visits (today on, and the last 30 days), the hours blocked and the hours open. The office only. */
+/** GET /api/site-visits: the visits (today on, and the last 30 days), the hours blocked and the hours open. The office, and a login with Customers (19 Nov 2026). */
 export async function GET(): Promise<Response> {
   try {
-    await requireTodoUser(true, "visits");
+    await requireTodoUser(false, "visits");
     return Response.json(await listVisits(), { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     return errorResponse(error);
@@ -19,7 +19,7 @@ const str = (v: unknown, max = 200) => (typeof v === "string" ? v.trim().slice(0
 const slots = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string" && SLOT_RE.test(x)).slice(0, 200) : []);
 
 /**
- * POST /api/site-visits { action, ... }, the office only:
+ * POST /api/site-visits { action, ... }, the office and a login with Customers:
  * - "came" / "missed" { id }: after the visit ("missed" emails them to pick another time);
  * - "cancel" { id }: lets the hour go and tells them;
  * - "move" { id, slot }: a new time (they are told);
@@ -29,7 +29,7 @@ const slots = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => t
  */
 export async function POST(request: Request): Promise<Response> {
   try {
-    await requireTodoUser(true, "visits");
+    await requireTodoUser(false, "visits");
     const body = await readJson(request);
     const action = str(body.action, 20);
     const id = str(body.id, 40);

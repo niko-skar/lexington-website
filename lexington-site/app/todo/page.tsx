@@ -6,7 +6,7 @@ import { getDashboard } from "@/lib/dashboard/server";
 import { opensRollcall } from "@/lib/rollcall/shared";
 import { ghanaDay } from "@/lib/store/shared";
 import { getTodoUser } from "@/lib/todo/server";
-import { isPageSection, sectionHref } from "@/lib/todo/shared";
+import { isCustomers, isFinance, isPageSection, sectionHref } from "@/lib/todo/shared";
 
 export const dynamic = "force-dynamic";
 
@@ -24,11 +24,13 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     const query = new URLSearchParams(Object.entries(params).flatMap(([k, v]) => (typeof v === "string" ? [[k, v]] : [])));
     redirect(`/todo/jobs?${query}`);
   }
-  // A login that opens one thing goes straight there (a storekeeper to the store, the roll call clerk to the roll call).
+  // A login that opens one thing goes straight there (a storekeeper to the store, the roll call clerk to the roll call,
+  // someone in sales to Customers: its two tabs, the prospects and the site visits, are one place on the bar).
   const pages = me.sections.filter(isPageSection);
   const rollcall = opensRollcall(me.sections);
+  const places = new Set(pages.map((p) => (isCustomers(p) ? "customers" : isFinance(p) ? "finance" : p)));
   if (!pages.length && rollcall) redirect("/todo/rollcall");
-  if (pages.length === 1 && !rollcall) redirect(sectionHref(pages[0]));
+  if (places.size === 1 && !rollcall) redirect(sectionHref(pages[0]));
   if (!pages.length) return <p style={{ padding: 24 }}>This login doesn&rsquo;t open anything yet. Ask the office.</p>;
   // The tiles' figures come with the page (18 Nov 2026, Niko: "The app takes forever to load on my phone"): the page
   // starts at once and the figures follow in the same answer, instead of the phone asking for them once its code has

@@ -2,12 +2,24 @@
 
 import { useEffect, useState } from "react";
 
-import { SITE_SECTIONS, type SiteAccount, type SiteSection } from "@/lib/todo/shared";
+import { isCustomers, SITE_SECTIONS, withCustomersTogether, type SiteAccount, type SiteSection } from "@/lib/todo/shared";
 import styles from "./Todo.module.css";
 
 const APP_ADDRESS = "https://www.lexington.com.gh/todo";
 
-const PART: Record<SiteSection, string> = { todo: "To-do list", store: "Store room", rollcall: "Roll call", payday: "Payday", workers: "Workers", concrete: "Concrete" };
+// Customers is one tick for its two parts, the prospects (the CRM) and the site visits (19 Nov 2026, Niko: "Make me a
+// login for Rahma where she can access our ERP but only access the CRM system").
+const CHIPS: readonly SiteSection[] = SITE_SECTIONS.filter((s) => s !== "visits");
+const PART: Record<SiteSection, string> = {
+  todo: "To-do list",
+  store: "Store room",
+  rollcall: "Roll call",
+  payday: "Payday",
+  workers: "Workers",
+  concrete: "Concrete",
+  prospects: "Customers",
+  visits: "Customers",
+};
 // What each part is for, in the message the office sends with the login.
 const HOW: Record<SiteSection, string> = {
   todo: "To-do: tick each job when it's done, and add a photo of the fix if you can.",
@@ -16,17 +28,22 @@ const HOW: Record<SiteSection, string> = {
   payday: "Payday: record each payment as you make it.",
   workers: "Workers: add a new worker with their numbers and ID photo.",
   concrete: "Concrete: when a concrete truck arrives, tap Truck arrived and photo its waybill; add the slump and cubes after the test.",
+  prospects: "Customers: Prospects shows who is waiting for a reply and what happens next with each person (tap Done when a step is done, add a note after each call); Site visits shows who is coming to see the site.",
+  visits: "",
 };
 
 function message(name: string, email: string, password: string, sections: SiteSection[]) {
-  const what = sections.map((s) => PART[s].toLowerCase()).join(", ").replace(/, ([^,]*)$/, " and $1");
+  const what = CHIPS.filter((s) => sections.includes(s))
+    .map((s) => PART[s].toLowerCase())
+    .join(", ")
+    .replace(/, ([^,]*)$/, " and $1");
   return [
-    `Hi ${name.split(" ")[0]}, this is the Lexington site app (${what}).`,
+    `Hi ${name.split(" ")[0]}, this is the Lexington app (${what}).`,
     `Open: ${APP_ADDRESS}`,
     `${email.includes("@") ? "Email" : "Username"}: ${email}`,
     `Password: ${password}`,
     "Then in Chrome tap ⋮ and Add to Home screen (or Install app) so it opens like an app.",
-    ...SITE_SECTIONS.filter((s) => sections.includes(s)).map((s) => HOW[s]),
+    ...CHIPS.filter((s) => sections.includes(s)).map((s) => HOW[s]),
   ].join("\n");
 }
 
@@ -46,16 +63,25 @@ async function call(method: string, body?: unknown, query = "") {
 function Parts({ value, onChange, disabled }: { value: SiteSection[]; onChange: (next: SiteSection[]) => void; disabled?: boolean }) {
   return (
     <div className={styles.chips}>
-      {SITE_SECTIONS.map((section) => {
+      {CHIPS.map((section) => {
         const on = value.includes(section);
+        const chips = CHIPS.filter((s) => value.includes(s));
         return (
           <button
             key={section}
             type="button"
             className={on ? styles.chipOn : styles.chip}
             aria-pressed={on}
-            disabled={disabled || (on && value.length === 1)}
-            onClick={() => onChange(on ? value.filter((s) => s !== section) : SITE_SECTIONS.filter((s) => s === section || value.includes(s)))}
+            disabled={disabled || (on && chips.length === 1)}
+            onClick={() =>
+              onChange(
+                withCustomersTogether(
+                  on
+                    ? value.filter((s) => s !== section && !(isCustomers(section) && isCustomers(s)))
+                    : SITE_SECTIONS.filter((s) => s === section || value.includes(s))
+                )
+              )
+            }
           >
             {on ? "✓ " : ""}
             {PART[section]}
@@ -158,9 +184,10 @@ export function AccessSheet({ onClose }: { onClose: () => void }) {
       <div className={styles.sheet} role="dialog" aria-label="Site logins">
         <h2 className={styles.sheetTitle}>Site logins</h2>
         <p className={styles.sheetNote}>
-          These logins open only what is ticked: the to-do list, the store room (never prices), and the roll call&rsquo;s three parts: Roll call
-          (marking), Payday (wages and payments) and Workers (names, numbers, ID photos). Without Payday a login never sees an amount. Only the
-          office sees the expenses and the alerts.
+          These logins open only what is ticked: the to-do list, the store room (never prices), the roll call&rsquo;s three parts: Roll call
+          (marking), Payday (wages and payments) and Workers (names, numbers, ID photos), and Customers (the prospects and the site visits;
+          everything but making buyer logins and deleting a prospect). Without Payday a login never sees an amount. Only the office sees the
+          expenses and the alerts.
         </p>
 
         {result && (

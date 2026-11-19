@@ -15,6 +15,8 @@ export interface LeadNote {
   at: string;
   kind: "note" | "stage" | "system";
   text: string;
+  /** Who wrote it, when it wasn't the office (a login of the app with Customers, 19 Nov 2026). */
+  by?: string;
 }
 
 /** The lead responder's suggested reply, kept on the prospect until it is sent or put aside. */

@@ -1,11 +1,11 @@
 "use client";
 
-import Link from "next/link";
 import { useOptimistic, useTransition } from "react";
 
 import { BOARD_STAGES, dueLabel, dueState, stageLabel } from "@/lib/crm";
 import type { Lead } from "@/lib/sanity/crmTypes";
 import styles from "./Crm.module.css";
+import { LeadLink, ListLink, useCrmHost } from "./CrmHost";
 import { saveStage } from "./StageSelect";
 import { useToast } from "./Toasts";
 import { aboutLine, nextTaskOf } from "./data";
@@ -31,6 +31,7 @@ export function PipelineBoard({ leads, today }: { leads: Lead[]; today: string }
   );
   const [, startTransition] = useTransition();
   const toast = useToast();
+  const host = useCrmHost();
   const lostCount = shown.filter((l) => l.stage === "lost").length;
 
   function go(lead: Lead, stage: string) {
@@ -38,12 +39,12 @@ export function PipelineBoard({ leads, today }: { leads: Lead[]; today: string }
     startTransition(async () => {
       move({ id: lead._id, stage });
       try {
-        await saveStage(lead._id, stage, from);
+        await saveStage(host, lead._id, stage, from);
       } catch {
         window.alert("Couldn't move that prospect. Please try again.");
       }
     });
-    toast.show(`${lead.name}: moved to ${stageLabel(stage)}`, () => saveStage(lead._id, from, stage));
+    toast.show(`${lead.name}: moved to ${stageLabel(stage)}`, () => saveStage(host, lead._id, from, stage));
   }
 
   return (
@@ -70,9 +71,9 @@ export function PipelineBoard({ leads, today }: { leads: Lead[]; today: string }
                   const about = aboutLine(lead);
                   return (
                     <div key={lead._id} className={styles.card}>
-                      <Link href={`/admin/crm/${lead._id}`} className={styles.cardName}>
+                      <LeadLink id={lead._id} className={styles.cardName}>
                         {lead.name}
-                      </Link>
+                      </LeadLink>
                       {about && <div className={styles.cardSub}>{about}</div>}
                       {task ? (
                         <div className={styles.cardTask}>
@@ -121,9 +122,9 @@ export function PipelineBoard({ leads, today }: { leads: Lead[]; today: string }
         })}
       </div>
       {lostCount > 0 && (
-        <Link href="/admin/crm?view=all&stage=lost" className={styles.lostLink}>
+        <ListLink to={{ view: "all", stage: "lost" }} className={styles.lostLink}>
           Lost ({lostCount})
-        </Link>
+        </ListLink>
       )}
     </>
   );

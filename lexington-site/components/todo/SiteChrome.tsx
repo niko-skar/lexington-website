@@ -5,17 +5,29 @@ import { useLayoutEffect, useRef } from "react";
 
 import { todoSignOutAction } from "@/lib/actions/todo";
 import { opensRollcall } from "@/lib/rollcall/shared";
-import { FINANCE_SECTIONS, isFinance, PAGE_SECTIONS, sectionHref, sectionName, type FinanceSection, type PageSection, type TodoMe } from "@/lib/todo/shared";
+import {
+  CUSTOMER_SECTIONS,
+  FINANCE_SECTIONS,
+  isCustomers,
+  isFinance,
+  PAGE_SECTIONS,
+  sectionHref,
+  sectionName,
+  type CustomerSection,
+  type FinanceSection,
+  type PageSection,
+  type TodoMe,
+} from "@/lib/todo/shared";
 import styles from "./Todo.module.css";
 
 // What every part of the site app shares: its header, the bar at the bottom (Home, then the parts this
-// login opens: To-do · Store · Finance · Concrete · Steel · Roll call, Alerts last; on a laptop a rail
-// down the left with every part, Alerts at its bottom), Finance's tabs and the ☰ menu.
+// login opens: To-do · Store · Customers · Finance · Concrete · Steel · Roll call, Alerts last; on a laptop a rail
+// down the left with every part, Alerts at its bottom), Finance's and Customers' tabs and the ☰ menu.
 
 /** Where the bar can go: the home page, a part drawn in this page, or the roll call (its page in the app's frame). */
 export type View = PageSection | "home" | "rollcall";
-/** Finance is one place on the bar for its parts (5 Nov 2026): it opens the one used last. */
-export type NavItem = View | "finance";
+/** Finance is one place on the bar for its parts (5 Nov 2026), and so is Customers (19 Nov 2026): each opens the one used last. */
+export type NavItem = View | "finance" | "customers";
 
 const ICONS: Record<NavItem, React.ReactNode> = {
   finance: (
@@ -72,6 +84,21 @@ const ICONS: Record<NavItem, React.ReactNode> = {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M3.5 16.5L16.5 3.5M7.5 20.5L20.5 7.5" />
       <path d="M5 13l6 6M9 9l6 6M13 5l6 6" />
+    </svg>
+  ),
+  // A contact card: the people buying (or thinking of it), the prospects and their site visits.
+  customers: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <circle cx="9" cy="11" r="2.3" />
+      <path d="M5.6 16.5c.6-1.9 1.9-2.9 3.4-2.9s2.8 1 3.4 2.9M14.5 10h4M14.5 13.5h3" />
+    </svg>
+  ),
+  prospects: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <circle cx="9" cy="11" r="2.3" />
+      <path d="M5.6 16.5c.6-1.9 1.9-2.9 3.4-2.9s2.8 1 3.4 2.9M14.5 10h4M14.5 13.5h3" />
     </svg>
   ),
   // A calendar page: the site visits booked.
@@ -148,12 +175,15 @@ const NOW_AND_THEN: readonly NavItem[] = ["concrete", "steel", "asbuilt", "updat
 type NavEntry = { item: NavItem; laptopOnly: boolean };
 const navItems = (me: TodoMe): NavEntry[] => {
   // Alerts last: the end of a phone's bar, the very bottom of a laptop's rail (Niko, 2 Nov 2026). The money parts
-  // are one item, Finance, where Expenses was (5 Nov 2026).
+  // are one item, Finance, where Expenses was (5 Nov 2026); the prospects and the site visits one, Customers, where
+  // Visits was (19 Nov 2026).
   const parts: NavItem[] = [];
   for (const s of PAGE_SECTIONS) {
     if (s === "alerts" || !me.sections.includes(s)) continue;
     if (isFinance(s)) {
       if (!parts.includes("finance")) parts.push("finance");
+    } else if (isCustomers(s)) {
+      if (!parts.includes("customers")) parts.push("customers");
     } else parts.push(s);
   }
   if (opensRollcall(me.sections)) parts.push("rollcall");
@@ -165,12 +195,33 @@ const navItems = (me: TodoMe): NavEntry[] => {
   return all.map((item) => ({ item, laptopOnly: crowded && NOW_AND_THEN.includes(item) }));
 };
 const firstFinance = (me: TodoMe): FinanceSection => FINANCE_SECTIONS.find((s) => me.sections.includes(s)) ?? "expenses";
-const navName = (item: NavItem) => (item === "home" ? "Home" : item === "rollcall" ? "Roll call" : item === "finance" ? "Finance" : sectionName(item));
+const firstCustomers = (me: TodoMe): CustomerSection => CUSTOMER_SECTIONS.find((s) => me.sections.includes(s)) ?? "prospects";
+const navName = (item: NavItem) =>
+  item === "home" ? "Home" : item === "rollcall" ? "Roll call" : item === "finance" ? "Finance" : item === "customers" ? "Customers" : sectionName(item);
 const navHref = (item: NavItem, me: TodoMe) =>
-  item === "home" ? "/todo" : item === "rollcall" ? "/todo/rollcall" : item === "finance" ? sectionHref(firstFinance(me)) : sectionHref(item);
+  item === "home"
+    ? "/todo"
+    : item === "rollcall"
+      ? "/todo/rollcall"
+      : item === "finance"
+        ? sectionHref(firstFinance(me))
+        : item === "customers"
+          ? sectionHref(firstCustomers(me))
+          : sectionHref(item);
 
 /** Finance's tabs, under its header: one row that slides sideways on a phone, the tab on screen kept in view. */
 export function FinanceTabs({ me, current, onGo }: { me: TodoMe; current: FinanceSection; onGo: (view: View) => void }) {
+  return <GroupTabs label="Finance" sections={FINANCE_SECTIONS.filter((s) => me.sections.includes(s))} current={current} onGo={onGo} />;
+}
+
+/** Customers' tabs (19 Nov 2026): Prospects and Site visits, under each one's header (none for a login with only one). */
+export function CustomerTabs({ me, current, onGo }: { me: TodoMe; current: CustomerSection; onGo: (view: View) => void }) {
+  const sections = CUSTOMER_SECTIONS.filter((s) => me.sections.includes(s));
+  return sections.length < 2 ? null : <GroupTabs label="Customers" sections={sections} current={current} onGo={onGo} />;
+}
+
+/** A bar item's parts as tabs. */
+function GroupTabs({ label, sections, current, onGo }: { label: string; sections: readonly PageSection[]; current: PageSection; onGo: (view: View) => void }) {
   const row = useRef<HTMLElement>(null);
   useLayoutEffect(() => {
     const nav = row.current;
@@ -178,8 +229,8 @@ export function FinanceTabs({ me, current, onGo }: { me: TodoMe; current: Financ
     if (nav && on) nav.scrollLeft = Math.max(0, on.offsetLeft - (nav.clientWidth - on.clientWidth) / 2);
   }, [current]);
   return (
-    <nav ref={row} className={styles.finTabs} aria-label="Finance">
-      {FINANCE_SECTIONS.filter((s) => me.sections.includes(s)).map((s) => (
+    <nav ref={row} className={styles.finTabs} aria-label={label}>
+      {sections.map((s) => (
         <a
           key={s}
           href={sectionHref(s)}
@@ -198,8 +249,10 @@ export function FinanceTabs({ me, current, onGo }: { me: TodoMe; current: Financ
   );
 }
 
+/** Whether this login has the bar (a login that opens one part has none). */
+export const hasNavBar = (me: TodoMe) => navItems(me).length > 1;
 /** The class for the app's outer box: room at the bottom for the bar when there is one. */
-export const appClass = (me: TodoMe) => (navItems(me).length > 1 ? `${styles.app} ${styles.withNav}` : styles.app);
+export const appClass = (me: TodoMe) => (hasNavBar(me) ? `${styles.app} ${styles.withNav}` : styles.app);
 
 /** Each part's header: "Building works", the part's name, a line of counts, the ☰ button, then its tabs. */
 export function SiteHeader({
@@ -250,7 +303,7 @@ export function SiteNav({
   const items = navItems(me);
   if (items.length < 2) return null;
   const onPhone = items.filter((x) => !x.laptopOnly).length;
-  const on = (item: NavItem) => item === current || (item === "finance" && isFinance(current));
+  const on = (item: NavItem) => item === current || (item === "finance" && isFinance(current)) || (item === "customers" && isCustomers(current));
   return (
     <nav className={`${styles.nav} ${onPhone > 5 ? styles.navMany : ""}`} aria-label="Parts of the app">
       <p className={styles.navBrand}>

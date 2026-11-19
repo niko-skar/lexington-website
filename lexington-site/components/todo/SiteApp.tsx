@@ -18,16 +18,33 @@ import type { BookLists } from "@/lib/quickbooks/books";
 import { opensRollcall } from "@/lib/rollcall/shared";
 import type { OpenArrival } from "@/lib/store/deliveries";
 import type { StoreData, StoreItem } from "@/lib/store/shared";
-import { FINANCE_SECTIONS, isFinance, PAGE_SECTIONS, sectionHref, type FinanceSection, type PageSection, type TodoList, type TodoMe, type TodoTask } from "@/lib/todo/shared";
+import type { CrmView } from "@/components/crm/CrmHost";
+import {
+  CUSTOMER_SECTIONS,
+  FINANCE_SECTIONS,
+  isCustomers,
+  isFinance,
+  PAGE_SECTIONS,
+  prospectHref,
+  prospectOfPath,
+  sectionHref,
+  type CustomerSection,
+  type FinanceSection,
+  type PageSection,
+  type TodoList,
+  type TodoMe,
+  type TodoTask,
+} from "@/lib/todo/shared";
 import { send, startPolling } from "./api";
 import type { AsBuiltData } from "./AsBuiltPart";
 import type { UpdatesData } from "./UpdatesPart";
 import { Dashboard, type FirstHome } from "./Dashboard";
 import type { ExpensePrefill } from "./ExpenseForm";
+import type { ProspectsData } from "./ProspectsApp";
 import { usePhoneAlerts } from "./PhoneAlerts";
 import { onUploads, resumeUploads, waitingUploads } from "./photoQueue";
 import { rollcallTabOf, type RollcallTab } from "./rollcallTab";
-import { appClass, FinanceTabs, SiteNav, type NavItem, type View } from "./SiteChrome";
+import { appClass, CustomerTabs, FinanceTabs, SiteNav, type NavItem, type View } from "./SiteChrome";
 import type { BillPayment, BillPrefill } from "./SuppliersApp";
 import styles from "./Todo.module.css";
 import { useSheetGestures } from "./useSheetGestures";
@@ -43,6 +60,7 @@ const CashflowApp = dynamic(() => import("./CashflowApp").then((m) => m.Cashflow
 const ConcreteApp = dynamic(() => import("./ConcreteApp").then((m) => m.ConcreteApp), { loading: () => <Opening /> });
 const ExpensesApp = dynamic(() => import("./ExpensesApp").then((m) => m.ExpensesApp), { loading: () => <Opening /> });
 const OrdersApp = dynamic(() => import("./OrdersApp").then((m) => m.OrdersApp), { loading: () => <Opening /> });
+const ProspectsApp = dynamic(() => import("./ProspectsApp").then((m) => m.ProspectsApp), { loading: () => <Opening /> });
 const RollcallPart = dynamic(() => import("./RollcallPart").then((m) => m.RollcallPart), { loading: () => <Opening /> });
 const SpendingApp = dynamic(() => import("./SpendingApp").then((m) => m.SpendingApp), { loading: () => <Opening /> });
 const SteelApp = dynamic(() => import("./SteelApp").then((m) => m.SteelApp), { loading: () => <Opening /> });
@@ -75,6 +93,7 @@ const PART_CODE: Partial<Record<View, () => Promise<unknown>>> = {
   cashflow: () => import("./CashflowApp"),
   analysis: () => import("./AnalysisApp"),
   visits: () => import("./VisitsApp"),
+  prospects: () => import("./ProspectsApp"),
   rollcall: () => import("./RollcallPart"),
 };
 /** Parts read only when they're opened (not quietly after the app opens): the as-built record is big; Site updates is rare. */
@@ -103,11 +122,14 @@ export type SiteData = {
   asbuilt?: AsBuiltData;
   visits?: VisitsData;
   updates?: UpdatesData;
+  prospects?: ProspectsData;
 };
 
 // Since 30 Oct 2026 the app opens on its home page (/todo) and the to-do list is /todo/jobs.
 const sectionFrom = (path: string): View | null =>
-  path.startsWith("/todo/store")
+  path.startsWith("/todo/customers")
+    ? "prospects"
+    : path.startsWith("/todo/store")
     ? "store"
     : path.startsWith("/todo/expenses")
       ? "expenses"
@@ -164,6 +186,7 @@ async function load(section: PageSection): Promise<SiteData> {
   if (section === "asbuilt") return { asbuilt: await get("/api/asbuilt") };
   if (section === "visits") return { visits: await get("/api/site-visits") };
   if (section === "updates") return { updates: await get("/api/updates") };
+  if (section === "prospects") return { prospects: { list: await get("/api/crm") } };
   const [x, s] = await Promise.all([get("/api/expenses"), get("/api/store")]);
   return { expenses: { expenses: x.expenses, items: s.items, arrivals: s.arrivals, pending: x.pending, books: x.books, bills: x.bills, vendors: x.vendors } };
 }
@@ -307,8 +330,16 @@ export function SiteApp({
   const [orderPayAsk, setOrderPayAsk] = useState<{ prefill: ExpensePrefill; at: number } | null>(null);
   const [supplierAsk, setSupplierAsk] = useState<{ vendorId: string; bill?: BillPrefill; at: number } | null>(null);
   const [orderAsk, setOrderAsk] = useState<{ orderId: string; at: number } | null>(null);
-  // The Finance item on the bar opens the part of it used last.
+  // The Finance item on the bar opens the part of it used last, and so does Customers.
   const lastFinance = useRef<FinanceSection>(isFinance(first) ? first : (FINANCE_SECTIONS.find((s) => me.sections.includes(s)) ?? "expenses"));
+  const lastCustomers = useRef<CustomerSection>(isCustomers(first) ? first : (CUSTOMER_SECTIONS.find((s) => me.sections.includes(s)) ?? "prospects"));
+  // The prospects' own address (a prospect's page, or the list at a tab), for coming back to it; and a prospect or the
+  // list asked for from outside (the back button, a visit's Record, an alert).
+  const prospectsPath = useRef("/todo/customers");
+  const [prospectAsk, setProspectAsk] = useState<{ to: CrmView; at: number } | null>(null);
+  const onProspectsPath = useCallback((path: string) => {
+    prospectsPath.current = path;
+  }, []);
   // The roll call's tab asked for (the address's #week, the home page's Payday tile).
   const [rcAsk, setRcAsk] = useState<{ tab: RollcallTab; at: number } | null>(null);
   useEffect(() => {
@@ -371,9 +402,10 @@ export function SiteApp({
 
   const go = useCallback(
     (item: NavItem, push = true) => {
-      const next: View = item === "finance" ? lastFinance.current : item;
+      const next: View = item === "finance" ? lastFinance.current : item === "customers" ? lastCustomers.current : item;
       if (next !== "home" && !(next === "rollcall" ? opensRollcall(me.sections) : me.sections.includes(next))) return;
       if (isFinance(next)) lastFinance.current = next;
+      if (isCustomers(next)) lastCustomers.current = next;
       if (next === current.current) {
         window.scrollTo({ top: 0, behavior: "smooth" });
         return;
@@ -382,9 +414,19 @@ export function SiteApp({
       current.current = next;
       setSection(next);
       setOpened((o) => (o.includes(next) ? o : [...o, next]));
-      if (push) window.history.pushState(null, "", hrefOf(next));
+      if (push) window.history.pushState(null, "", next === "prospects" ? prospectsPath.current : hrefOf(next));
     },
     [me.sections]
+  );
+
+  // A prospect's page, opened from another part (a visit's Record, an alert).
+  const openProspect = useCallback(
+    (id: string) => {
+      prospectsPath.current = prospectHref(id);
+      setProspectAsk({ to: { id }, at: Date.now() });
+      go("prospects");
+    },
+    [go]
   );
 
   // Each part comes back where it was left.
@@ -400,6 +442,10 @@ export function SiteApp({
       const tab = s === "rollcall" ? rollcallTabOf(window.location.hash) : null;
       if (tab) setRcAsk({ tab, at: Date.now() });
       if (s === "store" && window.location.hash === "#buy") setStoreAsk({ tab: "buy", at: Date.now() });
+      if (s === "prospects") {
+        const id = prospectOfPath(window.location.pathname);
+        setProspectAsk({ to: id ? { id } : {}, at: Date.now() });
+      }
     };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
@@ -437,8 +483,9 @@ export function SiteApp({
   const photosGoing = useSyncExternalStore(onUploads, waitingUploads, () => 0);
 
   const show = (s: View) => opened.includes(s) && (s === "home" || (s === "rollcall" ? opensRollcall(me.sections) : me.sections.includes(s)));
-  // Finance's tabs, in the header of each of its parts.
+  // Finance's tabs, in the header of each of its parts; Customers' the same.
   const tabs = (s: FinanceSection) => <FinanceTabs me={me} current={s} onGo={go} />;
+  const customerTabs = (s: CustomerSection) => <CustomerTabs me={me} current={s} onGo={go} />;
 
   return (
     <div className={appClass(me)} data-app="site">
@@ -487,6 +534,22 @@ export function SiteApp({
             initial={data.visits ?? null}
             startedOffline={startedOffline && first === "visits"}
             fresh={first === "visits"}
+            tabs={customerTabs("visits")}
+            onRecord={me.sections.includes("prospects") ? openProspect : undefined}
+          />
+        </div>
+      )}
+      {show("prospects") && (
+        <div hidden={section !== "prospects"}>
+          <ProspectsApp
+            me={me}
+            active={section === "prospects"}
+            initial={data.prospects ?? null}
+            startedOffline={startedOffline && first === "prospects"}
+            fresh={first === "prospects"}
+            tabs={customerTabs("prospects")}
+            ask={prospectAsk}
+            onPath={onProspectsPath}
           />
         </div>
       )}
@@ -571,6 +634,7 @@ export function SiteApp({
             openAlert={openAlert}
             onUnread={setUnread}
             phone={phone}
+            onProspect={me.sections.includes("prospects") ? openProspect : undefined}
           />
         </div>
       )}

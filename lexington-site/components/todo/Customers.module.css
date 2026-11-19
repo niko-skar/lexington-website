@@ -1,0 +1,97 @@
+/* The CRM inside the app's Customers part (ProspectsApp.tsx, 19 Nov 2026). The CRM's screens (components/crm) are the
+   admin pages' own, drawn with the website's colours and fonts; here those are pointed at the app's, so the prospects
+   look like the rest of the app, dark mode included. */
+
+.main {
+  max-width: min(1180px, 100%);
+}
+@media (max-width: 720px) {
+  .main {
+    padding-left: max(12px, env(safe-area-inset-left, 0px));
+    padding-right: max(12px, env(safe-area-inset-right, 0px));
+  }
+}
+
+.crmApp {
+  /* The website's tokens the CRM's styles use, as the app's. */
+  --ink: var(--x-ink);
+  --paper: var(--x-bg);
+  --paper-dim: var(--x-surface);
+  --stone: var(--x-line);
+  --stone-lt: var(--x-line);
+  --sage: var(--x-muted);
+  --clay: var(--x-warn);
+  --clay-lt: var(--x-warn);
+  --navy: var(--x-accent);
+  --navy-deep: var(--x-accent);
+  --brass: var(--x-amber);
+  --brass-lt: var(--x-amber-soft);
+  --brass-text: var(--x-amber);
+  --font-serif: var(--x-display);
+  --font-mono: var(--x-num);
+  --radius: 8px;
+  color: var(--x-ink);
+  font-family: var(--x-body);
+}
+/* Headings in the app's condensed face, a little larger to match it. */
+.crmApp h1,
+.crmApp h2 {
+  font-family: var(--x-display);
+  letter-spacing: 0.01em;
+}
+/* The tab on screen and the primary buttons in the app's blue, Done in its green; red stays for what needs attention.
+   (The CRM's class names come out as "<hash>_btnPrimary", or "Crm-module__<hash>__btnPrimary" on a laptop's test copy.) */
+.crmApp [role="tab"][aria-selected="true"] {
+  border-bottom-color: var(--x-accent);
+}
+.crmApp [class*="_btnPrimary"],
+.crmApp [class*="_btnPrimary"]:hover {
+  background: var(--x-accent);
+  border-color: var(--x-accent);
+  color: var(--x-accent-ink);
+}
+.crmApp [class*="_btnDone"],
+.crmApp [class*="_btnDone"]:hover {
+  background: var(--x-ok);
+  border-color: var(--x-ok);
+  color: var(--x-on-color);
+}
+.crmApp input,
+.crmApp select,
+.crmApp textarea {
+  color: var(--x-ink);
+  background: var(--x-bg);
+  border-color: var(--x-line);
+  font-family: var(--x-body);
+  /* 16px or more, so an iPhone doesn't zoom in on the field. */
+  font-size: max(16px, 1em);
+}
+.crmApp select {
+  color-scheme: light dark;
+}
+.crmApp a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* The CRM's messages (Moved to…, Undo) sit above the app's bar, and right of the laptop's rail. */
+.crmApp > [role="status"][aria-live="polite"] {
+  bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  z-index: 36;
+}
+.withBar > [role="status"][aria-live="polite"] {
+  bottom: calc(82px + env(safe-area-inset-bottom, 0px));
+}
+@media (min-width: 1024px) {
+  .withBar > [role="status"][aria-live="polite"] {
+    left: calc(var(--x-rail, 0px) + 24px);
+    bottom: 24px;
+  }
+}
+
+.missing {
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+  margin: 24px 0;
+  color: var(--x-muted);
+}

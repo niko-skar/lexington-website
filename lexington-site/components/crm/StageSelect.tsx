@@ -5,6 +5,7 @@ import { useOptimistic, useTransition } from "react";
 import { setStageAction } from "@/lib/actions/crm";
 import { STAGES, stageDef, stageLabel, type StageTone } from "@/lib/crm";
 import styles from "./Crm.module.css";
+import { runChange, useCrmHost, type CrmHostApi } from "./CrmHost";
 import { useToast } from "./Toasts";
 
 const TONE_CLASS: Record<StageTone, string> = {
@@ -17,13 +18,13 @@ const TONE_CLASS: Record<StageTone, string> = {
 
 // Moves a prospect to another stage in the background, with an Undo that moves
 // them back. Shared by every control that changes a stage.
-export async function saveStage(leadId: string, stage: string, fromStage: string, lostReason = "") {
+export async function saveStage(host: CrmHostApi, leadId: string, stage: string, fromStage: string, lostReason = "") {
   const data = new FormData();
   data.set("leadId", leadId);
   data.set("stage", stage);
   data.set("fromStage", fromStage);
   if (lostReason) data.set("lostReason", lostReason);
-  await setStageAction(data);
+  await runChange(host, setStageAction, data);
 }
 
 // A stage chip you can change in place. The chip updates the instant it's
@@ -32,6 +33,7 @@ export function StageSelect({ leadId, stage }: { leadId: string; stage: string |
   const [shown, setShown] = useOptimistic(stage ?? "new");
   const [, startTransition] = useTransition();
   const toast = useToast();
+  const host = useCrmHost();
 
   function change(next: string) {
     if (next === shown) return;
@@ -41,12 +43,12 @@ export function StageSelect({ leadId, stage }: { leadId: string; stage: string |
     startTransition(async () => {
       setShown(next);
       try {
-        await saveStage(leadId, next, from);
+        await saveStage(host, leadId, next, from);
       } catch {
         window.alert("Couldn't change the stage. Please try again.");
       }
     });
-    toast.show(`Moved to ${stageLabel(next)}`, () => saveStage(leadId, from, next));
+    toast.show(`Moved to ${stageLabel(next)}`, () => saveStage(host, leadId, from, next));
   }
 
   return (

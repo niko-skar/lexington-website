@@ -27,7 +27,8 @@ import v from "./Visits.module.css";
 
 // Site visits (lib/siteVisits says what and why): who is coming and when, booked by the visitors themselves on the
 // website or with the chat assistant. After a visit: Came (a follow-up step on their record) or Didn't come (they are
-// emailed to pick another time). Move, cancel, add one booked by phone, and block hours Niko can't show anyone.
+// emailed to pick another time). Move, cancel, add one booked by phone, and block hours Niko can't show anyone. Since
+// 19 Nov 2026 it's Customers' second tab, beside the prospects (ProspectsApp.tsx): a visit's Record opens its prospect there.
 
 type ToastData = { text: string; tone?: "error"; link?: { label: string; url: string } };
 type Answer = { ok: true; data: VisitsData; whatsapp?: string };
@@ -36,7 +37,25 @@ const HOUR = 3_600_000;
 /** When a change was saved (the list then ignores an older answer still on its way). */
 const stamp = () => Date.now();
 
-export function VisitsApp({ me, active, initial, startedOffline, fresh }: { me: TodoMe; active: boolean; initial: VisitsData | null; startedOffline: boolean; fresh: boolean }) {
+export function VisitsApp({
+  me,
+  active,
+  initial,
+  startedOffline,
+  fresh,
+  tabs,
+  onRecord,
+}: {
+  me: TodoMe;
+  active: boolean;
+  initial: VisitsData | null;
+  startedOffline: boolean;
+  fresh: boolean;
+  /** Customers' tabs (Prospects, Site visits). */
+  tabs?: React.ReactNode;
+  /** Opens a visitor's prospect in the app. */
+  onRecord?: (leadId: string) => void;
+}) {
   const [data, setData] = useState<VisitsData>(initial ?? EMPTY);
   const [loaded, setLoaded] = useState(initial !== null);
   const [offline, setOffline] = useState(startedOffline);
@@ -187,7 +206,15 @@ export function VisitsApp({ me, active, initial, startedOffline, fresh }: { me: 
             </a>
           )}
           {x.leadId && (
-            <a className={v.secondary} href={`/admin/crm/${x.leadId}`}>
+            <a
+              className={v.secondary}
+              href={onRecord ? `/todo/customers/${encodeURIComponent(x.leadId)}` : `/admin/crm/${x.leadId}`}
+              onClick={(e) => {
+                if (!onRecord || !x.leadId || e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+                e.preventDefault();
+                onRecord(x.leadId);
+              }}
+            >
               Record
             </a>
           )}
@@ -198,7 +225,8 @@ export function VisitsApp({ me, active, initial, startedOffline, fresh }: { me: 
 
   return (
     <>
-      <SiteHeader eyebrow="Sales" title="Site visits" sub={sub} onMenu={() => setMenuOpen(true)}>
+      <SiteHeader eyebrow="Customers" title="Site visits" sub={sub} onMenu={() => setMenuOpen(true)}>
+        {tabs}
         <div className={v.tools}>
           <button type="button" className={v.tool} onClick={() => setSheet({ kind: "add" })}>
             + Add a visit

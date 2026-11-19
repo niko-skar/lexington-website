@@ -1,7 +1,6 @@
-import Link from "next/link";
-
 import type { Lead } from "@/lib/sanity/crmTypes";
 import styles from "./Crm.module.css";
+import { LeadLink } from "./CrmHost";
 import { AskNextStepButton } from "./FollowUp";
 import { PipelineBoard } from "./PipelineBoard";
 import { StageSelect } from "./StageSelect";
@@ -73,9 +72,9 @@ export function TodayView({ leads, today }: { leads: Lead[]; today: string }) {
             <div key={lead._id} className={styles.row}>
               <div className={styles.rowMain}>
                 <div className={styles.rowTop}>
-                  <Link href={`/admin/crm/${lead._id}`} className={styles.leadLink}>
+                  <LeadLink id={lead._id} className={styles.leadLink}>
                     {lead.name}
-                  </Link>
+                  </LeadLink>
                   <StageSelect leadId={lead._id} stage={lead.stage} />
                 </div>
                 <div className={styles.rowMeta}>

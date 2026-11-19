@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 
 import { lockedFor, loginRules, recordFailure, recordSuccess, tooManyTries } from "@/lib/auth/loginGuard";
 import { createAdminSession, destroyAdminSession, destroyBuyerSession } from "@/lib/auth/session";
-import { APP_PAGES } from "@/lib/todo/shared";
+import { isAppPage } from "@/lib/todo/shared";
 
 // Compared as fixed-length digests, so the time taken says nothing about how much of it was right.
 const digest = (s: string) => createHash("sha256").update(s).digest();
@@ -41,7 +41,7 @@ export async function adminLoginAction(
   await createAdminSession();
   // From the site app's own sign-in: back to the page it came from.
   const next = String(formData.get("next") || "");
-  redirect(APP_PAGES.includes(next) ? next : "/admin/crm");
+  redirect(isAppPage(next) ? next : "/admin/crm");
 }
 
 export async function adminLogoutAction() {

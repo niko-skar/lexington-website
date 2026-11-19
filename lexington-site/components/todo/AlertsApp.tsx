@@ -3,7 +3,7 @@
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 
 import { KIND_LABEL, type AlertsData, type OwnerAlert } from "@/lib/alerts/shared";
-import type { TodoMe } from "@/lib/todo/shared";
+import { prospectHref, type TodoMe } from "@/lib/todo/shared";
 import { AccessSheet } from "./AccessSheet";
 import alerts from "./Alerts.module.css";
 import { dayName, send, startPolling } from "./api";
@@ -39,7 +39,10 @@ function Linked({ text }: { text: string }) {
   );
 }
 
-function AlertCard({ alert, fresh, opened }: { alert: OwnerAlert; fresh: boolean; opened: boolean }) {
+// A link to a prospect's record on the admin pages opens their page in the app's Customers part instead (19 Nov 2026).
+const ADMIN_PROSPECT_RE = /^\/admin\/crm\/([A-Za-z0-9_.-]{1,80})$/;
+
+function AlertCard({ alert, fresh, opened, onProspect }: { alert: OwnerAlert; fresh: boolean; opened: boolean; onProspect?: (id: string) => void }) {
   const tone =
     alert.kind === "enquiry" || alert.kind === "reservation" || alert.kind === "lead" || alert.kind === "chat" || alert.kind === "visit" || alert.kind === "buyer"
       ? alerts.kindPeople
@@ -71,17 +74,27 @@ function AlertCard({ alert, fresh, opened }: { alert: OwnerAlert; fresh: boolean
       )}
       {alert.links.length > 0 && (
         <div className={alerts.links}>
-          {alert.links.map((link) =>
-            link.url.startsWith("/") ? (
-              <a key={link.url + link.label} href={link.url} className={alerts.linkButton}>
+          {alert.links.map((link) => {
+            const prospect = ADMIN_PROSPECT_RE.exec(link.url)?.[1];
+            return link.url.startsWith("/") ? (
+              <a
+                key={link.url + link.label}
+                href={prospect ? prospectHref(prospect) : link.url}
+                className={alerts.linkButton}
+                onClick={(e) => {
+                  if (!prospect || !onProspect || e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+                  e.preventDefault();
+                  onProspect(prospect);
+                }}
+              >
                 {link.label}
               </a>
             ) : (
               <a key={link.url + link.label} href={link.url} target="_blank" rel="noreferrer" className={alerts.linkButton}>
                 {link.label} <span aria-hidden="true">↗</span>
               </a>
-            )
-          )}
+            );
+          })}
         </div>
       )}
     </article>
@@ -99,6 +112,7 @@ export function AlertsApp({
   openAlert,
   onUnread,
   phone,
+  onProspect,
 }: {
   me: TodoMe;
   /** On screen: only then does it keep itself fresh and count alerts as read. */
@@ -111,6 +125,8 @@ export function AlertsApp({
   onUnread: (n: number) => void;
   /** This phone's alerts (the app keeps them for all its parts). */
   phone: PhoneAlerts;
+  /** Opens a prospect's page in the app (a link to their record). */
+  onProspect?: (id: string) => void;
 }) {
   const [data, setData] = useState<AlertsData | null>(initial);
   const [offline, setOffline] = useState(startedOffline);
@@ -237,7 +253,7 @@ export function AlertsApp({
                 <section key={g.day} className={styles.group}>
                   <h2 className={styles.groupTitle}>{g.day}</h2>
                   {g.items.map((a) => (
-                    <AlertCard key={a.id} alert={a} fresh={isFresh(a)} opened={a.id === opened} />
+                    <AlertCard key={a.id} alert={a} fresh={isFresh(a)} opened={a.id === opened} onProspect={onProspect} />
                   ))}
                 </section>
               ))

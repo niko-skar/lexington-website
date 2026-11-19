@@ -4,6 +4,7 @@ import { createContext, useContext, useOptimistic, useState, useTransition, type
 
 import { LOST_REASONS, STAGES, stageLabel } from "@/lib/crm";
 import styles from "./Crm.module.css";
+import { useCrmHost } from "./CrmHost";
 import { StageChip } from "./StageChip";
 import { saveStage } from "./StageSelect";
 import { useToast } from "./Toasts";
@@ -35,18 +36,19 @@ export function StageProvider({
   const [shown, setShown] = useOptimistic(stage);
   const [, startTransition] = useTransition();
   const toast = useToast();
+  const host = useCrmHost();
 
   function change(next: string, reason = "") {
     const from = shown;
     startTransition(async () => {
       setShown(next);
       try {
-        await saveStage(leadId, next, from, reason);
+        await saveStage(host, leadId, next, from, reason);
       } catch {
         window.alert("Couldn't change the stage. Please try again.");
       }
     });
-    toast.show(`Moved to ${stageLabel(next)}`, () => saveStage(leadId, from, next));
+    toast.show(`Moved to ${stageLabel(next)}`, () => saveStage(host, leadId, from, next));
   }
 
   return <Context.Provider value={{ stage: shown, change }}>{children}</Context.Provider>;

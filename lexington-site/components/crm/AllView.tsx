@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 
 import { SOURCES, STAGES, dueLabel, dueState, paymentLabel } from "@/lib/crm";
@@ -9,6 +8,7 @@ import { phoneHref, whatsappUrl } from "@/lib/format";
 import type { Lead } from "@/lib/sanity/crmTypes";
 import { CopyNumber } from "./CopyNumber";
 import styles from "./Crm.module.css";
+import { LeadLink } from "./CrmHost";
 import { StageSelect } from "./StageSelect";
 import { nextTaskOf, unitLine } from "./data";
 
@@ -112,9 +112,9 @@ export function AllView({
               <div key={lead._id} className={styles.row}>
                 <div className={styles.rowMain}>
                   <div className={styles.rowTop}>
-                    <Link href={`/admin/crm/${lead._id}`} className={styles.leadLink}>
+                    <LeadLink id={lead._id} className={styles.leadLink}>
                       {lead.name}
-                    </Link>
+                    </LeadLink>
                     <StageSelect leadId={lead._id} stage={lead.stage} />
                   </div>
                   <div className={styles.rowMeta}>
@@ -145,9 +145,9 @@ export function AllView({
                       <CopyNumber phone={lead.phone} />
                     </>
                   )}
-                  <Link href={`/admin/crm/${lead._id}`} className={styles.btn}>
+                  <LeadLink id={lead._id} className={styles.btn}>
                     Open
-                  </Link>
+                  </LeadLink>
                 </div>
               </div>
             );

@@ -13,6 +13,7 @@ import { formatWhen } from "@/lib/crm";
 import { whatsappUrl } from "@/lib/format";
 import type { Lead } from "@/lib/sanity/crmTypes";
 import styles from "./Crm.module.css";
+import { runChange, useCrmHost, useHostAction } from "./CrmHost";
 import { FormMessage, SubmitButton } from "./FormBits";
 import { useToast } from "./Toasts";
 
@@ -40,7 +41,9 @@ export function ReplyPanel({ lead }: { lead: ReplyLead }) {
 function DraftReply({ lead }: { lead: ReplyLead }) {
   const draft = lead.replyDraft!;
   const toast = useToast();
-  const [sendState, send] = useActionState(sendReplyAction, idle);
+  const host = useCrmHost();
+  const sendAction = useHostAction(sendReplyAction);
+  const [sendState, send] = useActionState(sendAction, idle);
   const [whatsapp, setWhatsapp] = useState(draft.whatsapp);
   const [waOpened, setWaOpened] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -122,7 +125,7 @@ function DraftReply({ lead }: { lead: ReplyLead }) {
                     data.set("leadId", lead._id);
                     data.set("whatsapp", whatsapp);
                     try {
-                      await markWhatsAppSentAction(data);
+                      await runChange(host, markWhatsAppSentAction, data);
                       toast.show("Marked as sent on WhatsApp.");
                     } catch {
                       toast.show("Couldn't save that. Please try again.");
@@ -140,7 +143,7 @@ function DraftReply({ lead }: { lead: ReplyLead }) {
       <details className={styles.replyMore}>
         <summary>Write it again, or put it aside</summary>
         <Redraft leadId={lead._id} label="Write it again" />
-        <form action={discardReplyAction} style={{ marginTop: 10 }}>
+        <form action={host.inApp ? (data: FormData) => runChange(host, discardReplyAction, data) : discardReplyAction} style={{ marginTop: 10 }}>
           <input type="hidden" name="leadId" value={lead._id} />
           <SubmitButton className={styles.btn} pendingText="Putting aside…">
             Put this reply aside (I answered another way)
@@ -193,7 +196,8 @@ function NoDraft({ lead }: { lead: ReplyLead }) {
 }
 
 function Redraft({ leadId, label }: { leadId: string; label: string }) {
-  const [state, action] = useActionState(redraftReplyAction, idle);
+  const redraft = useHostAction(redraftReplyAction);
+  const [state, action] = useActionState(redraft, idle);
   return (
     <form action={action}>
       <input type="hidden" name="leadId" value={leadId} />

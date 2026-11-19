@@ -10,11 +10,11 @@ import { getTodoUser } from "@/lib/todo/server";
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Site visits | The Lexington" };
 
-/** Site visits (11 Nov 2026, the office only): who is coming to see the site, booked by the visitors themselves. */
+/** Site visits (11 Nov 2026): who is coming to see the site, booked by the visitors themselves. Customers' second tab since 19 Nov 2026 (the office, and a login with Customers). */
 export default async function VisitsPage() {
   const me = await getTodoUser();
   if (!me) return <TodoSignIn next="/todo/visits" />;
-  if (me.kind !== "admin" || !me.sections.includes("visits")) redirect("/todo");
+  if (!me.sections.includes("visits")) redirect("/todo");
   let visits: VisitsData | null = null;
   try {
     visits = await listVisits();

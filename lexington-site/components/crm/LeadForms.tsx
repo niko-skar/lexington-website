@@ -7,6 +7,7 @@ import { createBuyerFromLeadAction, updateLeadAction, type CrmFormState } from "
 import { PAYMENT_PREFS, SOURCES } from "@/lib/crm";
 import type { Lead, UnitOption } from "@/lib/sanity/crmTypes";
 import styles from "./Crm.module.css";
+import { useCrmHost, useHostAction } from "./CrmHost";
 import { FormMessage, SubmitButton, UnitSelect } from "./FormBits";
 
 const initial: CrmFormState = { status: "idle", message: "" };
@@ -14,7 +15,8 @@ const initial: CrmFormState = { status: "idle", message: "" };
 // ---- edit details ------------------------------------------------------
 
 export function LeadDetailsForm({ lead, units }: { lead: Lead; units: UnitOption[] }) {
-  const [state, formAction] = useActionState(updateLeadAction, initial);
+  const update = useHostAction(updateLeadAction);
+  const [state, formAction] = useActionState(update, initial);
 
   // React resets a form after its action runs, and a <select> keeps its
   // *first* default forever -- so after a save the dropdowns would snap back to
@@ -103,7 +105,9 @@ export function CreateBuyerFromLeadForm({
   units: UnitOption[];
   defaultPrice?: number;
 }) {
-  const [state, formAction] = useActionState(createBuyerFromLeadAction, initial);
+  const host = useCrmHost();
+  const create = useHostAction(createBuyerFromLeadAction);
+  const [state, formAction] = useActionState(create, initial);
 
   // The page refreshes the moment the login exists, so this panel keeps the
   // one-time password on screen itself instead of relying on the form below.
@@ -125,7 +129,7 @@ export function CreateBuyerFromLeadForm({
     return (
       <p className={styles.sectionHint}>
         This prospect already has a buyer login. You can find it under{" "}
-        <Link href="/admin" className={styles.leadLink}>
+        <Link href={host.inApp ? "/todo/buyers" : "/admin"} className={styles.leadLink}>
           Buyers
         </Link>
         .

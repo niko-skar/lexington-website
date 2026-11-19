@@ -46,7 +46,7 @@ export interface TodoTask {
  * messages). To-do, Store, Expenses and Alerts are drawn in the one page; the roll call's three parts
  * (Today, Payday, Workers) are its own page, /todo/rollcall (lib/rollcall).
  */
-export const SECTIONS = ["todo", "store", "expenses", "alerts", "rollcall", "payday", "workers", "concrete", "buyers", "steel", "suppliers", "spending", "orders", "cashflow", "analysis", "asbuilt", "visits", "updates"] as const;
+export const SECTIONS = ["todo", "store", "expenses", "alerts", "rollcall", "payday", "workers", "concrete", "buyers", "steel", "suppliers", "spending", "orders", "cashflow", "analysis", "asbuilt", "visits", "updates", "prospects"] as const;
 export type Section = (typeof SECTIONS)[number];
 /**
  * Concrete (the trucks on pour days, lib/concrete, 30 Oct 2026), Buyers (their payments and receipts,
@@ -61,9 +61,12 @@ export type Section = (typeof SECTIONS)[number];
  * see the site, booked by the visitors themselves, lib/siteVisits, the office only) came on 11 Nov 2026, and Site updates
  * (the progress reporter: site photos to the website's Construction Progress page, Facebook and Instagram,
  * lib/agents/progress, the office only) the same day (Niko: "make me the site update thing from the website and put it
- * on the app under asbuilt"): next to As-built on the laptop's rail.
+ * on the app under asbuilt"): next to As-built on the laptop's rail. The prospects (the CRM, lib/crm, until then only
+ * on the admin pages) came in on 19 Nov 2026 beside the site visits, the two of them one place on the bar, Customers,
+ * where Visits was (Niko: "add the CRM into the ERP app, change visits to customers and put the crm inside of that along
+ * with the existing site visit stuff"), and a login can open Customers alone (Rahma's).
  */
-export const PAGE_SECTIONS = ["todo", "store", "visits", "expenses", "alerts", "concrete", "buyers", "steel", "asbuilt", "updates", "suppliers", "spending", "orders", "cashflow", "analysis"] as const;
+export const PAGE_SECTIONS = ["todo", "store", "prospects", "visits", "expenses", "alerts", "concrete", "buyers", "steel", "asbuilt", "updates", "suppliers", "spending", "orders", "cashflow", "analysis"] as const;
 export type PageSection = (typeof PAGE_SECTIONS)[number];
 export const isPageSection = (section: string): section is PageSection => (PAGE_SECTIONS as readonly string[]).includes(section);
 /**
@@ -73,8 +76,22 @@ export const isPageSection = (section: string): section is PageSection => (PAGE_
 export const FINANCE_SECTIONS = ["expenses", "orders", "suppliers", "cashflow", "spending", "analysis", "buyers"] as const;
 export type FinanceSection = (typeof FINANCE_SECTIONS)[number];
 export const isFinance = (section: string): section is FinanceSection => (FINANCE_SECTIONS as readonly string[]).includes(section);
-export type SiteSection = Exclude<Section, "expenses" | "alerts" | "buyers" | "steel" | "suppliers" | "spending" | "orders" | "cashflow" | "analysis" | "asbuilt" | "visits" | "updates">;
-export const SITE_SECTIONS: readonly SiteSection[] = ["todo", "store", "rollcall", "payday", "workers", "concrete"];
+/** Customers (19 Nov 2026): the prospects and the site visits, one place on the bar with a tab for each. */
+export const CUSTOMER_SECTIONS = ["prospects", "visits"] as const;
+export type CustomerSection = (typeof CUSTOMER_SECTIONS)[number];
+export const isCustomers = (section: string): section is CustomerSection => (CUSTOMER_SECTIONS as readonly string[]).includes(section);
+export type SiteSection = Exclude<Section, "expenses" | "alerts" | "buyers" | "steel" | "suppliers" | "spending" | "orders" | "cashflow" | "analysis" | "asbuilt" | "updates">;
+/**
+ * What the office can tick for a login (the foreman, a storekeeper, the roll call clerk, someone in sales). Customers is
+ * one tick that opens both of its parts (the prospects and the site visits): a login has both or neither.
+ */
+export const SITE_SECTIONS: readonly SiteSection[] = ["todo", "store", "rollcall", "payday", "workers", "concrete", "prospects", "visits"];
+/** A login's parts as ticked, with Customers' two parts kept together. */
+export function withCustomersTogether<T extends string>(sections: T[]): T[] {
+  const customers = sections.some((s) => isCustomers(s));
+  const rest = sections.filter((s) => !isCustomers(s));
+  return customers ? ([...rest, ...CUSTOMER_SECTIONS] as T[]) : rest;
+}
 const HREF: Record<Section, string> = {
   todo: "/todo/jobs",
   store: "/todo/store",
@@ -94,8 +111,14 @@ const HREF: Record<Section, string> = {
   asbuilt: "/todo/asbuilt",
   visits: "/todo/visits",
   updates: "/todo/updates",
+  prospects: "/todo/customers",
 };
 export const sectionHref = (section: Section) => HREF[section];
+/** A prospect's page in the app (the CRM's /admin/crm/<id> on the admin pages). */
+export const prospectHref = (id: string) => `/todo/customers/${encodeURIComponent(id)}`;
+const PROSPECT_PATH_RE = /^\/todo\/customers\/([A-Za-z0-9_.-]{1,80})\/?$/;
+/** The prospect an app address opens, if it's one's page. */
+export const prospectOfPath = (path: string): string | null => PROSPECT_PATH_RE.exec(path)?.[1] ?? null;
 const SECTION_NAMES: Record<Section, string> = {
   todo: "To-do",
   store: "Store",
@@ -113,8 +136,9 @@ const SECTION_NAMES: Record<Section, string> = {
   cashflow: "Cash flow",
   analysis: "Analysis",
   asbuilt: "As-built",
-  visits: "Visits",
+  visits: "Site visits",
   updates: "Site updates",
+  prospects: "Prospects",
 };
 export const sectionName = (section: Section) => SECTION_NAMES[section];
 /** Where a sign-in from the app may send someone back to. */
@@ -135,7 +159,11 @@ export const APP_PAGES: readonly string[] = [
   "/todo/analysis",
   "/todo/asbuilt",
   "/todo/updates",
+  "/todo/visits",
+  "/todo/customers",
 ];
+/** An app page a sign-in may send someone back to: one of the above, or a prospect's page. */
+export const isAppPage = (path: string) => APP_PAGES.includes(path) || prospectOfPath(path) !== null;
 
 /** Who is using the page: Niko and other admins add and delete; a "site" login (the foreman) ticks. */
 export interface TodoMe {

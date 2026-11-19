@@ -7,6 +7,7 @@ import type { Patch } from "@sanity/client";
 
 import { createBuyerAccountRecord } from "@/lib/auth/buyerAccountsCore";
 import { getAdminSession } from "@/lib/auth/session";
+import { crmActor, fromApp, type CrmActor } from "@/lib/crmAccess";
 import { PAYMENT_PREFS, SOURCES, STAGES, addDaysISO, firstName, stageLabel, todayISO } from "@/lib/crm";
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
 import { leadByEmailQuery } from "@/lib/sanity/crmQueries";
@@ -33,22 +34,27 @@ const newKey = () => randomUUID().replace(/-/g, "").slice(0, 12);
 const field = (formData: FormData, name: string, max = 200) =>
   String(formData.get(name) || "").trim().slice(0, max);
 const fail = (message: string): CrmFormState => ({ status: "error", message });
-const note = (kind: "note" | "stage" | "system", text: string) => ({
+// A note written by a login other than the office's (Rahma's, in the app) says whose it is.
+const note = (kind: "note" | "stage" | "system", text: string, by?: string) => ({
   _key: newKey(),
   at: new Date().toISOString(),
   kind,
   text,
+  ...(by && { by }),
 });
 
 // A Server Action can be called directly, so each one checks for itself even
-// though proxy.ts already gates /admin/*.
-async function guard() {
-  if (!(await getAdminSession())) {
-    throw new Error("Not authorized.");
-  }
+// though proxy.ts already gates /admin/* (and the app its own pages).
+async function guard(): Promise<CrmActor> {
+  const actor = await crmActor();
+  if (!actor) throw new Error("Not authorized.");
+  return actor;
 }
 
-function refresh(id?: string) {
+// The admin pages are drawn again by the server; the app's Customers part reads the CRM again itself (a redraw there
+// would draw the app's whole page).
+function refresh(formData: FormData, id?: string) {
+  if (fromApp(formData)) return;
   revalidatePath("/admin/crm");
   if (id) revalidatePath(`/admin/crm/${id}`);
 }
@@ -70,7 +76,8 @@ function pick(value: string, allowed: string[], fallback: string) {
 // ---- add a prospect --------------------------------------------------
 
 export async function addLeadAction(_prev: CrmFormState, formData: FormData): Promise<CrmFormState> {
-  if (!(await getAdminSession())) return fail("Not authorized.");
+  const actor = await crmActor();
+  if (!actor) return fail("Not authorized.");
 
   const name = field(formData, "name", 120);
   if (!name) return fail("Please enter a name.");
@@ -103,10 +110,10 @@ export async function addLeadAction(_prev: CrmFormState, formData: FormData): Pr
       ...(unitNumber && { unitNumber }),
       paymentPreference: "undecided",
       tasks: [{ _key: newKey(), text: nextText, due, waitingOn: "me", done: false, createdAt: now }],
-      notes: [note("system", "Added manually.")],
+      notes: [note("system", actor.by ? `Added by ${actor.by}.` : "Added manually.", actor.by)],
     });
 
-    refresh();
+    refresh(formData);
     return { status: "success", message: `Added ${name}.`, id: doc._id };
   } catch (err) {
     console.error("Failed to add prospect:", err);
@@ -117,7 +124,7 @@ export async function addLeadAction(_prev: CrmFormState, formData: FormData): Pr
 // ---- stage -----------------------------------------------------------
 
 export async function setStageAction(formData: FormData) {
-  await guard();
+  const actor = await guard();
   const id = field(formData, "leadId", 80);
   const stage = field(formData, "stage", 30);
   const reason = field(formData, "lostReason", 80);
@@ -146,15 +153,15 @@ export async function setStageAction(formData: FormData) {
     (stage === "lost"
       ? p.set({ stage, lostReason: reason || "Other" })
       : p.set({ stage }).unset(["lostReason"])
-    ).append("notes", [note("stage", text)])
+    ).append("notes", [note("stage", text, actor.by)])
   );
-  refresh(id);
+  refresh(formData, id);
 }
 
 // ---- details ---------------------------------------------------------
 
 export async function updateLeadAction(_prev: CrmFormState, formData: FormData): Promise<CrmFormState> {
-  if (!(await getAdminSession())) return fail("Not authorized.");
+  if (!(await crmActor())) return fail("Not authorized.");
 
   const id = field(formData, "leadId", 80);
   if (!ID_RE.test(id)) return fail("Missing prospect.");
@@ -184,7 +191,7 @@ export async function updateLeadAction(_prev: CrmFormState, formData: FormData):
       const next = p.set(values);
       return price === undefined ? next.unset(["agreedPriceUSD"]) : next.set({ agreedPriceUSD: price });
     });
-    refresh(id);
+    refresh(formData, id);
     return { status: "success", message: "Saved.", id };
   } catch (err) {
     console.error("Failed to update prospect:", err);
@@ -195,7 +202,7 @@ export async function updateLeadAction(_prev: CrmFormState, formData: FormData):
 // ---- tasks -----------------------------------------------------------
 
 export async function addTaskAction(_prev: CrmFormState, formData: FormData): Promise<CrmFormState> {
-  if (!(await getAdminSession())) return fail("Not authorized.");
+  if (!(await crmActor())) return fail("Not authorized.");
 
   const id = field(formData, "leadId", 80);
   const text = field(formData, "text", 200);
@@ -211,7 +218,7 @@ export async function addTaskAction(_prev: CrmFormState, formData: FormData): Pr
         { _key: newKey(), text, due, waitingOn, done: false, createdAt: new Date().toISOString() },
       ])
     );
-    refresh(id);
+    refresh(formData, id);
     return { status: "success", message: "Added.", id };
   } catch (err) {
     console.error("Failed to add task:", err);
@@ -222,20 +229,20 @@ export async function addTaskAction(_prev: CrmFormState, formData: FormData): Pr
 // Returns the id of the timeline note it wrote, so an Undo can take that note
 // back out as well.
 export async function completeTaskAction(formData: FormData): Promise<{ noteKey: string }> {
-  await guard();
+  const actor = await guard();
   const id = field(formData, "leadId", 80);
   const key = field(formData, "taskKey", 40);
   const text = field(formData, "taskText", 200);
   if (!ID_RE.test(id) || !KEY_RE.test(key)) throw new Error("Bad request.");
 
   const now = new Date().toISOString();
-  const doneNote = note("system", `Done: ${text || "task"}`);
+  const doneNote = note("system", `Done: ${text || "task"}`, actor.by);
   await patchLead(id, (p) =>
     p
       .set({ [`tasks[_key=="${key}"].done`]: true, [`tasks[_key=="${key}"].doneAt`]: now })
       .append("notes", [doneNote])
   );
-  refresh(id);
+  refresh(formData, id);
   return { noteKey: doneNote._key };
 }
 
@@ -252,7 +259,7 @@ export async function reopenTaskAction(formData: FormData) {
       .set({ [`tasks[_key=="${key}"].done`]: false })
       .unset([`tasks[_key=="${key}"].doneAt`, ...(noteKey ? [`notes[_key=="${noteKey}"]`] : [])])
   );
-  refresh(id);
+  refresh(formData, id);
 }
 
 // Undo for "Tomorrow" / "+3 days": puts the date back (empty = no date).
@@ -264,7 +271,7 @@ export async function setTaskDueAction(formData: FormData) {
   if (!ID_RE.test(id) || !KEY_RE.test(key) || (due && !DATE_RE.test(due))) throw new Error("Bad request.");
 
   await patchLead(id, (p) => (due ? p.set({ [`tasks[_key=="${key}"].due`]: due }) : p.unset([`tasks[_key=="${key}"].due`])));
-  refresh(id);
+  refresh(formData, id);
 }
 
 export async function snoozeTaskAction(formData: FormData) {
@@ -276,7 +283,7 @@ export async function snoozeTaskAction(formData: FormData) {
   await patchLead(id, (p) =>
     p.set({ [`tasks[_key=="${key}"].due`]: addDaysISO(todayISO(), days) })
   );
-  refresh(id);
+  refresh(formData, id);
 }
 
 export async function deleteTaskAction(formData: FormData) {
@@ -286,13 +293,14 @@ export async function deleteTaskAction(formData: FormData) {
   if (!ID_RE.test(id) || !KEY_RE.test(key)) throw new Error("Bad request.");
 
   await patchLead(id, (p) => p.unset([`tasks[_key=="${key}"]`]));
-  refresh(id);
+  refresh(formData, id);
 }
 
 // ---- notes -----------------------------------------------------------
 
 export async function addNoteAction(_prev: CrmFormState, formData: FormData): Promise<CrmFormState> {
-  if (!(await getAdminSession())) return fail("Not authorized.");
+  const actor = await crmActor();
+  if (!actor) return fail("Not authorized.");
 
   const id = field(formData, "leadId", 80);
   const text = field(formData, "text", 2000);
@@ -300,8 +308,8 @@ export async function addNoteAction(_prev: CrmFormState, formData: FormData): Pr
   if (!text) return fail("Write something first.");
 
   try {
-    await patchLead(id, (p) => p.append("notes", [note("note", text)]));
-    refresh(id);
+    await patchLead(id, (p) => p.append("notes", [note("note", text, actor.by)]));
+    refresh(formData, id);
     return { status: "success", message: "Note added.", id };
   } catch (err) {
     console.error("Failed to add note:", err);
@@ -311,19 +319,23 @@ export async function addNoteAction(_prev: CrmFormState, formData: FormData): Pr
 
 // ---- delete ----------------------------------------------------------
 
+// The office only. From the app it answers instead of moving the page (the app goes back to the list itself).
 export async function deleteLeadAction(formData: FormData) {
-  await guard();
+  const actor = await guard();
+  if (!actor.office) throw new Error("Only the office can delete a prospect.");
   const id = field(formData, "leadId", 80);
   if (!ID_RE.test(id)) throw new Error("Bad request.");
 
   // Only the prospect goes -- a buyer login created from it is left alone.
   await getBuyersClient().delete(id);
-  refresh();
+  if (fromApp(formData)) return;
+  refresh(formData);
   redirect("/admin/crm?view=all");
 }
 
 // ---- buyer login -----------------------------------------------------
 
+// The office only (a login of the app with Customers can't make buyer logins).
 export async function createBuyerFromLeadAction(
   _prev: CrmFormState,
   formData: FormData
@@ -366,8 +378,8 @@ export async function createBuyerFromLeadAction(
       );
     });
 
-    revalidatePath("/admin");
-    refresh(id);
+    if (!fromApp(formData)) revalidatePath("/admin");
+    refresh(formData, id);
     return {
       status: "success",
       message: `Buyer login created for ${email}.`,

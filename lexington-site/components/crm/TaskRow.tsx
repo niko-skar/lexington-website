@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useOptimistic, useState, useTransition } from "react";
 
 import {
@@ -14,6 +13,7 @@ import { addDaysISO, daysUntil, dueLabel, dueState, firstName } from "@/lib/crm"
 import { phoneHref, whatsappUrl } from "@/lib/format";
 import type { Lead, LeadTask } from "@/lib/sanity/crmTypes";
 import { CopyNumber } from "./CopyNumber";
+import { LeadLink, runChange, useCrmHost } from "./CrmHost";
 import styles from "./Crm.module.css";
 import { useFollowUp } from "./FollowUp";
 import { StageSelect } from "./StageSelect";
@@ -70,6 +70,7 @@ export function TaskRow({
   const [error, setError] = useState("");
   const toast = useToast();
   const followUp = useFollowUp();
+  const host = useCrmHost();
 
   if (shown.gone) return null;
 
@@ -96,7 +97,7 @@ export function TaskRow({
         data.set("taskKey", task._key);
         for (const [key, value] of Object.entries(fields)) data.set(key, value);
         try {
-          resolve(await action(data));
+          resolve(await runChange(host, action, data));
         } catch {
           setError("Couldn't save that. Please try again.");
           resolve(undefined);
@@ -114,7 +115,7 @@ export function TaskRow({
       data.set("leadId", lead._id);
       data.set("taskKey", task._key);
       data.set("noteKey", done.noteKey);
-      await reopenTaskAction(data);
+      await runChange(host, reopenTaskAction, data);
     });
     if (showLead && followUp && openCount <= 1 && !NO_FOLLOW_UP.includes(lead.stage)) {
       followUp.ask({ leadId: lead._id, name: lead.name });
@@ -129,7 +130,7 @@ export function TaskRow({
       data.set("leadId", lead._id);
       data.set("taskKey", task._key);
       data.set("due", previous);
-      await setTaskDueAction(data);
+      await runChange(host, setTaskDueAction, data);
     });
   }
 
@@ -138,9 +139,9 @@ export function TaskRow({
       <div className={styles.rowMain}>
         {showLead && (
           <div className={styles.rowTop}>
-            <Link href={`/admin/crm/${lead._id}`} className={styles.leadLink}>
+            <LeadLink id={lead._id} className={styles.leadLink}>
               {lead.name}
-            </Link>
+            </LeadLink>
             <StageSelect leadId={lead._id} stage={lead.stage} />
           </div>
         )}

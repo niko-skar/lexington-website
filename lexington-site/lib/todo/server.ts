@@ -20,6 +20,7 @@ import {
   type SiteSection,
   type TodoMe,
   type TodoTask,
+  withCustomersTogether,
 } from "./shared";
 
 // Items live in the PRIVATE buyers dataset, never the public website one: the public dataset
@@ -68,7 +69,7 @@ async function accountFor(email: string): Promise<Account | null> {
  *  Payday unless the office ticks them. */
 function siteSections(value: unknown): SiteSection[] {
   if (!Array.isArray(value)) return ["todo", "store"];
-  return SITE_SECTIONS.filter((s) => value.includes(s));
+  return withCustomersTogether(SITE_SECTIONS.filter((s) => value.includes(s)));
 }
 
 /**
@@ -79,6 +80,14 @@ export async function getTodoUser(): Promise<TodoMe | null> {
   const me = await signedIn();
   if (me) await keepSignedIn();
   return me;
+}
+
+/**
+ * Who is signed in, without renewing the sign-in: for a Server Action (the CRM's buttons in the app), where setting a
+ * cookie would make Next draw the whole page again with its answer.
+ */
+export async function currentTodoUser(): Promise<TodoMe | null> {
+  return signedIn();
 }
 
 async function signedIn(): Promise<TodoMe | null> {

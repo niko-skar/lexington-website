@@ -5,6 +5,7 @@ import { createContext, useCallback, useContext, useState, useTransition, type R
 import { addTaskAction } from "@/lib/actions/crm";
 import { addDaysISO, firstName } from "@/lib/crm";
 import styles from "./Crm.module.css";
+import { markFromApp, useCrmHost } from "./CrmHost";
 import { useToast } from "./Toasts";
 
 interface Ask {
@@ -80,6 +81,7 @@ function FollowUpPrompt({ ask, today, onClose }: { ask: Ask; today: string; onCl
   const [text, setText] = useState("");
   const [, startTransition] = useTransition();
   const toast = useToast();
+  const host = useCrmHost();
   const first = firstName(ask.name);
 
   function add(days: number) {
@@ -92,7 +94,9 @@ function FollowUpPrompt({ ask, today, onClose }: { ask: Ask; today: string; onCl
       data.set("due", addDaysISO(today, days));
       data.set("waitingOn", "me");
       try {
+        markFromApp(host, data);
         const result = await addTaskAction({ status: "idle", message: "" }, data);
+        if (host.inApp) await host.refresh().catch(() => undefined);
         toast.show(result.status === "error" ? result.message : `Next step added for ${first}.`);
       } catch {
         toast.show("Couldn't add that step. Please try again.");

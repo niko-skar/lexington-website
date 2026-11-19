@@ -9,7 +9,7 @@ import { getBuyersClient } from "@/lib/sanity/buyersClient";
 import { buyerAccountByEmailQuery } from "@/lib/sanity/buyersQueries";
 import type { BuyerAccount } from "@/lib/sanity/buyersTypes";
 import { seesOnlyPlans } from "@/lib/planOptions";
-import { APP_PAGES } from "@/lib/todo/shared";
+import { isAppPage } from "@/lib/todo/shared";
 
 export interface LoginState {
   status: "idle" | "error";
@@ -24,7 +24,7 @@ export async function loginAction(
   const password = String(formData.get("password") || "").trim();
   // The site app's sign-in also takes a username (a site login with no email, lib/todo/server.ts).
   const next = String(formData.get("next") || "");
-  const appPage = APP_PAGES.includes(next) ? next : null;
+  const appPage = isAppPage(next) ? next : null;
 
   if (!email || !password) {
     return { status: "error", message: "Please enter your email or username, and your password." };

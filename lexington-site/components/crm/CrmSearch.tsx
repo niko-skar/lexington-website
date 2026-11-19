@@ -1,11 +1,11 @@
 "use client";
 
-import Link from "next/link";
 import { useRef, useState } from "react";
 
 import { stageDef } from "@/lib/crm";
 import { internationalDigits } from "@/lib/format";
 import styles from "./Crm.module.css";
+import { LeadLink } from "./CrmHost";
 import { StageChip } from "./StageChip";
 
 export interface SearchEntry {
@@ -76,9 +76,9 @@ export function CrmSearch({ entries }: { entries: SearchEntry[] }) {
             <div className={styles.searchEmpty}>No one matches “{query.trim()}”.</div>
           ) : (
             matches.map((m) => (
-              <Link
+              <LeadLink
                 key={m.id}
-                href={`/admin/crm/${m.id}`}
+                id={m.id}
                 className={styles.searchResult}
                 onClick={close}
                 role="option"
@@ -92,7 +92,7 @@ export function CrmSearch({ entries }: { entries: SearchEntry[] }) {
                   {[m.unitNumber ? `Unit ${m.unitNumber}` : "", m.interest, m.phone].filter(Boolean).join(" · ") ||
                     stageDef(m.stage).label}
                 </span>
-              </Link>
+              </LeadLink>
             ))
           )}
         </div>

@@ -6,6 +6,7 @@ import { addNoteAction, addTaskAction, type CrmFormState } from "@/lib/actions/c
 import { dueLabel, formatWhen } from "@/lib/crm";
 import type { Lead, LeadNote, LeadTask } from "@/lib/sanity/crmTypes";
 import styles from "./Crm.module.css";
+import { markFromApp, useCrmHost } from "./CrmHost";
 import { FormMessage, SubmitButton } from "./FormBits";
 import { TaskRow } from "./TaskRow";
 
@@ -29,6 +30,7 @@ export function StepsPanel({
   const [steps, addStep] = useOptimistic(open, (current: LeadTask[], step: LeadTask) => [...current, step]);
   const [state, setState] = useState<CrmFormState>(idle);
   const form = useRef<HTMLFormElement | null>(null);
+  const host = useCrmHost();
 
   async function add(data: FormData) {
     const text = String(data.get("text") || "").trim();
@@ -39,7 +41,9 @@ export function StepsPanel({
     setState(idle);
     addStep({ _key: `pending-${text}`, text, due, waitingOn, done: false });
     form.current?.reset();
+    markFromApp(host, data);
     const result = await addTaskAction(idle, data);
+    if (host.inApp) await host.refresh().catch(() => undefined);
     // The step is already on screen, so only a failure needs saying.
     setState(result.status === "error" ? result : idle);
   }
@@ -119,6 +123,7 @@ export function NotesPanel({ leadId, notes }: { leadId: string; notes: LeadNote[
   const [shown, addNote] = useOptimistic(notes, (current: LeadNote[], note: LeadNote) => [note, ...current]);
   const [state, setState] = useState<CrmFormState>(idle);
   const form = useRef<HTMLFormElement | null>(null);
+  const host = useCrmHost();
 
   async function add(data: FormData) {
     const text = String(data.get("text") || "").trim();
@@ -127,7 +132,9 @@ export function NotesPanel({ leadId, notes }: { leadId: string; notes: LeadNote[
     setState(idle);
     addNote({ _key: `pending-${text}`, at: new Date().toISOString(), kind: "note", text });
     form.current?.reset();
+    markFromApp(host, data);
     const result = await addNoteAction(idle, data);
+    if (host.inApp) await host.refresh().catch(() => undefined);
     setState(result.status === "error" ? result : idle);
   }
 
@@ -146,7 +153,7 @@ export function NotesPanel({ leadId, notes }: { leadId: string; notes: LeadNote[
       <div className={styles.noteList}>
         {shown.map((n) => (
           <div key={n._key} className={`${styles.noteItem} ${n.kind !== "note" ? styles.noteSystem : ""}`}>
-            <div className={styles.noteMeta}>{isPending(n._key) ? "Saving…" : formatWhen(n.at)}</div>
+            <div className={styles.noteMeta}>{isPending(n._key) ? "Saving…" : `${formatWhen(n.at)}${n.by ? ` · ${n.by}` : ""}`}</div>
             {n.text}
           </div>
         ))}

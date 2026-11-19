@@ -4,6 +4,7 @@ import { useState, type ReactNode } from "react";
 
 import styles from "./Crm.module.css";
 import { CrmSearch, type SearchEntry } from "./CrmSearch";
+import { useCrmHost } from "./CrmHost";
 import { FollowUpProvider } from "./FollowUp";
 
 export interface CrmTab {
@@ -24,13 +25,17 @@ export function CrmTabs({
   today,
   search,
   addForm,
+  title = "Prospects",
 }: {
   tabs: CrmTab[];
   initial: string;
   today: string;
   search: SearchEntry[];
   addForm: ReactNode;
+  /** None in the app, where the header above says it. */
+  title?: string | null;
 }) {
+  const host = useCrmHost();
   const [active, setActive] = useState(initial);
   const [seenInitial, setSeenInitial] = useState(initial);
   const [adding, setAdding] = useState(false);
@@ -44,13 +49,13 @@ export function CrmTabs({
 
   function choose(key: string) {
     setActive(key);
-    window.history.replaceState(null, "", `/admin/crm?view=${key}`);
+    window.history.replaceState(null, "", host.listHref({ view: key }));
   }
 
   return (
     <>
       <div className={styles.toolbar}>
-        <h1 className={styles.toolbarTitle}>Prospects</h1>
+        {title && <h1 className={styles.toolbarTitle}>{title}</h1>}
         <CrmSearch entries={search} />
         <button
           type="button"

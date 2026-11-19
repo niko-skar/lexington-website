@@ -1,19 +1,20 @@
 "use client";
 
-import Link from "next/link";
 import { useActionState } from "react";
 
 import { addLeadAction, type CrmFormState } from "@/lib/actions/crm";
 import { SOURCES } from "@/lib/crm";
 import type { UnitOption } from "@/lib/sanity/crmTypes";
 import styles from "./Crm.module.css";
+import { LeadLink, useHostAction } from "./CrmHost";
 import { FormMessage, SubmitButton, UnitSelect } from "./FormBits";
 
 const initial: CrmFormState = { status: "idle", message: "" };
 
 // Opened from the "+ Add prospect" button at the top of the screen.
 export function AddLeadForm({ units, today }: { units: UnitOption[]; today: string }) {
-  const [state, formAction] = useActionState(addLeadAction, initial);
+  const add = useHostAction(addLeadAction);
+  const [state, formAction] = useActionState(add, initial);
 
   return (
     <form action={formAction}>
@@ -57,9 +58,9 @@ export function AddLeadForm({ units, today }: { units: UnitOption[]; today: stri
       <FormMessage state={state} />
       {state.id && (
         <p className={styles.sectionHint} style={{ marginTop: 8 }}>
-          <Link href={`/admin/crm/${state.id}`} className={styles.leadLink}>
+          <LeadLink id={state.id} className={styles.leadLink}>
             Open {state.status === "success" ? "it" : "their page"} →
-          </Link>
+          </LeadLink>
         </p>
       )}
     </form>
