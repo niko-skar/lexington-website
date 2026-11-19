@@ -11,7 +11,7 @@ export const PLAN_MODELS: Record<string, { poster: string; script: PlanScript }>
   u5la: { poster: "/3d/u5la-plan.jpg", script: "lock" },
   u5lb: { poster: "/3d/u5lb-plan.jpg", script: "lock" },
   u5lc: { poster: "/3d/u5lc-plan.jpg", script: "lock" },
-  u5ld: { poster: "/3d/u5ld-plan.jpg", script: "lock" }, // option D, 19 Nov 2026: the two flats by the stair
+  u5ld: { poster: "/3d/u5ld-plan.jpg", script: "lock" }, // option D, 19 Nov 2026: the end home split in two
 };
 
 // The 3D models in /public/3d/offerpick.iife.js (homes a buyer picks from), and each one's picture from straight above.
