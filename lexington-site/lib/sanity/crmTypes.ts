@@ -33,7 +33,8 @@ export interface ReplyDraft {
   units: string[];
   status: "draft" | "sent" | "discarded";
   sentAt?: string;
-  sentVia?: "email" | "whatsapp" | "auto-email";
+  /** Messenger / Instagram: answered in their chat, by the assistant or by Niko (lib/crmReplies.ts). */
+  sentVia?: "email" | "whatsapp" | "auto-email" | "messenger" | "instagram";
   /** Why Claude did not write it, when it didn't. */
   note?: string;
 }

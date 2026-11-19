@@ -2,6 +2,7 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 
 import { addDaysISO, firstName, todayISO } from "@/lib/crm";
+import { closeIfChatAnswered } from "@/lib/crmReplies";
 import { internationalDigits } from "@/lib/format";
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
 import { leadByEmailQuery } from "@/lib/sanity/crmQueries";
@@ -257,6 +258,8 @@ export interface MetaFormLead {
 }
 
 const digitsOf = (phone: string) => internationalDigits(phone).replace(/\D/g, "");
+/** The person's Messenger id in Meta's link to the chat a lead form opened (business.facebook.com/latest/<id>?...). */
+const chatPsid = (inboxUrl?: string) => /business\.facebook\.com\/latest\/(\d+)/.exec(inboxUrl ?? "")?.[1];
 
 /**
  * Saves a lead form entry as a prospect: a new one, or the person already in the CRM
@@ -322,6 +325,7 @@ export async function saveMetaLead(input: MetaFormLead): Promise<{ id: string; i
           return existing!.stage === "lost" ? next.set({ stage: "new" }).unset(["lostReason"]) : next;
         })
         .commit();
+      await closeIfChatAnswered(existing._id, chatPsid(input.inboxUrl));
       return { id: existing._id, isNew: false };
     }
 
@@ -341,6 +345,7 @@ export async function saveMetaLead(input: MetaFormLead): Promise<{ id: string; i
       tasks: [task],
       notes: [entry],
     });
+    await closeIfChatAnswered(doc._id, chatPsid(input.inboxUrl));
     return { id: doc._id, isNew: true };
   } catch (err) {
     console.error("Could not save the Facebook lead to the CRM:", err);

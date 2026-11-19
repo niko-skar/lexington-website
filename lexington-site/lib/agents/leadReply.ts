@@ -8,6 +8,7 @@ import { claudeConfigured, writeWithClaude } from "@/lib/ai/claude";
 import { addDaysISO, firstName, todayISO } from "@/lib/crm";
 import { personalEmailHtml } from "@/lib/email/templates";
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
+import { answeredAnotherWay } from "@/lib/crmReplies";
 import { client } from "@/lib/sanity/client";
 import type { Lead, ReplyDraft } from "@/lib/sanity/crmTypes";
 
@@ -227,7 +228,8 @@ export async function recordReplySent(
 
 /** Puts the suggested reply aside (Niko answered some other way). */
 export async function discardReply(leadId: string): Promise<void> {
-  await getBuyersClient().patch(leadId).set({ "replyDraft.status": "discarded", replyWanted: false }).commit();
+  // "I answered another way": the first-reply step closes as well (19 Nov 2026; it used to stay "waiting").
+  await answeredAnotherWay(leadId);
 }
 
 // ---- the automatic part ---------------------------------------------------------

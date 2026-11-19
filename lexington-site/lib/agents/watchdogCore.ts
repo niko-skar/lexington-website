@@ -314,8 +314,8 @@ export function checkAll(input: WatchInput): Finding[] {
     add({
       level: "act",
       area: "Replies",
-      title: `${plural(waiting.length, "enquiry is", "enquiries are")} still waiting for a first reply.`,
-      detail: `Longest waiting: ${oldest.name}, ${plural(oldest.days, "day")}. Each has a suggested reply in the CRM.`,
+      title: `${plural(waiting.length, "enquiry has", "enquiries have")} no first reply on record.`,
+      detail: `Longest: ${oldest.name}, ${plural(oldest.days, "day")}. The CRM sees replies sent from it and in Messenger and Instagram chats, but not WhatsApp: if you answered there, press "I sent it" or "I answered another way" on their page.`,
     });
   }
   const n = input.crm.newLast7;

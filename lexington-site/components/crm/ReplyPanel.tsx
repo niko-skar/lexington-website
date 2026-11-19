@@ -165,10 +165,19 @@ function NoDraft({ lead }: { lead: ReplyLead }) {
       {draft?.status === "sent" && (
         <details className={styles.replyMore} style={{ marginTop: 0, marginBottom: 14 }}>
           <summary>
-            First reply sent {draft.sentVia === "whatsapp" ? "on WhatsApp" : draft.sentVia === "auto-email" ? "by email, automatically" : "by email"}
+            First reply sent{" "}
+            {draft.sentVia === "whatsapp"
+              ? "on WhatsApp"
+              : draft.sentVia === "messenger"
+                ? "in their Messenger chat"
+                : draft.sentVia === "instagram"
+                  ? "in their Instagram chat"
+                  : draft.sentVia === "auto-email"
+                    ? "by email, automatically"
+                    : "by email"}
             {draft.sentAt ? `, ${formatWhen(draft.sentAt)} GMT` : ""}
           </summary>
-          <div className={styles.sentText}>{draft.sentVia === "whatsapp" ? draft.body : `${draft.subject}\n\n${draft.body}`}</div>
+          <div className={styles.sentText}>{draft.sentVia === "email" || draft.sentVia === "auto-email" || !draft.sentVia ? `${draft.subject}\n\n${draft.body}` : draft.body}</div>
         </details>
       )}
       <details className={styles.replyMore} style={{ marginTop: 0 }}>

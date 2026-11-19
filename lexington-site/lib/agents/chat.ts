@@ -6,6 +6,7 @@ import { claudeConfigured, writeWithClaude } from "@/lib/ai/claude";
 import { notifyOwner } from "@/lib/alerts/notify";
 import { firstName, todayISO } from "@/lib/crm";
 import { samePerson } from "@/lib/crmMatch";
+import { answeredInChat } from "@/lib/crmReplies";
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
 import { SITE_URL } from "@/lib/seo";
 import { googleMapsUrl } from "@/lib/maps";
@@ -583,20 +584,29 @@ export async function handleChatEvent(ev: ChatEvent, nowMs = Date.now()): Promis
       if (ev.fromAgent || ev.automated) return;
       // The agent's own message can come back before it is saved: give that a moment, then look again.
       await sleep(3000);
+      // Whether this really was a message of Niko's (updateThread hands the chat back even when it's left alone, so a
+      // returned chat alone doesn't say so: the assistant's own card echoed back used to be noted as "you: [image]").
+      let his = false;
       const saved = await updateThread(
         id,
         (t) => {
+          his = false;
           if (t.messages.some((m) => m.mid === ev.mid || m.cardMids?.includes(ev.mid))) return null;
           // While the assistant is still sending its cards (its lock is on), a picture is one of them.
           if (t.lockedUntil && Date.parse(t.lockedUntil) > Date.now() && /^\[image/.test(ev.text)) return null;
           t.messages = keepLast([...t.messages, { _key: newKey(), from: "owner", text: ev.text.slice(0, 2000), at: ev.at, mid: ev.mid }]);
           t.ownerActiveUntil = new Date(Date.parse(ev.at) + OWNER_QUIET_HOURS * 3_600_000).toISOString();
           t.handedOver = null;
+          his = true;
           return t;
         },
         fresh
       );
-      if (saved?.leadId) await leadNote(saved.leadId, `${CHANNEL_NAMES[ev.channel]}, you: ${ev.text}`);
+      if (his && saved?.leadId) {
+        await leadNote(saved.leadId, `${CHANNEL_NAMES[ev.channel]}, you: ${ev.text}`);
+        // Niko answered in the chat himself: the enquiry is answered (and so is anything handed over to him there).
+        await answeredInChat(saved.leadId, ev.channel, "you", ev.text);
+      }
       return;
     }
 
@@ -694,6 +704,8 @@ export async function handleChatEvent(ev: ChatEvent, nowMs = Date.now()): Promis
             )) ?? thread;
         }
         if (mid) await leadNote(thread.leadId, `${CHANNEL_NAMES[current.channel]}, assistant: ${d.text}${cards.length ? ` [cards: ${cards.map((c) => c.unit).join(", ")}]` : ""}`);
+        // The assistant has answered them: their enquiry no longer waits for a first reply (19 Nov 2026).
+        if (mid) await answeredInChat(thread.leadId, current.channel, "assistant", d.text);
         if (d.out) {
           const joinedId = await learnAbout(thread.leadId, d.out, thread);
           if (joinedId && joinedId !== thread.leadId) thread = { ...thread, leadId: joinedId };

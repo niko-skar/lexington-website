@@ -8,6 +8,7 @@ import { readGoogleReport } from "@/lib/ads/googleStore";
 import { fetchMetaReport, metaConfig, type MetaConfig } from "@/lib/ads/meta";
 import { notifyOwner } from "@/lib/alerts/notify";
 import { todayISO } from "@/lib/crm";
+import { isFirstReplyStep } from "@/lib/crmReplies";
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
 import { client } from "@/lib/sanity/client";
 import type { LeadTask } from "@/lib/sanity/crmTypes";
@@ -192,10 +193,12 @@ async function gatherSite(today: string): Promise<WatchInput["site"]> {
 
 // ---- the CRM ----------------------------------------------------------------------
 
-async function gatherCrm(today: string, nowMs: number): Promise<WatchInput["crm"]> {
+/** Who still waits for a first reply, and the week's new enquiries (exported for a read-only check). */
+export async function gatherCrm(today: string, nowMs: number): Promise<WatchInput["crm"]> {
   const leads = await getBuyersClient().fetch<
-    Array<{ _id: string; _createdAt: string; name: string; source?: string; stage?: string; tasks?: LeadTask[] }>
-  >(`*[_type == "lead"]{ _id, _createdAt, name, source, stage, tasks }`);
+    Array<{ _id: string; _createdAt: string; name: string; source?: string; stage?: string; tasks?: LeadTask[]; chatReplied?: boolean }>
+  >(`*[_type == "lead"]{ _id, _createdAt, name, source, stage, tasks,
+    "chatReplied": count(*[_type == "chatThread" && _id == ^.chatThread][0].messages[from in ["agent", "owner"]]) > 0 }`);
   const waiting: WatchInput["crm"]["waiting"] = [];
   const weekAgo = new Date(nowMs - 7 * 86_400_000).toISOString();
   const newLast7 = { website: 0, facebook: 0, other: 0 };
@@ -205,8 +208,11 @@ async function gatherCrm(today: string, nowMs: number): Promise<WatchInput["crm"
       else if (lead.source === "meta_ads") newLast7.facebook += 1;
       else newLast7.other += 1;
     }
-    if (lead.stage === "lost") continue;
-    const reply = (lead.tasks ?? []).find((t) => !t.done && /^reply to\b/i.test(t.text) && (t.due ?? today) < today);
+    // Only a new enquiry can still wait for its first reply: one moved on (Contacted and beyond, or lost) has had it,
+    // and so has one the assistant or Niko answered in their chat (19 Nov 2026: answered chats were counted as waiting).
+    // What the assistant hands over to Niko is counted with the chats, not here.
+    if ((lead.stage ?? "new") !== "new" || lead.chatReplied) continue;
+    const reply = (lead.tasks ?? []).find((t) => !t.done && isFirstReplyStep(t.text) && (t.due ?? today) < today);
     if (reply) {
       const from = (reply.createdAt ?? `${reply.due}T00:00:00Z`).slice(0, 10);
       const days = Math.max(1, Math.round((Date.parse(`${today}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000));
