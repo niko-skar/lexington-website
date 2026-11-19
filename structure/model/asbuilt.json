@@ -1,0 +1,8596 @@
+{
+ "source": "seed (drawing figures only)",
+ "exported": "2026-11-19T16:23:15.824Z",
+ "floors": [
+  {
+   "key": "g",
+   "name": "Ground floor",
+   "short": "G",
+   "order": 0,
+   "level": 300,
+   "source": "Columns from the new 1st floor drawing (10 Oct 2026): the columns that stand on the ground floor and hold up the 1st floor. There is no new ground floor slab drawing, so no slab edge is drawn here.",
+   "notes": [
+    "Grid 4 to 5 is written 3975 on the new plans, but it is drawn 4000 and the sections say 4000 (3 to 5 = 5650). The app uses 3975: measure it on site."
+   ],
+   "grid": {
+    "x": [
+     {
+      "id": "B",
+      "design": 0,
+      "pos": 0,
+      "measured": false
+     },
+     {
+      "id": "B1",
+      "design": 1600,
+      "pos": 1600,
+      "measured": false
+     },
+     {
+      "id": "B2",
+      "design": 3000,
+      "pos": 3000,
+      "measured": false
+     },
+     {
+      "id": "C",
+      "design": 6150,
+      "pos": 6150,
+      "measured": false
+     },
+     {
+      "id": "D",
+      "design": 12300,
+      "pos": 12300,
+      "measured": false
+     },
+     {
+      "id": "E",
+      "design": 14300,
+      "pos": 14300,
+      "measured": false
+     },
+     {
+      "id": "F",
+      "design": 16700,
+      "pos": 16700,
+      "measured": false
+     },
+     {
+      "id": "G",
+      "design": 22850,
+      "pos": 22850,
+      "measured": false
+     },
+     {
+      "id": "H",
+      "design": 29000,
+      "pos": 29000,
+      "measured": false
+     },
+     {
+      "id": "J",
+      "design": 31400,
+      "pos": 31400,
+      "measured": false
+     },
+     {
+      "id": "K",
+      "design": 33400,
+      "pos": 33400,
+      "measured": false
+     },
+     {
+      "id": "L",
+      "design": 39550,
+      "pos": 39550,
+      "measured": false
+     },
+     {
+      "id": "M",
+      "design": 45700,
+      "pos": 45700,
+      "measured": false
+     },
+     {
+      "id": "N",
+      "design": 50800,
+      "pos": 50800,
+      "measured": false
+     }
+    ],
+    "y": [
+     {
+      "id": "2",
+      "design": 0,
+      "pos": 0,
+      "measured": false
+     },
+     {
+      "id": "2A",
+      "design": 1175,
+      "pos": 1175,
+      "measured": false
+     },
+     {
+      "id": "2b",
+      "design": 5175,
+      "pos": 5175,
+      "measured": false
+     },
+     {
+      "id": "3",
+      "design": 5750,
+      "pos": 5750,
+      "measured": false
+     },
+     {
+      "id": "4",
+      "design": 7400,
+      "pos": 7400,
+      "measured": false
+     },
+     {
+      "id": "5",
+      "design": 11375,
+      "pos": 11375,
+      "measured": false
+     },
+     {
+      "id": "6",
+      "design": 13475,
+      "pos": 13475,
+      "measured": false
+     },
+     {
+      "id": "7",
+      "design": 16350,
+      "pos": 16350,
+      "measured": false
+     },
+     {
+      "id": "7a",
+      "design": 17850,
+      "pos": 17850,
+      "measured": false
+     },
+     {
+      "id": "7b",
+      "design": 18200,
+      "pos": 18200,
+      "measured": false
+     }
+    ]
+   },
+   "outline": null,
+   "outlineDesign": null,
+   "edgesMeasured": 0,
+   "columns": [
+    {
+     "key": "B2",
+     "name": "C2",
+     "kind": "column",
+     "ref": "B/2",
+     "ends": false,
+     "box": [
+      -75,
+      -100,
+      225,
+      500
+     ],
+     "design": [
+      -75,
+      -100,
+      225,
+      500
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "C2",
+     "name": "C2",
+     "kind": "column",
+     "ref": "C/2",
+     "ends": false,
+     "box": [
+      5925,
+      -100,
+      6225,
+      500
+     ],
+     "design": [
+      5925,
+      -100,
+      6225,
+      500
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "B3",
+     "name": "C2",
+     "kind": "column",
+     "ref": "B/3",
+     "ends": false,
+     "box": [
+      -75,
+      5475,
+      225,
+      6075
+     ],
+     "design": [
+      -75,
+      5475,
+      225,
+      6075
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "C3",
+     "name": "SW5",
+     "kind": "wall",
+     "ref": "C/3",
+     "ends": false,
+     "box": [
+      5925,
+      4575,
+      6225,
+      6075
+     ],
+     "design": [
+      5925,
+      4575,
+      6225,
+      6075
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "D3",
+     "name": "C1",
+     "kind": "column",
+     "ref": "D/3",
+     "ends": false,
+     "box": [
+      12000,
+      5650,
+      12600,
+      5950
+     ],
+     "design": [
+      12000,
+      5650,
+      12600,
+      5950
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "F3",
+     "name": "C1",
+     "kind": "column",
+     "ref": "F/3",
+     "ends": false,
+     "box": [
+      16400,
+      5650,
+      17000,
+      5950
+     ],
+     "design": [
+      16400,
+      5650,
+      17000,
+      5950
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "G3",
+     "name": "SW4",
+     "kind": "wall",
+     "ref": "G/3",
+     "ends": false,
+     "box": [
+      22100,
+      5650,
+      23600,
+      5950
+     ],
+     "design": [
+      22100,
+      5650,
+      23600,
+      5950
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "H3",
+     "name": "C1",
+     "kind": "column",
+     "ref": "H/3",
+     "ends": false,
+     "box": [
+      28700,
+      5650,
+      29300,
+      5950
+     ],
+     "design": [
+      28700,
+      5650,
+      29300,
+      5950
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "K3",
+     "name": "C1",
+     "kind": "column",
+     "ref": "K/3",
+     "ends": false,
+     "box": [
+      33100,
+      5650,
+      33700,
+      5950
+     ],
+     "design": [
+      33100,
+      5650,
+      33700,
+      5950
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "L3",
+     "name": "C1",
+     "kind": "column",
+     "ref": "L/3",
+     "ends": false,
+     "box": [
+      39250,
+      5650,
+      39850,
+      5950
+     ],
+     "design": [
+      39250,
+      5650,
+      39850,
+      5950
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "M3",
+     "name": "C1",
+     "kind": "column",
+     "ref": "M/3",
+     "ends": false,
+     "box": [
+      45400,
+      5650,
+      46000,
+      5950
+     ],
+     "design": [
+      45400,
+      5650,
+      46000,
+      5950
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "N3",
+     "name": "SW6",
+     "kind": "wall",
+     "ref": "N/3",
+     "ends": false,
+     "box": [
+      49450,
+      5650,
+      50950,
+      5950
+     ],
+     "design": [
+      49450,
+      5650,
+      50950,
+      5950
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "B4",
+     "name": "C3",
+     "kind": "column",
+     "ref": "B/4",
+     "ends": false,
+     "box": [
+      -75,
+      7000,
+      225,
+      7600
+     ],
+     "design": [
+      -75,
+      7000,
+      225,
+      7600
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "C4",
+     "name": "C1a",
+     "kind": "column",
+     "ref": "C/4",
+     "ends": false,
+     "box": [
+      5925,
+      7000,
+      6225,
+      7600
+     ],
+     "design": [
+      5925,
+      7000,
+      6225,
+      7600
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "B5",
+     "name": "C2",
+     "kind": "column",
+     "ref": "B/5",
+     "ends": false,
+     "box": [
+      -75,
+      10875,
+      225,
+      11475
+     ],
+     "design": [
+      -75,
+      10875,
+      225,
+      11475
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "C5",
+     "name": "C1a",
+     "kind": "column",
+     "ref": "C/5",
+     "ends": false,
+     "box": [
+      5925,
+      11225,
+      6225,
+      11825
+     ],
+     "design": [
+      5925,
+      11225,
+      6225,
+      11825
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "F5",
+     "name": "C1",
+     "kind": "column",
+     "ref": "F/5",
+     "ends": false,
+     "box": [
+      16550,
+      11225,
+      16850,
+      11825
+     ],
+     "design": [
+      16550,
+      11225,
+      16850,
+      11825
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "G5",
+     "name": "C6",
+     "kind": "column",
+     "ref": "G/5",
+     "ends": false,
+     "box": [
+      22700,
+      11225,
+      23000,
+      12025
+     ],
+     "design": [
+      22700,
+      11225,
+      23000,
+      12025
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "H5",
+     "name": "C1",
+     "kind": "column",
+     "ref": "H/5",
+     "ends": false,
+     "box": [
+      28850,
+      11225,
+      29150,
+      11825
+     ],
+     "design": [
+      28850,
+      11225,
+      29150,
+      11825
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "L5",
+     "name": "C6",
+     "kind": "column",
+     "ref": "L/5",
+     "ends": false,
+     "box": [
+      39400,
+      11225,
+      39700,
+      12025
+     ],
+     "design": [
+      39400,
+      11225,
+      39700,
+      12025
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "M5",
+     "name": "SW7",
+     "kind": "wall",
+     "ref": "M/5",
+     "ends": false,
+     "box": [
+      45550,
+      11225,
+      45850,
+      13850
+     ],
+     "design": [
+      45550,
+      11225,
+      45850,
+      13850
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "N5",
+     "name": "C2",
+     "kind": "column",
+     "ref": "N/5",
+     "ends": false,
+     "box": [
+      50650,
+      11225,
+      50950,
+      11825
+     ],
+     "design": [
+      50650,
+      11225,
+      50950,
+      11825
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "B7",
+     "name": "C4",
+     "kind": "column",
+     "ref": "B/7",
+     "ends": true,
+     "box": [
+      -75,
+      15850,
+      225,
+      16450
+     ],
+     "design": [
+      -75,
+      15850,
+      225,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "C7",
+     "name": "C1a",
+     "kind": "column",
+     "ref": "C/7",
+     "ends": false,
+     "box": [
+      5925,
+      15850,
+      6225,
+      16450
+     ],
+     "design": [
+      5925,
+      15850,
+      6225,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "D7",
+     "name": "C1b",
+     "kind": "column",
+     "ref": "D/7",
+     "ends": false,
+     "box": [
+      12150,
+      15850,
+      12450,
+      16450
+     ],
+     "design": [
+      12150,
+      15850,
+      12450,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "F7",
+     "name": "C1b",
+     "kind": "column",
+     "ref": "F/7",
+     "ends": false,
+     "box": [
+      16550,
+      15850,
+      16850,
+      16450
+     ],
+     "design": [
+      16550,
+      15850,
+      16850,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "G7",
+     "name": "C6",
+     "kind": "column",
+     "ref": "G/7",
+     "ends": false,
+     "box": [
+      22700,
+      15650,
+      23000,
+      16450
+     ],
+     "design": [
+      22700,
+      15650,
+      23000,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "H7",
+     "name": "C1b",
+     "kind": "column",
+     "ref": "H/7",
+     "ends": false,
+     "box": [
+      28850,
+      15850,
+      29150,
+      16450
+     ],
+     "design": [
+      28850,
+      15850,
+      29150,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "K7",
+     "name": "C1b",
+     "kind": "column",
+     "ref": "K/7",
+     "ends": false,
+     "box": [
+      33250,
+      15850,
+      33550,
+      16450
+     ],
+     "design": [
+      33250,
+      15850,
+      33550,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "L7",
+     "name": "C6",
+     "kind": "column",
+     "ref": "L/7",
+     "ends": false,
+     "box": [
+      39400,
+      15650,
+      39700,
+      16450
+     ],
+     "design": [
+      39400,
+      15650,
+      39700,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "M7",
+     "name": "C1b",
+     "kind": "column",
+     "ref": "M/7",
+     "ends": false,
+     "box": [
+      45550,
+      15850,
+      45850,
+      16450
+     ],
+     "design": [
+      45550,
+      15850,
+      45850,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "N7",
+     "name": "C2",
+     "kind": "column",
+     "ref": "N/7",
+     "ends": false,
+     "box": [
+      50650,
+      15850,
+      50950,
+      16450
+     ],
+     "design": [
+      50650,
+      15850,
+      50950,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    }
+   ],
+   "cores": [
+    {
+     "key": "lift1",
+     "name": "Lift 1",
+     "ref": "D/5",
+     "box": [
+      12150,
+      11225,
+      14450,
+      13850
+     ],
+     "design": [
+      12150,
+      11225,
+      14450,
+      13850
+     ],
+     "wall": 300,
+     "door": {
+      "side": "b",
+      "from": 490,
+      "width": 1320
+     },
+     "measured": false
+    },
+    {
+     "key": "lift2",
+     "name": "Lift 2",
+     "ref": "J/5",
+     "box": [
+      31250,
+      11225,
+      33550,
+      13850
+     ],
+     "design": [
+      31250,
+      11225,
+      33550,
+      13850
+     ],
+     "wall": 300,
+     "door": {
+      "side": "b",
+      "from": 490,
+      "width": 1320
+     },
+     "measured": false
+    }
+   ],
+   "openings": []
+  },
+  {
+   "key": "1",
+   "name": "1st floor",
+   "short": "1",
+   "order": 1,
+   "level": 3900,
+   "source": "Slab from the new 1st floor drawing (10 Oct 2026). Columns from the new 2nd floor drawing (12 Oct 2026): the columns that stand on this floor and hold up the 2nd floor.",
+   "notes": [
+    "Grid 4 to 5 is written 3975 on the new plans, but it is drawn 4000 and the sections say 4000 (3 to 5 = 5650). The app uses 3975: measure it on site.",
+    "The balconies between K–L and M–N are written 1850 from grid 7 but drawn 1925. The app uses 1850: measure them."
+   ],
+   "grid": {
+    "x": [
+     {
+      "id": "B",
+      "design": 0,
+      "pos": 0,
+      "measured": false
+     },
+     {
+      "id": "B1",
+      "design": 1600,
+      "pos": 1600,
+      "measured": false
+     },
+     {
+      "id": "B2",
+      "design": 3000,
+      "pos": 3000,
+      "measured": false
+     },
+     {
+      "id": "C",
+      "design": 6150,
+      "pos": 6150,
+      "measured": false
+     },
+     {
+      "id": "D",
+      "design": 12300,
+      "pos": 12300,
+      "measured": false
+     },
+     {
+      "id": "E",
+      "design": 14300,
+      "pos": 14300,
+      "measured": false
+     },
+     {
+      "id": "F",
+      "design": 16700,
+      "pos": 16700,
+      "measured": false
+     },
+     {
+      "id": "G",
+      "design": 22850,
+      "pos": 22850,
+      "measured": false
+     },
+     {
+      "id": "H",
+      "design": 29000,
+      "pos": 29000,
+      "measured": false
+     },
+     {
+      "id": "J",
+      "design": 31400,
+      "pos": 31400,
+      "measured": false
+     },
+     {
+      "id": "K",
+      "design": 33400,
+      "pos": 33400,
+      "measured": false
+     },
+     {
+      "id": "L",
+      "design": 39550,
+      "pos": 39550,
+      "measured": false
+     },
+     {
+      "id": "M",
+      "design": 45700,
+      "pos": 45700,
+      "measured": false
+     },
+     {
+      "id": "N",
+      "design": 50800,
+      "pos": 50800,
+      "measured": false
+     }
+    ],
+    "y": [
+     {
+      "id": "2",
+      "design": 0,
+      "pos": 0,
+      "measured": false
+     },
+     {
+      "id": "2A",
+      "design": 1175,
+      "pos": 1175,
+      "measured": false
+     },
+     {
+      "id": "2b",
+      "design": 5175,
+      "pos": 5175,
+      "measured": false
+     },
+     {
+      "id": "3",
+      "design": 5750,
+      "pos": 5750,
+      "measured": false
+     },
+     {
+      "id": "4",
+      "design": 7400,
+      "pos": 7400,
+      "measured": false
+     },
+     {
+      "id": "5",
+      "design": 11375,
+      "pos": 11375,
+      "measured": false
+     },
+     {
+      "id": "6",
+      "design": 13475,
+      "pos": 13475,
+      "measured": false
+     },
+     {
+      "id": "7",
+      "design": 16350,
+      "pos": 16350,
+      "measured": false
+     },
+     {
+      "id": "7a",
+      "design": 17850,
+      "pos": 17850,
+      "measured": false
+     },
+     {
+      "id": "7b",
+      "design": 18200,
+      "pos": 18200,
+      "measured": false
+     }
+    ]
+   },
+   "outline": [
+    [
+     7725,
+     -100
+    ],
+    [
+     7725,
+     5100
+    ],
+    [
+     51775,
+     5100
+    ],
+    [
+     51775,
+     11400
+    ],
+    [
+     51475,
+     11400
+    ],
+    [
+     51475,
+     13500
+    ],
+    [
+     50950,
+     13500
+    ],
+    [
+     50950,
+     18200
+    ],
+    [
+     45550,
+     18200
+    ],
+    [
+     45550,
+     17725
+    ],
+    [
+     39700,
+     17725
+    ],
+    [
+     39700,
+     18200
+    ],
+    [
+     33250,
+     18200
+    ],
+    [
+     33250,
+     17925
+    ],
+    [
+     29150,
+     17925
+    ],
+    [
+     29150,
+     18200
+    ],
+    [
+     22700,
+     18200
+    ],
+    [
+     22700,
+     17400
+    ],
+    [
+     16550,
+     17400
+    ],
+    [
+     16550,
+     16450
+    ],
+    [
+     12450,
+     16450
+    ],
+    [
+     12450,
+     18200
+    ],
+    [
+     -575,
+     18200
+    ],
+    [
+     -575,
+     -100
+    ]
+   ],
+   "outlineDesign": [
+    [
+     7725,
+     -100
+    ],
+    [
+     7725,
+     5100
+    ],
+    [
+     51775,
+     5100
+    ],
+    [
+     51775,
+     11400
+    ],
+    [
+     51475,
+     11400
+    ],
+    [
+     51475,
+     13500
+    ],
+    [
+     50950,
+     13500
+    ],
+    [
+     50950,
+     18200
+    ],
+    [
+     45550,
+     18200
+    ],
+    [
+     45550,
+     17725
+    ],
+    [
+     39700,
+     17725
+    ],
+    [
+     39700,
+     18200
+    ],
+    [
+     33250,
+     18200
+    ],
+    [
+     33250,
+     17925
+    ],
+    [
+     29150,
+     17925
+    ],
+    [
+     29150,
+     18200
+    ],
+    [
+     22700,
+     18200
+    ],
+    [
+     22700,
+     17400
+    ],
+    [
+     16550,
+     17400
+    ],
+    [
+     16550,
+     16450
+    ],
+    [
+     12450,
+     16450
+    ],
+    [
+     12450,
+     18200
+    ],
+    [
+     -575,
+     18200
+    ],
+    [
+     -575,
+     -100
+    ]
+   ],
+   "edgesMeasured": 0,
+   "columns": [
+    {
+     "key": "B2",
+     "name": "C2",
+     "kind": "column",
+     "ref": "B/2",
+     "ends": false,
+     "box": [
+      -75,
+      -100,
+      225,
+      500
+     ],
+     "design": [
+      -75,
+      -100,
+      225,
+      500
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "C2",
+     "name": "C2",
+     "kind": "column",
+     "ref": "C/2",
+     "ends": false,
+     "box": [
+      5925,
+      -100,
+      6225,
+      500
+     ],
+     "design": [
+      5925,
+      -100,
+      6225,
+      500
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "B3",
+     "name": "C2",
+     "kind": "column",
+     "ref": "B/3",
+     "ends": false,
+     "box": [
+      -75,
+      5475,
+      225,
+      6075
+     ],
+     "design": [
+      -75,
+      5475,
+      225,
+      6075
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "C3",
+     "name": "SW5",
+     "kind": "wall",
+     "ref": "C/3",
+     "ends": false,
+     "box": [
+      5925,
+      4575,
+      6225,
+      6075
+     ],
+     "design": [
+      5925,
+      4575,
+      6225,
+      6075
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "D3",
+     "name": "C1",
+     "kind": "column",
+     "ref": "D/3",
+     "ends": false,
+     "box": [
+      12000,
+      5650,
+      12600,
+      5950
+     ],
+     "design": [
+      12000,
+      5650,
+      12600,
+      5950
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "F3",
+     "name": "C1",
+     "kind": "column",
+     "ref": "F/3",
+     "ends": false,
+     "box": [
+      16400,
+      5650,
+      17000,
+      5950
+     ],
+     "design": [
+      16400,
+      5650,
+      17000,
+      5950
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "G3",
+     "name": "SW4",
+     "kind": "wall",
+     "ref": "G/3",
+     "ends": false,
+     "box": [
+      22100,
+      5650,
+      23600,
+      5950
+     ],
+     "design": [
+      22100,
+      5650,
+      23600,
+      5950
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "H3",
+     "name": "C1",
+     "kind": "column",
+     "ref": "H/3",
+     "ends": false,
+     "box": [
+      28700,
+      5650,
+      29300,
+      5950
+     ],
+     "design": [
+      28700,
+      5650,
+      29300,
+      5950
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "K3",
+     "name": "C1",
+     "kind": "column",
+     "ref": "K/3",
+     "ends": false,
+     "box": [
+      33100,
+      5650,
+      33700,
+      5950
+     ],
+     "design": [
+      33100,
+      5650,
+      33700,
+      5950
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "L3",
+     "name": "C1",
+     "kind": "column",
+     "ref": "L/3",
+     "ends": false,
+     "box": [
+      39250,
+      5650,
+      39850,
+      5950
+     ],
+     "design": [
+      39250,
+      5650,
+      39850,
+      5950
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "M3",
+     "name": "C1",
+     "kind": "column",
+     "ref": "M/3",
+     "ends": false,
+     "box": [
+      45400,
+      5650,
+      46000,
+      5950
+     ],
+     "design": [
+      45400,
+      5650,
+      46000,
+      5950
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "N3",
+     "name": "SW6",
+     "kind": "wall",
+     "ref": "N/3",
+     "ends": false,
+     "box": [
+      49450,
+      5650,
+      50950,
+      5950
+     ],
+     "design": [
+      49450,
+      5650,
+      50950,
+      5950
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "B4",
+     "name": "C3",
+     "kind": "column",
+     "ref": "B/4",
+     "ends": false,
+     "box": [
+      -75,
+      7000,
+      225,
+      7600
+     ],
+     "design": [
+      -75,
+      7000,
+      225,
+      7600
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "C4",
+     "name": "C1a",
+     "kind": "column",
+     "ref": "C/4",
+     "ends": false,
+     "box": [
+      5925,
+      7000,
+      6225,
+      7600
+     ],
+     "design": [
+      5925,
+      7000,
+      6225,
+      7600
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "B5",
+     "name": "C2",
+     "kind": "column",
+     "ref": "B/5",
+     "ends": false,
+     "box": [
+      -75,
+      10925,
+      225,
+      11525
+     ],
+     "design": [
+      -75,
+      10925,
+      225,
+      11525
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "C5",
+     "name": "C1a",
+     "kind": "column",
+     "ref": "C/5",
+     "ends": false,
+     "box": [
+      5925,
+      11225,
+      6225,
+      11825
+     ],
+     "design": [
+      5925,
+      11225,
+      6225,
+      11825
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "F5",
+     "name": "C1",
+     "kind": "column",
+     "ref": "F/5",
+     "ends": false,
+     "box": [
+      16550,
+      11225,
+      16850,
+      11825
+     ],
+     "design": [
+      16550,
+      11225,
+      16850,
+      11825
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "G5",
+     "name": "C6",
+     "kind": "column",
+     "ref": "G/5",
+     "ends": false,
+     "box": [
+      22700,
+      11225,
+      23000,
+      12025
+     ],
+     "design": [
+      22700,
+      11225,
+      23000,
+      12025
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "H5",
+     "name": "C1",
+     "kind": "column",
+     "ref": "H/5",
+     "ends": false,
+     "box": [
+      28850,
+      11225,
+      29150,
+      11825
+     ],
+     "design": [
+      28850,
+      11225,
+      29150,
+      11825
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "L5",
+     "name": "C6",
+     "kind": "column",
+     "ref": "L/5",
+     "ends": false,
+     "box": [
+      39400,
+      11225,
+      39700,
+      12025
+     ],
+     "design": [
+      39400,
+      11225,
+      39700,
+      12025
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "M5",
+     "name": "SW7",
+     "kind": "wall",
+     "ref": "M/5",
+     "ends": false,
+     "box": [
+      45550,
+      11225,
+      45850,
+      13850
+     ],
+     "design": [
+      45550,
+      11225,
+      45850,
+      13850
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "N5",
+     "name": "C2",
+     "kind": "column",
+     "ref": "N/5",
+     "ends": false,
+     "box": [
+      50650,
+      11225,
+      50950,
+      11825
+     ],
+     "design": [
+      50650,
+      11225,
+      50950,
+      11825
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "C7",
+     "name": "C1a",
+     "kind": "column",
+     "ref": "C/7",
+     "ends": false,
+     "box": [
+      5925,
+      15850,
+      6225,
+      16450
+     ],
+     "design": [
+      5925,
+      15850,
+      6225,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "D7",
+     "name": "C1b",
+     "kind": "column",
+     "ref": "D/7",
+     "ends": false,
+     "box": [
+      12150,
+      15850,
+      12450,
+      16450
+     ],
+     "design": [
+      12150,
+      15850,
+      12450,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "F7",
+     "name": "C1b",
+     "kind": "column",
+     "ref": "F/7",
+     "ends": false,
+     "box": [
+      16550,
+      15850,
+      16850,
+      16450
+     ],
+     "design": [
+      16550,
+      15850,
+      16850,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "G7",
+     "name": "C6",
+     "kind": "column",
+     "ref": "G/7",
+     "ends": false,
+     "box": [
+      22700,
+      15650,
+      23000,
+      16450
+     ],
+     "design": [
+      22700,
+      15650,
+      23000,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "H7",
+     "name": "C1b",
+     "kind": "column",
+     "ref": "H/7",
+     "ends": false,
+     "box": [
+      28850,
+      15850,
+      29150,
+      16450
+     ],
+     "design": [
+      28850,
+      15850,
+      29150,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "K7",
+     "name": "C1b",
+     "kind": "column",
+     "ref": "K/7",
+     "ends": false,
+     "box": [
+      33250,
+      15850,
+      33550,
+      16450
+     ],
+     "design": [
+      33250,
+      15850,
+      33550,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "L7",
+     "name": "C6",
+     "kind": "column",
+     "ref": "L/7",
+     "ends": false,
+     "box": [
+      39400,
+      15650,
+      39700,
+      16450
+     ],
+     "design": [
+      39400,
+      15650,
+      39700,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "M7",
+     "name": "C1b",
+     "kind": "column",
+     "ref": "M/7",
+     "ends": false,
+     "box": [
+      45550,
+      15850,
+      45850,
+      16450
+     ],
+     "design": [
+      45550,
+      15850,
+      45850,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "N7",
+     "name": "C2",
+     "kind": "column",
+     "ref": "N/7",
+     "ends": false,
+     "box": [
+      50650,
+      15850,
+      50950,
+      16450
+     ],
+     "design": [
+      50650,
+      15850,
+      50950,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    }
+   ],
+   "cores": [
+    {
+     "key": "lift1",
+     "name": "Lift 1",
+     "ref": "D/5",
+     "box": [
+      12150,
+      11225,
+      14450,
+      13850
+     ],
+     "design": [
+      12150,
+      11225,
+      14450,
+      13850
+     ],
+     "wall": 300,
+     "door": {
+      "side": "b",
+      "from": 490,
+      "width": 1320
+     },
+     "measured": false
+    },
+    {
+     "key": "lift2",
+     "name": "Lift 2",
+     "ref": "J/5",
+     "box": [
+      31250,
+      11225,
+      33550,
+      13850
+     ],
+     "design": [
+      31250,
+      11225,
+      33550,
+      13850
+     ],
+     "wall": 300,
+     "door": {
+      "side": "b",
+      "from": 490,
+      "width": 1320
+     },
+     "measured": false
+    }
+   ],
+   "openings": [
+    {
+     "key": "o1",
+     "name": "Opening by B/3",
+     "kind": "void",
+     "ref": "B/3",
+     "box": [
+      225,
+      5900,
+      700,
+      6325
+     ]
+    },
+    {
+     "key": "o2",
+     "name": "Opening by E/3",
+     "kind": "void",
+     "ref": "E/3",
+     "box": [
+      13800,
+      5100,
+      14450,
+      5650
+     ]
+    },
+    {
+     "key": "o3",
+     "name": "Opening by J/3",
+     "kind": "void",
+     "ref": "J/3",
+     "box": [
+      30525,
+      5100,
+      31175,
+      5650
+     ]
+    },
+    {
+     "key": "o4",
+     "name": "Opening by L/3",
+     "kind": "void",
+     "ref": "L/3",
+     "box": [
+      38550,
+      5100,
+      39400,
+      5650
+     ]
+    },
+    {
+     "key": "stair1",
+     "name": "Stair 1",
+     "kind": "stair",
+     "ref": "E/5",
+     "box": [
+      14450,
+      11375,
+      16550,
+      14550
+     ]
+    },
+    {
+     "key": "stair2",
+     "name": "Stair 2",
+     "kind": "stair",
+     "ref": "H/5",
+     "box": [
+      29150,
+      11375,
+      31250,
+      14550
+     ]
+    },
+    {
+     "key": "pool",
+     "name": "Pool (inside)",
+     "kind": "pool",
+     "ref": "B/4",
+     "box": [
+      1900,
+      7600,
+      5925,
+      16175
+     ]
+    }
+   ]
+  },
+  {
+   "key": "2",
+   "name": "2nd floor",
+   "short": "2",
+   "order": 2,
+   "level": 7200,
+   "source": "Slab from the new 2nd floor drawing (12 Oct 2026). Columns copied from it too: the new 3rd floor drawing hasn't come yet, and the old drawings used the same columns for these two floors.",
+   "notes": [
+    "Grid 4 to 5 is written 3975 on the new plans, but it is drawn 4000 and the sections say 4000 (3 to 5 = 5650). The app uses 3975: measure it on site.",
+    "The B–C block's left edge is written 500 from grid B but drawn 575 (575 on the 1st floor). The app uses 500.",
+    "The B–C block's right edge is written 1550 from grid C but drawn 1575 (1575 on the 1st floor). The app uses 1550."
+   ],
+   "grid": {
+    "x": [
+     {
+      "id": "B",
+      "design": 0,
+      "pos": 0,
+      "measured": false
+     },
+     {
+      "id": "C",
+      "design": 6150,
+      "pos": 6150,
+      "measured": false
+     },
+     {
+      "id": "D",
+      "design": 12300,
+      "pos": 12300,
+      "measured": false
+     },
+     {
+      "id": "E",
+      "design": 14300,
+      "pos": 14300,
+      "measured": false
+     },
+     {
+      "id": "F",
+      "design": 16700,
+      "pos": 16700,
+      "measured": false
+     },
+     {
+      "id": "G",
+      "design": 22850,
+      "pos": 22850,
+      "measured": false
+     },
+     {
+      "id": "H",
+      "design": 29000,
+      "pos": 29000,
+      "measured": false
+     },
+     {
+      "id": "J",
+      "design": 31400,
+      "pos": 31400,
+      "measured": false
+     },
+     {
+      "id": "K",
+      "design": 33400,
+      "pos": 33400,
+      "measured": false
+     },
+     {
+      "id": "L",
+      "design": 39550,
+      "pos": 39550,
+      "measured": false
+     },
+     {
+      "id": "M",
+      "design": 45700,
+      "pos": 45700,
+      "measured": false
+     },
+     {
+      "id": "N",
+      "design": 50800,
+      "pos": 50800,
+      "measured": false
+     }
+    ],
+    "y": [
+     {
+      "id": "2",
+      "design": 0,
+      "pos": 0,
+      "measured": false
+     },
+     {
+      "id": "2b",
+      "design": 5175,
+      "pos": 5175,
+      "measured": false
+     },
+     {
+      "id": "3",
+      "design": 5750,
+      "pos": 5750,
+      "measured": false
+     },
+     {
+      "id": "4",
+      "design": 7400,
+      "pos": 7400,
+      "measured": false
+     },
+     {
+      "id": "5",
+      "design": 11375,
+      "pos": 11375,
+      "measured": false
+     },
+     {
+      "id": "6",
+      "design": 13475,
+      "pos": 13475,
+      "measured": false
+     },
+     {
+      "id": "7",
+      "design": 16350,
+      "pos": 16350,
+      "measured": false
+     },
+     {
+      "id": "7a",
+      "design": 17850,
+      "pos": 17850,
+      "measured": false
+     },
+     {
+      "id": "7b",
+      "design": 18200,
+      "pos": 18200,
+      "measured": false
+     }
+    ]
+   },
+   "outline": [
+    [
+     7700,
+     -100
+    ],
+    [
+     7700,
+     5100
+    ],
+    [
+     51775,
+     5100
+    ],
+    [
+     51775,
+     11400
+    ],
+    [
+     51475,
+     11400
+    ],
+    [
+     51475,
+     13500
+    ],
+    [
+     50950,
+     13500
+    ],
+    [
+     50950,
+     18275
+    ],
+    [
+     45550,
+     18275
+    ],
+    [
+     45550,
+     17725
+    ],
+    [
+     39700,
+     17725
+    ],
+    [
+     39700,
+     18275
+    ],
+    [
+     33250,
+     18275
+    ],
+    [
+     33250,
+     17925
+    ],
+    [
+     29150,
+     17925
+    ],
+    [
+     29150,
+     18275
+    ],
+    [
+     22700,
+     18275
+    ],
+    [
+     22700,
+     17400
+    ],
+    [
+     12450,
+     17400
+    ],
+    [
+     12450,
+     18275
+    ],
+    [
+     5925,
+     18275
+    ],
+    [
+     5925,
+     11525
+    ],
+    [
+     -500,
+     11525
+    ],
+    [
+     -500,
+     -100
+    ]
+   ],
+   "outlineDesign": [
+    [
+     7700,
+     -100
+    ],
+    [
+     7700,
+     5100
+    ],
+    [
+     51775,
+     5100
+    ],
+    [
+     51775,
+     11400
+    ],
+    [
+     51475,
+     11400
+    ],
+    [
+     51475,
+     13500
+    ],
+    [
+     50950,
+     13500
+    ],
+    [
+     50950,
+     18275
+    ],
+    [
+     45550,
+     18275
+    ],
+    [
+     45550,
+     17725
+    ],
+    [
+     39700,
+     17725
+    ],
+    [
+     39700,
+     18275
+    ],
+    [
+     33250,
+     18275
+    ],
+    [
+     33250,
+     17925
+    ],
+    [
+     29150,
+     17925
+    ],
+    [
+     29150,
+     18275
+    ],
+    [
+     22700,
+     18275
+    ],
+    [
+     22700,
+     17400
+    ],
+    [
+     12450,
+     17400
+    ],
+    [
+     12450,
+     18275
+    ],
+    [
+     5925,
+     18275
+    ],
+    [
+     5925,
+     11525
+    ],
+    [
+     -500,
+     11525
+    ],
+    [
+     -500,
+     -100
+    ]
+   ],
+   "edgesMeasured": 0,
+   "columns": [
+    {
+     "key": "B2",
+     "name": "C2",
+     "kind": "column",
+     "ref": "B/2",
+     "ends": false,
+     "box": [
+      -75,
+      -100,
+      225,
+      500
+     ],
+     "design": [
+      -75,
+      -100,
+      225,
+      500
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "C2",
+     "name": "C2",
+     "kind": "column",
+     "ref": "C/2",
+     "ends": false,
+     "box": [
+      5925,
+      -100,
+      6225,
+      500
+     ],
+     "design": [
+      5925,
+      -100,
+      6225,
+      500
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "B3",
+     "name": "C2",
+     "kind": "column",
+     "ref": "B/3",
+     "ends": false,
+     "box": [
+      -75,
+      5475,
+      225,
+      6075
+     ],
+     "design": [
+      -75,
+      5475,
+      225,
+      6075
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "C3",
+     "name": "SW5",
+     "kind": "wall",
+     "ref": "C/3",
+     "ends": false,
+     "box": [
+      5925,
+      4575,
+      6225,
+      6075
+     ],
+     "design": [
+      5925,
+      4575,
+      6225,
+      6075
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "D3",
+     "name": "C1",
+     "kind": "column",
+     "ref": "D/3",
+     "ends": false,
+     "box": [
+      12000,
+      5650,
+      12600,
+      5950
+     ],
+     "design": [
+      12000,
+      5650,
+      12600,
+      5950
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "F3",
+     "name": "C1",
+     "kind": "column",
+     "ref": "F/3",
+     "ends": false,
+     "box": [
+      16400,
+      5650,
+      17000,
+      5950
+     ],
+     "design": [
+      16400,
+      5650,
+      17000,
+      5950
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "G3",
+     "name": "SW4",
+     "kind": "wall",
+     "ref": "G/3",
+     "ends": false,
+     "box": [
+      22100,
+      5650,
+      23600,
+      5950
+     ],
+     "design": [
+      22100,
+      5650,
+      23600,
+      5950
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "H3",
+     "name": "C1",
+     "kind": "column",
+     "ref": "H/3",
+     "ends": false,
+     "box": [
+      28700,
+      5650,
+      29300,
+      5950
+     ],
+     "design": [
+      28700,
+      5650,
+      29300,
+      5950
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "K3",
+     "name": "C1",
+     "kind": "column",
+     "ref": "K/3",
+     "ends": false,
+     "box": [
+      33100,
+      5650,
+      33700,
+      5950
+     ],
+     "design": [
+      33100,
+      5650,
+      33700,
+      5950
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "L3",
+     "name": "C1",
+     "kind": "column",
+     "ref": "L/3",
+     "ends": false,
+     "box": [
+      39250,
+      5650,
+      39850,
+      5950
+     ],
+     "design": [
+      39250,
+      5650,
+      39850,
+      5950
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "M3",
+     "name": "C1",
+     "kind": "column",
+     "ref": "M/3",
+     "ends": false,
+     "box": [
+      45400,
+      5650,
+      46000,
+      5950
+     ],
+     "design": [
+      45400,
+      5650,
+      46000,
+      5950
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "N3",
+     "name": "SW6",
+     "kind": "wall",
+     "ref": "N/3",
+     "ends": false,
+     "box": [
+      49450,
+      5650,
+      50950,
+      5950
+     ],
+     "design": [
+      49450,
+      5650,
+      50950,
+      5950
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "B4",
+     "name": "C3",
+     "kind": "column",
+     "ref": "B/4",
+     "ends": false,
+     "box": [
+      -75,
+      7000,
+      225,
+      7600
+     ],
+     "design": [
+      -75,
+      7000,
+      225,
+      7600
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "C4",
+     "name": "C1a",
+     "kind": "column",
+     "ref": "C/4",
+     "ends": false,
+     "box": [
+      5925,
+      7000,
+      6225,
+      7600
+     ],
+     "design": [
+      5925,
+      7000,
+      6225,
+      7600
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "B5",
+     "name": "C2",
+     "kind": "column",
+     "ref": "B/5",
+     "ends": false,
+     "box": [
+      -75,
+      10925,
+      225,
+      11525
+     ],
+     "design": [
+      -75,
+      10925,
+      225,
+      11525
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "C5",
+     "name": "C1a",
+     "kind": "column",
+     "ref": "C/5",
+     "ends": false,
+     "box": [
+      5925,
+      11225,
+      6225,
+      11825
+     ],
+     "design": [
+      5925,
+      11225,
+      6225,
+      11825
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "F5",
+     "name": "C1",
+     "kind": "column",
+     "ref": "F/5",
+     "ends": false,
+     "box": [
+      16550,
+      11225,
+      16850,
+      11825
+     ],
+     "design": [
+      16550,
+      11225,
+      16850,
+      11825
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "G5",
+     "name": "C6",
+     "kind": "column",
+     "ref": "G/5",
+     "ends": false,
+     "box": [
+      22700,
+      11225,
+      23000,
+      12025
+     ],
+     "design": [
+      22700,
+      11225,
+      23000,
+      12025
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "H5",
+     "name": "C1",
+     "kind": "column",
+     "ref": "H/5",
+     "ends": false,
+     "box": [
+      28850,
+      11225,
+      29150,
+      11825
+     ],
+     "design": [
+      28850,
+      11225,
+      29150,
+      11825
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "L5",
+     "name": "C6",
+     "kind": "column",
+     "ref": "L/5",
+     "ends": false,
+     "box": [
+      39400,
+      11225,
+      39700,
+      12025
+     ],
+     "design": [
+      39400,
+      11225,
+      39700,
+      12025
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "M5",
+     "name": "SW7",
+     "kind": "wall",
+     "ref": "M/5",
+     "ends": false,
+     "box": [
+      45550,
+      11225,
+      45850,
+      13850
+     ],
+     "design": [
+      45550,
+      11225,
+      45850,
+      13850
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "N5",
+     "name": "C2",
+     "kind": "column",
+     "ref": "N/5",
+     "ends": false,
+     "box": [
+      50650,
+      11225,
+      50950,
+      11825
+     ],
+     "design": [
+      50650,
+      11225,
+      50950,
+      11825
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "C7",
+     "name": "C1a",
+     "kind": "column",
+     "ref": "C/7",
+     "ends": false,
+     "box": [
+      5925,
+      15850,
+      6225,
+      16450
+     ],
+     "design": [
+      5925,
+      15850,
+      6225,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "D7",
+     "name": "C1b",
+     "kind": "column",
+     "ref": "D/7",
+     "ends": false,
+     "box": [
+      12150,
+      15850,
+      12450,
+      16450
+     ],
+     "design": [
+      12150,
+      15850,
+      12450,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "F7",
+     "name": "C1b",
+     "kind": "column",
+     "ref": "F/7",
+     "ends": false,
+     "box": [
+      16550,
+      15850,
+      16850,
+      16450
+     ],
+     "design": [
+      16550,
+      15850,
+      16850,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "G7",
+     "name": "C6",
+     "kind": "column",
+     "ref": "G/7",
+     "ends": false,
+     "box": [
+      22700,
+      15650,
+      23000,
+      16450
+     ],
+     "design": [
+      22700,
+      15650,
+      23000,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "H7",
+     "name": "C1b",
+     "kind": "column",
+     "ref": "H/7",
+     "ends": false,
+     "box": [
+      28850,
+      15850,
+      29150,
+      16450
+     ],
+     "design": [
+      28850,
+      15850,
+      29150,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "K7",
+     "name": "C1b",
+     "kind": "column",
+     "ref": "K/7",
+     "ends": false,
+     "box": [
+      33250,
+      15850,
+      33550,
+      16450
+     ],
+     "design": [
+      33250,
+      15850,
+      33550,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "L7",
+     "name": "C6",
+     "kind": "column",
+     "ref": "L/7",
+     "ends": false,
+     "box": [
+      39400,
+      15650,
+      39700,
+      16450
+     ],
+     "design": [
+      39400,
+      15650,
+      39700,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "M7",
+     "name": "C1b",
+     "kind": "column",
+     "ref": "M/7",
+     "ends": false,
+     "box": [
+      45550,
+      15850,
+      45850,
+      16450
+     ],
+     "design": [
+      45550,
+      15850,
+      45850,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "N7",
+     "name": "C2",
+     "kind": "column",
+     "ref": "N/7",
+     "ends": false,
+     "box": [
+      50650,
+      15850,
+      50950,
+      16450
+     ],
+     "design": [
+      50650,
+      15850,
+      50950,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    }
+   ],
+   "cores": [
+    {
+     "key": "lift1",
+     "name": "Lift 1",
+     "ref": "D/5",
+     "box": [
+      12150,
+      11225,
+      14450,
+      13850
+     ],
+     "design": [
+      12150,
+      11225,
+      14450,
+      13850
+     ],
+     "wall": 300,
+     "door": {
+      "side": "b",
+      "from": 490,
+      "width": 1320
+     },
+     "measured": false
+    },
+    {
+     "key": "lift2",
+     "name": "Lift 2",
+     "ref": "J/5",
+     "box": [
+      31250,
+      11225,
+      33550,
+      13850
+     ],
+     "design": [
+      31250,
+      11225,
+      33550,
+      13850
+     ],
+     "wall": 300,
+     "door": {
+      "side": "b",
+      "from": 490,
+      "width": 1320
+     },
+     "measured": false
+    }
+   ],
+   "openings": [
+    {
+     "key": "stair1",
+     "name": "Stair 1",
+     "kind": "stair",
+     "ref": "E/5",
+     "box": [
+      14450,
+      11375,
+      16550,
+      14550
+     ]
+    },
+    {
+     "key": "stair2",
+     "name": "Stair 2",
+     "kind": "stair",
+     "ref": "H/5",
+     "box": [
+      29150,
+      11375,
+      31250,
+      14550
+     ]
+    }
+   ]
+  },
+  {
+   "key": "3",
+   "name": "3rd floor",
+   "short": "3",
+   "order": 3,
+   "level": 10500,
+   "source": "No new drawing for this floor yet, so everything is copied from the new 2nd floor drawing. The old drawings showed this floor the same as the 2nd. Update it when the engineer sends this floor's drawing.",
+   "notes": [
+    "Grid 4 to 5 is written 3975 on the new plans, but it is drawn 4000 and the sections say 4000 (3 to 5 = 5650). The app uses 3975: measure it on site."
+   ],
+   "grid": {
+    "x": [
+     {
+      "id": "B",
+      "design": 0,
+      "pos": 0,
+      "measured": false
+     },
+     {
+      "id": "C",
+      "design": 6150,
+      "pos": 6150,
+      "measured": false
+     },
+     {
+      "id": "D",
+      "design": 12300,
+      "pos": 12300,
+      "measured": false
+     },
+     {
+      "id": "E",
+      "design": 14300,
+      "pos": 14300,
+      "measured": false
+     },
+     {
+      "id": "F",
+      "design": 16700,
+      "pos": 16700,
+      "measured": false
+     },
+     {
+      "id": "G",
+      "design": 22850,
+      "pos": 22850,
+      "measured": false
+     },
+     {
+      "id": "H",
+      "design": 29000,
+      "pos": 29000,
+      "measured": false
+     },
+     {
+      "id": "J",
+      "design": 31400,
+      "pos": 31400,
+      "measured": false
+     },
+     {
+      "id": "K",
+      "design": 33400,
+      "pos": 33400,
+      "measured": false
+     },
+     {
+      "id": "L",
+      "design": 39550,
+      "pos": 39550,
+      "measured": false
+     },
+     {
+      "id": "M",
+      "design": 45700,
+      "pos": 45700,
+      "measured": false
+     },
+     {
+      "id": "N",
+      "design": 50800,
+      "pos": 50800,
+      "measured": false
+     }
+    ],
+    "y": [
+     {
+      "id": "2",
+      "design": 0,
+      "pos": 0,
+      "measured": false
+     },
+     {
+      "id": "2b",
+      "design": 5175,
+      "pos": 5175,
+      "measured": false
+     },
+     {
+      "id": "3",
+      "design": 5750,
+      "pos": 5750,
+      "measured": false
+     },
+     {
+      "id": "4",
+      "design": 7400,
+      "pos": 7400,
+      "measured": false
+     },
+     {
+      "id": "5",
+      "design": 11375,
+      "pos": 11375,
+      "measured": false
+     },
+     {
+      "id": "6",
+      "design": 13475,
+      "pos": 13475,
+      "measured": false
+     },
+     {
+      "id": "7",
+      "design": 16350,
+      "pos": 16350,
+      "measured": false
+     },
+     {
+      "id": "7a",
+      "design": 17850,
+      "pos": 17850,
+      "measured": false
+     },
+     {
+      "id": "7b",
+      "design": 18200,
+      "pos": 18200,
+      "measured": false
+     }
+    ]
+   },
+   "outline": [
+    [
+     7700,
+     -100
+    ],
+    [
+     7700,
+     5100
+    ],
+    [
+     51775,
+     5100
+    ],
+    [
+     51775,
+     11400
+    ],
+    [
+     51475,
+     11400
+    ],
+    [
+     51475,
+     13500
+    ],
+    [
+     50950,
+     13500
+    ],
+    [
+     50950,
+     18275
+    ],
+    [
+     45550,
+     18275
+    ],
+    [
+     45550,
+     17725
+    ],
+    [
+     39700,
+     17725
+    ],
+    [
+     39700,
+     18275
+    ],
+    [
+     33250,
+     18275
+    ],
+    [
+     33250,
+     17925
+    ],
+    [
+     29150,
+     17925
+    ],
+    [
+     29150,
+     18275
+    ],
+    [
+     22700,
+     18275
+    ],
+    [
+     22700,
+     17400
+    ],
+    [
+     12450,
+     17400
+    ],
+    [
+     12450,
+     18275
+    ],
+    [
+     5925,
+     18275
+    ],
+    [
+     5925,
+     11525
+    ],
+    [
+     -500,
+     11525
+    ],
+    [
+     -500,
+     -100
+    ]
+   ],
+   "outlineDesign": [
+    [
+     7700,
+     -100
+    ],
+    [
+     7700,
+     5100
+    ],
+    [
+     51775,
+     5100
+    ],
+    [
+     51775,
+     11400
+    ],
+    [
+     51475,
+     11400
+    ],
+    [
+     51475,
+     13500
+    ],
+    [
+     50950,
+     13500
+    ],
+    [
+     50950,
+     18275
+    ],
+    [
+     45550,
+     18275
+    ],
+    [
+     45550,
+     17725
+    ],
+    [
+     39700,
+     17725
+    ],
+    [
+     39700,
+     18275
+    ],
+    [
+     33250,
+     18275
+    ],
+    [
+     33250,
+     17925
+    ],
+    [
+     29150,
+     17925
+    ],
+    [
+     29150,
+     18275
+    ],
+    [
+     22700,
+     18275
+    ],
+    [
+     22700,
+     17400
+    ],
+    [
+     12450,
+     17400
+    ],
+    [
+     12450,
+     18275
+    ],
+    [
+     5925,
+     18275
+    ],
+    [
+     5925,
+     11525
+    ],
+    [
+     -500,
+     11525
+    ],
+    [
+     -500,
+     -100
+    ]
+   ],
+   "edgesMeasured": 0,
+   "columns": [
+    {
+     "key": "B2",
+     "name": "C2",
+     "kind": "column",
+     "ref": "B/2",
+     "ends": false,
+     "box": [
+      -75,
+      -100,
+      225,
+      500
+     ],
+     "design": [
+      -75,
+      -100,
+      225,
+      500
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "C2",
+     "name": "C2",
+     "kind": "column",
+     "ref": "C/2",
+     "ends": false,
+     "box": [
+      5925,
+      -100,
+      6225,
+      500
+     ],
+     "design": [
+      5925,
+      -100,
+      6225,
+      500
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "B3",
+     "name": "C2",
+     "kind": "column",
+     "ref": "B/3",
+     "ends": false,
+     "box": [
+      -75,
+      5475,
+      225,
+      6075
+     ],
+     "design": [
+      -75,
+      5475,
+      225,
+      6075
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "C3",
+     "name": "SW5",
+     "kind": "wall",
+     "ref": "C/3",
+     "ends": false,
+     "box": [
+      5925,
+      4575,
+      6225,
+      6075
+     ],
+     "design": [
+      5925,
+      4575,
+      6225,
+      6075
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "D3",
+     "name": "C1",
+     "kind": "column",
+     "ref": "D/3",
+     "ends": false,
+     "box": [
+      12000,
+      5650,
+      12600,
+      5950
+     ],
+     "design": [
+      12000,
+      5650,
+      12600,
+      5950
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "F3",
+     "name": "C1",
+     "kind": "column",
+     "ref": "F/3",
+     "ends": false,
+     "box": [
+      16400,
+      5650,
+      17000,
+      5950
+     ],
+     "design": [
+      16400,
+      5650,
+      17000,
+      5950
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "G3",
+     "name": "SW4",
+     "kind": "wall",
+     "ref": "G/3",
+     "ends": false,
+     "box": [
+      22100,
+      5650,
+      23600,
+      5950
+     ],
+     "design": [
+      22100,
+      5650,
+      23600,
+      5950
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "H3",
+     "name": "C1",
+     "kind": "column",
+     "ref": "H/3",
+     "ends": false,
+     "box": [
+      28700,
+      5650,
+      29300,
+      5950
+     ],
+     "design": [
+      28700,
+      5650,
+      29300,
+      5950
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "K3",
+     "name": "C1",
+     "kind": "column",
+     "ref": "K/3",
+     "ends": false,
+     "box": [
+      33100,
+      5650,
+      33700,
+      5950
+     ],
+     "design": [
+      33100,
+      5650,
+      33700,
+      5950
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "L3",
+     "name": "C1",
+     "kind": "column",
+     "ref": "L/3",
+     "ends": false,
+     "box": [
+      39250,
+      5650,
+      39850,
+      5950
+     ],
+     "design": [
+      39250,
+      5650,
+      39850,
+      5950
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "M3",
+     "name": "C1",
+     "kind": "column",
+     "ref": "M/3",
+     "ends": false,
+     "box": [
+      45400,
+      5650,
+      46000,
+      5950
+     ],
+     "design": [
+      45400,
+      5650,
+      46000,
+      5950
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "N3",
+     "name": "SW6",
+     "kind": "wall",
+     "ref": "N/3",
+     "ends": false,
+     "box": [
+      49450,
+      5650,
+      50950,
+      5950
+     ],
+     "design": [
+      49450,
+      5650,
+      50950,
+      5950
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "B4",
+     "name": "C3",
+     "kind": "column",
+     "ref": "B/4",
+     "ends": false,
+     "box": [
+      -75,
+      7000,
+      225,
+      7600
+     ],
+     "design": [
+      -75,
+      7000,
+      225,
+      7600
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "C4",
+     "name": "C1a",
+     "kind": "column",
+     "ref": "C/4",
+     "ends": false,
+     "box": [
+      5925,
+      7000,
+      6225,
+      7600
+     ],
+     "design": [
+      5925,
+      7000,
+      6225,
+      7600
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "B5",
+     "name": "C2",
+     "kind": "column",
+     "ref": "B/5",
+     "ends": false,
+     "box": [
+      -75,
+      10925,
+      225,
+      11525
+     ],
+     "design": [
+      -75,
+      10925,
+      225,
+      11525
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "C5",
+     "name": "C1a",
+     "kind": "column",
+     "ref": "C/5",
+     "ends": false,
+     "box": [
+      5925,
+      11225,
+      6225,
+      11825
+     ],
+     "design": [
+      5925,
+      11225,
+      6225,
+      11825
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "F5",
+     "name": "C1",
+     "kind": "column",
+     "ref": "F/5",
+     "ends": false,
+     "box": [
+      16550,
+      11225,
+      16850,
+      11825
+     ],
+     "design": [
+      16550,
+      11225,
+      16850,
+      11825
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "G5",
+     "name": "C6",
+     "kind": "column",
+     "ref": "G/5",
+     "ends": false,
+     "box": [
+      22700,
+      11225,
+      23000,
+      12025
+     ],
+     "design": [
+      22700,
+      11225,
+      23000,
+      12025
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "H5",
+     "name": "C1",
+     "kind": "column",
+     "ref": "H/5",
+     "ends": false,
+     "box": [
+      28850,
+      11225,
+      29150,
+      11825
+     ],
+     "design": [
+      28850,
+      11225,
+      29150,
+      11825
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "L5",
+     "name": "C6",
+     "kind": "column",
+     "ref": "L/5",
+     "ends": false,
+     "box": [
+      39400,
+      11225,
+      39700,
+      12025
+     ],
+     "design": [
+      39400,
+      11225,
+      39700,
+      12025
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "M5",
+     "name": "SW7",
+     "kind": "wall",
+     "ref": "M/5",
+     "ends": false,
+     "box": [
+      45550,
+      11225,
+      45850,
+      13850
+     ],
+     "design": [
+      45550,
+      11225,
+      45850,
+      13850
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "N5",
+     "name": "C2",
+     "kind": "column",
+     "ref": "N/5",
+     "ends": false,
+     "box": [
+      50650,
+      11225,
+      50950,
+      11825
+     ],
+     "design": [
+      50650,
+      11225,
+      50950,
+      11825
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "C7",
+     "name": "C1a",
+     "kind": "column",
+     "ref": "C/7",
+     "ends": false,
+     "box": [
+      5925,
+      15850,
+      6225,
+      16450
+     ],
+     "design": [
+      5925,
+      15850,
+      6225,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "D7",
+     "name": "C1b",
+     "kind": "column",
+     "ref": "D/7",
+     "ends": false,
+     "box": [
+      12150,
+      15850,
+      12450,
+      16450
+     ],
+     "design": [
+      12150,
+      15850,
+      12450,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "F7",
+     "name": "C1b",
+     "kind": "column",
+     "ref": "F/7",
+     "ends": false,
+     "box": [
+      16550,
+      15850,
+      16850,
+      16450
+     ],
+     "design": [
+      16550,
+      15850,
+      16850,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "G7",
+     "name": "C6",
+     "kind": "column",
+     "ref": "G/7",
+     "ends": false,
+     "box": [
+      22700,
+      15650,
+      23000,
+      16450
+     ],
+     "design": [
+      22700,
+      15650,
+      23000,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "H7",
+     "name": "C1b",
+     "kind": "column",
+     "ref": "H/7",
+     "ends": false,
+     "box": [
+      28850,
+      15850,
+      29150,
+      16450
+     ],
+     "design": [
+      28850,
+      15850,
+      29150,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "K7",
+     "name": "C1b",
+     "kind": "column",
+     "ref": "K/7",
+     "ends": false,
+     "box": [
+      33250,
+      15850,
+      33550,
+      16450
+     ],
+     "design": [
+      33250,
+      15850,
+      33550,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "L7",
+     "name": "C6",
+     "kind": "column",
+     "ref": "L/7",
+     "ends": false,
+     "box": [
+      39400,
+      15650,
+      39700,
+      16450
+     ],
+     "design": [
+      39400,
+      15650,
+      39700,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "M7",
+     "name": "C1b",
+     "kind": "column",
+     "ref": "M/7",
+     "ends": false,
+     "box": [
+      45550,
+      15850,
+      45850,
+      16450
+     ],
+     "design": [
+      45550,
+      15850,
+      45850,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "N7",
+     "name": "C2",
+     "kind": "column",
+     "ref": "N/7",
+     "ends": false,
+     "box": [
+      50650,
+      15850,
+      50950,
+      16450
+     ],
+     "design": [
+      50650,
+      15850,
+      50950,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    }
+   ],
+   "cores": [
+    {
+     "key": "lift1",
+     "name": "Lift 1",
+     "ref": "D/5",
+     "box": [
+      12150,
+      11225,
+      14450,
+      13850
+     ],
+     "design": [
+      12150,
+      11225,
+      14450,
+      13850
+     ],
+     "wall": 300,
+     "door": {
+      "side": "b",
+      "from": 490,
+      "width": 1320
+     },
+     "measured": false
+    },
+    {
+     "key": "lift2",
+     "name": "Lift 2",
+     "ref": "J/5",
+     "box": [
+      31250,
+      11225,
+      33550,
+      13850
+     ],
+     "design": [
+      31250,
+      11225,
+      33550,
+      13850
+     ],
+     "wall": 300,
+     "door": {
+      "side": "b",
+      "from": 490,
+      "width": 1320
+     },
+     "measured": false
+    }
+   ],
+   "openings": [
+    {
+     "key": "stair1",
+     "name": "Stair 1",
+     "kind": "stair",
+     "ref": "E/5",
+     "box": [
+      14450,
+      11375,
+      16550,
+      14550
+     ]
+    },
+    {
+     "key": "stair2",
+     "name": "Stair 2",
+     "kind": "stair",
+     "ref": "H/5",
+     "box": [
+      29150,
+      11375,
+      31250,
+      14550
+     ]
+    }
+   ]
+  },
+  {
+   "key": "4",
+   "name": "4th floor",
+   "short": "4",
+   "order": 4,
+   "level": 13800,
+   "source": "No new drawing for this floor yet, so everything is copied from the new 2nd floor drawing. The old drawing for this level (then called the 3rd floor) had a smaller B–C block, so check that part. Update it when the engineer sends this floor's drawing.",
+   "notes": [
+    "Grid 4 to 5 is written 3975 on the new plans, but it is drawn 4000 and the sections say 4000 (3 to 5 = 5650). The app uses 3975: measure it on site."
+   ],
+   "grid": {
+    "x": [
+     {
+      "id": "B",
+      "design": 0,
+      "pos": 0,
+      "measured": false
+     },
+     {
+      "id": "C",
+      "design": 6150,
+      "pos": 6150,
+      "measured": false
+     },
+     {
+      "id": "D",
+      "design": 12300,
+      "pos": 12300,
+      "measured": false
+     },
+     {
+      "id": "E",
+      "design": 14300,
+      "pos": 14300,
+      "measured": false
+     },
+     {
+      "id": "F",
+      "design": 16700,
+      "pos": 16700,
+      "measured": false
+     },
+     {
+      "id": "G",
+      "design": 22850,
+      "pos": 22850,
+      "measured": false
+     },
+     {
+      "id": "H",
+      "design": 29000,
+      "pos": 29000,
+      "measured": false
+     },
+     {
+      "id": "J",
+      "design": 31400,
+      "pos": 31400,
+      "measured": false
+     },
+     {
+      "id": "K",
+      "design": 33400,
+      "pos": 33400,
+      "measured": false
+     },
+     {
+      "id": "L",
+      "design": 39550,
+      "pos": 39550,
+      "measured": false
+     },
+     {
+      "id": "M",
+      "design": 45700,
+      "pos": 45700,
+      "measured": false
+     },
+     {
+      "id": "N",
+      "design": 50800,
+      "pos": 50800,
+      "measured": false
+     }
+    ],
+    "y": [
+     {
+      "id": "2",
+      "design": 0,
+      "pos": 0,
+      "measured": false
+     },
+     {
+      "id": "2b",
+      "design": 5175,
+      "pos": 5175,
+      "measured": false
+     },
+     {
+      "id": "3",
+      "design": 5750,
+      "pos": 5750,
+      "measured": false
+     },
+     {
+      "id": "4",
+      "design": 7400,
+      "pos": 7400,
+      "measured": false
+     },
+     {
+      "id": "5",
+      "design": 11375,
+      "pos": 11375,
+      "measured": false
+     },
+     {
+      "id": "6",
+      "design": 13475,
+      "pos": 13475,
+      "measured": false
+     },
+     {
+      "id": "7",
+      "design": 16350,
+      "pos": 16350,
+      "measured": false
+     },
+     {
+      "id": "7a",
+      "design": 17850,
+      "pos": 17850,
+      "measured": false
+     },
+     {
+      "id": "7b",
+      "design": 18200,
+      "pos": 18200,
+      "measured": false
+     }
+    ]
+   },
+   "outline": [
+    [
+     7700,
+     -100
+    ],
+    [
+     7700,
+     5100
+    ],
+    [
+     51775,
+     5100
+    ],
+    [
+     51775,
+     11400
+    ],
+    [
+     51475,
+     11400
+    ],
+    [
+     51475,
+     13500
+    ],
+    [
+     50950,
+     13500
+    ],
+    [
+     50950,
+     18275
+    ],
+    [
+     45550,
+     18275
+    ],
+    [
+     45550,
+     17725
+    ],
+    [
+     39700,
+     17725
+    ],
+    [
+     39700,
+     18275
+    ],
+    [
+     33250,
+     18275
+    ],
+    [
+     33250,
+     17925
+    ],
+    [
+     29150,
+     17925
+    ],
+    [
+     29150,
+     18275
+    ],
+    [
+     22700,
+     18275
+    ],
+    [
+     22700,
+     17400
+    ],
+    [
+     12450,
+     17400
+    ],
+    [
+     12450,
+     18275
+    ],
+    [
+     5925,
+     18275
+    ],
+    [
+     5925,
+     11525
+    ],
+    [
+     -500,
+     11525
+    ],
+    [
+     -500,
+     -100
+    ]
+   ],
+   "outlineDesign": [
+    [
+     7700,
+     -100
+    ],
+    [
+     7700,
+     5100
+    ],
+    [
+     51775,
+     5100
+    ],
+    [
+     51775,
+     11400
+    ],
+    [
+     51475,
+     11400
+    ],
+    [
+     51475,
+     13500
+    ],
+    [
+     50950,
+     13500
+    ],
+    [
+     50950,
+     18275
+    ],
+    [
+     45550,
+     18275
+    ],
+    [
+     45550,
+     17725
+    ],
+    [
+     39700,
+     17725
+    ],
+    [
+     39700,
+     18275
+    ],
+    [
+     33250,
+     18275
+    ],
+    [
+     33250,
+     17925
+    ],
+    [
+     29150,
+     17925
+    ],
+    [
+     29150,
+     18275
+    ],
+    [
+     22700,
+     18275
+    ],
+    [
+     22700,
+     17400
+    ],
+    [
+     12450,
+     17400
+    ],
+    [
+     12450,
+     18275
+    ],
+    [
+     5925,
+     18275
+    ],
+    [
+     5925,
+     11525
+    ],
+    [
+     -500,
+     11525
+    ],
+    [
+     -500,
+     -100
+    ]
+   ],
+   "edgesMeasured": 0,
+   "columns": [
+    {
+     "key": "B2",
+     "name": "C2",
+     "kind": "column",
+     "ref": "B/2",
+     "ends": false,
+     "box": [
+      -75,
+      -100,
+      225,
+      500
+     ],
+     "design": [
+      -75,
+      -100,
+      225,
+      500
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "C2",
+     "name": "C2",
+     "kind": "column",
+     "ref": "C/2",
+     "ends": false,
+     "box": [
+      5925,
+      -100,
+      6225,
+      500
+     ],
+     "design": [
+      5925,
+      -100,
+      6225,
+      500
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "B3",
+     "name": "C2",
+     "kind": "column",
+     "ref": "B/3",
+     "ends": false,
+     "box": [
+      -75,
+      5475,
+      225,
+      6075
+     ],
+     "design": [
+      -75,
+      5475,
+      225,
+      6075
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "C3",
+     "name": "SW5",
+     "kind": "wall",
+     "ref": "C/3",
+     "ends": false,
+     "box": [
+      5925,
+      4575,
+      6225,
+      6075
+     ],
+     "design": [
+      5925,
+      4575,
+      6225,
+      6075
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "D3",
+     "name": "C1",
+     "kind": "column",
+     "ref": "D/3",
+     "ends": false,
+     "box": [
+      12000,
+      5650,
+      12600,
+      5950
+     ],
+     "design": [
+      12000,
+      5650,
+      12600,
+      5950
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "F3",
+     "name": "C1",
+     "kind": "column",
+     "ref": "F/3",
+     "ends": false,
+     "box": [
+      16400,
+      5650,
+      17000,
+      5950
+     ],
+     "design": [
+      16400,
+      5650,
+      17000,
+      5950
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "G3",
+     "name": "SW4",
+     "kind": "wall",
+     "ref": "G/3",
+     "ends": false,
+     "box": [
+      22100,
+      5650,
+      23600,
+      5950
+     ],
+     "design": [
+      22100,
+      5650,
+      23600,
+      5950
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "H3",
+     "name": "C1",
+     "kind": "column",
+     "ref": "H/3",
+     "ends": false,
+     "box": [
+      28700,
+      5650,
+      29300,
+      5950
+     ],
+     "design": [
+      28700,
+      5650,
+      29300,
+      5950
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "K3",
+     "name": "C1",
+     "kind": "column",
+     "ref": "K/3",
+     "ends": false,
+     "box": [
+      33100,
+      5650,
+      33700,
+      5950
+     ],
+     "design": [
+      33100,
+      5650,
+      33700,
+      5950
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "L3",
+     "name": "C1",
+     "kind": "column",
+     "ref": "L/3",
+     "ends": false,
+     "box": [
+      39250,
+      5650,
+      39850,
+      5950
+     ],
+     "design": [
+      39250,
+      5650,
+      39850,
+      5950
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "M3",
+     "name": "C1",
+     "kind": "column",
+     "ref": "M/3",
+     "ends": false,
+     "box": [
+      45400,
+      5650,
+      46000,
+      5950
+     ],
+     "design": [
+      45400,
+      5650,
+      46000,
+      5950
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "N3",
+     "name": "SW6",
+     "kind": "wall",
+     "ref": "N/3",
+     "ends": false,
+     "box": [
+      49450,
+      5650,
+      50950,
+      5950
+     ],
+     "design": [
+      49450,
+      5650,
+      50950,
+      5950
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "B4",
+     "name": "C3",
+     "kind": "column",
+     "ref": "B/4",
+     "ends": false,
+     "box": [
+      -75,
+      7000,
+      225,
+      7600
+     ],
+     "design": [
+      -75,
+      7000,
+      225,
+      7600
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "C4",
+     "name": "C1a",
+     "kind": "column",
+     "ref": "C/4",
+     "ends": false,
+     "box": [
+      5925,
+      7000,
+      6225,
+      7600
+     ],
+     "design": [
+      5925,
+      7000,
+      6225,
+      7600
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "B5",
+     "name": "C2",
+     "kind": "column",
+     "ref": "B/5",
+     "ends": false,
+     "box": [
+      -75,
+      10925,
+      225,
+      11525
+     ],
+     "design": [
+      -75,
+      10925,
+      225,
+      11525
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "C5",
+     "name": "C1a",
+     "kind": "column",
+     "ref": "C/5",
+     "ends": false,
+     "box": [
+      5925,
+      11225,
+      6225,
+      11825
+     ],
+     "design": [
+      5925,
+      11225,
+      6225,
+      11825
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "F5",
+     "name": "C1",
+     "kind": "column",
+     "ref": "F/5",
+     "ends": false,
+     "box": [
+      16550,
+      11225,
+      16850,
+      11825
+     ],
+     "design": [
+      16550,
+      11225,
+      16850,
+      11825
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "G5",
+     "name": "C6",
+     "kind": "column",
+     "ref": "G/5",
+     "ends": false,
+     "box": [
+      22700,
+      11225,
+      23000,
+      12025
+     ],
+     "design": [
+      22700,
+      11225,
+      23000,
+      12025
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "H5",
+     "name": "C1",
+     "kind": "column",
+     "ref": "H/5",
+     "ends": false,
+     "box": [
+      28850,
+      11225,
+      29150,
+      11825
+     ],
+     "design": [
+      28850,
+      11225,
+      29150,
+      11825
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "L5",
+     "name": "C6",
+     "kind": "column",
+     "ref": "L/5",
+     "ends": false,
+     "box": [
+      39400,
+      11225,
+      39700,
+      12025
+     ],
+     "design": [
+      39400,
+      11225,
+      39700,
+      12025
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "M5",
+     "name": "SW7",
+     "kind": "wall",
+     "ref": "M/5",
+     "ends": false,
+     "box": [
+      45550,
+      11225,
+      45850,
+      13850
+     ],
+     "design": [
+      45550,
+      11225,
+      45850,
+      13850
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "N5",
+     "name": "C2",
+     "kind": "column",
+     "ref": "N/5",
+     "ends": false,
+     "box": [
+      50650,
+      11225,
+      50950,
+      11825
+     ],
+     "design": [
+      50650,
+      11225,
+      50950,
+      11825
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "C7",
+     "name": "C1a",
+     "kind": "column",
+     "ref": "C/7",
+     "ends": false,
+     "box": [
+      5925,
+      15850,
+      6225,
+      16450
+     ],
+     "design": [
+      5925,
+      15850,
+      6225,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "D7",
+     "name": "C1b",
+     "kind": "column",
+     "ref": "D/7",
+     "ends": false,
+     "box": [
+      12150,
+      15850,
+      12450,
+      16450
+     ],
+     "design": [
+      12150,
+      15850,
+      12450,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "F7",
+     "name": "C1b",
+     "kind": "column",
+     "ref": "F/7",
+     "ends": false,
+     "box": [
+      16550,
+      15850,
+      16850,
+      16450
+     ],
+     "design": [
+      16550,
+      15850,
+      16850,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "G7",
+     "name": "C6",
+     "kind": "column",
+     "ref": "G/7",
+     "ends": false,
+     "box": [
+      22700,
+      15650,
+      23000,
+      16450
+     ],
+     "design": [
+      22700,
+      15650,
+      23000,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "H7",
+     "name": "C1b",
+     "kind": "column",
+     "ref": "H/7",
+     "ends": false,
+     "box": [
+      28850,
+      15850,
+      29150,
+      16450
+     ],
+     "design": [
+      28850,
+      15850,
+      29150,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "K7",
+     "name": "C1b",
+     "kind": "column",
+     "ref": "K/7",
+     "ends": false,
+     "box": [
+      33250,
+      15850,
+      33550,
+      16450
+     ],
+     "design": [
+      33250,
+      15850,
+      33550,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "L7",
+     "name": "C6",
+     "kind": "column",
+     "ref": "L/7",
+     "ends": false,
+     "box": [
+      39400,
+      15650,
+      39700,
+      16450
+     ],
+     "design": [
+      39400,
+      15650,
+      39700,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "M7",
+     "name": "C1b",
+     "kind": "column",
+     "ref": "M/7",
+     "ends": false,
+     "box": [
+      45550,
+      15850,
+      45850,
+      16450
+     ],
+     "design": [
+      45550,
+      15850,
+      45850,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "N7",
+     "name": "C2",
+     "kind": "column",
+     "ref": "N/7",
+     "ends": false,
+     "box": [
+      50650,
+      15850,
+      50950,
+      16450
+     ],
+     "design": [
+      50650,
+      15850,
+      50950,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    }
+   ],
+   "cores": [
+    {
+     "key": "lift1",
+     "name": "Lift 1",
+     "ref": "D/5",
+     "box": [
+      12150,
+      11225,
+      14450,
+      13850
+     ],
+     "design": [
+      12150,
+      11225,
+      14450,
+      13850
+     ],
+     "wall": 300,
+     "door": {
+      "side": "b",
+      "from": 490,
+      "width": 1320
+     },
+     "measured": false
+    },
+    {
+     "key": "lift2",
+     "name": "Lift 2",
+     "ref": "J/5",
+     "box": [
+      31250,
+      11225,
+      33550,
+      13850
+     ],
+     "design": [
+      31250,
+      11225,
+      33550,
+      13850
+     ],
+     "wall": 300,
+     "door": {
+      "side": "b",
+      "from": 490,
+      "width": 1320
+     },
+     "measured": false
+    }
+   ],
+   "openings": [
+    {
+     "key": "stair1",
+     "name": "Stair 1",
+     "kind": "stair",
+     "ref": "E/5",
+     "box": [
+      14450,
+      11375,
+      16550,
+      14550
+     ]
+    },
+    {
+     "key": "stair2",
+     "name": "Stair 2",
+     "kind": "stair",
+     "ref": "H/5",
+     "box": [
+      29150,
+      11375,
+      31250,
+      14550
+     ]
+    }
+   ]
+  },
+  {
+   "key": "5",
+   "name": "5th floor",
+   "short": "5",
+   "order": 5,
+   "level": 17100,
+   "source": "No new drawing for this floor yet, so everything is copied from the new 2nd floor drawing. The old drawing for this level (then called the 4th floor) had a smaller B–C block, so check that part. Update it when the engineer sends this floor's drawing.",
+   "notes": [
+    "Grid 4 to 5 is written 3975 on the new plans, but it is drawn 4000 and the sections say 4000 (3 to 5 = 5650). The app uses 3975: measure it on site."
+   ],
+   "grid": {
+    "x": [
+     {
+      "id": "B",
+      "design": 0,
+      "pos": 0,
+      "measured": false
+     },
+     {
+      "id": "C",
+      "design": 6150,
+      "pos": 6150,
+      "measured": false
+     },
+     {
+      "id": "D",
+      "design": 12300,
+      "pos": 12300,
+      "measured": false
+     },
+     {
+      "id": "E",
+      "design": 14300,
+      "pos": 14300,
+      "measured": false
+     },
+     {
+      "id": "F",
+      "design": 16700,
+      "pos": 16700,
+      "measured": false
+     },
+     {
+      "id": "G",
+      "design": 22850,
+      "pos": 22850,
+      "measured": false
+     },
+     {
+      "id": "H",
+      "design": 29000,
+      "pos": 29000,
+      "measured": false
+     },
+     {
+      "id": "J",
+      "design": 31400,
+      "pos": 31400,
+      "measured": false
+     },
+     {
+      "id": "K",
+      "design": 33400,
+      "pos": 33400,
+      "measured": false
+     },
+     {
+      "id": "L",
+      "design": 39550,
+      "pos": 39550,
+      "measured": false
+     },
+     {
+      "id": "M",
+      "design": 45700,
+      "pos": 45700,
+      "measured": false
+     },
+     {
+      "id": "N",
+      "design": 50800,
+      "pos": 50800,
+      "measured": false
+     }
+    ],
+    "y": [
+     {
+      "id": "2",
+      "design": 0,
+      "pos": 0,
+      "measured": false
+     },
+     {
+      "id": "2b",
+      "design": 5175,
+      "pos": 5175,
+      "measured": false
+     },
+     {
+      "id": "3",
+      "design": 5750,
+      "pos": 5750,
+      "measured": false
+     },
+     {
+      "id": "4",
+      "design": 7400,
+      "pos": 7400,
+      "measured": false
+     },
+     {
+      "id": "5",
+      "design": 11375,
+      "pos": 11375,
+      "measured": false
+     },
+     {
+      "id": "6",
+      "design": 13475,
+      "pos": 13475,
+      "measured": false
+     },
+     {
+      "id": "7",
+      "design": 16350,
+      "pos": 16350,
+      "measured": false
+     },
+     {
+      "id": "7a",
+      "design": 17850,
+      "pos": 17850,
+      "measured": false
+     },
+     {
+      "id": "7b",
+      "design": 18200,
+      "pos": 18200,
+      "measured": false
+     }
+    ]
+   },
+   "outline": [
+    [
+     7700,
+     -100
+    ],
+    [
+     7700,
+     5100
+    ],
+    [
+     51775,
+     5100
+    ],
+    [
+     51775,
+     11400
+    ],
+    [
+     51475,
+     11400
+    ],
+    [
+     51475,
+     13500
+    ],
+    [
+     50950,
+     13500
+    ],
+    [
+     50950,
+     18275
+    ],
+    [
+     45550,
+     18275
+    ],
+    [
+     45550,
+     17725
+    ],
+    [
+     39700,
+     17725
+    ],
+    [
+     39700,
+     18275
+    ],
+    [
+     33250,
+     18275
+    ],
+    [
+     33250,
+     17925
+    ],
+    [
+     29150,
+     17925
+    ],
+    [
+     29150,
+     18275
+    ],
+    [
+     22700,
+     18275
+    ],
+    [
+     22700,
+     17400
+    ],
+    [
+     12450,
+     17400
+    ],
+    [
+     12450,
+     18275
+    ],
+    [
+     5925,
+     18275
+    ],
+    [
+     5925,
+     11525
+    ],
+    [
+     -500,
+     11525
+    ],
+    [
+     -500,
+     -100
+    ]
+   ],
+   "outlineDesign": [
+    [
+     7700,
+     -100
+    ],
+    [
+     7700,
+     5100
+    ],
+    [
+     51775,
+     5100
+    ],
+    [
+     51775,
+     11400
+    ],
+    [
+     51475,
+     11400
+    ],
+    [
+     51475,
+     13500
+    ],
+    [
+     50950,
+     13500
+    ],
+    [
+     50950,
+     18275
+    ],
+    [
+     45550,
+     18275
+    ],
+    [
+     45550,
+     17725
+    ],
+    [
+     39700,
+     17725
+    ],
+    [
+     39700,
+     18275
+    ],
+    [
+     33250,
+     18275
+    ],
+    [
+     33250,
+     17925
+    ],
+    [
+     29150,
+     17925
+    ],
+    [
+     29150,
+     18275
+    ],
+    [
+     22700,
+     18275
+    ],
+    [
+     22700,
+     17400
+    ],
+    [
+     12450,
+     17400
+    ],
+    [
+     12450,
+     18275
+    ],
+    [
+     5925,
+     18275
+    ],
+    [
+     5925,
+     11525
+    ],
+    [
+     -500,
+     11525
+    ],
+    [
+     -500,
+     -100
+    ]
+   ],
+   "edgesMeasured": 0,
+   "columns": [
+    {
+     "key": "B2",
+     "name": "C2",
+     "kind": "column",
+     "ref": "B/2",
+     "ends": false,
+     "box": [
+      -75,
+      -100,
+      225,
+      500
+     ],
+     "design": [
+      -75,
+      -100,
+      225,
+      500
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "C2",
+     "name": "C2",
+     "kind": "column",
+     "ref": "C/2",
+     "ends": false,
+     "box": [
+      5925,
+      -100,
+      6225,
+      500
+     ],
+     "design": [
+      5925,
+      -100,
+      6225,
+      500
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "B3",
+     "name": "C2",
+     "kind": "column",
+     "ref": "B/3",
+     "ends": false,
+     "box": [
+      -75,
+      5475,
+      225,
+      6075
+     ],
+     "design": [
+      -75,
+      5475,
+      225,
+      6075
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "C3",
+     "name": "SW5",
+     "kind": "wall",
+     "ref": "C/3",
+     "ends": false,
+     "box": [
+      5925,
+      4575,
+      6225,
+      6075
+     ],
+     "design": [
+      5925,
+      4575,
+      6225,
+      6075
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "D3",
+     "name": "C1",
+     "kind": "column",
+     "ref": "D/3",
+     "ends": false,
+     "box": [
+      12000,
+      5650,
+      12600,
+      5950
+     ],
+     "design": [
+      12000,
+      5650,
+      12600,
+      5950
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "F3",
+     "name": "C1",
+     "kind": "column",
+     "ref": "F/3",
+     "ends": false,
+     "box": [
+      16400,
+      5650,
+      17000,
+      5950
+     ],
+     "design": [
+      16400,
+      5650,
+      17000,
+      5950
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "G3",
+     "name": "SW4",
+     "kind": "wall",
+     "ref": "G/3",
+     "ends": false,
+     "box": [
+      22100,
+      5650,
+      23600,
+      5950
+     ],
+     "design": [
+      22100,
+      5650,
+      23600,
+      5950
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "H3",
+     "name": "C1",
+     "kind": "column",
+     "ref": "H/3",
+     "ends": false,
+     "box": [
+      28700,
+      5650,
+      29300,
+      5950
+     ],
+     "design": [
+      28700,
+      5650,
+      29300,
+      5950
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "K3",
+     "name": "C1",
+     "kind": "column",
+     "ref": "K/3",
+     "ends": false,
+     "box": [
+      33100,
+      5650,
+      33700,
+      5950
+     ],
+     "design": [
+      33100,
+      5650,
+      33700,
+      5950
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "L3",
+     "name": "C1",
+     "kind": "column",
+     "ref": "L/3",
+     "ends": false,
+     "box": [
+      39250,
+      5650,
+      39850,
+      5950
+     ],
+     "design": [
+      39250,
+      5650,
+      39850,
+      5950
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "M3",
+     "name": "C1",
+     "kind": "column",
+     "ref": "M/3",
+     "ends": false,
+     "box": [
+      45400,
+      5650,
+      46000,
+      5950
+     ],
+     "design": [
+      45400,
+      5650,
+      46000,
+      5950
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "N3",
+     "name": "SW6",
+     "kind": "wall",
+     "ref": "N/3",
+     "ends": false,
+     "box": [
+      49450,
+      5650,
+      50950,
+      5950
+     ],
+     "design": [
+      49450,
+      5650,
+      50950,
+      5950
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "B4",
+     "name": "C3",
+     "kind": "column",
+     "ref": "B/4",
+     "ends": false,
+     "box": [
+      -75,
+      7000,
+      225,
+      7600
+     ],
+     "design": [
+      -75,
+      7000,
+      225,
+      7600
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "C4",
+     "name": "C1a",
+     "kind": "column",
+     "ref": "C/4",
+     "ends": false,
+     "box": [
+      5925,
+      7000,
+      6225,
+      7600
+     ],
+     "design": [
+      5925,
+      7000,
+      6225,
+      7600
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "B5",
+     "name": "C2",
+     "kind": "column",
+     "ref": "B/5",
+     "ends": false,
+     "box": [
+      -75,
+      10925,
+      225,
+      11525
+     ],
+     "design": [
+      -75,
+      10925,
+      225,
+      11525
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "C5",
+     "name": "C1a",
+     "kind": "column",
+     "ref": "C/5",
+     "ends": false,
+     "box": [
+      5925,
+      11225,
+      6225,
+      11825
+     ],
+     "design": [
+      5925,
+      11225,
+      6225,
+      11825
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "F5",
+     "name": "C1",
+     "kind": "column",
+     "ref": "F/5",
+     "ends": false,
+     "box": [
+      16550,
+      11225,
+      16850,
+      11825
+     ],
+     "design": [
+      16550,
+      11225,
+      16850,
+      11825
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "G5",
+     "name": "C6",
+     "kind": "column",
+     "ref": "G/5",
+     "ends": false,
+     "box": [
+      22700,
+      11225,
+      23000,
+      12025
+     ],
+     "design": [
+      22700,
+      11225,
+      23000,
+      12025
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "H5",
+     "name": "C1",
+     "kind": "column",
+     "ref": "H/5",
+     "ends": false,
+     "box": [
+      28850,
+      11225,
+      29150,
+      11825
+     ],
+     "design": [
+      28850,
+      11225,
+      29150,
+      11825
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "L5",
+     "name": "C6",
+     "kind": "column",
+     "ref": "L/5",
+     "ends": false,
+     "box": [
+      39400,
+      11225,
+      39700,
+      12025
+     ],
+     "design": [
+      39400,
+      11225,
+      39700,
+      12025
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "M5",
+     "name": "SW7",
+     "kind": "wall",
+     "ref": "M/5",
+     "ends": false,
+     "box": [
+      45550,
+      11225,
+      45850,
+      13850
+     ],
+     "design": [
+      45550,
+      11225,
+      45850,
+      13850
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "N5",
+     "name": "C2",
+     "kind": "column",
+     "ref": "N/5",
+     "ends": false,
+     "box": [
+      50650,
+      11225,
+      50950,
+      11825
+     ],
+     "design": [
+      50650,
+      11225,
+      50950,
+      11825
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "C7",
+     "name": "C1a",
+     "kind": "column",
+     "ref": "C/7",
+     "ends": false,
+     "box": [
+      5925,
+      15850,
+      6225,
+      16450
+     ],
+     "design": [
+      5925,
+      15850,
+      6225,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "D7",
+     "name": "C1b",
+     "kind": "column",
+     "ref": "D/7",
+     "ends": false,
+     "box": [
+      12150,
+      15850,
+      12450,
+      16450
+     ],
+     "design": [
+      12150,
+      15850,
+      12450,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "F7",
+     "name": "C1b",
+     "kind": "column",
+     "ref": "F/7",
+     "ends": false,
+     "box": [
+      16550,
+      15850,
+      16850,
+      16450
+     ],
+     "design": [
+      16550,
+      15850,
+      16850,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "G7",
+     "name": "C6",
+     "kind": "column",
+     "ref": "G/7",
+     "ends": false,
+     "box": [
+      22700,
+      15650,
+      23000,
+      16450
+     ],
+     "design": [
+      22700,
+      15650,
+      23000,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "H7",
+     "name": "C1b",
+     "kind": "column",
+     "ref": "H/7",
+     "ends": false,
+     "box": [
+      28850,
+      15850,
+      29150,
+      16450
+     ],
+     "design": [
+      28850,
+      15850,
+      29150,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "K7",
+     "name": "C1b",
+     "kind": "column",
+     "ref": "K/7",
+     "ends": false,
+     "box": [
+      33250,
+      15850,
+      33550,
+      16450
+     ],
+     "design": [
+      33250,
+      15850,
+      33550,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "L7",
+     "name": "C6",
+     "kind": "column",
+     "ref": "L/7",
+     "ends": false,
+     "box": [
+      39400,
+      15650,
+      39700,
+      16450
+     ],
+     "design": [
+      39400,
+      15650,
+      39700,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "M7",
+     "name": "C1b",
+     "kind": "column",
+     "ref": "M/7",
+     "ends": false,
+     "box": [
+      45550,
+      15850,
+      45850,
+      16450
+     ],
+     "design": [
+      45550,
+      15850,
+      45850,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "N7",
+     "name": "C2",
+     "kind": "column",
+     "ref": "N/7",
+     "ends": false,
+     "box": [
+      50650,
+      15850,
+      50950,
+      16450
+     ],
+     "design": [
+      50650,
+      15850,
+      50950,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    }
+   ],
+   "cores": [
+    {
+     "key": "lift1",
+     "name": "Lift 1",
+     "ref": "D/5",
+     "box": [
+      12150,
+      11225,
+      14450,
+      13850
+     ],
+     "design": [
+      12150,
+      11225,
+      14450,
+      13850
+     ],
+     "wall": 300,
+     "door": {
+      "side": "b",
+      "from": 490,
+      "width": 1320
+     },
+     "measured": false
+    },
+    {
+     "key": "lift2",
+     "name": "Lift 2",
+     "ref": "J/5",
+     "box": [
+      31250,
+      11225,
+      33550,
+      13850
+     ],
+     "design": [
+      31250,
+      11225,
+      33550,
+      13850
+     ],
+     "wall": 300,
+     "door": {
+      "side": "b",
+      "from": 490,
+      "width": 1320
+     },
+     "measured": false
+    }
+   ],
+   "openings": [
+    {
+     "key": "stair1",
+     "name": "Stair 1",
+     "kind": "stair",
+     "ref": "E/5",
+     "box": [
+      14450,
+      11375,
+      16550,
+      14550
+     ]
+    },
+    {
+     "key": "stair2",
+     "name": "Stair 2",
+     "kind": "stair",
+     "ref": "H/5",
+     "box": [
+      29150,
+      11375,
+      31250,
+      14550
+     ]
+    }
+   ]
+  },
+  {
+   "key": "6",
+   "name": "6th floor",
+   "short": "6",
+   "order": 6,
+   "level": 20400,
+   "source": "No new drawing for this floor yet, so everything is copied from the new 2nd floor drawing. The old drawing for this level (then called the 5th floor) had a smaller B–C block, so check that part. Update it when the engineer sends this floor's drawing.",
+   "notes": [
+    "Grid 4 to 5 is written 3975 on the new plans, but it is drawn 4000 and the sections say 4000 (3 to 5 = 5650). The app uses 3975: measure it on site."
+   ],
+   "grid": {
+    "x": [
+     {
+      "id": "B",
+      "design": 0,
+      "pos": 0,
+      "measured": false
+     },
+     {
+      "id": "C",
+      "design": 6150,
+      "pos": 6150,
+      "measured": false
+     },
+     {
+      "id": "D",
+      "design": 12300,
+      "pos": 12300,
+      "measured": false
+     },
+     {
+      "id": "E",
+      "design": 14300,
+      "pos": 14300,
+      "measured": false
+     },
+     {
+      "id": "F",
+      "design": 16700,
+      "pos": 16700,
+      "measured": false
+     },
+     {
+      "id": "G",
+      "design": 22850,
+      "pos": 22850,
+      "measured": false
+     },
+     {
+      "id": "H",
+      "design": 29000,
+      "pos": 29000,
+      "measured": false
+     },
+     {
+      "id": "J",
+      "design": 31400,
+      "pos": 31400,
+      "measured": false
+     },
+     {
+      "id": "K",
+      "design": 33400,
+      "pos": 33400,
+      "measured": false
+     },
+     {
+      "id": "L",
+      "design": 39550,
+      "pos": 39550,
+      "measured": false
+     },
+     {
+      "id": "M",
+      "design": 45700,
+      "pos": 45700,
+      "measured": false
+     },
+     {
+      "id": "N",
+      "design": 50800,
+      "pos": 50800,
+      "measured": false
+     }
+    ],
+    "y": [
+     {
+      "id": "2",
+      "design": 0,
+      "pos": 0,
+      "measured": false
+     },
+     {
+      "id": "2b",
+      "design": 5175,
+      "pos": 5175,
+      "measured": false
+     },
+     {
+      "id": "3",
+      "design": 5750,
+      "pos": 5750,
+      "measured": false
+     },
+     {
+      "id": "4",
+      "design": 7400,
+      "pos": 7400,
+      "measured": false
+     },
+     {
+      "id": "5",
+      "design": 11375,
+      "pos": 11375,
+      "measured": false
+     },
+     {
+      "id": "6",
+      "design": 13475,
+      "pos": 13475,
+      "measured": false
+     },
+     {
+      "id": "7",
+      "design": 16350,
+      "pos": 16350,
+      "measured": false
+     },
+     {
+      "id": "7a",
+      "design": 17850,
+      "pos": 17850,
+      "measured": false
+     },
+     {
+      "id": "7b",
+      "design": 18200,
+      "pos": 18200,
+      "measured": false
+     }
+    ]
+   },
+   "outline": [
+    [
+     7700,
+     -100
+    ],
+    [
+     7700,
+     5100
+    ],
+    [
+     51775,
+     5100
+    ],
+    [
+     51775,
+     11400
+    ],
+    [
+     51475,
+     11400
+    ],
+    [
+     51475,
+     13500
+    ],
+    [
+     50950,
+     13500
+    ],
+    [
+     50950,
+     18275
+    ],
+    [
+     45550,
+     18275
+    ],
+    [
+     45550,
+     17725
+    ],
+    [
+     39700,
+     17725
+    ],
+    [
+     39700,
+     18275
+    ],
+    [
+     33250,
+     18275
+    ],
+    [
+     33250,
+     17925
+    ],
+    [
+     29150,
+     17925
+    ],
+    [
+     29150,
+     18275
+    ],
+    [
+     22700,
+     18275
+    ],
+    [
+     22700,
+     17400
+    ],
+    [
+     12450,
+     17400
+    ],
+    [
+     12450,
+     18275
+    ],
+    [
+     5925,
+     18275
+    ],
+    [
+     5925,
+     11525
+    ],
+    [
+     -500,
+     11525
+    ],
+    [
+     -500,
+     -100
+    ]
+   ],
+   "outlineDesign": [
+    [
+     7700,
+     -100
+    ],
+    [
+     7700,
+     5100
+    ],
+    [
+     51775,
+     5100
+    ],
+    [
+     51775,
+     11400
+    ],
+    [
+     51475,
+     11400
+    ],
+    [
+     51475,
+     13500
+    ],
+    [
+     50950,
+     13500
+    ],
+    [
+     50950,
+     18275
+    ],
+    [
+     45550,
+     18275
+    ],
+    [
+     45550,
+     17725
+    ],
+    [
+     39700,
+     17725
+    ],
+    [
+     39700,
+     18275
+    ],
+    [
+     33250,
+     18275
+    ],
+    [
+     33250,
+     17925
+    ],
+    [
+     29150,
+     17925
+    ],
+    [
+     29150,
+     18275
+    ],
+    [
+     22700,
+     18275
+    ],
+    [
+     22700,
+     17400
+    ],
+    [
+     12450,
+     17400
+    ],
+    [
+     12450,
+     18275
+    ],
+    [
+     5925,
+     18275
+    ],
+    [
+     5925,
+     11525
+    ],
+    [
+     -500,
+     11525
+    ],
+    [
+     -500,
+     -100
+    ]
+   ],
+   "edgesMeasured": 0,
+   "columns": [
+    {
+     "key": "B2",
+     "name": "C2",
+     "kind": "column",
+     "ref": "B/2",
+     "ends": false,
+     "box": [
+      -75,
+      -100,
+      225,
+      500
+     ],
+     "design": [
+      -75,
+      -100,
+      225,
+      500
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "C2",
+     "name": "C2",
+     "kind": "column",
+     "ref": "C/2",
+     "ends": false,
+     "box": [
+      5925,
+      -100,
+      6225,
+      500
+     ],
+     "design": [
+      5925,
+      -100,
+      6225,
+      500
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "B3",
+     "name": "C2",
+     "kind": "column",
+     "ref": "B/3",
+     "ends": false,
+     "box": [
+      -75,
+      5475,
+      225,
+      6075
+     ],
+     "design": [
+      -75,
+      5475,
+      225,
+      6075
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "C3",
+     "name": "SW5",
+     "kind": "wall",
+     "ref": "C/3",
+     "ends": false,
+     "box": [
+      5925,
+      4575,
+      6225,
+      6075
+     ],
+     "design": [
+      5925,
+      4575,
+      6225,
+      6075
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "D3",
+     "name": "C1",
+     "kind": "column",
+     "ref": "D/3",
+     "ends": false,
+     "box": [
+      12000,
+      5650,
+      12600,
+      5950
+     ],
+     "design": [
+      12000,
+      5650,
+      12600,
+      5950
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "F3",
+     "name": "C1",
+     "kind": "column",
+     "ref": "F/3",
+     "ends": false,
+     "box": [
+      16400,
+      5650,
+      17000,
+      5950
+     ],
+     "design": [
+      16400,
+      5650,
+      17000,
+      5950
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "G3",
+     "name": "SW4",
+     "kind": "wall",
+     "ref": "G/3",
+     "ends": false,
+     "box": [
+      22100,
+      5650,
+      23600,
+      5950
+     ],
+     "design": [
+      22100,
+      5650,
+      23600,
+      5950
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "H3",
+     "name": "C1",
+     "kind": "column",
+     "ref": "H/3",
+     "ends": false,
+     "box": [
+      28700,
+      5650,
+      29300,
+      5950
+     ],
+     "design": [
+      28700,
+      5650,
+      29300,
+      5950
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "K3",
+     "name": "C1",
+     "kind": "column",
+     "ref": "K/3",
+     "ends": false,
+     "box": [
+      33100,
+      5650,
+      33700,
+      5950
+     ],
+     "design": [
+      33100,
+      5650,
+      33700,
+      5950
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "L3",
+     "name": "C1",
+     "kind": "column",
+     "ref": "L/3",
+     "ends": false,
+     "box": [
+      39250,
+      5650,
+      39850,
+      5950
+     ],
+     "design": [
+      39250,
+      5650,
+      39850,
+      5950
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "M3",
+     "name": "C1",
+     "kind": "column",
+     "ref": "M/3",
+     "ends": false,
+     "box": [
+      45400,
+      5650,
+      46000,
+      5950
+     ],
+     "design": [
+      45400,
+      5650,
+      46000,
+      5950
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "N3",
+     "name": "SW6",
+     "kind": "wall",
+     "ref": "N/3",
+     "ends": false,
+     "box": [
+      49450,
+      5650,
+      50950,
+      5950
+     ],
+     "design": [
+      49450,
+      5650,
+      50950,
+      5950
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "B4",
+     "name": "C3",
+     "kind": "column",
+     "ref": "B/4",
+     "ends": false,
+     "box": [
+      -75,
+      7000,
+      225,
+      7600
+     ],
+     "design": [
+      -75,
+      7000,
+      225,
+      7600
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "C4",
+     "name": "C1a",
+     "kind": "column",
+     "ref": "C/4",
+     "ends": false,
+     "box": [
+      5925,
+      7000,
+      6225,
+      7600
+     ],
+     "design": [
+      5925,
+      7000,
+      6225,
+      7600
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "B5",
+     "name": "C2",
+     "kind": "column",
+     "ref": "B/5",
+     "ends": false,
+     "box": [
+      -75,
+      10925,
+      225,
+      11525
+     ],
+     "design": [
+      -75,
+      10925,
+      225,
+      11525
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "C5",
+     "name": "C1a",
+     "kind": "column",
+     "ref": "C/5",
+     "ends": false,
+     "box": [
+      5925,
+      11225,
+      6225,
+      11825
+     ],
+     "design": [
+      5925,
+      11225,
+      6225,
+      11825
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "F5",
+     "name": "C1",
+     "kind": "column",
+     "ref": "F/5",
+     "ends": false,
+     "box": [
+      16550,
+      11225,
+      16850,
+      11825
+     ],
+     "design": [
+      16550,
+      11225,
+      16850,
+      11825
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "G5",
+     "name": "C6",
+     "kind": "column",
+     "ref": "G/5",
+     "ends": false,
+     "box": [
+      22700,
+      11225,
+      23000,
+      12025
+     ],
+     "design": [
+      22700,
+      11225,
+      23000,
+      12025
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "H5",
+     "name": "C1",
+     "kind": "column",
+     "ref": "H/5",
+     "ends": false,
+     "box": [
+      28850,
+      11225,
+      29150,
+      11825
+     ],
+     "design": [
+      28850,
+      11225,
+      29150,
+      11825
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "L5",
+     "name": "C6",
+     "kind": "column",
+     "ref": "L/5",
+     "ends": false,
+     "box": [
+      39400,
+      11225,
+      39700,
+      12025
+     ],
+     "design": [
+      39400,
+      11225,
+      39700,
+      12025
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "M5",
+     "name": "SW7",
+     "kind": "wall",
+     "ref": "M/5",
+     "ends": false,
+     "box": [
+      45550,
+      11225,
+      45850,
+      13850
+     ],
+     "design": [
+      45550,
+      11225,
+      45850,
+      13850
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "N5",
+     "name": "C2",
+     "kind": "column",
+     "ref": "N/5",
+     "ends": false,
+     "box": [
+      50650,
+      11225,
+      50950,
+      11825
+     ],
+     "design": [
+      50650,
+      11225,
+      50950,
+      11825
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "C7",
+     "name": "C1a",
+     "kind": "column",
+     "ref": "C/7",
+     "ends": false,
+     "box": [
+      5925,
+      15850,
+      6225,
+      16450
+     ],
+     "design": [
+      5925,
+      15850,
+      6225,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "D7",
+     "name": "C1b",
+     "kind": "column",
+     "ref": "D/7",
+     "ends": false,
+     "box": [
+      12150,
+      15850,
+      12450,
+      16450
+     ],
+     "design": [
+      12150,
+      15850,
+      12450,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "F7",
+     "name": "C1b",
+     "kind": "column",
+     "ref": "F/7",
+     "ends": false,
+     "box": [
+      16550,
+      15850,
+      16850,
+      16450
+     ],
+     "design": [
+      16550,
+      15850,
+      16850,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "G7",
+     "name": "C6",
+     "kind": "column",
+     "ref": "G/7",
+     "ends": false,
+     "box": [
+      22700,
+      15650,
+      23000,
+      16450
+     ],
+     "design": [
+      22700,
+      15650,
+      23000,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "H7",
+     "name": "C1b",
+     "kind": "column",
+     "ref": "H/7",
+     "ends": false,
+     "box": [
+      28850,
+      15850,
+      29150,
+      16450
+     ],
+     "design": [
+      28850,
+      15850,
+      29150,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "K7",
+     "name": "C1b",
+     "kind": "column",
+     "ref": "K/7",
+     "ends": false,
+     "box": [
+      33250,
+      15850,
+      33550,
+      16450
+     ],
+     "design": [
+      33250,
+      15850,
+      33550,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "L7",
+     "name": "C6",
+     "kind": "column",
+     "ref": "L/7",
+     "ends": false,
+     "box": [
+      39400,
+      15650,
+      39700,
+      16450
+     ],
+     "design": [
+      39400,
+      15650,
+      39700,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "M7",
+     "name": "C1b",
+     "kind": "column",
+     "ref": "M/7",
+     "ends": false,
+     "box": [
+      45550,
+      15850,
+      45850,
+      16450
+     ],
+     "design": [
+      45550,
+      15850,
+      45850,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "N7",
+     "name": "C2",
+     "kind": "column",
+     "ref": "N/7",
+     "ends": false,
+     "box": [
+      50650,
+      15850,
+      50950,
+      16450
+     ],
+     "design": [
+      50650,
+      15850,
+      50950,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    }
+   ],
+   "cores": [
+    {
+     "key": "lift1",
+     "name": "Lift 1",
+     "ref": "D/5",
+     "box": [
+      12150,
+      11225,
+      14450,
+      13850
+     ],
+     "design": [
+      12150,
+      11225,
+      14450,
+      13850
+     ],
+     "wall": 300,
+     "door": {
+      "side": "b",
+      "from": 490,
+      "width": 1320
+     },
+     "measured": false
+    },
+    {
+     "key": "lift2",
+     "name": "Lift 2",
+     "ref": "J/5",
+     "box": [
+      31250,
+      11225,
+      33550,
+      13850
+     ],
+     "design": [
+      31250,
+      11225,
+      33550,
+      13850
+     ],
+     "wall": 300,
+     "door": {
+      "side": "b",
+      "from": 490,
+      "width": 1320
+     },
+     "measured": false
+    }
+   ],
+   "openings": [
+    {
+     "key": "stair1",
+     "name": "Stair 1",
+     "kind": "stair",
+     "ref": "E/5",
+     "box": [
+      14450,
+      11375,
+      16550,
+      14550
+     ]
+    },
+    {
+     "key": "stair2",
+     "name": "Stair 2",
+     "kind": "stair",
+     "ref": "H/5",
+     "box": [
+      29150,
+      11375,
+      31250,
+      14550
+     ]
+    }
+   ]
+  },
+  {
+   "key": "7",
+   "name": "7th floor",
+   "short": "7",
+   "order": 7,
+   "level": 23700,
+   "source": "No new drawing for this floor yet. Slab copied from the new 2nd floor drawing. The penthouse stairs come from the old 'Rooftop (sixth floor)' drawing and the columns from the old roof drawing (Jan 2025): with the extra storey those levels now sit one floor higher. Rough guide only.",
+   "notes": [
+    "Grid 4 to 5 is written 3975 on the new plans, but it is drawn 4000 and the sections say 4000 (3 to 5 = 5650). The app uses 3975: measure it on site."
+   ],
+   "grid": {
+    "x": [
+     {
+      "id": "B",
+      "design": 0,
+      "pos": 0,
+      "measured": false
+     },
+     {
+      "id": "C",
+      "design": 6150,
+      "pos": 6150,
+      "measured": false
+     },
+     {
+      "id": "D",
+      "design": 12300,
+      "pos": 12300,
+      "measured": false
+     },
+     {
+      "id": "E",
+      "design": 14300,
+      "pos": 14300,
+      "measured": false
+     },
+     {
+      "id": "F",
+      "design": 16700,
+      "pos": 16700,
+      "measured": false
+     },
+     {
+      "id": "G",
+      "design": 22850,
+      "pos": 22850,
+      "measured": false
+     },
+     {
+      "id": "H",
+      "design": 29000,
+      "pos": 29000,
+      "measured": false
+     },
+     {
+      "id": "J",
+      "design": 31400,
+      "pos": 31400,
+      "measured": false
+     },
+     {
+      "id": "K",
+      "design": 33400,
+      "pos": 33400,
+      "measured": false
+     },
+     {
+      "id": "L",
+      "design": 39550,
+      "pos": 39550,
+      "measured": false
+     },
+     {
+      "id": "M",
+      "design": 45700,
+      "pos": 45700,
+      "measured": false
+     },
+     {
+      "id": "N",
+      "design": 50800,
+      "pos": 50800,
+      "measured": false
+     }
+    ],
+    "y": [
+     {
+      "id": "2",
+      "design": 0,
+      "pos": 0,
+      "measured": false
+     },
+     {
+      "id": "2b",
+      "design": 5175,
+      "pos": 5175,
+      "measured": false
+     },
+     {
+      "id": "3",
+      "design": 5750,
+      "pos": 5750,
+      "measured": false
+     },
+     {
+      "id": "4",
+      "design": 7400,
+      "pos": 7400,
+      "measured": false
+     },
+     {
+      "id": "5",
+      "design": 11375,
+      "pos": 11375,
+      "measured": false
+     },
+     {
+      "id": "6",
+      "design": 13475,
+      "pos": 13475,
+      "measured": false
+     },
+     {
+      "id": "7",
+      "design": 16350,
+      "pos": 16350,
+      "measured": false
+     },
+     {
+      "id": "7a",
+      "design": 17850,
+      "pos": 17850,
+      "measured": false
+     },
+     {
+      "id": "7b",
+      "design": 18200,
+      "pos": 18200,
+      "measured": false
+     }
+    ]
+   },
+   "outline": [
+    [
+     7700,
+     -100
+    ],
+    [
+     7700,
+     5100
+    ],
+    [
+     51775,
+     5100
+    ],
+    [
+     51775,
+     11400
+    ],
+    [
+     51475,
+     11400
+    ],
+    [
+     51475,
+     13500
+    ],
+    [
+     50950,
+     13500
+    ],
+    [
+     50950,
+     18275
+    ],
+    [
+     45550,
+     18275
+    ],
+    [
+     45550,
+     17725
+    ],
+    [
+     39700,
+     17725
+    ],
+    [
+     39700,
+     18275
+    ],
+    [
+     33250,
+     18275
+    ],
+    [
+     33250,
+     17925
+    ],
+    [
+     29150,
+     17925
+    ],
+    [
+     29150,
+     18275
+    ],
+    [
+     22700,
+     18275
+    ],
+    [
+     22700,
+     17400
+    ],
+    [
+     12450,
+     17400
+    ],
+    [
+     12450,
+     18275
+    ],
+    [
+     5925,
+     18275
+    ],
+    [
+     5925,
+     11525
+    ],
+    [
+     -500,
+     11525
+    ],
+    [
+     -500,
+     -100
+    ]
+   ],
+   "outlineDesign": [
+    [
+     7700,
+     -100
+    ],
+    [
+     7700,
+     5100
+    ],
+    [
+     51775,
+     5100
+    ],
+    [
+     51775,
+     11400
+    ],
+    [
+     51475,
+     11400
+    ],
+    [
+     51475,
+     13500
+    ],
+    [
+     50950,
+     13500
+    ],
+    [
+     50950,
+     18275
+    ],
+    [
+     45550,
+     18275
+    ],
+    [
+     45550,
+     17725
+    ],
+    [
+     39700,
+     17725
+    ],
+    [
+     39700,
+     18275
+    ],
+    [
+     33250,
+     18275
+    ],
+    [
+     33250,
+     17925
+    ],
+    [
+     29150,
+     17925
+    ],
+    [
+     29150,
+     18275
+    ],
+    [
+     22700,
+     18275
+    ],
+    [
+     22700,
+     17400
+    ],
+    [
+     12450,
+     17400
+    ],
+    [
+     12450,
+     18275
+    ],
+    [
+     5925,
+     18275
+    ],
+    [
+     5925,
+     11525
+    ],
+    [
+     -500,
+     11525
+    ],
+    [
+     -500,
+     -100
+    ]
+   ],
+   "edgesMeasured": 0,
+   "columns": [
+    {
+     "key": "C3",
+     "name": "SW5",
+     "kind": "wall",
+     "ref": "C/3",
+     "ends": false,
+     "box": [
+      5925,
+      4575,
+      6225,
+      6075
+     ],
+     "design": [
+      5925,
+      4575,
+      6225,
+      6075
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "D3",
+     "name": "C1",
+     "kind": "column",
+     "ref": "D/3",
+     "ends": false,
+     "box": [
+      12000,
+      5650,
+      12600,
+      5950
+     ],
+     "design": [
+      12000,
+      5650,
+      12600,
+      5950
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "F3",
+     "name": "C1",
+     "kind": "column",
+     "ref": "F/3",
+     "ends": false,
+     "box": [
+      16400,
+      5650,
+      17000,
+      5950
+     ],
+     "design": [
+      16400,
+      5650,
+      17000,
+      5950
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "H3",
+     "name": "C1",
+     "kind": "column",
+     "ref": "H/3",
+     "ends": false,
+     "box": [
+      28700,
+      5650,
+      29300,
+      5950
+     ],
+     "design": [
+      28700,
+      5650,
+      29300,
+      5950
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "K3",
+     "name": "C1",
+     "kind": "column",
+     "ref": "K/3",
+     "ends": false,
+     "box": [
+      33100,
+      5650,
+      33700,
+      5950
+     ],
+     "design": [
+      33100,
+      5650,
+      33700,
+      5950
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "L3",
+     "name": "C1",
+     "kind": "column",
+     "ref": "L/3",
+     "ends": false,
+     "box": [
+      39250,
+      5650,
+      39850,
+      5950
+     ],
+     "design": [
+      39250,
+      5650,
+      39850,
+      5950
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "M3",
+     "name": "C1",
+     "kind": "column",
+     "ref": "M/3",
+     "ends": false,
+     "box": [
+      45400,
+      5650,
+      46000,
+      5950
+     ],
+     "design": [
+      45400,
+      5650,
+      46000,
+      5950
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "C4",
+     "name": "C1a",
+     "kind": "column",
+     "ref": "C/4",
+     "ends": false,
+     "box": [
+      5925,
+      7000,
+      6225,
+      7600
+     ],
+     "design": [
+      5925,
+      7000,
+      6225,
+      7600
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "C5",
+     "name": "C1a",
+     "kind": "column",
+     "ref": "C/5",
+     "ends": false,
+     "box": [
+      5925,
+      11225,
+      6225,
+      11825
+     ],
+     "design": [
+      5925,
+      11225,
+      6225,
+      11825
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "F5",
+     "name": "C1",
+     "kind": "column",
+     "ref": "F/5",
+     "ends": false,
+     "box": [
+      16550,
+      11225,
+      16850,
+      11825
+     ],
+     "design": [
+      16550,
+      11225,
+      16850,
+      11825
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "G5",
+     "name": "C6",
+     "kind": "column",
+     "ref": "G/5",
+     "ends": false,
+     "box": [
+      22700,
+      11225,
+      23000,
+      12025
+     ],
+     "design": [
+      22700,
+      11225,
+      23000,
+      12025
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "H5",
+     "name": "C1",
+     "kind": "column",
+     "ref": "H/5",
+     "ends": false,
+     "box": [
+      28850,
+      11225,
+      29150,
+      11825
+     ],
+     "design": [
+      28850,
+      11225,
+      29150,
+      11825
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "L5",
+     "name": "C6",
+     "kind": "column",
+     "ref": "L/5",
+     "ends": false,
+     "box": [
+      39400,
+      11225,
+      39700,
+      12025
+     ],
+     "design": [
+      39400,
+      11225,
+      39700,
+      12025
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "M5",
+     "name": "SW7",
+     "kind": "wall",
+     "ref": "M/5",
+     "ends": false,
+     "box": [
+      45550,
+      11225,
+      45850,
+      13850
+     ],
+     "design": [
+      45550,
+      11225,
+      45850,
+      13850
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "C7",
+     "name": "C1a",
+     "kind": "column",
+     "ref": "C/7",
+     "ends": false,
+     "box": [
+      5925,
+      15850,
+      6225,
+      16450
+     ],
+     "design": [
+      5925,
+      15850,
+      6225,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "D7",
+     "name": "C1b",
+     "kind": "column",
+     "ref": "D/7",
+     "ends": false,
+     "box": [
+      12150,
+      15850,
+      12450,
+      16450
+     ],
+     "design": [
+      12150,
+      15850,
+      12450,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "F7",
+     "name": "C1b",
+     "kind": "column",
+     "ref": "F/7",
+     "ends": false,
+     "box": [
+      16550,
+      15850,
+      16850,
+      16450
+     ],
+     "design": [
+      16550,
+      15850,
+      16850,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "G7",
+     "name": "C6",
+     "kind": "column",
+     "ref": "G/7",
+     "ends": false,
+     "box": [
+      22700,
+      15650,
+      23000,
+      16450
+     ],
+     "design": [
+      22700,
+      15650,
+      23000,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "H7",
+     "name": "C1b",
+     "kind": "column",
+     "ref": "H/7",
+     "ends": false,
+     "box": [
+      28850,
+      15850,
+      29150,
+      16450
+     ],
+     "design": [
+      28850,
+      15850,
+      29150,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "K7",
+     "name": "C1b",
+     "kind": "column",
+     "ref": "K/7",
+     "ends": false,
+     "box": [
+      33250,
+      15850,
+      33550,
+      16450
+     ],
+     "design": [
+      33250,
+      15850,
+      33550,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "L7",
+     "name": "C6",
+     "kind": "column",
+     "ref": "L/7",
+     "ends": false,
+     "box": [
+      39400,
+      15650,
+      39700,
+      16450
+     ],
+     "design": [
+      39400,
+      15650,
+      39700,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    },
+    {
+     "key": "M7",
+     "name": "C1b",
+     "kind": "column",
+     "ref": "M/7",
+     "ends": false,
+     "box": [
+      45550,
+      15850,
+      45850,
+      16450
+     ],
+     "design": [
+      45550,
+      15850,
+      45850,
+      16450
+     ],
+     "measured": false,
+     "note": null
+    }
+   ],
+   "cores": [
+    {
+     "key": "lift1",
+     "name": "Lift 1",
+     "ref": "D/5",
+     "box": [
+      12150,
+      11225,
+      14450,
+      13850
+     ],
+     "design": [
+      12150,
+      11225,
+      14450,
+      13850
+     ],
+     "wall": 300,
+     "door": {
+      "side": "b",
+      "from": 490,
+      "width": 1320
+     },
+     "measured": false
+    },
+    {
+     "key": "lift2",
+     "name": "Lift 2",
+     "ref": "J/5",
+     "box": [
+      31250,
+      11225,
+      33550,
+      13850
+     ],
+     "design": [
+      31250,
+      11225,
+      33550,
+      13850
+     ],
+     "wall": 300,
+     "door": {
+      "side": "b",
+      "from": 490,
+      "width": 1320
+     },
+     "measured": false
+    }
+   ],
+   "openings": [
+    {
+     "key": "stair1",
+     "name": "Stair 1",
+     "kind": "stair",
+     "ref": "E/5",
+     "box": [
+      14450,
+      11375,
+      16550,
+      14550
+     ]
+    },
+    {
+     "key": "stair2",
+     "name": "Stair 2",
+     "kind": "stair",
+     "ref": "H/5",
+     "box": [
+      29150,
+      11375,
+      31250,
+      14550
+     ]
+    },
+    {
+     "key": "ph1",
+     "name": "Penthouse stair C–D",
+     "kind": "stair",
+     "ref": "C/7",
+     "box": [
+      6225,
+      12475,
+      7525,
+      16250
+     ]
+    },
+    {
+     "key": "ph2",
+     "name": "Penthouse stair L–M (top)",
+     "kind": "stair",
+     "ref": "M/7",
+     "box": [
+      44450,
+      12450,
+      45550,
+      15850
+     ]
+    },
+    {
+     "key": "ph3",
+     "name": "Penthouse stair L–M (bottom)",
+     "kind": "stair",
+     "ref": "M/7",
+     "box": [
+      42550,
+      14650,
+      44450,
+      15850
+     ]
+    }
+   ]
+  },
+  {
+   "key": "roof",
+   "name": "Roof",
+   "short": "R",
+   "order": 8,
+   "level": 27000,
+   "source": "From the old roof drawing (Jan 2025), moved onto the new grid line by line. Rough guide only: update it when the new roof drawing comes.",
+   "notes": [],
+   "grid": {
+    "x": [
+     {
+      "id": "C",
+      "design": 6150,
+      "pos": 6150,
+      "measured": false
+     },
+     {
+      "id": "D",
+      "design": 12300,
+      "pos": 12300,
+      "measured": false
+     },
+     {
+      "id": "E",
+      "design": 14300,
+      "pos": 14300,
+      "measured": false
+     },
+     {
+      "id": "F",
+      "design": 16700,
+      "pos": 16700,
+      "measured": false
+     },
+     {
+      "id": "G",
+      "design": 22850,
+      "pos": 22850,
+      "measured": false
+     },
+     {
+      "id": "H",
+      "design": 29000,
+      "pos": 29000,
+      "measured": false
+     },
+     {
+      "id": "J",
+      "design": 31400,
+      "pos": 31400,
+      "measured": false
+     },
+     {
+      "id": "K",
+      "design": 33400,
+      "pos": 33400,
+      "measured": false
+     },
+     {
+      "id": "L",
+      "design": 39550,
+      "pos": 39550,
+      "measured": false
+     },
+     {
+      "id": "M",
+      "design": 45700,
+      "pos": 45700,
+      "measured": false
+     }
+    ],
+    "y": [
+     {
+      "id": "3",
+      "design": 5750,
+      "pos": 5750,
+      "measured": false
+     },
+     {
+      "id": "4",
+      "design": 7400,
+      "pos": 7400,
+      "measured": false
+     },
+     {
+      "id": "5",
+      "design": 11375,
+      "pos": 11375,
+      "measured": false
+     },
+     {
+      "id": "6",
+      "design": 13475,
+      "pos": 13475,
+      "measured": false
+     },
+     {
+      "id": "7",
+      "design": 16350,
+      "pos": 16350,
+      "measured": false
+     }
+    ]
+   },
+   "outline": [
+    [
+     16800,
+     5650
+    ],
+    [
+     16800,
+     11225
+    ],
+    [
+     28900,
+     11225
+    ],
+    [
+     28900,
+     5650
+    ],
+    [
+     45800,
+     5650
+    ],
+    [
+     45800,
+     17825
+    ],
+    [
+     33350,
+     17825
+    ],
+    [
+     33350,
+     17550
+    ],
+    [
+     29100,
+     17550
+    ],
+    [
+     29100,
+     18050
+    ],
+    [
+     16600,
+     18050
+    ],
+    [
+     16600,
+     17425
+    ],
+    [
+     12450,
+     17425
+    ],
+    [
+     12450,
+     18275
+    ],
+    [
+     6025,
+     18275
+    ],
+    [
+     6025,
+     5650
+    ]
+   ],
+   "outlineDesign": [
+    [
+     16800,
+     5650
+    ],
+    [
+     16800,
+     11225
+    ],
+    [
+     28900,
+     11225
+    ],
+    [
+     28900,
+     5650
+    ],
+    [
+     45800,
+     5650
+    ],
+    [
+     45800,
+     17825
+    ],
+    [
+     33350,
+     17825
+    ],
+    [
+     33350,
+     17550
+    ],
+    [
+     29100,
+     17550
+    ],
+    [
+     29100,
+     18050
+    ],
+    [
+     16600,
+     18050
+    ],
+    [
+     16600,
+     17425
+    ],
+    [
+     12450,
+     17425
+    ],
+    [
+     12450,
+     18275
+    ],
+    [
+     6025,
+     18275
+    ],
+    [
+     6025,
+     5650
+    ]
+   ],
+   "edgesMeasured": 0,
+   "columns": [],
+   "cores": [
+    {
+     "key": "lift1",
+     "name": "Lift 1",
+     "ref": "D/5",
+     "box": [
+      12150,
+      11225,
+      14450,
+      13850
+     ],
+     "design": [
+      12150,
+      11225,
+      14450,
+      13850
+     ],
+     "wall": 300,
+     "door": {
+      "side": "b",
+      "from": 490,
+      "width": 1320
+     },
+     "measured": false
+    },
+    {
+     "key": "lift2",
+     "name": "Lift 2",
+     "ref": "J/5",
+     "box": [
+      31250,
+      11225,
+      33550,
+      13850
+     ],
+     "design": [
+      31250,
+      11225,
+      33550,
+      13850
+     ],
+     "wall": 300,
+     "door": {
+      "side": "b",
+      "from": 490,
+      "width": 1320
+     },
+     "measured": false
+    }
+   ],
+   "openings": []
+  }
+ ]
+}

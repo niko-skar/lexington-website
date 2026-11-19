@@ -1,0 +1,125 @@
+{
+  "_about": "Design basis for the structural model. Every value here is an input you can change; run.py reads it each time. Units: kN, m, kPa (kN/m2). 'src' says where each value comes from.",
+  "materials": {
+    "concrete": {
+      "grade": "C25/30",
+      "fck": 25,
+      "Ecm_GPa": 31,
+      "nu": 0.2,
+      "gamma": 25,
+      "src": "R10 general notes (Jan 2025): C25/30. Site pour orders say C35 (lib/concrete/pourOrder.ts); the drawings' grade is used for capacity so it stays on the safe side."
+    },
+    "steel": {
+      "fyk": 500,
+      "Es_GPa": 200,
+      "src": "R10 general notes: high tensile H = 500 N/mm2"
+    },
+    "cover_mm": {
+      "foundation": 50,
+      "column": 40,
+      "beam": 25,
+      "slab": 25,
+      "src": "R10 general notes"
+    },
+    "gamma_c": 1.5,
+    "gamma_s": 1.15,
+    "alpha_cc": 1.0
+  },
+  "stiffness": {
+    "column_I": 0.7,
+    "wall_I": 0.7,
+    "core_E": 0.7,
+    "beam_I": 0.35,
+    "slab_bending": 0.25,
+    "beam_torsion": 0.1,
+    "src": "Cracked-section modifiers in the usual range (ACI 318 6.6.3.1.1 / EN 1998-1 4.3.1(7) gives 0.5 for all); same model used for gravity and lateral"
+  },
+  "soil": {
+    "bearing_kPa": 400,
+    "at_depth_m": 4.0,
+    "src": "R10 general notes: estimated bearing capacity 400 kN/m2 at 4.0 m depth, from the geotechnical investigation report"
+  },
+  "dead": {
+    "finishes_kPa": 1.5,
+    "ceiling_services_kPa": 0.25,
+    "roof_finishes_kPa": 2.5,
+    "src": "50 mm screed + tiles + soffit plaster 1.5, services 0.25 (common Ghana/UK practice); roof: screed to falls + waterproofing + terrace tiles 2.5"
+  },
+  "walls": {
+    "mode": "uniform",
+    "internal_kPa": 2.5,
+    "external_kN_m": 10.0,
+    "balustrade_kN_m": 1.0,
+    "src": "Sandcrete block walls plastered both sides (Structville unit weights; Tarmac block data): 225 hollow 3.5 kN/m2 x ~2.9 m = 10 kN/m round the edge; internal 150 hollow walls (8-9 kN/m) spread as 2.5 kPa until the plan walls are read in as line loads (EN 1991-1-1 6.3.1.2(8) says walls over 3 kN/m should be line loads)",
+    "unit_kPa": {
+      "150_hollow": 2.8,
+      "225_hollow": 3.5,
+      "150_solid": 3.5,
+      "225_solid": 5.0
+    }
+  },
+  "imposed": {
+    "floor_kPa": 2.0,
+    "balcony_kPa": 2.5,
+    "stairs_kPa": 3.0,
+    "corridor_kPa": 3.0,
+    "roof_kPa": 2.0,
+    "psi2": 0.3,
+    "psi0": 0.7,
+    "src": "EN 1991-1-1 Table 6.2: dwellings 2.0, private balconies 2.5, stairs 3.0 (cat A range 2-4), accessible roof/terrace 2.0; seismic mass psiE = phi x psi2 (EN 1998-1 4.2.4): 0.15 floors, 0.3 roof",
+    "phi_floor": 0.5,
+    "phi_roof": 1.0
+  },
+  "stairs": {
+    "self_kPa": 6.0,
+    "finishes_kPa": 1.2,
+    "src": "175 mm waist + 150/250 steps, on plan; tiled"
+  },
+  "pool": {
+    "floor": "1",
+    "water_depth_m": 1.5,
+    "base_slab_m": 0.25,
+    "wall_depth_m": 1.8,
+    "wall_t_m": 0.3,
+    "finishes_kPa": 1.0,
+    "src": "R10 swimming pool GA (sheet 56): pool hangs below the 1st floor (SSL +3900) on 1800x300 wall-beams to a 250 mm base slab at SSL +2100; water depth assumed 1.5 m"
+  },
+  "lifts": {
+    "G_kN": 60,
+    "Q_kN": 40,
+    "src": "Machine-room-less lift: rail/car/counterweight reactions at the top of each shaft, typical 8-person lift; replace with the supplier's figures"
+  },
+  "roof_tanks": {
+    "items": [],
+    "src": "None in the record yet: add {x_mm, y_mm, kN} for each water tank on the roof"
+  },
+  "wind": {
+    "vb0": 20.0,
+    "terrain": "III",
+    "z0": 0.3,
+    "zmin": 5.0,
+    "rho": 1.25,
+    "cpe_windward": 0.8,
+    "cpe_leeward": -0.5,
+    "torsion_e_frac": 0.1,
+    "src": "Ghana Building Code Part 5 Table 5.8: Accra 29 m/s 3-s gust (50 yr), converted to a 10-min mean of about 20 m/s for EN 1991-1-4; terrain category III (suburban); torsion e = b/10 (EN 1991-1-4 7.1.2)"
+  },
+  "seismic": {
+    "agR_g": 0.35,
+    "agR_sensitivity_g": 0.2,
+    "gamma_I": 1.0,
+    "ground_types": [
+      "B",
+      "C"
+    ],
+    "spectrum_type": 1,
+    "q": 3.0,
+    "damping": 0.05,
+    "accidental_e": 0.05,
+    "beta": 0.2,
+    "src": "Ghana Building Code: Accra in zone 3, ag = 0.35 g (hazard studies give 0.06-0.2 g at 475 yr; 0.20 g run as a sensitivity). EN 1998-1 type 1 spectrum, envelope of ground types B and C until Vs30 is measured; importance class II; DCM dual system q = 3.0 (3.6 if regular; 2.0 if torsionally flexible -- checked by the model)"
+  },
+  "combinations": {
+    "src": "EN 1990 Eq. 6.10 (STR), 6.12b (seismic), characteristic SLS for bearing pressures"
+  }
+}

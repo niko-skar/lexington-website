@@ -1,0 +1,1272 @@
+{
+ "1": {
+  "source": "the 1st floor drawings (revised 10 Oct 2026): 200 mm slab, 600 mm deep beams",
+  "zones": [
+   {
+    "t": 200
+   }
+  ],
+  "beams": [
+   {
+    "along": "row",
+    "at": "2",
+    "from": "B",
+    "to": "edge",
+    "depth": 600,
+    "width": 300
+   },
+   {
+    "along": "row",
+    "at": "3",
+    "from": "B",
+    "to": "N",
+    "depth": 600,
+    "width": 300
+   },
+   {
+    "along": "row",
+    "at": "5",
+    "from": "B",
+    "to": "B1",
+    "depth": 600,
+    "width": 300
+   },
+   {
+    "along": "row",
+    "at": "5",
+    "from": "C",
+    "to": "N",
+    "depth": 600,
+    "width": 300
+   },
+   {
+    "along": "row",
+    "at": "7",
+    "from": "B",
+    "to": "N",
+    "depth": 600,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "B",
+    "from": "2",
+    "to": "7b",
+    "depth": 600,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "C",
+    "from": "2",
+    "to": "7b",
+    "depth": 600,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "D",
+    "from": "3",
+    "to": "7a",
+    "depth": 600,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "F",
+    "from": "3",
+    "to": "edge",
+    "depth": 600,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "G",
+    "from": "3",
+    "to": "7b",
+    "depth": 600,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "H",
+    "from": "3",
+    "to": "7b",
+    "depth": 600,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "K",
+    "from": "3",
+    "to": "7b",
+    "depth": 600,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "L",
+    "from": "3",
+    "to": "7b",
+    "depth": 600,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "M",
+    "from": "3",
+    "to": "7b",
+    "depth": 600,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "N",
+    "from": "3",
+    "to": "7b",
+    "depth": 600,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "E",
+    "from": "6",
+    "to": "7",
+    "depth": 600,
+    "width": 200
+   },
+   {
+    "along": "line",
+    "at": "J",
+    "from": "6",
+    "to": "7",
+    "depth": 600,
+    "width": 200
+   }
+  ]
+ },
+ "2": {
+  "source": "the 2nd floor drawings (revised 12 Oct 2026): 200 mm slab with 500 mm deep beams from B to G, 250 mm flat slab from G to N",
+  "zones": [
+   {
+    "to": "G",
+    "t": 200
+   },
+   {
+    "from": "G",
+    "t": 250
+   }
+  ],
+  "beams": [
+   {
+    "along": "row",
+    "at": "2",
+    "from": "B",
+    "to": "edge",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "row",
+    "at": "3",
+    "from": "B",
+    "to": "G",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "row",
+    "at": "5",
+    "from": "B",
+    "to": "G",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "row",
+    "at": 13850,
+    "from": "B",
+    "to": "G",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "row",
+    "at": "7",
+    "from": "C",
+    "to": "G",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "row",
+    "at": "7b",
+    "from": "C",
+    "to": "D",
+    "depth": 500,
+    "width": 150,
+    "edge": true
+   },
+   {
+    "along": "row",
+    "at": "7a",
+    "from": "D",
+    "to": "G",
+    "depth": 500,
+    "width": 150,
+    "edge": true
+   },
+   {
+    "along": "line",
+    "at": "B",
+    "from": "2",
+    "to": "5",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "C",
+    "from": "2",
+    "to": "7b",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "D",
+    "from": "3",
+    "to": "7b",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "F",
+    "from": "3",
+    "to": "edge",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "G",
+    "from": "2b",
+    "to": "7b",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "row",
+    "at": "3",
+    "from": "G",
+    "to": "H",
+    "depth": 500,
+    "width": 250
+   },
+   {
+    "along": "row",
+    "at": "5",
+    "from": "H",
+    "to": "J",
+    "depth": 500,
+    "width": 300
+   }
+  ]
+ },
+ "3": {
+  "source": "the 3rd floor drawings (R28, 2 Nov 2026): 175 mm slab, 500 mm deep beams",
+  "zones": [
+   {
+    "t": 175
+   }
+  ],
+  "beams": [
+   {
+    "along": "row",
+    "at": "2",
+    "from": "B",
+    "to": "edge",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "row",
+    "at": "3",
+    "from": "B",
+    "to": "N",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "row",
+    "at": "5",
+    "from": "B",
+    "to": "N",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "row",
+    "at": 13850,
+    "from": "B",
+    "to": "G",
+    "depth": 500,
+    "width": 250
+   },
+   {
+    "along": "row",
+    "at": 13850,
+    "from": "H",
+    "to": "K",
+    "depth": 500,
+    "width": 250
+   },
+   {
+    "along": "row",
+    "at": "7",
+    "from": "C",
+    "to": "N",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "row",
+    "at": "7a",
+    "from": "C",
+    "to": "D",
+    "depth": 500,
+    "width": 200,
+    "edge": true
+   },
+   {
+    "along": "row",
+    "at": "7a",
+    "from": "F",
+    "to": "H",
+    "depth": 500,
+    "width": 200,
+    "edge": true
+   },
+   {
+    "along": "row",
+    "at": "7a",
+    "from": "K",
+    "to": "N",
+    "depth": 500,
+    "width": 200,
+    "edge": true
+   },
+   {
+    "along": "line",
+    "at": "B",
+    "from": "2",
+    "to": "5",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "C",
+    "from": "2",
+    "to": "edge",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "D",
+    "from": "3",
+    "to": "edge",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "F",
+    "from": "3",
+    "to": "edge",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "G",
+    "from": "3",
+    "to": "edge",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "H",
+    "from": "3",
+    "to": "edge",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "K",
+    "from": "3",
+    "to": "edge",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "L",
+    "from": "3",
+    "to": "edge",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "M",
+    "from": "3",
+    "to": "edge",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "N",
+    "from": "3",
+    "to": "edge",
+    "depth": 500,
+    "width": 300
+   }
+  ]
+ },
+ "4": {
+  "source": "the 4th floor plan in the 3rd floor drawings (R28, 2 Nov 2026): 175 mm slab, 500 mm deep beams as the 3rd floor's",
+  "zones": [
+   {
+    "t": 175
+   }
+  ],
+  "beams": [
+   {
+    "along": "row",
+    "at": "2",
+    "from": "B",
+    "to": "edge",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "row",
+    "at": "3",
+    "from": "B",
+    "to": "N",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "row",
+    "at": "5",
+    "from": "B",
+    "to": "N",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "row",
+    "at": 13850,
+    "from": "B",
+    "to": "G",
+    "depth": 500,
+    "width": 250
+   },
+   {
+    "along": "row",
+    "at": 13850,
+    "from": "H",
+    "to": "K",
+    "depth": 500,
+    "width": 250
+   },
+   {
+    "along": "row",
+    "at": "7",
+    "from": "C",
+    "to": "N",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "row",
+    "at": "7a",
+    "from": "C",
+    "to": "D",
+    "depth": 500,
+    "width": 200,
+    "edge": true
+   },
+   {
+    "along": "row",
+    "at": "7a",
+    "from": "F",
+    "to": "H",
+    "depth": 500,
+    "width": 200,
+    "edge": true
+   },
+   {
+    "along": "row",
+    "at": "7a",
+    "from": "K",
+    "to": "N",
+    "depth": 500,
+    "width": 200,
+    "edge": true
+   },
+   {
+    "along": "line",
+    "at": "B",
+    "from": "2",
+    "to": "5",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "C",
+    "from": "2",
+    "to": "edge",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "D",
+    "from": "3",
+    "to": "edge",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "F",
+    "from": "3",
+    "to": "edge",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "G",
+    "from": "3",
+    "to": "edge",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "H",
+    "from": "3",
+    "to": "edge",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "K",
+    "from": "3",
+    "to": "edge",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "L",
+    "from": "3",
+    "to": "edge",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "M",
+    "from": "3",
+    "to": "edge",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "N",
+    "from": "3",
+    "to": "edge",
+    "depth": 500,
+    "width": 300
+   }
+  ]
+ },
+ "5": {
+  "source": "the 4th floor plan in the 3rd floor drawings (R28, 2 Nov 2026): 175 mm slab, 500 mm deep beams as the 3rd floor's",
+  "zones": [
+   {
+    "t": 175
+   }
+  ],
+  "beams": [
+   {
+    "along": "row",
+    "at": "2",
+    "from": "B",
+    "to": "edge",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "row",
+    "at": "3",
+    "from": "B",
+    "to": "N",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "row",
+    "at": "5",
+    "from": "B",
+    "to": "N",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "row",
+    "at": 13850,
+    "from": "B",
+    "to": "G",
+    "depth": 500,
+    "width": 250
+   },
+   {
+    "along": "row",
+    "at": 13850,
+    "from": "H",
+    "to": "K",
+    "depth": 500,
+    "width": 250
+   },
+   {
+    "along": "row",
+    "at": "7",
+    "from": "C",
+    "to": "N",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "row",
+    "at": "7a",
+    "from": "C",
+    "to": "D",
+    "depth": 500,
+    "width": 200,
+    "edge": true
+   },
+   {
+    "along": "row",
+    "at": "7a",
+    "from": "F",
+    "to": "H",
+    "depth": 500,
+    "width": 200,
+    "edge": true
+   },
+   {
+    "along": "row",
+    "at": "7a",
+    "from": "K",
+    "to": "N",
+    "depth": 500,
+    "width": 200,
+    "edge": true
+   },
+   {
+    "along": "line",
+    "at": "B",
+    "from": "2",
+    "to": "5",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "C",
+    "from": "2",
+    "to": "edge",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "D",
+    "from": "3",
+    "to": "edge",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "F",
+    "from": "3",
+    "to": "edge",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "G",
+    "from": "3",
+    "to": "edge",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "H",
+    "from": "3",
+    "to": "edge",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "K",
+    "from": "3",
+    "to": "edge",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "L",
+    "from": "3",
+    "to": "edge",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "M",
+    "from": "3",
+    "to": "edge",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "N",
+    "from": "3",
+    "to": "edge",
+    "depth": 500,
+    "width": 300
+   }
+  ],
+  "borrowed": "No drawing for this floor yet: the 4th floor's slab and beams are used. Check with the engineer's drawing when it comes."
+ },
+ "6": {
+  "source": "the 4th floor plan in the 3rd floor drawings (R28, 2 Nov 2026): 175 mm slab, 500 mm deep beams as the 3rd floor's",
+  "zones": [
+   {
+    "t": 175
+   }
+  ],
+  "beams": [
+   {
+    "along": "row",
+    "at": "2",
+    "from": "B",
+    "to": "edge",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "row",
+    "at": "3",
+    "from": "B",
+    "to": "N",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "row",
+    "at": "5",
+    "from": "B",
+    "to": "N",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "row",
+    "at": 13850,
+    "from": "B",
+    "to": "G",
+    "depth": 500,
+    "width": 250
+   },
+   {
+    "along": "row",
+    "at": 13850,
+    "from": "H",
+    "to": "K",
+    "depth": 500,
+    "width": 250
+   },
+   {
+    "along": "row",
+    "at": "7",
+    "from": "C",
+    "to": "N",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "row",
+    "at": "7a",
+    "from": "C",
+    "to": "D",
+    "depth": 500,
+    "width": 200,
+    "edge": true
+   },
+   {
+    "along": "row",
+    "at": "7a",
+    "from": "F",
+    "to": "H",
+    "depth": 500,
+    "width": 200,
+    "edge": true
+   },
+   {
+    "along": "row",
+    "at": "7a",
+    "from": "K",
+    "to": "N",
+    "depth": 500,
+    "width": 200,
+    "edge": true
+   },
+   {
+    "along": "line",
+    "at": "B",
+    "from": "2",
+    "to": "5",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "C",
+    "from": "2",
+    "to": "edge",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "D",
+    "from": "3",
+    "to": "edge",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "F",
+    "from": "3",
+    "to": "edge",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "G",
+    "from": "3",
+    "to": "edge",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "H",
+    "from": "3",
+    "to": "edge",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "K",
+    "from": "3",
+    "to": "edge",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "L",
+    "from": "3",
+    "to": "edge",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "M",
+    "from": "3",
+    "to": "edge",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "N",
+    "from": "3",
+    "to": "edge",
+    "depth": 500,
+    "width": 300
+   }
+  ],
+  "borrowed": "No drawing for this floor yet: the 4th floor's slab and beams are used. Check with the engineer's drawing when it comes."
+ },
+ "7": {
+  "source": "the 4th floor plan in the 3rd floor drawings (R28, 2 Nov 2026): 175 mm slab, 500 mm deep beams as the 3rd floor's",
+  "zones": [
+   {
+    "t": 175
+   }
+  ],
+  "beams": [
+   {
+    "along": "row",
+    "at": "2",
+    "from": "B",
+    "to": "edge",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "row",
+    "at": "3",
+    "from": "B",
+    "to": "N",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "row",
+    "at": "5",
+    "from": "B",
+    "to": "N",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "row",
+    "at": 13850,
+    "from": "B",
+    "to": "G",
+    "depth": 500,
+    "width": 250
+   },
+   {
+    "along": "row",
+    "at": 13850,
+    "from": "H",
+    "to": "K",
+    "depth": 500,
+    "width": 250
+   },
+   {
+    "along": "row",
+    "at": "7",
+    "from": "C",
+    "to": "N",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "row",
+    "at": "7a",
+    "from": "C",
+    "to": "D",
+    "depth": 500,
+    "width": 200,
+    "edge": true
+   },
+   {
+    "along": "row",
+    "at": "7a",
+    "from": "F",
+    "to": "H",
+    "depth": 500,
+    "width": 200,
+    "edge": true
+   },
+   {
+    "along": "row",
+    "at": "7a",
+    "from": "K",
+    "to": "N",
+    "depth": 500,
+    "width": 200,
+    "edge": true
+   },
+   {
+    "along": "line",
+    "at": "B",
+    "from": "2",
+    "to": "5",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "C",
+    "from": "2",
+    "to": "edge",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "D",
+    "from": "3",
+    "to": "edge",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "F",
+    "from": "3",
+    "to": "edge",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "G",
+    "from": "3",
+    "to": "edge",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "H",
+    "from": "3",
+    "to": "edge",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "K",
+    "from": "3",
+    "to": "edge",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "L",
+    "from": "3",
+    "to": "edge",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "M",
+    "from": "3",
+    "to": "edge",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "N",
+    "from": "3",
+    "to": "edge",
+    "depth": 500,
+    "width": 300
+   }
+  ],
+  "borrowed": "No drawing for this floor yet: the 4th floor's slab and beams are used. Check with the engineer's drawing when it comes."
+ },
+ "g": null,
+ "roof": {
+  "source": "the 4th floor plan in the 3rd floor drawings (R28, 2 Nov 2026): 175 mm slab, 500 mm deep beams as the 3rd floor's",
+  "zones": [
+   {
+    "t": 175
+   }
+  ],
+  "beams": [
+   {
+    "along": "row",
+    "at": "2",
+    "from": "B",
+    "to": "edge",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "row",
+    "at": "3",
+    "from": "B",
+    "to": "N",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "row",
+    "at": "5",
+    "from": "B",
+    "to": "N",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "row",
+    "at": 13850,
+    "from": "B",
+    "to": "G",
+    "depth": 500,
+    "width": 250
+   },
+   {
+    "along": "row",
+    "at": 13850,
+    "from": "H",
+    "to": "K",
+    "depth": 500,
+    "width": 250
+   },
+   {
+    "along": "row",
+    "at": "7",
+    "from": "C",
+    "to": "N",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "row",
+    "at": "7a",
+    "from": "C",
+    "to": "D",
+    "depth": 500,
+    "width": 200,
+    "edge": true
+   },
+   {
+    "along": "row",
+    "at": "7a",
+    "from": "F",
+    "to": "H",
+    "depth": 500,
+    "width": 200,
+    "edge": true
+   },
+   {
+    "along": "row",
+    "at": "7a",
+    "from": "K",
+    "to": "N",
+    "depth": 500,
+    "width": 200,
+    "edge": true
+   },
+   {
+    "along": "line",
+    "at": "B",
+    "from": "2",
+    "to": "5",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "C",
+    "from": "2",
+    "to": "edge",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "D",
+    "from": "3",
+    "to": "edge",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "F",
+    "from": "3",
+    "to": "edge",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "G",
+    "from": "3",
+    "to": "edge",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "H",
+    "from": "3",
+    "to": "edge",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "K",
+    "from": "3",
+    "to": "edge",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "L",
+    "from": "3",
+    "to": "edge",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "M",
+    "from": "3",
+    "to": "edge",
+    "depth": 500,
+    "width": 300
+   },
+   {
+    "along": "line",
+    "at": "N",
+    "from": "3",
+    "to": "edge",
+    "depth": 500,
+    "width": 300
+   }
+  ],
+  "borrowed": "No drawing for this floor yet: the 4th floor's slab and beams are used. Check with the engineer's drawing when it comes."
+ }
+}

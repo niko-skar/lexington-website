@@ -1,0 +1,1731 @@
+{
+ "source": "R10 Jan 2025 structural set (PRB/2025/STR/LEO/SD/01, sheets 001-014 = PDF pages 4-17; checked against pages 3, 18, 19, 24 where needed)",
+ "units": "mm; levels are structural slab levels (SSL) relative to datum +00 = existing ground level (general note 2, p3)",
+ "levels": [
+  {
+   "name": "Basement floor (p18 'BASEMENT FLOOR G.A', SSL -3300; raft top inside retaining walls)",
+   "level_mm": -3300
+  },
+  {
+   "name": "Sub-basement floor (columns/walls sheets 'SUB-BASEMENT FLOOR +300'; p19 SSL +300; p17 calls it 'BASEMENT FLR +300')",
+   "level_mm": 300
+  },
+  {
+   "name": "Ground floor",
+   "level_mm": 3900
+  },
+  {
+   "name": "First floor",
+   "level_mm": 7200
+  },
+  {
+   "name": "Second floor",
+   "level_mm": 10500
+  },
+  {
+   "name": "Third floor",
+   "level_mm": 13800
+  },
+  {
+   "name": "Fourth floor (printed 'FORTH')",
+   "level_mm": 17100
+  },
+  {
+   "name": "Fifth floor",
+   "level_mm": 20400
+  },
+  {
+   "name": "Sixth floor (printed 'SIX')",
+   "level_mm": 23700
+  },
+  {
+   "name": "Roof floor (printed '+2700' on every elevation - typo for +27000)",
+   "level_mm": 27000
+  }
+ ],
+ "storey_heights_mm": "+300 to +3900 = 3600; every storey above = 3300. Elevations show slab 200 thick at ground and roof, 175 at other floors, beams 425 below slab soffit (600 overall).",
+ "materials": {
+  "concrete": "C25/30 (fck 25 cylinder / 30 cube) - p3",
+  "reinforcement": "H = high tensile fy 500 N/mm2; R = mild steel 250 N/mm2 - p3",
+  "cover_mm": {
+   "foundations": 50,
+   "columns": 40,
+   "beams": 25,
+   "slabs": 25,
+   "tie_beams": 25
+  },
+  "blinding": "50 mm GEN C15 under all bases and raft",
+  "laps": "columns and walls: 1750 mm lap drawn at every floor (bars cranked); tie beams min lap 900; retaining wall horizontal bars min lap 850",
+  "kickers": "150 kicker on bases, 75 kicker at each floor"
+ },
+ "foundations": {
+  "formation": "General note 1 (p3): formation level below natural (existing) ground level for all bases unless otherwise stated; datum for existing ground = +00. Every base section (p7-p11) and section 01-01 on p4 shows: 150 ground-bearing slab (BRC A252 mesh 50 from top) + 300 hardcore + 1500 + 1900 (1800/2000/3300 for some types) + base thickness = 4450 from top of the +300 slab to underside of base, i.e. underside of base at -4150 (blinding to -4200). Raft: top -3300, 300 thick, underside -3600, blinding -3650.",
+  "bearing_kPa": 400,
+  "bearing_note": "'An estimated bearing capacity of 400 kN/m2 at 4.0 m depth was used in the design of the foundation as given by the Geotechnical investigation report' (p3).",
+  "founding_level_note": "founding_level_mm below is derived (+300 - 4450 = -4150); the drawings never print it. Base sections are the same generic section for bases inside the basement footprint, where the floor is at -3300 and the raft underside at -3600, so those pads would project ~550 below the raft underside - the drawings do not show this junction.",
+  "bases": [
+   {
+    "type": "B1",
+    "L_mm": 1500,
+    "B_mm": 1500,
+    "thickness_mm": 400,
+    "count": 2,
+    "count_on_plan_p4": 2,
+    "under": [
+     "A/1 (C5)",
+     "A/2A (C5)"
+    ],
+    "bars": {
+     "bottom_x": "11-H12@150 [11-H1201 B1]",
+     "bottom_y": "11-H12@150 [11-H1201 B2]",
+     "top": "none"
+    },
+    "column_starters": "6-H16 [6-H1601] for C5 (400x200)",
+    "setting_out": "A/1: 775 W / 725 E of A, 625 N / 875 S of 1. A/2A: 775 W / 725 E, 850 N / 650 S of 2A",
+    "notes": "Pad bases at the west edge for the small C5 columns (3 storeys). Detail draws the column 400 in x x 200 in y; p5 draws C5 200 in x x 400 in y (orientation mismatch, base is square).",
+    "founding_level_mm": -4150
+   },
+   {
+    "type": "B2",
+    "L_mm": 2500,
+    "B_mm": 2500,
+    "thickness_mm": 600,
+    "count": 10,
+    "count_on_plan_p4": 8,
+    "under": [
+     "D/3 (C1, at retaining wall corner)",
+     "F/3 (C1)",
+     "H/3 (C1)",
+     "K/3 (C1)",
+     "L/3 (C1)",
+     "M/3 (C1)",
+     "B/2A (C2, in retaining wall)",
+     "C/2A (C2, in retaining wall)"
+    ],
+    "bars": {
+     "bottom_x": "24-H20@100 [24-H2002 B1]",
+     "bottom_y": "24-H20@100 [24-H2002 B2]",
+     "top": "none"
+    },
+    "column_starters": "18-H20 [18-H2001], column 600x300",
+    "setting_out": "Row 3: D/3, F/3, K/3 1250 W / 1250 E; H/3 and L/3 1275 W / 1225 E; M/3 1400 W / 1100 E; all 1200 N / 1300 S of grid 3. B/2A: 1175 W / 1325 E of B, 1450 N / 1050 S of 2A. C/2A: 1325 W / 1175 E of C, 1450 N / 1050 S",
+    "notes": "Detail title and schedule (480 H2002 = 10 x 48) say 10 No.; only 8 B2 labels on p4. Bottom mat only.",
+    "founding_level_mm": -4150
+   },
+   {
+    "type": "B3",
+    "L_mm": 3750,
+    "B_mm": 2500,
+    "thickness_mm": 500,
+    "count": 3,
+    "count_on_plan_p4": 2,
+    "under": [
+     "G/3 (shear wall SW4)",
+     "N/3 (shear wall SW6)"
+    ],
+    "bars": {
+     "bottom_long": "17-H20@150 [2x17-H2003 B1&T1, 4250 long]",
+     "bottom_short": "25-H20@150 [2x25-H2002 B2&T2, 3000 long]",
+     "top_long": "17-H20@150 [H2003 T1]",
+     "top_short": "25-H20@150 [H2002 T2]"
+    },
+    "column_starters": "wall: 2x(2x5)-H20@100 end zones N.F & F.F [H2001] + 1x(2x4)-H16@150 middle [H1601]; horizontal 1x(2x28)-H16@150 [H1605]",
+    "setting_out": "Long side E-W. G/3: 1850 W / 1900 E of G; N/3: 2475 W / 1275 E of N; both 1200 N / 1300 S of 3. Wall 1500x300 centred 1125/1500/1125 on detail",
+    "notes": "Detail and schedule say 3 No.; only 2 on p4 (SW4, SW6).",
+    "founding_level_mm": -4150
+   },
+   {
+    "type": "B4",
+    "L_mm": 4725,
+    "B_mm": 2500,
+    "thickness_mm": 600,
+    "count": 1,
+    "count_on_plan_p4": 1,
+    "under": [
+     "C/2A-4: shear wall SW5 (C line, 1175 N to 325 S of grid 3) + C1a at C/4"
+    ],
+    "bars": {
+     "bottom_long": "17-H16@150 [2x17-H1603 B1&T1, 5225 long]",
+     "bottom_short": "32-H16@150 [2x32-H1602 B2&T2, 3000 long]",
+     "top_long": "17-H16@150 [H1603 T1]",
+     "top_short": "32-H16@150 [H1602 T2]"
+    },
+    "column_starters": "SW5: 2x(2x5)-H20@100 + 1x(2x4)-H16@150; C1a: 14-H25 [14-H2501]",
+    "setting_out": "Long side N-S on C line: from 1675 N of grid 3 to 3050 S of grid 3 (900 S of grid 4); 1325 W / 1175 E of C. Along the length: 500 / wall 1500 / 1425 / column 600 / 700",
+    "notes": "Sits on the line of the C retaining wall (basement side).",
+    "founding_level_mm": -4150
+   },
+   {
+    "type": "B5",
+    "L_mm": 3675,
+    "B_mm": 2000,
+    "thickness_mm": 600,
+    "count": 1,
+    "count_on_plan_p4": 1,
+    "under": [
+     "B/5 (C2, in retaining wall)",
+     "B1/5 (C4)"
+    ],
+    "bars": {
+     "bottom_long": "20-H16@100 [2x20-H1604 B1&T1, 4175 long]",
+     "bottom_short": "36-H16@100 [2x36-H1605 B2&T2, 2500 long]",
+     "top_long": "20-H16@100 [H1604 T1]",
+     "top_short": "36-H16@100 [H1605 T2]"
+    },
+    "column_starters": "2 x 18-H20 [18-H2001]",
+    "setting_out": "Long side E-W: 925 W of B to 1125 E of B1; 1200 N / 800 S of grid 5",
+    "notes": "Combined base. Detail column centres 1675 apart (850/300/1375/300/850) but grid B-B1 is 1625 - small mismatch.",
+    "founding_level_mm": -4150
+   },
+   {
+    "type": "B6",
+    "L_mm": 3500,
+    "B_mm": 3500,
+    "thickness_mm": 600,
+    "count": 1,
+    "count_on_plan_p4": 1,
+    "under": [
+     "C/5 (C1a, in retaining wall)"
+    ],
+    "bars": {
+     "bottom_x": "23-H20@150 [2x23-H2004]",
+     "bottom_y": "23-H20@150 [2x23-H2004]",
+     "top": "23-H20@150 each way (T1 & T2)"
+    },
+    "column_starters": "14-H25 [14-H2501]",
+    "setting_out": "1825 W / 1675 E of C; 1600 N / 1900 S of 5",
+    "notes": "Both plan labels read 'B1&T1' (one should be B2&T2). Schedule 92 = 4 x 23 so top and bottom both ways.",
+    "founding_level_mm": -4150
+   },
+   {
+    "type": "B7",
+    "L_mm": 2500,
+    "B_mm": 2500,
+    "thickness_mm": 600,
+    "count": 1,
+    "count_on_plan_p4": 1,
+    "under": [
+     "C/7 (C1a, at retaining wall corner)"
+    ],
+    "bars": {
+     "bottom_x": "17-H20@150 [2x17-H2002 B1&T1]",
+     "bottom_y": "17-H20@150 [2x17-H2002 B2&T2]",
+     "top": "17-H20@150 each way"
+    },
+    "column_starters": "14-H25 [14-H2501]",
+    "setting_out": "1325 W / 1175 E of C; 1450 N / 1050 S of 7",
+    "notes": "Plan says H2002, schedule says H2004 (68 no., 3000 long) - both H20.",
+    "founding_level_mm": -4150
+   },
+   {
+    "type": "B8",
+    "L_mm": 3500,
+    "B_mm": 3500,
+    "thickness_mm": 700,
+    "count": 3,
+    "count_on_plan_p4": 3,
+    "under": [
+     "D/7 (C1b)",
+     "F/7 (C1b)",
+     "K/7 (C1b)"
+    ],
+    "bars": {
+     "bottom_x": "35-H20@100 [2x35-H2004 B1&T1]",
+     "bottom_y": "35-H20@100 [2x35-H2004 B2&T2]",
+     "top": "35-H20@100 each way"
+    },
+    "column_starters": "18-H25 [18-H2501]",
+    "setting_out": "1750 / 1750 about the column grid; 1950 N / 1550 S of grid 7",
+    "founding_level_mm": -4150
+   },
+   {
+    "type": "B8a",
+    "L_mm": 3500,
+    "B_mm": 3500,
+    "thickness_mm": 700,
+    "count": 1,
+    "count_on_plan_p4": 1,
+    "under": [
+     "H/7 (C1b)"
+    ],
+    "bars": {
+     "bottom_x": "35-H25@100 [2x35-H2502 B1&T1]",
+     "bottom_y": "35-H25@100 [2x35-H2502 B2&T2]",
+     "top": "35-H25@100 each way"
+    },
+    "column_starters": "18-H25 [18-H2501]",
+    "setting_out": "1750 / 1750 about H; 1950 N / 1550 S of 7",
+    "notes": "Same size as B8 but H25 mats instead of H20.",
+    "founding_level_mm": -4150
+   },
+   {
+    "type": "B9",
+    "L_mm": 3500,
+    "B_mm": 3500,
+    "thickness_mm": 700,
+    "count": 3,
+    "count_on_plan_p4": 3,
+    "under": [
+     "F/5 (C1)",
+     "N/5 (C2)",
+     "N/7 (C2)"
+    ],
+    "bars": {
+     "bottom_x": "35-H20@100 [35-H2004 B1]",
+     "bottom_y": "35-H20@100 [35-H2004 B2]",
+     "top": "none (schedule 70 each = bottom only)"
+    },
+    "column_starters": "18-H20 [18-H2001]",
+    "setting_out": "1750 / 1750; F/5 and N/5 1600 N / 1900 S of 5; N/7 1950 N / 1550 S of 7",
+    "founding_level_mm": -4150
+   },
+   {
+    "type": "B10",
+    "L_mm": 3500,
+    "B_mm": 3500,
+    "thickness_mm": 700,
+    "count": 1,
+    "count_on_plan_p4": 1,
+    "under": [
+     "H/5 (C1)"
+    ],
+    "bars": {
+     "bottom_x": "35-H20@100 [2x35-H2004 B1&T1]",
+     "bottom_y": "35-H20@100 [2x35-H2004 B2&T2]",
+     "top": "35-H20@100 each way"
+    },
+    "column_starters": "18-H20 [18-H2001]",
+    "setting_out": "1750 / 1750; 1500 N / 2000 S of 5",
+    "founding_level_mm": -4150
+   },
+   {
+    "type": "B11",
+    "L_mm": 3500,
+    "B_mm": 3500,
+    "thickness_mm": 700,
+    "count": 4,
+    "count_on_plan_p4": 4,
+    "under": [
+     "G/5 (C6)",
+     "L/5 (C6)",
+     "G/7 (C6)",
+     "L/7 (C6)"
+    ],
+    "bars": {
+     "bottom_x": "35-H20@100 [2x35-H2004 B1&T1]",
+     "bottom_y": "35-H20@100 [2x35-H2004 B2&T2]",
+     "top": "35-H20@100 each way"
+    },
+    "column_starters": "18-H25 [18-H2501], column 800x300",
+    "setting_out": "1750 / 1750; row 5: 1500 N / 2000 S of 5; row 7: 2050 N / 1450 S of 7",
+    "founding_level_mm": -4150
+   },
+   {
+    "type": "B12",
+    "L_mm": 8500,
+    "B_mm": 3500,
+    "thickness_mm": 700,
+    "count": 1,
+    "count_on_plan_p4": 1,
+    "under": [
+     "M/5-6 (shear wall SW7)",
+     "M/7 (C1b)"
+    ],
+    "bars": {
+     "bottom_long": "35-H25@100 [H2503 B1, 9400 long]",
+     "bottom_short": "85-H25@100 [H2504 B2, 4400 long]",
+     "top_long": "35-H16@100 [H1609 T1]",
+     "top_short": "85-H16@100 [H1610 T2]"
+    },
+    "column_starters": "SW7: 2x(2x5)-H20@100 + 1x(2x8)-H16@200; column: 18-H20 [18-H2001] (section 16-16)",
+    "setting_out": "Long side N-S on M: from 1600 N of grid 5 to 1550 S of grid 7; 1750 W / 1750 E of M. Along length: 1450 / SW7 2625 / 2375 / C1b 600 / 1450",
+    "notes": "Labels '2x35-H2503,1609 B1&T1' and '2x85-H2504,H1610 B2&T2': H25 bottom, H16 top. Column starters here are H20 but C1b is 18-H25 from +300 to +3900 (p12). Schedule H2001 = 28, which does not cover 20 wall + 18 column bars.",
+    "founding_level_mm": -4150
+   },
+   {
+    "type": "B13",
+    "L_mm": 3675,
+    "B_mm": 4025,
+    "thickness_mm": 600,
+    "count": 1,
+    "count_on_plan_p4": 1,
+    "shape": "L-shaped",
+    "under": [
+     "B/3 (C2, in retaining wall)",
+     "B/4 (C3, in retaining wall)",
+     "B1/4 (C4)"
+    ],
+    "bars": {
+     "x_dir": "27-H20@150, length varies 1900-3575 [2x27-H2006 B1&T1]",
+     "y_dir": "24-H20@150, length varies 1900-3925 [2x24-H2005 B2&T2]",
+     "top": "same as bottom (T1/T2)"
+    },
+    "column_starters": "2 x 18-H20 [18-H2001] (sections 17-17, 18-18) - only two columns detailed",
+    "setting_out": "N part 2000 E-W (925 W of B to 1075 E of B) x 2025 N-S starting 975 N of grid 3; S part 3675 E-W (925 W of B to 1125 E of B1) x 2000 N-S ending 900 S of grid 4. Overall 3675 x 4025",
+    "notes": "Three columns sit on it but only two sets of starters are detailed or scheduled; C4 at B1/4 has none on this sheet.",
+    "founding_level_mm": -4150
+   },
+   {
+    "type": "B14",
+    "L_mm": 4225,
+    "B_mm": 4025,
+    "thickness_mm": 700,
+    "count": 2,
+    "count_on_plan_p4": 2,
+    "under": [
+     "Lift core D-E/5-6 (SW1, SW2, SW3)",
+     "Lift core J-K/5-6 (SW1, SW2, SW3)"
+    ],
+    "bars": {
+     "x_dir": "H20@100 [2x42-H2008 B1&T1]",
+     "y_dir": "H20@100 [plan label '2x85-H2007 B2&T2']",
+     "top": "same as bottom (B1&T1, B2&T2)"
+    },
+    "column_starters": "core: 4x(2x5)-H20@100 corner zones [H2001] + 2x(2x8) & 1x(2x10)-H16@200 middles [H1601]",
+    "setting_out": "Core D-E: 800 W of D to 825 E of E; core J-K: 775 W of J to 900 E of K; both 850 N of grid 5 to 825 S of grid 6. Core box 2825 x 2625 outside, walls 300",
+    "notes": "Bar counts do not agree: 85 bars @100 cannot fit in 4025 (likely copied from B12; ~40 expected). The schedule gives H2007 48 no. (4925 long) and H2008 54 no. (4575 long), with each = total although there are 2 bases. The wall link mark is '21*(2x10)-H1612@200', but H1612 is not in the schedule (H1610 is). Section depth 150+300+3300+700 = 4450, with no tie beam.",
+    "founding_level_mm": -4150
+   },
+   {
+    "type": "B15",
+    "L_mm": 3675,
+    "B_mm": 3675,
+    "thickness_mm": 600,
+    "count": 1,
+    "count_on_plan_p4": 1,
+    "shape": "two overlapping rectangles (stepped)",
+    "under": [
+     "B/7 (C4, at retaining wall corner)",
+     "B1 between 6 and 7 (C4, ~1075-1675 S of grid 6)"
+    ],
+    "bars": {
+     "x_dir": "H20@100 [2x20-H2007 B1&T1 on plan]",
+     "y_dir": "H20@100 [2x36-H2008 B2&T2]",
+     "top": "same as bottom"
+    },
+    "column_starters": "2 x 18-H20 [18-H2001]",
+    "setting_out": "SW part ~2250 E-W (925 W of B to 1325 E of B) x 2500 N-S (1450 N to 1050 S of grid 7); NE part 2000 x 2000 (1675-3675 from W edge, from 2625 N to 625 N of grid 7). Overall 3675 x 3675",
+    "notes": "Plan says 2x20-H2007 but the schedule says 72 H2007 (2750-4125 varies) and 72 H2008 (2500-4125 varies), i.e. 2x36 each. The SW rectangle width (~2250) is scaled, not dimensioned.",
+    "founding_level_mm": -4150
+   }
+  ],
+  "raft": {
+   "type": "RAFT TYPE '1' (300 mm thick) - p4, p16, p17, p18",
+   "extent": "Inside the 300 RC retaining walls: B to B2 from 1B to 2 (north wing); B to C from 2 to 7; C to D from 3 to 5 (underground water tank). Raft projects 600 beyond the outer face of the walls (p17 section). Lift pit D-E/5-6 adjoins it on B14.",
+   "top_level_mm": -3300,
+   "thickness_mm": 300,
+   "underside_mm": -3600,
+   "bars": "Top and bottom both ways at 150. E-W layers T2/B2, all H12@150: 29-H1201/29-H1202 (B-B2 wing, 1B-1A zone); 20-H1203/20-H1204 (2-2A); 50-H1205/50-H1206 (2A-4); 39-H1207/39-H1208 (C-D tank, 3-5); 50-H1209/50-H1210 (5-7). N-S layers T1/B1 @150: 35-H1601/35-H1602 (B-B1 strip; mark says H16 but schedule says dia 12); 35-H1603/35-H1604 H16 (B1-B2); 70-H1605/70-H1606 H16 (B2-C); 35-H1607/35-H1608 H16 (C-D).",
+   "floor_over": "250 RC slab at +300 spans over the basement on top of the retaining walls (p17); 200 RC slab SSL +300 with BM 600x300 over the B-B2 wing (p19)",
+   "notes": "Zone-to-bar mapping is read from label positions and is approximate. Several schedule lengths do not match the zone widths (e.g. H1202 cut 1800 with sketch 10600). The B-C bay is the 'BASEMENT FLR (-3300)' and the C-D bay is the 'UNDERGROUND WATER TANK FLR (-3300)' (p17). Pad bases under the wall columns (B2, B4, B5, B6, B7, B13, B15) are also drawn on the raft plan."
+  },
+  "retaining_walls": [
+   {
+    "where": "Basement perimeter (p4/p6/p18): grid B 1B-7; grid 1B B-B2; grid B2 1B-2; grid 2 B2-C; grid C 2-7; grid 7 B-C; also around the water tank: grid 3 C-D, grid D 3-5, grid 5 C-D. Outer face 75 outside grid on B / B2 / 1B, wall 300 (e.g. B-75 to B+225). Total length 90 m (p17).",
+    "thickness_mm": 300,
+    "height_mm": 3350,
+    "height_note": "Clear height from raft top -3300 to the underside of the 250 slab at +300; top of slab +300 is 3600 above raft top",
+    "bars": "Vertical H16@150 each face [H1610, L-bars 200+3700+400 into raft]; horizontal H16@200 each face [H1609, cut to suit, min lap 850]",
+    "notes": "Water stop bar at the raft/wall joint; 2 coats bituminous DPM on the retained face. Columns C2, C3, C1a, C5a, SW5 and C4 at B/7 sit in the wall line. p6 labels every wall '300 MM THICK R.C RETAINING WALL'. Schedule totals (500 x H1609, 330 x H1610) were not checked against the 90 m."
+   }
+  ],
+  "tie_beams": [
+   {
+    "mark": "unmarked - 'TYPICAL NON-SUSPENDED 300X200 GROUND BEAMS' / '300x200 TIE BEAM'",
+    "size_mm": "200 wide x 300 deep",
+    "bars": "2-H12 top + 2-H12 bottom [H1201, 12000 cut to suit, min lap 900]; links H10@200 [H1001, 250x150]; 25 cover",
+    "level": "p6 title 'FOUNDATION TIE BEAMS GENERAL ARRANGEMENT (-1500)'. The p4 section shows a 'GROUND BM 300x200' under the +300 slab and a 'TIE BM 300x200' 1950 below slab top (~-1650).",
+    "where": "Under all block walls outside the basement: along grid 3 (D-N), a line ~1350 S of 3 (G and L-M areas), a line 2475 S of 3 between H and K, along grid 5 (D-N) and grid 7 (C-N), N-S along D, F, G, H, K, L, M, N (3-7), along M+2600 (5-7) with a stub 450 S of 7 between M and N, and the west wing A-B on rows 1, 2 and 2A plus along A (1-2A). Panels between them are 'EARTH FILL'."
+   }
+  ]
+ },
+ "columns": [
+  {
+   "type": "C1",
+   "count": 8,
+   "size_mm": [
+    600,
+    300
+   ],
+   "where": [
+    "D/3 (B2)",
+    "F/3 (B2)",
+    "H/3 (B2)",
+    "K/3 (B2)",
+    "L/3 (B2)",
+    "M/3 (B2)",
+    "F/5 (B9)",
+    "H/5 (B10)"
+   ],
+   "orientation": "Row 3: 600 along E-W, 200 N / 100 S of grid 3. Row 5: 600 along N-S, 450 N / 150 S of grid 5 (p5).",
+   "stages": [
+    {
+     "from_level_mm": 300,
+     "to_level_mm": 3900,
+     "size_mm": [
+      600,
+      300
+     ],
+     "bars": "18-H20 [18-H2003]",
+     "links": "H10@150: 1x25-H1001 + 1x25-H1002 + 2x25-H1003 + 1x25-H1004",
+     "section": "01-01"
+    },
+    {
+     "from_level_mm": 3900,
+     "to_level_mm": 7200,
+     "size_mm": [
+      600,
+      300
+     ],
+     "bars": "18-H20 [18-H2001]",
+     "links": "H10@150: 1x22 each of H1001, H1002, H1004 + 2x22-H1003"
+    },
+    {
+     "from_level_mm": 7200,
+     "to_level_mm": 10500,
+     "size_mm": [
+      600,
+      300
+     ],
+     "bars": "18-H16 [18-H1601]",
+     "links": "H10@150 (same link set)",
+     "section": "02-02"
+    },
+    {
+     "from_level_mm": 10500,
+     "to_level_mm": 13800,
+     "size_mm": [
+      600,
+      300
+     ],
+     "bars": "18-H16 [18-H1601]",
+     "links": "H10@150 (same link set)"
+    },
+    {
+     "from_level_mm": 13800,
+     "to_level_mm": 17100,
+     "size_mm": [
+      600,
+      300
+     ],
+     "bars": "18-H16 [18-H1601]",
+     "links": "H10@150 (same link set)"
+    },
+    {
+     "from_level_mm": 17100,
+     "to_level_mm": 20400,
+     "size_mm": [
+      600,
+      300
+     ],
+     "bars": "18-H16 [18-H1601]",
+     "links": "H10@150 (same link set)"
+    },
+    {
+     "from_level_mm": 20400,
+     "to_level_mm": 23700,
+     "size_mm": [
+      600,
+      300
+     ],
+     "bars": "18-H16 [18-H1601]",
+     "links": "H10@150 (same link set)"
+    },
+    {
+     "from_level_mm": 23700,
+     "to_level_mm": 27000,
+     "size_mm": [
+      600,
+      300
+     ],
+     "bars": "18-H16 [18-H1602, top bars bent into roof slab]",
+     "links": "H10@150 (same link set)"
+    }
+   ],
+   "notes": "Schedule check: H1601 90 each = 18 x 5 storeys, H2001/H2003/H1602 18 each; total 144 = 8 x 18. Section 01-01 labels the bars H2001 while the elevation says H2003 (both H20)."
+  },
+  {
+   "type": "C1a",
+   "count": 3,
+   "size_mm": [
+    600,
+    300
+   ],
+   "where": [
+    "C/4 (B4, with SW5)",
+    "C/5 (B6)",
+    "C/7 (B7)"
+   ],
+   "stages": [
+    {
+     "from_level_mm": 300,
+     "to_level_mm": 3900,
+     "size_mm": [
+      600,
+      300
+     ],
+     "bars": "14-H25 [14-H2501]",
+     "links": "H10@150: 1x25-H1001 + 2x25-H1005 + 1x25-H1006",
+     "section": "03-03"
+    },
+    {
+     "from_level_mm": 3900,
+     "to_level_mm": 7200,
+     "size_mm": [
+      600,
+      300
+     ],
+     "bars": "14-H25 [14-H2502]",
+     "links": "H10@150: 1x22-H1001 + 2x22-H1005 + 1x22-H1006"
+    },
+    {
+     "from_level_mm": 7200,
+     "to_level_mm": 10500,
+     "size_mm": [
+      600,
+      300
+     ],
+     "bars": "14-H20 [14-H2001]",
+     "links": "H10@150 (same set)",
+     "section": "04-04"
+    },
+    {
+     "from_level_mm": 10500,
+     "to_level_mm": 13800,
+     "size_mm": [
+      600,
+      300
+     ],
+     "bars": "14-H20 [14-H2001]",
+     "links": "H10@150 (same set)"
+    },
+    {
+     "from_level_mm": 13800,
+     "to_level_mm": 17100,
+     "size_mm": [
+      600,
+      300
+     ],
+     "bars": "14-H20 [14-H2001]",
+     "links": "H10@150 (same set)"
+    },
+    {
+     "from_level_mm": 17100,
+     "to_level_mm": 20400,
+     "size_mm": [
+      600,
+      300
+     ],
+     "bars": "14-H20 [14-H2001]",
+     "links": "H10@150 (same set)"
+    },
+    {
+     "from_level_mm": 20400,
+     "to_level_mm": 23700,
+     "size_mm": [
+      600,
+      300
+     ],
+     "bars": "14-H20 [14-H2001]",
+     "links": "H10@150 (same set)"
+    },
+    {
+     "from_level_mm": 23700,
+     "to_level_mm": 27000,
+     "size_mm": [
+      600,
+      300
+     ],
+     "bars": "14-H20 [14-H2002]",
+     "links": "H10@150 (same set)"
+    }
+   ],
+   "notes": "All three sit in the C-line retaining wall below +300. Section 03-03 is labelled 6-H2501 top face + 2-H2501 sides + 6-H2001 bottom face. Section 04-04 is labelled 12-H2001 + 2-H1601 at the sides. The elevations and schedule (H2501/H2502 14 each, H2001 70 = 14 x 5) give 14 bars of one diameter, which is used here."
+  },
+  {
+   "type": "C1b",
+   "count": 5,
+   "size_mm": [
+    600,
+    300
+   ],
+   "where": [
+    "D/7 (B8)",
+    "F/7 (B8)",
+    "H/7 (B8a)",
+    "K/7 (B8)",
+    "M/7 (B12)"
+   ],
+   "orientation": "600 along N-S, 500 N / 100 S of grid 7 (p5)",
+   "stages": [
+    {
+     "from_level_mm": 300,
+     "to_level_mm": 3900,
+     "size_mm": [
+      600,
+      300
+     ],
+     "bars": "18-H25 [18-H2501]",
+     "links": "H10@150: 1x25-H1001 + 1x25-H1002 + 2x25-H1003 + 1x25-H1004",
+     "section": "05-05"
+    },
+    {
+     "from_level_mm": 3900,
+     "to_level_mm": 7200,
+     "size_mm": [
+      600,
+      300
+     ],
+     "bars": "18-H25 [18-H2502]",
+     "links": "H10@150: 1x22 sets (H1001, H1002, 2xH1003, H1004)"
+    },
+    {
+     "from_level_mm": 7200,
+     "to_level_mm": 10500,
+     "size_mm": [
+      600,
+      300
+     ],
+     "bars": "18-H20 [18-H2001]",
+     "links": "H10@150 (same set)",
+     "section": "06-06"
+    },
+    {
+     "from_level_mm": 10500,
+     "to_level_mm": 13800,
+     "size_mm": [
+      600,
+      300
+     ],
+     "bars": "18-H20 [18-H2001]",
+     "links": "H10@150 (same set)"
+    },
+    {
+     "from_level_mm": 13800,
+     "to_level_mm": 17100,
+     "size_mm": [
+      600,
+      300
+     ],
+     "bars": "18-H20 [18-H2001]",
+     "links": "H10@150 (same set)"
+    },
+    {
+     "from_level_mm": 17100,
+     "to_level_mm": 20400,
+     "size_mm": [
+      600,
+      300
+     ],
+     "bars": "18-H20 [18-H2001]",
+     "links": "H10@150 (same set)"
+    },
+    {
+     "from_level_mm": 20400,
+     "to_level_mm": 23700,
+     "size_mm": [
+      600,
+      300
+     ],
+     "bars": "18-H20 [18-H2001]",
+     "links": "H10@150 (same set)"
+    },
+    {
+     "from_level_mm": 23700,
+     "to_level_mm": 27000,
+     "size_mm": [
+      600,
+      300
+     ],
+     "bars": "18-H20 [18-H2002]",
+     "links": "H10@150 (same set)"
+    }
+   ],
+   "notes": "18-H25 in 600x300 is 8836 mm2 = 4.9% (9.8% at the 1750 laps). Section 05-05 labels the side bars H2001. B12 (under M/7) gives 18-H20 starters, which do not match the H25 here."
+  },
+  {
+   "type": "C2",
+   "count": 6,
+   "size_mm": [
+    600,
+    300
+   ],
+   "where": [
+    "B/2A (B2, in retaining wall)",
+    "C/2A (B2, in retaining wall)",
+    "B/3 (B13, in retaining wall)",
+    "B/5 (B5, in retaining wall)",
+    "N/5 (B9)",
+    "N/7 (B9)"
+   ],
+   "stages": [
+    {
+     "from_level_mm": 300,
+     "to_level_mm": 3900,
+     "size_mm": [
+      600,
+      300
+     ],
+     "bars": "18-H20 [18-H2003]",
+     "links": "H10@150: 1x25-H1001 + 1x25-H1002 + 2x25-H1003 + 1x25-H1004",
+     "section": "07-07"
+    },
+    {
+     "from_level_mm": 3900,
+     "to_level_mm": 7200,
+     "size_mm": [
+      600,
+      300
+     ],
+     "bars": "18-H20 [18-H2001]",
+     "links": "H10@150: 1x22 sets"
+    },
+    {
+     "from_level_mm": 7200,
+     "to_level_mm": 10500,
+     "size_mm": [
+      600,
+      300
+     ],
+     "bars": "18-H16 [18-H1601]",
+     "links": "H10@150",
+     "section": "08-08"
+    },
+    {
+     "from_level_mm": 10500,
+     "to_level_mm": 13800,
+     "size_mm": [
+      600,
+      300
+     ],
+     "bars": "18-H16 [18-H1601]",
+     "links": "H10@150"
+    },
+    {
+     "from_level_mm": 13800,
+     "to_level_mm": 17100,
+     "size_mm": [
+      600,
+      300
+     ],
+     "bars": "18-H16 [18-H1601]",
+     "links": "H10@150"
+    },
+    {
+     "from_level_mm": 17100,
+     "to_level_mm": 20400,
+     "size_mm": [
+      600,
+      300
+     ],
+     "bars": "18-H16 [18-H1601]",
+     "links": "H10@150"
+    },
+    {
+     "from_level_mm": 20400,
+     "to_level_mm": 23700,
+     "size_mm": [
+      600,
+      300
+     ],
+     "bars": "18-H16 [18-H1602, bent into sixth floor slab]",
+     "links": "H10@150"
+    }
+   ],
+   "terminates_at_mm": 23700,
+   "notes": "Stops at the sixth floor (+23700); there is no roof storey (link schedule 157 = 25 + 6 x 22 confirms). H1601 72 each = 18 x 4."
+  },
+  {
+   "type": "C3",
+   "count": 1,
+   "size_mm": [
+    600,
+    300
+   ],
+   "where": [
+    "B/4 (B13, in retaining wall)"
+   ],
+   "stages": [
+    {
+     "from_level_mm": 300,
+     "to_level_mm": 3900,
+     "size_mm": [
+      600,
+      300
+     ],
+     "bars": "18-H20 [18-H2003]",
+     "links": "H10@150: 1x25-H1001 + 1x25-H1002 + 2x25-H1003 + 1x25-H1004",
+     "section": "09-09"
+    },
+    {
+     "from_level_mm": 3900,
+     "to_level_mm": 7200,
+     "size_mm": [
+      600,
+      300
+     ],
+     "bars": "18-H20 [18-H2001]",
+     "links": "H10@150: 1x22 sets"
+    },
+    {
+     "from_level_mm": 7200,
+     "to_level_mm": 10500,
+     "size_mm": [
+      600,
+      300
+     ],
+     "bars": "18-H16 [18-H1601]",
+     "links": "H10@150",
+     "section": "10-10"
+    },
+    {
+     "from_level_mm": 10500,
+     "to_level_mm": 13800,
+     "size_mm": [
+      600,
+      300
+     ],
+     "bars": "18-H16 [18-H1601]",
+     "links": "H10@150"
+    },
+    {
+     "from_level_mm": 13800,
+     "to_level_mm": 17100,
+     "size_mm": [
+      600,
+      300
+     ],
+     "bars": "18-H16 [18-H1601]",
+     "links": "H10@150"
+    },
+    {
+     "from_level_mm": 17100,
+     "to_level_mm": 20400,
+     "size_mm": [
+      600,
+      300
+     ],
+     "bars": "18-H16 [18-H1601]",
+     "links": "H10@150"
+    },
+    {
+     "from_level_mm": 20400,
+     "to_level_mm": 23700,
+     "size_mm": [
+      600,
+      300
+     ],
+     "bars": "18-H16 [18-H1602, bent into sixth floor slab]",
+     "links": "H10@150"
+    }
+   ],
+   "terminates_at_mm": 23700,
+   "notes": "Same as C2. Stops at +23700."
+  },
+  {
+   "type": "C4",
+   "count": 4,
+   "size_mm": [
+    600,
+    300
+   ],
+   "where": [
+    "B1/4 (B13)",
+    "B1/5 (B5)",
+    "B1 between 6 and 7, ~1075-1675 S of grid 6 (B15)",
+    "B/7 (B15, retaining wall corner)"
+   ],
+   "stages": [
+    {
+     "from_level_mm": 300,
+     "to_level_mm": 3900,
+     "size_mm": [
+      600,
+      300
+     ],
+     "bars": "18-H20 [18-H2002]",
+     "links": "H10@150: 1x25-H1001 + 1x25-H1002 + 2x25-H1003 + 1x25-H1004",
+     "section": "11-11"
+    }
+   ],
+   "terminates_at_mm": 3900,
+   "notes": "Basement-only columns: they stop at the ground floor (+3900). Three of them stand free inside the basement, where the floor is at -3300. The elevation only covers +300 to +3900, so the -3300 to +300 storey (3600) is not detailed; it is restrained by the +300 slab."
+  },
+  {
+   "type": "C5",
+   "count": 2,
+   "size_mm": [
+    400,
+    200
+   ],
+   "where": [
+    "A/1 (B1)",
+    "A/2A (B1)"
+   ],
+   "stages": [
+    {
+     "from_level_mm": 300,
+     "to_level_mm": 3900,
+     "size_mm": [
+      400,
+      200
+     ],
+     "bars": "6-H16 [6-H1603]",
+     "links": "H10@150: 1x25-H1007 + 1x25-H1008",
+     "section": "12-12"
+    },
+    {
+     "from_level_mm": 3900,
+     "to_level_mm": 7200,
+     "size_mm": [
+      400,
+      200
+     ],
+     "bars": "6-H16 [6-H1601]",
+     "links": "H10@150: 1x22-H1007 + 1x22-H1008"
+    },
+    {
+     "from_level_mm": 7200,
+     "to_level_mm": 10500,
+     "size_mm": [
+      400,
+      200
+     ],
+     "bars": "6-H16 [6-H1602, bent into second floor slab]",
+     "links": "H10@150: 1x22-H1007 + 1x22-H1008"
+    }
+   ],
+   "terminates_at_mm": 10500,
+   "notes": "West-wing columns on B1 pads. Stop at the second floor (+10500). The schedule (links 135 = 25 + 5 x 22, H1601 12 each) suggests more storeys than the elevation shows. The elevation (3 storeys) is used here."
+  },
+  {
+   "type": "C5a",
+   "count": 1,
+   "size_mm": [
+    400,
+    200
+   ],
+   "where": [
+    "B/1A (on B retaining wall line; no pad base)"
+   ],
+   "stages": [
+    {
+     "from_level_mm": 300,
+     "to_level_mm": 3900,
+     "size_mm": [
+      400,
+      200
+     ],
+     "bars": "6-H16 [6-H1603]",
+     "links": "H10@150: 1x25-H1007 + 1x25-H1008",
+     "section": "13-13"
+    },
+    {
+     "from_level_mm": 3900,
+     "to_level_mm": 7200,
+     "size_mm": [
+      400,
+      200
+     ],
+     "bars": "6-H16 [6-H1601]",
+     "links": "H10@150: 1x22-H1007 + 1x22-H1008"
+    },
+    {
+     "from_level_mm": 7200,
+     "to_level_mm": 10500,
+     "size_mm": [
+      400,
+      200
+     ],
+     "bars": "6-H16 [6-H1602, bent into second floor slab]",
+     "links": "H10@150: 1x22-H1007 + 1x22-H1008"
+    }
+   ],
+   "terminates_at_mm": 10500,
+   "notes": "Drawn hollow ('terminated') on p4/p5/p18, so it starts at +300 off the B retaining wall/raft edge. Stops at +10500."
+  },
+  {
+   "type": "C5b",
+   "count": 2,
+   "size_mm": [
+    400,
+    200
+   ],
+   "where": [
+    "B1/1",
+    "B1/2 (located from p19 Sub-basement GA only; not on p4/p5/p18)"
+   ],
+   "stages": [
+    {
+     "from_level_mm": 300,
+     "to_level_mm": 3900,
+     "size_mm": [
+      400,
+      200
+     ],
+     "bars": "6-H16 [6-H1603] + starters 6-H16 [6-H1604]",
+     "links": "H10@150: 1x25-H1007 + 1x25-H1008",
+     "section": "14-14"
+    },
+    {
+     "from_level_mm": 3900,
+     "to_level_mm": 7200,
+     "size_mm": [
+      400,
+      200
+     ],
+     "bars": "6-H16 [6-H1601]",
+     "links": "H10@150: 1x22-H1007 + 1x22-H1008"
+    },
+    {
+     "from_level_mm": 7200,
+     "to_level_mm": 10500,
+     "size_mm": [
+      400,
+      200
+     ],
+     "bars": "6-H16 [6-H1602, bent into second floor slab]",
+     "links": "H10@150: 1x22-H1007 + 1x22-H1008"
+    }
+   ],
+   "terminates_at_mm": 10500,
+   "notes": "Starts at +300. Starter bars 6-H16 [6-H1604, 3800 long with a 1000 L-leg] are anchored into a BM 600x300 along B1 at +300 (p19) over the basement wing. Planted (transfer) column. Stops at +10500."
+  },
+  {
+   "type": "C6",
+   "count": 4,
+   "size_mm": [
+    800,
+    300
+   ],
+   "where": [
+    "G/5 (B11)",
+    "L/5 (B11)",
+    "G/7 (B11)",
+    "L/7 (B11)"
+   ],
+   "orientation": "800 along N-S; row 5: 650 N / 150 S of 5; row 7: 700 N / 100 S of 7 (p5)",
+   "stages": [
+    {
+     "from_level_mm": 300,
+     "to_level_mm": 3900,
+     "size_mm": [
+      800,
+      300
+     ],
+     "bars": "18-H25 [18-H2501]",
+     "links": "H10@150: 2x25-H1009 + 1x25-H1010 + 2x25-H1011",
+     "section": "15-15"
+    },
+    {
+     "from_level_mm": 3900,
+     "to_level_mm": 7200,
+     "size_mm": [
+      800,
+      300
+     ],
+     "bars": "18-H20 [18-H2001] per elevation - schedule implies 18-H25 [H2502]",
+     "links": "H10@150: 2x22-H1009 + 1x22-H1010 + 2x22-H1011"
+    },
+    {
+     "from_level_mm": 7200,
+     "to_level_mm": 10500,
+     "size_mm": [
+      800,
+      300
+     ],
+     "bars": "18-H20 [18-H2001]",
+     "links": "H10@150 (same set)",
+     "section": "16-16"
+    },
+    {
+     "from_level_mm": 10500,
+     "to_level_mm": 13800,
+     "size_mm": [
+      800,
+      300
+     ],
+     "bars": "18-H20 [18-H2001]",
+     "links": "H10@150 (same set)"
+    },
+    {
+     "from_level_mm": 13800,
+     "to_level_mm": 17100,
+     "size_mm": [
+      800,
+      300
+     ],
+     "bars": "18-H20 [18-H2001]",
+     "links": "H10@150 (same set)"
+    },
+    {
+     "from_level_mm": 17100,
+     "to_level_mm": 20400,
+     "size_mm": [
+      800,
+      300
+     ],
+     "bars": "18-H20 [18-H2001]",
+     "links": "H10@150 (same set)"
+    },
+    {
+     "from_level_mm": 20400,
+     "to_level_mm": 23700,
+     "size_mm": [
+      800,
+      300
+     ],
+     "bars": "18-H20 [18-H2001]",
+     "links": "H10@150 (same set)"
+    },
+    {
+     "from_level_mm": 23700,
+     "to_level_mm": 27000,
+     "size_mm": [
+      800,
+      300
+     ],
+     "bars": "18-H20 [18-H2002]",
+     "links": "H10@150 (same set)"
+    }
+   ],
+   "notes": "Conflict at +3900 to +7200. The elevation clearly reads 18-H2001 (H20). The bending schedule has H2501 18, H2502 18 and H2001 only 90 (= 5 storeys), which implies 18-H25 in that storey, as in C1a and C1b. H20 (the lower value) is entered in the stage."
+  },
+  {
+   "type": "C7",
+   "count": 1,
+   "count_note": "Detail says 1 No.; the fifth floor GA (p24) shows C7 twice",
+   "size_mm": [
+    600,
+    200
+   ],
+   "where": [
+    "Fifth floor (p24): between C and D ~1.5 m E of C, just N of grid 6, beside staircase 4",
+    "Fifth floor (p24): between L and M ~1.8 m W of M, just N of grid 6, beside staircase 5 / SW7"
+   ],
+   "stages": [
+    {
+     "from_level_mm": 20400,
+     "to_level_mm": 23700,
+     "size_mm": [
+      600,
+      200
+     ],
+     "bars": "8-H16 [8-H1602] + starters 8-H16 [8-H1613, 3000 long with a 700 L-leg]",
+     "links": "H10@150: 1x22-H1017 + 1x22-H1018",
+     "section": "17-17"
+    }
+   ],
+   "notes": "Planted column that starts on the fifth floor slab (+20400) next to a 'HIDDEN BM 175X600', and runs to +23700. Transfer condition. C8/C9 stair columns appear on p24 but are not detailed on p12/p13."
+  }
+ ],
+ "walls": [
+  {
+   "type": "SW1",
+   "count": 2,
+   "where": "Lift cores D-E/5-6 and J-K/5-6: north wall (along grid 5, ~150 N of 5)",
+   "thickness_mm": 300,
+   "length_mm": 2825,
+   "end_zone_mm": 450,
+   "stages": [
+    {
+     "from_level_mm": 300,
+     "to_level_mm": 3900,
+     "vertical_bars": "end zones 2x(2x5)-H20@100 N.F&F.F = 20 bars [H2003]; middle 1x(2x8)-H16@200 N.F&F.F [H1603]",
+     "horizontal_bars": "1x(2x25)-H16@150 N.F&F.F [H1607]",
+     "boundary_bars": "end-zone links 2x(1x25)-H10@150 [H1012] + 2x(1x25)-H10@150 [H1013]",
+     "section": "06-06 (core)"
+    },
+    {
+     "from_level_mm": 3900,
+     "to_level_mm": 7200,
+     "vertical_bars": "end zones 2x(2x5)-H20@100 [H2001]; middle 1x(2x8)-H16@200 [H1601]",
+     "horizontal_bars": "1x(2x25)-H16@150 N.F&F.F [H1607]",
+     "boundary_bars": "end-zone links 2x(1x22)-H10@150 [H1012, H1013]"
+    },
+    {
+     "from_level_mm": 7200,
+     "to_level_mm": 10500,
+     "vertical_bars": "end zones 2x(2x5)-H20@100 [H2001]; middle 1x(2x8)-H16@200 [H1601]",
+     "horizontal_bars": "1x(2x25)-H16@150 N.F&F.F [H1607]",
+     "boundary_bars": "end-zone links 2x(1x22)-H10@150 [H1012, H1013]"
+    },
+    {
+     "from_level_mm": 10500,
+     "to_level_mm": 13800,
+     "vertical_bars": "end zones 2x(2x5)-H20@100 [H2001]; middle 1x(2x8)-H16@200 [H1601]",
+     "horizontal_bars": "1x(2x25)-H16@150 N.F&F.F [H1607]",
+     "boundary_bars": "end-zone links 2x(1x22)-H10@150 [H1012, H1013]"
+    },
+    {
+     "from_level_mm": 13800,
+     "to_level_mm": 17100,
+     "vertical_bars": "end zones 2x(2x5)-H20@100 [H2001]; middle 1x(2x8)-H16@200 [H1601]",
+     "horizontal_bars": "1x(2x25)-H16@150 N.F&F.F [H1607]",
+     "boundary_bars": "end-zone links 2x(1x22)-H10@150 [H1012, H1013]"
+    },
+    {
+     "from_level_mm": 17100,
+     "to_level_mm": 20400,
+     "vertical_bars": "end zones 2x(2x5)-H20@100 [H2001]; middle 1x(2x8)-H16@200 [H1601]",
+     "horizontal_bars": "1x(2x25)-H16@150 N.F&F.F [H1607]",
+     "boundary_bars": "end-zone links 2x(1x22)-H10@150 [H1012, H1013]"
+    },
+    {
+     "from_level_mm": 20400,
+     "to_level_mm": 23700,
+     "vertical_bars": "end zones 2x(2x5)-H20@100 [H2001]; middle 1x(2x8)-H16@200 [H1601]",
+     "horizontal_bars": "1x(2x25)-H16@150 N.F&F.F [H1607]",
+     "boundary_bars": "end-zone links 2x(1x22)-H10@150 [H1012, H1013]"
+    },
+    {
+     "from_level_mm": 23700,
+     "to_level_mm": 27000,
+     "vertical_bars": "end zones 2x(2x5)-H20@100 [H2002]; middle 1x(2x8)-H16@200 [H1602]",
+     "horizontal_bars": "1x(2x25)-H16@150 N.F&F.F [H1607]",
+     "boundary_bars": "end-zone links 2x(1x22)-H10@150 [H1012, H1013]"
+    }
+   ],
+   "notes": "Core box is 2825 x 2625 outside with 300 walls (p14 sections 06-06/07-07, p10 section 19-19). Runs +300 to the roof."
+  },
+  {
+   "type": "SW2",
+   "count": 4,
+   "where": "Lift cores D-E/5-6 and J-K/5-6: east and west walls (N-S)",
+   "thickness_mm": 300,
+   "length_mm": 2625,
+   "end_zone_mm": 450,
+   "stages": [
+    {
+     "from_level_mm": 300,
+     "to_level_mm": 3900,
+     "vertical_bars": "end zones 2x(2x5)-H20@100 [H2003]; middle 1x(2x10)-H16@200 [H1603]",
+     "horizontal_bars": "1x(2x25)-H16@150 N.F&F.F [H1606]",
+     "boundary_bars": "2x(1x25)-H10@150 [H1012, H1013]",
+     "section": "06-06 (core)"
+    },
+    {
+     "from_level_mm": 3900,
+     "to_level_mm": 7200,
+     "vertical_bars": "end zones 2x(2x5)-H20@100 [H2001]; middle 1x(2x10)-H16@200 [H1601]",
+     "horizontal_bars": "1x(2x25)-H16@150 N.F&F.F [H1606]",
+     "boundary_bars": "2x(1x22)-H10@150 [H1012, H1013]"
+    },
+    {
+     "from_level_mm": 7200,
+     "to_level_mm": 10500,
+     "vertical_bars": "end zones 2x(2x5)-H20@100 [H2001]; middle 1x(2x10)-H16@200 [H1601]",
+     "horizontal_bars": "1x(2x25)-H16@150 N.F&F.F [H1606]",
+     "boundary_bars": "2x(1x22)-H10@150 [H1012, H1013]"
+    },
+    {
+     "from_level_mm": 10500,
+     "to_level_mm": 13800,
+     "vertical_bars": "end zones 2x(2x5)-H20@100 [H2001]; middle 1x(2x10)-H16@200 [H1601]",
+     "horizontal_bars": "1x(2x25)-H16@150 N.F&F.F [H1606]",
+     "boundary_bars": "2x(1x22)-H10@150 [H1012, H1013]"
+    },
+    {
+     "from_level_mm": 13800,
+     "to_level_mm": 17100,
+     "vertical_bars": "end zones 2x(2x5)-H20@100 [H2001]; middle 1x(2x10)-H16@200 [H1601]",
+     "horizontal_bars": "1x(2x25)-H16@150 N.F&F.F [H1606]",
+     "boundary_bars": "2x(1x22)-H10@150 [H1012, H1013]"
+    },
+    {
+     "from_level_mm": 17100,
+     "to_level_mm": 20400,
+     "vertical_bars": "end zones 2x(2x5)-H20@100 [H2001]; middle 1x(2x10)-H16@200 [H1601]",
+     "horizontal_bars": "1x(2x25)-H16@150 N.F&F.F [H1606]",
+     "boundary_bars": "2x(1x22)-H10@150 [H1012, H1013]"
+    },
+    {
+     "from_level_mm": 20400,
+     "to_level_mm": 23700,
+     "vertical_bars": "end zones 2x(2x5)-H20@100 [H2001]; middle 1x(2x10)-H16@200 [H1601]",
+     "horizontal_bars": "1x(2x25)-H16@150 N.F&F.F [H1606]",
+     "boundary_bars": "2x(1x22)-H10@150 [H1012, H1013]"
+    },
+    {
+     "from_level_mm": 23700,
+     "to_level_mm": 27000,
+     "vertical_bars": "end zones 2x(2x5)-H20@100 [elevation says H2001; schedule H2002]; middle 1x(2x10)-H16@200 [H1602]",
+     "horizontal_bars": "1x(2x25)-H16@150 N.F&F.F [H1606]",
+     "boundary_bars": "2x(1x22)-H10@150 [H1012, H1013]"
+    }
+   ],
+   "notes": "Section 06-06 draws 8 H16 per face in the middle; the elevation and schedule say 10 per face (2x10)."
+  },
+  {
+   "type": "SW3",
+   "count": 2,
+   "where": "Lift cores: south wall (along grid 6) with lift door opening",
+   "thickness_mm": 300,
+   "length_mm": 2825,
+   "opening_mm": "1350 wide x 2100 high, centred; piers 725 each side",
+   "stages": [
+    {
+     "from_level_mm": 300,
+     "to_level_mm": 3900,
+     "vertical_bars": "piers 2x(2x7)-H20@100 N.F&F.F = 28 bars [H2003]; over opening 1x(2x10)-H16@200 [H1608]",
+     "horizontal_bars": "1x(2x25)-H16@150 N.F&F.F [H1606]",
+     "boundary_bars": "pier links 2x(1x25)-H10@150 [H1015] + [H1016]",
+     "section": "08-08"
+    },
+    {
+     "from_level_mm": 3900,
+     "to_level_mm": 7200,
+     "vertical_bars": "piers 2x(2x7)-H20@100 [H2001]; over opening 1x(2x10)-H16@200 [H1609]",
+     "horizontal_bars": "lintel 1x(2x9)-H16@150 N.F&F.F [H1606]",
+     "boundary_bars": "2x(1x22)-H10@150 [H1015, H1016]"
+    },
+    {
+     "from_level_mm": 7200,
+     "to_level_mm": 10500,
+     "vertical_bars": "piers 2x(2x7)-H20@100 [H2001]; over opening 1x(2x10)-H16@200 [H1609]",
+     "horizontal_bars": "lintel 1x(2x9)-H16@150 N.F&F.F [H1606]",
+     "boundary_bars": "2x(1x22)-H10@150 [H1015, H1016]"
+    },
+    {
+     "from_level_mm": 10500,
+     "to_level_mm": 13800,
+     "vertical_bars": "piers 2x(2x7)-H20@100 [H2001]; over opening 1x(2x10)-H16@200 [H1609]",
+     "horizontal_bars": "lintel 1x(2x9)-H16@150 N.F&F.F [H1606]",
+     "boundary_bars": "2x(1x22)-H10@150 [H1015, H1016]"
+    },
+    {
+     "from_level_mm": 13800,
+     "to_level_mm": 17100,
+     "vertical_bars": "piers 2x(2x7)-H20@100 [H2001]; over opening 1x(2x10)-H16@200 [H1609]",
+     "horizontal_bars": "lintel 1x(2x9)-H16@150 N.F&F.F [H1606]",
+     "boundary_bars": "2x(1x22)-H10@150 [H1015, H1016]"
+    },
+    {
+     "from_level_mm": 17100,
+     "to_level_mm": 20400,
+     "vertical_bars": "piers 2x(2x7)-H20@100 [H2001]; over opening 1x(2x10)-H16@200 [H1609]",
+     "horizontal_bars": "lintel 1x(2x9)-H16@150 N.F&F.F [H1606]",
+     "boundary_bars": "2x(1x22)-H10@150 [H1015, H1016]"
+    },
+    {
+     "from_level_mm": 20400,
+     "to_level_mm": 23700,
+     "vertical_bars": "piers 2x(2x7)-H20@100 [H2001]; over opening 1x(2x10)-H16@200 [H1609]",
+     "horizontal_bars": "lintel 1x(2x9)-H16@150 N.F&F.F [H1606]",
+     "boundary_bars": "2x(1x22)-H10@150 [H1015, H1016]"
+    },
+    {
+     "from_level_mm": 23700,
+     "to_level_mm": 27000,
+     "vertical_bars": "piers 2x(2x7)-H20@100 [H2002 per schedule; elevation says H2001]; over opening 1x(2x10)-H16@200 [H1609]",
+     "horizontal_bars": "lintel 1x(2x9)-H16@150 N.F&F.F [H1606]",
+     "boundary_bars": "2x(1x22)-H10@150 [H1015, H1016]"
+    }
+   ],
+   "notes": "Each storey is two 725 x 300 piers (boundary elements) joined by a lintel/spandrel above the 2100 opening."
+  },
+  {
+   "type": "SW4",
+   "count": 1,
+   "where": "G/3: 775 W / 725 E of G, 200 N / 100 S of grid 3 (on B3)",
+   "thickness_mm": 300,
+   "length_mm": 1500,
+   "end_zone_mm": 450,
+   "stages": [
+    {
+     "from_level_mm": 300,
+     "to_level_mm": 3900,
+     "vertical_bars": "end zones 2x(2x5)-H20@100 [H2003]; middle 1x(2x4)-H16@150 [H1603]",
+     "horizontal_bars": "1x(2x25)-H16@150 N.F&F.F [H1605]",
+     "boundary_bars": "2x(1x25)-H10@150 [H1012, H1013]",
+     "section": "01-01"
+    },
+    {
+     "from_level_mm": 3900,
+     "to_level_mm": 7200,
+     "vertical_bars": "end zones 2x(2x5)-H20@100 [H2001]; middle 1x(2x4)-H16@150 [H1601]",
+     "horizontal_bars": "1x(2x25)-H16@150 N.F&F.F [H1605]",
+     "boundary_bars": "2x(1x22)-H10@150 [H1012, H1013]"
+    },
+    {
+     "from_level_mm": 7200,
+     "to_level_mm": 10500,
+     "vertical_bars": "end zones 2x(2x5)-H20@100 [H2001]; middle 1x(2x4)-H16@150 [H1601]",
+     "horizontal_bars": "1x(2x22)-H16@150 N.F&F.F [H1605]",
+     "boundary_bars": "2x(1x22)-H10@150 [H1012, H1013]"
+    },
+    {
+     "from_level_mm": 10500,
+     "to_level_mm": 13800,
+     "vertical_bars": "end zones 2x(2x5)-H20@100 [H2001]; middle 1x(2x4)-H16@150 [H1601]",
+     "horizontal_bars": "1x(2x22)-H16@150 N.F&F.F [H1605]",
+     "boundary_bars": "2x(1x22)-H10@150 [H1012, H1013]"
+    },
+    {
+     "from_level_mm": 13800,
+     "to_level_mm": 17100,
+     "vertical_bars": "end zones 2x(2x5)-H20@100 [H2001]; middle 1x(2x4)-H16@150 [H1601]",
+     "horizontal_bars": "1x(2x22)-H16@150 N.F&F.F [H1605]",
+     "boundary_bars": "2x(1x22)-H10@150 [H1012, H1013]"
+    },
+    {
+     "from_level_mm": 17100,
+     "to_level_mm": 20400,
+     "vertical_bars": "end zones 2x(2x5)-H20@100 [H2001]; middle 1x(2x4)-H16@150 [H1601]",
+     "horizontal_bars": "1x(2x22)-H16@150 N.F&F.F [H1605]",
+     "boundary_bars": "2x(1x22)-H10@150 [H1012, H1013]"
+    },
+    {
+     "from_level_mm": 20400,
+     "to_level_mm": 23700,
+     "vertical_bars": "end zones 2x(2x5)-H20@100 [H2002]; middle 1x(2x4)-H16@150 [H1602]",
+     "horizontal_bars": "1x(2x22)-H16@150 N.F&F.F [H1605]",
+     "boundary_bars": "2x(1x22)-H10@150 [H1012, H1013]"
+    }
+   ],
+   "terminates_at_mm": 23700,
+   "notes": "Stops at the sixth floor (+23700). Schedule H1601 40 = 8 x 5 and H1602 8, consistent with the elevation."
+  },
+  {
+   "type": "SW6",
+   "count": 1,
+   "where": "N/3: 1350 W / 150 E of N, 200 N / 100 S of grid 3 (on B3)",
+   "thickness_mm": 300,
+   "length_mm": 1500,
+   "end_zone_mm": 450,
+   "stages": [
+    {
+     "from_level_mm": 300,
+     "to_level_mm": 3900,
+     "vertical_bars": "end zones 2x(2x5)-H20@100 [H2003]; middle 1x(2x4)-H16@150 [H1603]",
+     "horizontal_bars": "1x(2x25)-H16@150 N.F&F.F [H1605]",
+     "boundary_bars": "2x(1x25)-H10@150 [H1012, H1013]",
+     "section": "04-04"
+    },
+    {
+     "from_level_mm": 3900,
+     "to_level_mm": 7200,
+     "vertical_bars": "end zones 2x(2x5)-H20@100 [H2001]; middle 1x(2x4)-H16@150 [H1601]",
+     "horizontal_bars": "1x(2x25)-H16@150 N.F&F.F [H1605]",
+     "boundary_bars": "2x(1x22)-H10@150 [H1012, H1013]"
+    },
+    {
+     "from_level_mm": 7200,
+     "to_level_mm": 10500,
+     "vertical_bars": "end zones 2x(2x5)-H20@100 [H2001]; middle 1x(2x4)-H16@150 [H1601]",
+     "horizontal_bars": "1x(2x22)-H16@150 N.F&F.F [H1605]",
+     "boundary_bars": "2x(1x22)-H10@150 [H1012, H1013]"
+    },
+    {
+     "from_level_mm": 10500,
+     "to_level_mm": 13800,
+     "vertical_bars": "end zones 2x(2x5)-H20@100 [H2001]; middle 1x(2x4)-H16@150 [H1601]",
+     "horizontal_bars": "1x(2x22)-H16@150 N.F&F.F [H1605]",
+     "boundary_bars": "2x(1x22)-H10@150 [H1012, H1013]"
+    },
+    {
+     "from_level_mm": 13800,
+     "to_level_mm": 17100,
+     "vertical_bars": "end zones 2x(2x5)-H20@100 [H2001]; middle 1x(2x4)-H16@150 [H1601]",
+     "horizontal_bars": "1x(2x22)-H16@150 N.F&F.F [H1605]",
+     "boundary_bars": "2x(1x22)-H10@150 [H1012, H1013]"
+    },
+    {
+     "from_level_mm": 17100,
+     "to_level_mm": 20400,
+     "vertical_bars": "end zones 2x(2x5)-H20@100 [H2001]; middle 1x(2x4)-H16@150 [H1601]",
+     "horizontal_bars": "1x(2x22)-H16@150 N.F&F.F [H1605]",
+     "boundary_bars": "2x(1x22)-H10@150 [H1012, H1013]"
+    },
+    {
+     "from_level_mm": 20400,
+     "to_level_mm": 23700,
+     "vertical_bars": "end zones 2x(2x5)-H20@100 [H2002]; middle 1x(2x4)-H16@150 [H1602]",
+     "horizontal_bars": "1x(2x22)-H16@150 N.F&F.F [H1605]",
+     "boundary_bars": "2x(1x22)-H10@150 [H1012, H1013]"
+    }
+   ],
+   "terminates_at_mm": 23700,
+   "notes": "Stops at the sixth floor (+23700). Schedule H1601 40 = 8 x 5 and H1602 8, consistent with the elevation."
+  },
+  {
+   "type": "SW5",
+   "count": 1,
+   "where": "C line between 2A and 3: 1175 N to 325 S of grid 3, in the C retaining wall line below +300 (on B4)",
+   "thickness_mm": 300,
+   "length_mm": 1500,
+   "end_zone_mm": 450,
+   "stages": [
+    {
+     "from_level_mm": 300,
+     "to_level_mm": 3900,
+     "vertical_bars": "end zones 2x(2x5)-H20@100 [H2003]; middle 1x(2x4)-H16@150 [H1603]",
+     "horizontal_bars": "1x(2x25)-H16@150 N.F&F.F [H1605]",
+     "boundary_bars": "2x(1x25)-H10@150 [H1012, H1013]",
+     "section": "02-02"
+    },
+    {
+     "from_level_mm": 3900,
+     "to_level_mm": 7200,
+     "vertical_bars": "end zones 2x(2x5)-H20@100 [H2001]; middle 1x(2x4)-H16@150 [H1601]",
+     "horizontal_bars": "1x(2x25)-H16@150 N.F&F.F [H1605]",
+     "boundary_bars": "2x(1x22)-H10@150 [H1012, H1013]"
+    },
+    {
+     "from_level_mm": 7200,
+     "to_level_mm": 10500,
+     "vertical_bars": "end zones 2x(2x5)-H20@100 [H2001]; middle 1x(2x4)-H16@150 [H1601]",
+     "horizontal_bars": "1x(2x22)-H16@150 N.F&F.F [H1605]",
+     "boundary_bars": "2x(1x22)-H10@150 [H1012, H1013]"
+    },
+    {
+     "from_level_mm": 10500,
+     "to_level_mm": 13800,
+     "vertical_bars": "end zones 2x(2x5)-H20@100 [H2001]; middle 1x(2x4)-H16@150 [H1601]",
+     "horizontal_bars": "1x(2x22)-H16@150 N.F&F.F [H1605]",
+     "boundary_bars": "2x(1x22)-H10@150 [H1012, H1013]"
+    },
+    {
+     "from_level_mm": 13800,
+     "to_level_mm": 17100,
+     "vertical_bars": "end zones 2x(2x5)-H20@100 [H2001]; middle 1x(2x4)-H16@150 [H1601]",
+     "horizontal_bars": "1x(2x22)-H16@150 N.F&F.F [H1605]",
+     "boundary_bars": "2x(1x22)-H10@150 [H1012, H1013]"
+    },
+    {
+     "from_level_mm": 17100,
+     "to_level_mm": 20400,
+     "vertical_bars": "end zones 2x(2x5)-H20@100 [H2001]; middle 1x(2x4)-H16@150 [H1601]",
+     "horizontal_bars": "1x(2x22)-H16@150 N.F&F.F [H1605]",
+     "boundary_bars": "2x(1x22)-H10@150 [H1012, H1013]"
+    },
+    {
+     "from_level_mm": 20400,
+     "to_level_mm": 23700,
+     "vertical_bars": "end zones 2x(2x5)-H20@100 [H2001 per elevation; schedule implies H2002]; middle 1x(2x4)-H16@150 [H1601 per elevation; schedule implies H1602]",
+     "horizontal_bars": "1x(2x22)-H16@150 N.F&F.F [H1605]",
+     "boundary_bars": "2x(1x22)-H10@150 [H1012, H1013]"
+    },
+    {
+     "from_level_mm": 23700,
+     "to_level_mm": 27000,
+     "size_mm": [
+      600,
+      300
+     ],
+     "vertical_bars": "12-H20 [12-H2002] - wall reduces to a 600x300 column",
+     "horizontal_bars": "links 1x22-H10@150 [H1001] + 2x22-H10@150 [H1014]",
+     "boundary_bars": "n/a",
+     "section": "03-03"
+    }
+   ],
+   "notes": "Above +23700 the wall becomes a 600x300 column stub (12-H20) up to the roof. This is a discontinuity in the shear wall."
+  },
+  {
+   "type": "SW7",
+   "count": 1,
+   "where": "M/5-6: 150 W / 150 E of M, from 150 N of grid 5 to 125 S of grid 6 (on B12)",
+   "thickness_mm": 300,
+   "length_mm": 2625,
+   "end_zone_mm": 450,
+   "stages": [
+    {
+     "from_level_mm": 300,
+     "to_level_mm": 3900,
+     "vertical_bars": "end zones 2x(2x5)-H20@100 [H2003]; middle 1x(2x8)-H16@200 [H1603]",
+     "horizontal_bars": "1x(2x25)-H16@150 N.F&F.F [H1607]",
+     "boundary_bars": "2x(1x25)-H10@150 [H1012, H1013]",
+     "section": "05-05"
+    },
+    {
+     "from_level_mm": 3900,
+     "to_level_mm": 7200,
+     "vertical_bars": "end zones 2x(2x5)-H20@100 [H2001]; middle 1x(2x8)-H16@200 [H1601]",
+     "horizontal_bars": "1x(2x25)-H16@150 N.F&F.F [H1607]",
+     "boundary_bars": "2x(1x22)-H10@150 [H1012, H1013]"
+    },
+    {
+     "from_level_mm": 7200,
+     "to_level_mm": 10500,
+     "vertical_bars": "end zones 2x(2x5)-H20@100 [H2001]; middle 1x(2x8)-H16@200 [H1601]",
+     "horizontal_bars": "1x(2x25)-H16@150 N.F&F.F [H1607]",
+     "boundary_bars": "2x(1x22)-H10@150 [H1012, H1013]"
+    },
+    {
+     "from_level_mm": 10500,
+     "to_level_mm": 13800,
+     "vertical_bars": "end zones 2x(2x5)-H20@100 [H2001]; middle 1x(2x8)-H16@200 [H1601]",
+     "horizontal_bars": "1x(2x25)-H16@150 N.F&F.F [H1607]",
+     "boundary_bars": "2x(1x22)-H10@150 [H1012, H1013]"
+    },
+    {
+     "from_level_mm": 13800,
+     "to_level_mm": 17100,
+     "vertical_bars": "end zones 2x(2x5)-H20@100 [H2001]; middle 1x(2x8)-H16@200 [H1601]",
+     "horizontal_bars": "1x(2x25)-H16@150 N.F&F.F [H1607]",
+     "boundary_bars": "2x(1x22)-H10@150 [H1012, H1013]"
+    },
+    {
+     "from_level_mm": 17100,
+     "to_level_mm": 20400,
+     "vertical_bars": "end zones 2x(2x5)-H20@100 [H2001]; middle 1x(2x8)-H16@200 [H1601]",
+     "horizontal_bars": "1x(2x25)-H16@150 N.F&F.F [H1607]",
+     "boundary_bars": "2x(1x22)-H10@150 [H1012, H1013]"
+    },
+    {
+     "from_level_mm": 20400,
+     "to_level_mm": 23700,
+     "vertical_bars": "end zones 2x(2x5)-H20@100 [H2001]; middle 1x(2x8)-H16@200 [elevation says H1602; schedule (H1601 96 = 16 x 6) implies H1601]",
+     "horizontal_bars": "1x(2x25)-H16@150 N.F&F.F [H1607]",
+     "boundary_bars": "2x(1x22)-H10@150 [H1012, H1013]"
+    },
+    {
+     "from_level_mm": 23700,
+     "to_level_mm": 27000,
+     "vertical_bars": "end zones 2x(2x5)-H20@100 [H2002]; middle 1x(2x8)-H16@200 [H1602]",
+     "horizontal_bars": "1x(2x25)-H16@150 N.F&F.F [H1607]",
+     "boundary_bars": "2x(1x22)-H10@150 [H1012, H1013]"
+    }
+   ],
+   "notes": "Runs +300 to the roof. The schedule totals (H2002/H2003 40, H1012 358) look copied from SW1 (2 No.)."
+  }
+ ],
+ "continuity_legend": {
+  "legend": "p4/p5/p6 legend: filled red = CONTINUOUS COLUMN, hollow = TERMINATED COLUMN, red X box = SUMP, black X = OPENING IN CORE WALL",
+  "terminated_as_drawn": [
+   "C5a at B/1A is drawn hollow on p4, p5 and p18 (filled on p19 at +300), so it starts at +300 on the B retaining wall line. It has no pad base."
+  ],
+  "continuous_as_drawn": "Every other column on p4/p5 is drawn filled, including C4 (stops at +3900), C5 (stops at +10500) and C2/C3 (stop at +23700). The hollow/filled symbol therefore does not show where a column stops at the top; use the elevations (p12/p13).",
+  "sump": "The SUMP symbol is in the legend, but no red-X sump appears on p4 or p5. Lift shaft interiors (D-E/5-6, J-K/5-6) carry a black X and are marked VOID on p6.",
+  "basement_extent": "Basement (raft top -3300) inside the retaining walls: B-B2/1B-2, B-C/2-7, plus underground water tank C-D/3-5. Ramp labelled south of grid 7 between C and D (p6). Swimming pool on the ground floor in the B1-B2/4-7 area (p20, not transcribed)."
+ },
+ "unreadable_or_ambiguous": [
+  "The drawings never print a founding level. -4150 is derived from the 4450 base-section depth below the +300 slab. Pads under the basement-wall columns (B2 at B/2A and C/2A, B4, B5, B6, B7, B13, B15) use the same generic section, even though the floor there is the -3300 raft. Their real depth and connection to the raft are not shown.",
+  "Base counts: B2 detail says 10 No. but p4 shows 8; B3 says 3 No. but p4 shows 2.",
+  "B14 bars: '2x85-H2007 B2&T2 @100' cannot fit a 4025 base. The schedule H2007 48 / H2008 54 (each = total) fits neither base nor count. Read as H20@100 both ways, top and bottom; counts unreliable. The wall link mark H1612 is not in the schedule.",
+  "B12: column starters 18-H20 (section 16-16) vs C1b 18-H25 at +300 to +3900. Schedule H2001 = 28 does not match 20 wall + 18 column.",
+  "B13: three columns (C2, C3, C4) but starters are detailed and scheduled for two only.",
+  "B15: plan '2x20-H2007' vs schedule 72 H2007 and 72 H2008. The SW rectangle width (~2250) is scaled from p4 (925 + 1325), not dimensioned on the detail.",
+  "B6 both mat labels read B1&T1; B7 plan H2002 vs schedule H2004 (both H20).",
+  "C6 at +3900 to +7200: elevation 18-H2001 (H20) vs schedule implying 18-H25 (H2502). The diameter matters.",
+  "Section bar labels disagree with the elevations for C1a (03-03: mixed H25/H20; 04-04: 12-H20 + 2-H16) and C1b (05-05 side bars H2001). The elevation/schedule counts are used.",
+  "C5 schedule (links 135, H1601 12) implies more storeys than the 3-storey elevation. C5 orientation: B1 detail 400(x)x200(y) vs p5 200(x)x400(y).",
+  "C7: detail says 1 No.; p24 shows two. C5b is only on p19.",
+  "Top-storey bar marks (H2001 vs H2002, H1601 vs H1602) differ between elevation and schedule for SW2, SW3, SW5 and SW7. The diameter is the same, so this does not change capacity.",
+  "Raft: N-S marks H1601/H1602 are scheduled as 12 mm. Some raft schedule cut lengths do not match the zones. The zone-to-label mapping is approximate.",
+  "Tie beam level: p6 title says -1500, but the p4 section geometry gives ~-1650 (top of beam 1950 below the +300 slab top).",
+  "Level naming conflict: +300 is 'SUB-BASEMENT FLOOR' on p12-p15/p19 but 'BASEMENT FLR +300' on p17. p18 'BASEMENT FLOOR' is -3300. Roof printed '+2700'.",
+  "The panel marked with a large black X between G and H (from ~1350 S of grid 3 to grid 7) on the p6 tie-beam plan is unlabelled. It has no tie beams or earth fill inside; purpose not identified.",
+  "The basement storey (-3300 to +300) of the free-standing C4 columns, and the C5b anchorage beam at +300, are not detailed on the column sheets."
+ ],
+ "structural_observations": [
+  "Columns stopping short of the roof: C4 at +3900; C5, C5a and C5b at +10500; C2 (6 No.), C3, SW4 and SW6 at +23700. SW5 reduces from a 1500x300 wall to a 600x300 column above +23700. Only C1, C1a, C1b, C6, the two lift cores, SW5 (as a column) and SW7 reach +27000.",
+  "Transfer / planted columns: C7 (600x200) starts on the fifth floor slab at +20400 beside a hidden beam 175x600 (two locations on p24). C5b (400x200) starts at +300 on a 600x300 beam over the basement wing (B1/1, B1/2).",
+  "Bar reductions: C1 and C2/C3 drop from 18-H20 to 18-H16 at +7200. C1a and C1b drop from H25 to H20 at +7200. C6 drops from H25 to H20 at +3900 (or +7200 per schedule).",
+  "C1b: 18-H25 in 600x300 is 4.9% (9.8% at the 1750 laps), above the usual 4%/8% limits. C1a: 14-H25 is 3.8% (7.6% at laps).",
+  "Row 3 C1 columns (6 No.) sit on 2500x2500x600 pads with a bottom mat only. Row 5/7 columns sit on 3500x3500x700 pads. At 400 kPa a B2 pad allows ~2500 kN service.",
+  "B9 (under C1 at F/5 and C2 at N/5, N/7) has a bottom mat only. The otherwise identical B10 (C1 at H/5) has top and bottom mats.",
+  "SW4, SW6 and SW7 are single isolated 1500/2625 x 300 walls on their own bases. The two lift cores (2825 x 2625, 300 walls) are the main lateral elements on B14 (4225x4025x700).",
+  "The basement / underground water tank (raft top -3300) is enclosed by 300 RC retaining walls. Columns C2, C3, C1a, C5a and SW5 are embedded in the wall lines."
+ ]
+}

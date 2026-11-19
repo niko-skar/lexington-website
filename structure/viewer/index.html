@@ -1,0 +1,667 @@
+<title>Lexington Structure Model</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: the model fills the left; an engineer's sheet runs down the right (it drops below the model on phones). */
+:root {
+  --bg: #eef1f2;
+  --panel: #fbfcfc;
+  --ink: #1b262d;
+  --muted: #5a6a73;
+  --line: #d3dbdf;
+  --accent: #23708a;
+  --accent-soft: #dcebf0;
+  --canvas: #e6ebed;
+  --ok: #2f8a5b;
+  --warn: #c7860f;
+  --bad: #c23b2e;
+  --none: #9aa8b0;
+  --font-ui: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-num: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #10161a; --panel: #162026; --ink: #e2e9ed; --muted: #94a4ad; --line: #2a363e; --accent: #62b6d1; --accent-soft: #1d3540;
+    --canvas: #0d1316; --ok: #4fbf84; --warn: #e3ab3e; --bad: #e8634f; --none: #5f6d75; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #10161a; --panel: #162026; --ink: #e2e9ed; --muted: #94a4ad; --line: #2a363e; --accent: #62b6d1; --accent-soft: #1d3540;
+  --canvas: #0d1316; --ok: #4fbf84; --warn: #e3ab3e; --bad: #e8634f; --none: #5f6d75; color-scheme: dark;
+}
+[hidden] { display: none !important; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--panel); }
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-ui); font-size: 14px; line-height: 1.45; }
+.app { display: grid; grid-template-columns: minmax(0, 1fr) 380px; height: 100%; }
+.stage { position: relative; min-width: 0; background: var(--canvas); }
+#c { display: block; width: 100%; height: 100%; touch-action: none; }
+.panel { border-left: 1px solid var(--line); background: var(--panel); overflow-y: auto; min-width: 0; display: flex; flex-direction: column; }
+.panel-head { padding-block: 16px 10px; padding-left: 18px; padding-right: max(18px, env(safe-area-inset-right, 0px)); border-bottom: 1px solid var(--line); }
+.panel-head h1 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: 0.01em; text-wrap: balance; }
+.panel-head p { margin: 2px 0 0; color: var(--muted); font-size: 12px; }
+.tabs { display: flex; gap: 2px; padding-left: 12px; padding-right: max(12px, env(safe-area-inset-right, 0px)); border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--panel); z-index: 2; }
+.tabs button { flex: 1; border: 0; background: none; color: var(--muted); font: 500 13px var(--font-ui); padding: 10px 4px; border-bottom: 2px solid transparent; cursor: pointer; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+.tabs button:focus-visible, .btn:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+section.tab { padding-block: 14px 28px; padding-left: 18px; padding-right: max(18px, env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; gap: 18px; }
+h2 { margin: 0 0 8px; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+h3 { margin: 0 0 6px; font-size: 14px; font-weight: 600; }
+p { margin: 0; }
+.note { color: var(--muted); font-size: 12.5px; }
+.num { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+.layers { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; }
+.layers label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.layers label.off { color: var(--muted); cursor: default; }
+.group-label { grid-column: 1 / -1; font-size: 12px; color: var(--muted); margin-top: 4px; }
+select, input[type="range"] { width: 100%; }
+select { font: 14px var(--font-ui); padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); color: var(--ink); }
+.row { display: flex; align-items: center; gap: 10px; }
+.row > * { min-width: 0; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+.hud { position: absolute; left: max(12px, env(safe-area-inset-left, 0px)); bottom: 12px; right: 12px; display: flex; flex-wrap: wrap; gap: 8px; pointer-events: none; }
+.hud .chip { pointer-events: auto; background: color-mix(in srgb, var(--panel) 88%, transparent); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; font-size: 12px; }
+.detail { border: 1px solid var(--line); border-radius: 8px; padding: 12px; background: var(--bg); }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; font-size: 13px; }
+.kv dt { color: var(--muted); }
+.kv dd { margin: 0; font-family: var(--font-num); font-variant-numeric: tabular-nums; text-align: right; }
+.tbl-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+th, td { padding: 4px 6px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+th { font-weight: 500; color: var(--muted); font-size: 11.5px; }
+td { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+td.txt { font-family: var(--font-ui); }
+.tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.tile { border: 1px solid var(--line); border-radius: 8px; padding: 10px; }
+.tile b { display: block; font: 500 18px var(--font-num); }
+.tile small { color: var(--muted); font-size: 12px; }
+.verdict { display: grid; grid-template-columns: 10px 1fr; gap: 10px; align-items: start; }
+.verdict i { width: 10px; height: 10px; border-radius: 50%; margin-top: 5px; }
+.pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 11.5px; font-weight: 500; }
+.pill.ok { background: color-mix(in srgb, var(--ok) 18%, transparent); color: var(--ok); }
+.pill.warn { background: color-mix(in srgb, var(--warn) 20%, transparent); color: var(--warn); }
+.pill.bad { background: color-mix(in srgb, var(--bad) 18%, transparent); color: var(--bad); }
+.btn { border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 6px; padding: 5px 10px; font: 500 13px var(--font-ui); cursor: pointer; }
+.btn[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); }
+.modes { display: flex; flex-direction: column; gap: 6px; }
+.mode { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; }
+.bar { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; display: flex; }
+.bar i { display: block; height: 100%; }
+ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+.loading { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); }
+@media (max-width: 860px) {
+  .app { grid-template-columns: 1fr; grid-template-rows: 58vh auto; height: auto; }
+  html, body { height: auto; }
+  .panel { border-left: 0; border-top: 1px solid var(--line); overflow: visible; }
+  .panel-head, section.tab { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  .tabs { top: env(safe-area-inset-top, 0px); }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+
+<div class="app">
+  <div class="stage">
+    <canvas id="c" aria-label="3D model of the building"></canvas>
+    <div class="loading" id="loading">Loading the model&#x2026;</div>
+    <div class="hud" id="hud"></div>
+  </div>
+  <aside class="panel">
+    <div class="panel-head">
+      <h1>The Lexington &#xB7; structural model</h1>
+      <p id="stamp">Shiashie, East Legon, Accra</p>
+    </div>
+    <div class="tabs" role="tablist">
+      <button role="tab" aria-selected="true" data-tab="model" id="t-model">Model</button>
+      <button role="tab" aria-selected="false" data-tab="loads" id="t-loads">Loads</button>
+      <button role="tab" aria-selected="false" data-tab="checks" id="t-checks">Checks</button>
+      <button role="tab" aria-selected="false" data-tab="modes" id="t-modes">Sway</button>
+    </div>
+
+    <section class="tab" id="tab-model">
+      <div>
+        <h2>Layers</h2>
+        <div class="layers" id="layers"></div>
+      </div>
+      <div>
+        <h2>Colour by</h2>
+        <select id="colour">
+          <option value="type">Element type</option>
+          <option value="gravity">Gravity + wind check (R10 bars)</option>
+          <option value="seis">Earthquake check, code level</option>
+          <option value="seis2">Earthquake check, lower hazard</option>
+          <option value="axial">Load carried (G + Q)</option>
+        </select>
+        <div class="legend" id="legend" style="margin-top:8px"></div>
+      </div>
+      <div>
+        <h2>Floors shown</h2>
+        <div class="row"><input type="range" id="levels" min="0" max="8" value="8" step="1"><span class="num" id="levels-out" style="min-width:7ch;text-align:right"></span></div>
+      </div>
+      <div>
+        <h2>Selected</h2>
+        <div class="detail" id="detail"><p class="note">Tap a column, wall, lift core, beam, slab or foundation to see its loads and checks.</p></div>
+      </div>
+    </section>
+
+    <section class="tab" id="tab-loads" hidden></section>
+    <section class="tab" id="tab-checks" hidden></section>
+    <section class="tab" id="tab-modes" hidden></section>
+  </aside>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+(function () {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  const fmt = (v, d = 0) => (v === null || v === undefined || Number.isNaN(v)) ? "\u2013" : Number(v).toLocaleString("en-GB", { maximumFractionDigits: d, minimumFractionDigits: d });
+  const pct = (v) => (v === null || v === undefined) ? "over 4 %" : (v * 100).toFixed(v < 0.01 ? 1 : (v * 100 % 1 ? 2 : 0)).replace(/\.?0+$/, "") + " %";
+
+  let DATA = null;
+  const state = { colour: "type", topLevel: 8, layers: { slabs: true, columns: true, cores: true, beams: true, foundations: true, grid: true }, sel: null, mode: -1, amp: 1.2 };
+
+  // ---------------------------------------------------------------- scene
+  const canvas = $("c");
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 1000);
+  const controls = new THREE.OrbitControls(camera, canvas);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.08;
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x8899a0, 0.85));
+  const sun = new THREE.DirectionalLight(0xffffff, 0.55);
+  sun.position.set(-30, 60, 40);
+  scene.add(sun);
+
+  const objects = []; // { mesh, kind, level, data, base: Vector3, lvlIdx }
+  const groups = {};
+  ["slabs", "columns", "cores", "beams", "foundations", "grid"].forEach((k) => { groups[k] = new THREE.Group(); scene.add(groups[k]); });
+
+  function resize() {
+    const r = canvas.parentElement.getBoundingClientRect();
+    renderer.setSize(r.width, r.height, false);
+    camera.aspect = r.width / Math.max(1, r.height);
+    camera.updateProjectionMatrix();
+  }
+  window.addEventListener("resize", resize);
+
+  function themeColours() {
+    scene.background = new THREE.Color(css("--canvas"));
+    recolour();
+  }
+  try { window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", themeColours); } catch (e) {}
+  new MutationObserver(themeColours).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+  // ---------------------------------------------------------------- build
+  function mat(colour, opts = {}) {
+    return new THREE.MeshLambertMaterial(Object.assign({ color: colour }, opts));
+  }
+  function addBox(group, kind, data, lvlIdx, x0, x1, y0, y1, z0, z1) {
+    const g = new THREE.BoxGeometry(Math.max(0.02, x1 - x0), Math.max(0.02, z1 - z0), Math.max(0.02, y1 - y0));
+    const m = new THREE.Mesh(g, mat(0x999999));
+    m.position.set((x0 + x1) / 2, (z0 + z1) / 2, (y0 + y1) / 2);
+    group.add(m);
+    const o = { mesh: m, kind, data, lvlIdx, base: m.position.clone() };
+    m.userData.o = o;
+    objects.push(o);
+    return o;
+  }
+
+  function build() {
+    const S = DATA.layers.structure;
+    const lv = {};
+    DATA.levels.forEach((l, i) => (lv[l.key] = i));
+    // slabs
+    S.slabs.forEach((s) => {
+      const shape = new THREE.Shape(s.outline.map(([x, y]) => new THREE.Vector2(x, y)));
+      s.holes.forEach((h) => {
+        const [x0, y0, x1, y1] = h.box;
+        shape.holes.push(new THREE.Path([new THREE.Vector2(x0, y0), new THREE.Vector2(x1, y0), new THREE.Vector2(x1, y1), new THREE.Vector2(x0, y1)]));
+      });
+      const g = new THREE.ExtrudeGeometry(shape, { depth: s.t, bevelEnabled: false });
+      const m = new THREE.Mesh(g, mat(0xcccccc, { transparent: true, opacity: 0.92 }));
+      m.rotation.x = Math.PI / 2;
+      m.position.y = s.z;
+      groups.slabs.add(m);
+      const o = { mesh: m, kind: "slab", data: s, lvlIdx: lv[s.level], base: m.position.clone() };
+      m.userData.o = o;
+      objects.push(o);
+    });
+    // columns and walls
+    S.columns.forEach((c) => {
+      const [x0, y0, x1, y1] = c.box;
+      addBox(groups.columns, c.kind, c, lv[c.level], x0, x1, y0, y1, c.z0, c.z1 - 0.01);
+    });
+    // lift cores: four walls, the door left out of the bottom 2.2 m
+    S.cores.forEach((c) => {
+      const [x0, y0, x1, y1] = c.box;
+      const t = c.wall;
+      const L = lv[c.level];
+      const parts = [];
+      parts.push([x0, x1, y0, y0 + t, c.z0, c.z1]);
+      parts.push([x0, x0 + t, y0 + t, y1 - t, c.z0, c.z1]);
+      parts.push([x1 - t, x1, y0 + t, y1 - t, c.z0, c.z1]);
+      if (c.door && c.door.side === "b") {
+        const a = x0 + c.door.from / 1000, b = a + c.door.width / 1000, top = Math.min(c.z1, c.z0 + 2.2);
+        parts.push([x0, a, y1 - t, y1, c.z0, c.z1]);
+        parts.push([b, x1, y1 - t, y1, c.z0, c.z1]);
+        parts.push([a, b, y1 - t, y1, top, c.z1]);
+      } else parts.push([x0, x1, y1 - t, y1, c.z0, c.z1]);
+      parts.forEach((p) => addBox(groups.cores, "core", c, L, p[0], p[1], p[2], p[3], p[4], p[5]));
+    });
+    // beams: top flush with the slab top
+    S.beams.forEach((b) => {
+      const [ax, ay] = b.a, [bx, by] = b.b_;
+      const w = b.w / 2;
+      const along = Math.abs(bx - ax) >= Math.abs(by - ay);
+      const x0 = along ? Math.min(ax, bx) : ax - w, x1 = along ? Math.max(ax, bx) : ax + w;
+      const y0 = along ? ay - w : Math.min(ay, by), y1 = along ? ay + w : Math.max(ay, by);
+      addBox(groups.beams, "beam", b, lv[b.level], x0, x1, y0, y1, b.z - b.h, b.z - 0.005);
+    });
+    // foundations (pad size needed), 600 thick under the ground floor
+    S.foundations.forEach((f) => {
+      const h = (f.side_sls || f.side) / 2; // drawn at the service-load size; the quake size is in the details
+      const o = addBox(groups.foundations, "foundation", f, 0, f.x - h, f.x + h, f.y - h, f.y + h, f.z - 0.9, f.z - 0.3);
+      o.mesh.material.transparent = true;
+      o.mesh.material.opacity = 0.55;
+    });
+    // grid lines and bubbles at ground level
+    const gx = DATA.grid.x, gy = DATA.grid.y;
+    const ymin = Math.min(...gy.map((g) => g.p)) - 3, ymax = Math.max(...gy.map((g) => g.p)) + 3;
+    const xmin = Math.min(...gx.map((g) => g.p)) - 3, xmax = Math.max(...gx.map((g) => g.p)) + 3;
+    const lineMat = new THREE.LineDashedMaterial({ color: 0x7a8a93, dashSize: 0.6, gapSize: 0.3 });
+    const addLine = (a, b) => {
+      const g = new THREE.BufferGeometry().setFromPoints([a, b]);
+      const l = new THREE.Line(g, lineMat);
+      l.computeLineDistances();
+      groups.grid.add(l);
+    };
+    const bubble = (text, x, z) => {
+      const cv = document.createElement("canvas");
+      cv.width = cv.height = 128;
+      const ctx = cv.getContext("2d");
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath(); ctx.arc(64, 64, 58, 0, Math.PI * 2); ctx.fill();
+      ctx.lineWidth = 6; ctx.strokeStyle = "#23708a"; ctx.stroke();
+      ctx.fillStyle = "#1b262d"; ctx.font = "600 52px IBM Plex Sans, sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText(text, 64, 68);
+      const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(cv), depthTest: false }));
+      sp.scale.set(1.3, 1.3, 1);
+      sp.position.set(x, 0.35, z);
+      groups.grid.add(sp);
+    };
+    gx.forEach((g) => { addLine(new THREE.Vector3(g.p, 0.3, ymin), new THREE.Vector3(g.p, 0.3, ymax)); bubble(g.id, g.p, ymin - 0.9); });
+    gy.forEach((g) => { addLine(new THREE.Vector3(xmin, 0.3, g.p), new THREE.Vector3(xmax, 0.3, g.p)); bubble(g.id, xmin - 0.9, g.p); });
+    // camera
+    const cx = (xmin + xmax) / 2, cz = (ymin + ymax) / 2;
+    controls.target.set(cx, 11, cz);
+    camera.position.set(cx + 34, 34, cz + 52);
+    controls.update();
+    $("levels").max = DATA.levels.length - 1;
+    $("levels").value = DATA.levels.length - 1;
+    state.topLevel = DATA.levels.length - 1;
+  }
+
+  // ---------------------------------------------------------------- colour
+  function scaleUtil(u) {
+    if (u === null || u === undefined) return css("--none");
+    if (u <= 0.85) return css("--ok");
+    if (u <= 1.0) return css("--warn");
+    return css("--bad");
+  }
+  function scaleRho(r) {
+    if (r === undefined) return css("--none");
+    if (r === null) return css("--bad");
+    if (r <= 0.02) return css("--ok");
+    if (r <= 0.04) return css("--warn");
+    return css("--bad");
+  }
+  function heat(t) {
+    const a = new THREE.Color(css("--accent-soft")), b = new THREE.Color(css("--accent"));
+    const c = a.clone().lerp(b, Math.max(0, Math.min(1, t)));
+    if (t > 0.85) c.lerp(new THREE.Color(css("--bad")), (t - 0.85) / 0.15 * 0.6);
+    return "#" + c.getHexString();
+  }
+  const TYPE = { slab: "#c9d1d5", column: "#7e8c94", wall: "#5c6c76", core: "#4f6470", beam: "#a7b3b9", foundation: "#b59a6a" };
+  const TYPE_DARK = { slab: "#3a4950", column: "#8c9aa2", wall: "#a2b0b8", core: "#7e939e", beam: "#5d6d75", foundation: "#8d7650" };
+  function isDark() { return css("--bg").toLowerCase() === "#10161a"; }
+
+  function colourFor(o) {
+    const d = o.data, mode = state.colour;
+    const T = isDark() ? TYPE_DARK : TYPE;
+    if (mode === "type") return T[o.kind];
+    if (o.kind === "slab") return T.slab;
+    if (mode === "axial") {
+      if (o.kind === "column" || o.kind === "wall" || o.kind === "core") return heat(((d.NG || 0) + (d.NQ || 0)) / maxN);
+      if (o.kind === "foundation") return heat(d.Nsls / maxN);
+      return T[o.kind];
+    }
+    if (mode === "gravity") {
+      if (o.kind === "column" || o.kind === "wall") return d.ug !== null && d.ug !== undefined ? scaleUtil(d.ug) : scaleRho(d.rho_g);
+      if (o.kind === "core") return scaleUtil(d.ug);
+      if (o.kind === "beam") return d.ok ? css("--ok") : css("--bad");
+      if (o.kind === "foundation") return d.r10_sls_kPa ? scaleUtil(d.r10_sls_kPa / 400) : T.foundation;
+    }
+    if (mode === "seis" || mode === "seis2") {
+      const low = mode === "seis2";
+      if (o.kind === "column" || o.kind === "wall") {
+        const u = low ? d.us2 : d.us;
+        return u !== null && u !== undefined ? scaleUtil(u) : scaleRho(low ? d.rho_s2 : d.rho_s);
+      }
+      if (o.kind === "core") {
+        const r = low ? (coreSens[d.name + "|" + d.level] || {}).rho_needed_seismic : d.rho_s;
+        return r === null ? css("--bad") : (r > 0.02 ? css("--warn") : css("--ok"));
+      }
+      if (o.kind === "beam") return d.seis && d.seis.ok ? css("--ok") : css("--bad");
+      if (o.kind === "foundation") return d.uplift ? css("--bad") : (d.side > d.side_sls + 0.3 ? css("--warn") : css("--ok"));
+    }
+    return T[o.kind];
+  }
+  let maxN = 1, coreSens = {};
+  function recolour() {
+    if (!DATA) return;
+    objects.forEach((o) => {
+      o.mesh.material.color.set(colourFor(o));
+      o.mesh.material.emissive && o.mesh.material.emissive.set(state.sel && state.sel.data === o.data ? css("--accent") : "#000000");
+      if (o.mesh.material.emissive) o.mesh.material.emissiveIntensity = state.sel && state.sel.data === o.data ? 0.45 : 0;
+    });
+    legend();
+  }
+  function legend() {
+    const L = $("legend");
+    const sw = (c, t) => `<span><i class="sw" style="background:${c}"></i>${t}</span>`;
+    const T = isDark() ? TYPE_DARK : TYPE;
+    let h = "";
+    if (state.colour === "type") h = sw(T.column, "Columns") + sw(T.wall, "Shear walls") + sw(T.core, "Lift cores") + sw(T.beam, "Beams") + sw(T.slab, "Slabs") + sw(T.foundation, "Foundations (size needed)");
+    else if (state.colour === "axial") h = sw(heat(0.1), "Light") + sw(heat(0.5), "") + sw(heat(1), `Heaviest, ${fmt(maxN)} kN`);
+    else h = sw(css("--ok"), "Passes") + sw(css("--warn"), "Close, or needs extra steel") + sw(css("--bad"), "Fails") + sw(css("--none"), "No bars known");
+    L.innerHTML = h;
+    const hud = $("hud");
+    const label = { type: "Element type", gravity: "Gravity + wind, EN 1992 checks with the R10 bars", seis: `Earthquake at ${DATA.summary.seismic.agR_g} g (Ghana code level), q = ${DATA.summary.seismic.q}`, seis2: `Earthquake at ${DATA.report.sens_ag} g (upper end of hazard studies)`, axial: "Axial load in service, G + Q" }[state.colour];
+    hud.innerHTML = `<div class="chip">${label}</div>` + (state.mode >= 0 ? `<div class="chip">Mode ${state.mode + 1}, T = ${DATA.modes[state.mode].T} s (exaggerated)</div>` : "");
+  }
+
+  // ---------------------------------------------------------------- visibility
+  function applyVisibility() {
+    Object.keys(groups).forEach((k) => (groups[k].visible = !!state.layers[k]));
+    objects.forEach((o) => {
+      let show = o.lvlIdx <= state.topLevel;
+      if (o.kind === "slab") show = o.lvlIdx <= state.topLevel;
+      o.mesh.visible = show;
+    });
+    const l = DATA.levels[state.topLevel];
+    $("levels-out").textContent = l ? l.name : "";
+  }
+
+  // ---------------------------------------------------------------- picking
+  const ray = new THREE.Raycaster();
+  let down = null;
+  canvas.addEventListener("pointerdown", (e) => (down = [e.clientX, e.clientY]));
+  canvas.addEventListener("pointerup", (e) => {
+    if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 6) return;
+    const r = canvas.getBoundingClientRect();
+    const p = new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+    ray.setFromCamera(p, camera);
+    const hits = ray.intersectObjects(objects.filter((o) => o.mesh.visible && groups[groupOf(o.kind)].visible).map((o) => o.mesh));
+    select(hits.length ? hits[0].object.userData.o : null);
+  });
+  function groupOf(k) { return { slab: "slabs", column: "columns", wall: "columns", core: "cores", beam: "beams", foundation: "foundations" }[k]; }
+
+  function kv(rows) {
+    return `<dl class="kv">${rows.filter(Boolean).map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl>`;
+  }
+  const lvName = (k) => (DATA.levels.find((l) => l.key === k) || {}).name || k;
+  function verdictPill(u) {
+    if (u === null || u === undefined) return '<span class="pill warn">no bars known</span>';
+    return u <= 1 ? `<span class="pill ok">${u.toFixed(2)} passes</span>` : `<span class="pill bad">${u.toFixed(2)} fails</span>`;
+  }
+  function rhoPill(r) { return r === null ? '<span class="pill bad">over 4 %</span>' : `<span class="pill ${r <= 0.02 ? "ok" : "warn"}">${pct(r)}</span>`; }
+
+  function select(o) {
+    state.sel = o;
+    recolour();
+    const D = $("detail");
+    if (!o) { D.innerHTML = '<p class="note">Tap a column, wall, lift core, beam, slab or foundation to see its loads and checks.</p>'; return; }
+    const d = o.data;
+    if (o.kind === "column" || o.kind === "wall") {
+      const stack = DATA.layers.structure.columns.filter((c) => c.ref === d.ref && c.name === d.name).sort((a, b) => a.z0 - b.z0);
+      D.innerHTML = `<h3>${d.name} at ${d.ref} <span class="note">\u00B7 ${lvName(d.level)} to the floor above</span></h3>` +
+        kv([["Size (mm)", d.box ? `${Math.round((d.box[2] - d.box[0]) * 1000)} \u00D7 ${Math.round((d.box[3] - d.box[1]) * 1000)}` : "\u2013"],
+            ["Permanent load G", fmt(d.NG) + " kN"], ["Imposed load Q", fmt(d.NQ) + " kN"], ["Design load 1.35G + 1.5Q", fmt(d.Nuls) + " kN"],
+            ["Squash ratio N / Ac\u00B7fcd", fmt(d.axial, 2)],
+            ["Bars on R10", d.prov ? d.prov.split(" [")[0] + ` (${pct(d.rho_prov)})` : "not scheduled"],
+            ["Gravity + wind", d.ug !== null && d.ug !== undefined ? verdictPill(d.ug) : "needs " + pct(d.rho_g)],
+            ["Earthquake, code level", d.us !== null && d.us !== undefined ? verdictPill(d.us) : "needs " + (d.rho_s === null ? "over 4 %" : pct(d.rho_s))],
+            ["Earthquake, lower hazard", d.us2 !== null && d.us2 !== undefined ? verdictPill(d.us2) : "needs " + (d.rho_s2 === null ? "over 4 %" : pct(d.rho_s2))],
+            ["Steel needed, quake (code)", d.rho_s === null ? "over 4 %" : pct(d.rho_s)],
+            ["Taped on site", d.measured ? "yes" : "drawing figures"]]) +
+        `<h3 style="margin-top:12px">Load takedown at ${d.ref}</h3><div class="tbl-wrap"><table><tr><th>Storey</th><th>G kN</th><th>Q kN</th><th>ULS kN</th></tr>` +
+        stack.slice().reverse().map((c) => `<tr><td class="txt">${lvName(c.level)}</td><td>${fmt(c.NG)}</td><td>${fmt(c.NQ)}</td><td>${fmt(c.Nuls)}</td></tr>`).join("") + "</table></div>";
+    } else if (o.kind === "core") {
+      const s = coreSens[d.name + "|" + d.level] || {};
+      D.innerHTML = `<h3>${d.name} <span class="note">\u00B7 ${lvName(d.level)} storey</span></h3>` +
+        kv([["Walls", `${Math.round(d.wall * 1000)} mm, box ${Math.round((d.box[2] - d.box[0]) * 1000)} \u00D7 ${Math.round((d.box[3] - d.box[1]) * 1000)}`],
+            ["Permanent load G", fmt(d.NG) + " kN"], ["Imposed load Q", fmt(d.NQ) + " kN"],
+            ["Earthquake shear", fmt(d.V) + " kN"], ["Earthquake moment", fmt(d.M) + " kNm"],
+            ["Vertical steel, gravity", pct(d.rho_g)], ["Vertical steel, quake (code)", rhoPill(d.rho_s)], ["Vertical steel, quake (lower)", rhoPill(s.rho_needed_seismic === undefined ? null : s.rho_needed_seismic)],
+            ["R10 lift-wall bars (SW1\u20133)", "about 1.8 %"]]);
+    } else if (o.kind === "beam") {
+      D.innerHTML = `<h3>Beam ${d.label} <span class="note">\u00B7 ${lvName(d.level)}</span></h3>` +
+        kv([["Size", `${Math.round(d.h * 1000)} deep \u00D7 ${Math.round(d.w * 1000)} wide`], ["Hogging moment (ULS)", fmt(d.Mhog) + " kNm"], ["Sagging moment (ULS)", fmt(d.Msag) + " kNm"], ["Shear (ULS)", fmt(d.V) + " kN"],
+            ["Top steel needed", fmt(d.As_top) + " mm\u00B2"], ["Bottom steel needed", fmt(d.As_bot) + " mm\u00B2"], d.As_comp ? ["Compression steel", fmt(d.As_comp) + " mm\u00B2"] : null,
+            ["Links needed", fmt(d.links) + " mm\u00B2/m"],
+            d.seis ? ["Quake: top / bottom", `${fmt(d.seis.As_top)} / ${fmt(d.seis.As_bottom)} mm\u00B2`] : null,
+            d.seis ? ["Quake: links", d.seis.links === null ? "shear too high" : fmt(d.seis.links) + " mm\u00B2/m"] : null]);
+    } else if (o.kind === "foundation") {
+      D.innerHTML = `<h3>Foundation under ${d.name}${d.ref ? " at " + d.ref : ""}</h3>` +
+        kv([["Service load G + Q", fmt(d.Nsls) + " kN"], ["Design load", fmt(d.Nuls) + " kN"], ["Square pad needed (400 kPa)", fmt(d.side_sls, 2) + " m"],
+            d.Nmax !== null && d.Nmax !== undefined ? ["Quake: axial range", `${fmt(d.Nmin)} to ${fmt(d.Nmax)} kN`] : null,
+            d.M ? ["Quake: overturning", fmt(d.M) + " kNm"] : null,
+            ["Pad needed with quake", fmt(d.side, 2) + " m"], ["Lifts off in a quake", d.uplift ? "yes" : "no"],
+            d.r10_base ? ["R10 base", d.r10_base] : null, d.r10_sls_kPa ? ["Pressure on R10 base", fmt(d.r10_sls_kPa) + " kPa"] : null]);
+    } else if (o.kind === "slab") {
+      const f = DATA.report.floors.find((x) => x.level === d.level) || {};
+      D.innerHTML = `<h3>${lvName(d.level)} slab</h3>` + kv([["Thickness", Math.round(d.t * 1000) + " mm (thickest zone)"], ["Area", fmt(f.area_m2, 1) + " m\u00B2"], ["Seismic weight", fmt(f.W_seis) + " kN"]]) +
+        `<p class="note" style="margin-top:8px">${d.borrowed ? d.borrowed : "From " + (d.source || "the record")}.</p>`;
+    }
+  }
+
+  // ---------------------------------------------------------------- tabs
+  document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => {
+    document.querySelectorAll(".tabs button").forEach((x) => x.setAttribute("aria-selected", x === b ? "true" : "false"));
+    document.querySelectorAll("section.tab").forEach((s) => (s.hidden = s.id !== "tab-" + b.dataset.tab));
+  }));
+
+  function layersUI() {
+    const L = $("layers");
+    const item = (k, label, on = true, enabled = true) => `<label class="${enabled ? "" : "off"}"><input type="checkbox" id="ly-${k}" ${on ? "checked" : ""} ${enabled ? "" : "disabled"}> ${label}</label>`;
+    L.innerHTML = '<div class="group-label">Structure</div>' + item("slabs", "Slabs") + item("columns", "Columns, walls") + item("cores", "Lift cores") + item("beams", "Beams") + item("foundations", "Foundations") + item("grid", "Grid") +
+      '<div class="group-label">Coming next</div>' + item("arch", "Architecture", false, false) + item("mep", "MEP", false, false) + item("other", "Other", false, false);
+    ["slabs", "columns", "cores", "beams", "foundations", "grid"].forEach((k) => $("ly-" + k).addEventListener("change", (e) => { state.layers[k] = e.target.checked; applyVisibility(); }));
+  }
+
+  // ---------------------------------------------------------------- loads tab
+  function loadsTab() {
+    const S = DATA.summary, R = DATA.report, T = S.totals, B = R.basis;
+    const tile = (v, u, l) => `<div class="tile"><b>${v}<span class="note" style="font-size:12px"> ${u}</span></b><small>${l}</small></div>`;
+    const floors = R.floors.slice().reverse();
+    $("tab-loads").innerHTML = `
+      <div><h2>What the building weighs</h2>
+        <div class="tiles">
+          ${tile(fmt(T.G_self), "kN", "Structure's own weight")}
+          ${tile(fmt(T.G_super), "kN", "Finishes, walls, pool, lifts")}
+          ${tile(fmt(T.Q), "kN", "People and furniture (imposed)")}
+          ${tile(fmt(T.seismic_weight), "kN", "Weight that sways in a quake")}
+        </div>
+        <p class="note" style="margin-top:8px">${fmt(T.slab_area_m2)} m\u00B2 of suspended slab. Permanent load averages ${fmt((T.G_self + T.G_super) / T.slab_area_m2, 1)} kN/m\u00B2 of floor; at 1.35G + 1.5Q the building puts about ${fmt((1.35 * (T.G_self + T.G_super) + 1.5 * T.Q) / 1000, 1)} MN on its foundations.</p>
+      </div>
+      <div><h2>Floor by floor</h2><div class="tbl-wrap"><table>
+        <tr><th>Level</th><th>SSL m</th><th>Slab m\u00B2</th><th>Quake weight kN</th></tr>
+        ${floors.map((f) => `<tr><td class="txt">${f.name}</td><td>+${(f.z / 1000).toFixed(3)}</td><td>${fmt(f.area_m2)}</td><td>${fmt(f.W_seis)}</td></tr>`).join("")}
+      </table></div>
+      <p class="note" style="margin-top:6px">${floors.filter((f) => f.borrowed).map((f) => f.name).join(", ")}: no engineer's drawing of their own yet, so the 4th floor's slab and beams are used.</p></div>
+      <div><h2>Load basis</h2><div class="tbl-wrap"><table>
+        <tr><th>Load</th><th>Value</th></tr>
+        <tr><td class="txt">Concrete (drawings)</td><td>${B.materials.concrete.grade}, ${B.materials.concrete.gamma} kN/m\u00B3</td></tr>
+        <tr><td class="txt">Floor finishes + services</td><td>${fmt(B.dead.finishes_kPa + B.dead.ceiling_services_kPa, 2)} kPa</td></tr>
+        <tr><td class="txt">Internal block walls</td><td>${fmt(B.walls.internal_kPa, 1)} kPa</td></tr>
+        <tr><td class="txt">External walls at slab edge</td><td>${fmt(B.walls.external_kN_m, 1)} kN/m</td></tr>
+        <tr><td class="txt">Roof finishes</td><td>${fmt(B.dead.roof_finishes_kPa, 1)} kPa</td></tr>
+        <tr><td class="txt">Homes (imposed)</td><td>${fmt(B.imposed.floor_kPa, 1)} kPa</td></tr>
+        <tr><td class="txt">Balconies / stairs / roof</td><td>${fmt(B.imposed.balcony_kPa, 1)} / ${fmt(B.imposed.stairs_kPa, 1)} / ${fmt(B.imposed.roof_kPa, 1)} kPa</td></tr>
+        <tr><td class="txt">Pool (water ${B.pool.water_depth_m} m deep)</td><td>${fmt(S.pool ? S.pool.G_kN : 0)} kN</td></tr>
+        <tr><td class="txt">Lifts, each</td><td>${B.lifts.G_kN} + ${B.lifts.Q_kN} kN</td></tr>
+        <tr><td class="txt">Soil bearing (geotech)</td><td>${B.soil.bearing_kPa} kPa at ${B.soil.at_depth_m} m</td></tr>
+      </table></div></div>
+      <div><h2>Sideways loads</h2><div class="tbl-wrap"><table>
+        <tr><th></th><th>Along (x)</th><th>Across (y)</th></tr>
+        <tr><td class="txt">Wind, base shear</td><td>${fmt(S.wind.x.base_shear)} kN</td><td>${fmt(S.wind.y.base_shear)} kN</td></tr>
+        <tr><td class="txt">Earthquake ${S.seismic.agR_g} g, base shear</td><td>${fmt(S.seismic.rsa_base_shear_x)} kN</td><td>${fmt(S.seismic.rsa_base_shear_y)} kN</td></tr>
+        <tr><td class="txt">As % of quake weight</td><td>${fmt(100 * S.seismic.rsa_base_shear_x / T.seismic_weight, 1)} %</td><td>${fmt(100 * S.seismic.rsa_base_shear_y / T.seismic_weight, 1)} %</td></tr>
+        <tr><td class="txt">First sway period</td><td>${S.seismic.T1x} s</td><td>${S.seismic.T1y} s</td></tr>
+      </table></div>
+      <p class="note" style="margin-top:6px">Wind ${B.wind.vb0} m/s (10-min mean, Accra), terrain III. Earthquake: EN 1998-1 spectrum, ground B/C envelope, q = ${B.seismic.q}. The earthquake load is about ${fmt(S.seismic.rsa_base_shear_y / S.wind.y.base_shear)}\u00D7 the wind, so it decides the sideways design.</p></div>`;
+  }
+
+  // ---------------------------------------------------------------- checks tab
+  function checksTab() {
+    const S = DATA.layers.structure, R = DATA.report;
+    const cols = S.columns.filter((c) => c.kind === "column");
+    const withBars = cols.filter((c) => c.ug !== null && c.ug !== undefined);
+    const gFail = withBars.filter((c) => c.ug > 1).length;
+    const gMax = Math.max(...withBars.map((c) => c.ug));
+    const sFail = withBars.filter((c) => c.us > 1).length, s2Fail = withBars.filter((c) => c.us2 > 1).length;
+    const beamsG = S.beams.filter((b) => !b.ok).length;
+    const coreG = R.cores.filter((c) => c.level === "g");
+    const coresSens = R.cores_sens || [];
+    const coreRho = (arr) => arr.map((c) => c.rho_needed_seismic === null ? "over 4 %" : pct(c.rho_needed_seismic)).join(" / ");
+    const drift = (rows) => Math.max(...rows.map((r) => r.drift_ratio));
+    const dx = drift(R.drift.x), dy = drift(R.drift.y);
+    const dsx = R.drift_sens ? Math.max(drift(R.drift_sens.x), drift(R.drift_sens.y)) : null;
+    const th = Math.max(...R.drift.x.map((r) => r.theta || 0), ...R.drift.y.map((r) => r.theta || 0));
+    const tors = R.torsion.find((t) => t.r_x < t.l_s || t.r_y < t.l_s);
+    const v = (cls, title, body) => `<div class="verdict"><i style="background:var(--${cls})"></i><div><h3>${title}</h3><p class="note">${body}</p></div></div>`;
+    const found = R.foundations;
+    const lift = found.filter((f) => f.name.startsWith("Lift"));
+    $("tab-checks").innerHTML = `
+      <div><h2>Every day: gravity and wind</h2><div style="display:flex;flex-direction:column;gap:12px">
+        ${v(gFail ? "bad" : "ok", `Columns ${gFail ? gFail + " fail" : "pass"}`, `${withBars.length} column storeys checked with the bars on the R10 schedule (EN 1992-1-1, biaxial bending, imperfections and slenderness). Highest use ${gMax.toFixed(2)} of capacity. The shear walls have no matching R10 schedule; they need no more than ${pct(Math.max(...S.columns.filter((c) => c.kind === "wall").map((c) => c.rho_g)))} steel for these loads.`)}
+        ${v(beamsG ? "warn" : "ok", `Beams ${beamsG ? beamsG + " need attention" : "pass"}`, `${S.beams.length} beam runs designed for bending and shear. ${S.beams.filter((b) => b.As_comp > 0).length ? "Compression steel needed in: " + [...new Set(S.beams.filter((b) => b.As_comp > 0).map((b) => lvName(b.level) + " " + b.label))].join(", ") + "." : ""}`)}
+        ${v("ok", "Lift cores pass", "Under gravity the cores use a few per cent of their capacity.")}
+        ${v("ok", "Wind sway is small", `Largest storey drift under wind is h/${fmt(1 / Math.max(...R.drift.wind_x.map((r) => r.ratio), ...R.drift.wind_y.map((r) => r.ratio)))}; the usual limit is h/500.`)}
+        ${v(found.some((f) => f.r10_sls_kPa > 400) ? "warn" : "ok", "Foundations: pad sizes for service loads", `At 400 kPa the heaviest pads need ${fmt(found[0].base_side_m, 1)} m square (lift cores) and about ${fmt((found.find((f) => /^C\d/.test(f.name)) || found[0]).base_side_m, 1)} m under the heaviest columns. ${found.filter((f) => f.r10_sls_kPa).length} bases match an R10 base by grid reference; ${found.filter((f) => f.r10_sls_kPa > 400).length} of those would be over 400 kPa.`)}
+      </div></div>
+      <div><h2>Earthquake</h2><div style="display:flex;flex-direction:column;gap:12px">
+        ${v(sFail ? "bad" : "ok", `At the Ghana code level (${DATA.summary.seismic.agR_g} g): ${sFail} of ${withBars.length} column storeys fail`, `With the R10 bars. ${cols.filter((c) => c.rho_s === null).length} would need more than the 4 % maximum steel. Lift cores need ${coreRho(coreG)} vertical steel at ground floor; the R10 lift-wall bars come to about 1.8 %. Storey drift reaches ${(Math.max(dx, dy) * 100).toFixed(2)} % of the height against a 1.0 % limit for block walls.`)}
+        ${v(s2Fail || coresSens.some((c) => c.level === "g" && (c.rho_needed_seismic === null || c.rho_needed_seismic > 0.018)) ? "warn" : "ok", `At ${R.sens_ag} g (upper end of hazard studies): ${s2Fail} column storeys fail`, `Lift cores need ${coreRho(coresSens.filter((c) => c.level === "g"))} at ground floor. Drift ${dsx ? (dsx * 100).toFixed(2) + " %" : "\u2013"}, inside the 1.0 % limit.`)}
+        ${v(lift.some((f) => f.base_side_seis_m > f.base_side_m * 2) ? "bad" : "ok", "Overturning at the lift cores", `In the code-level earthquake each core pushes ${fmt(lift[0].M_seis)} kNm of overturning into its foundation; a pad alone would need to be about ${fmt(lift[0].base_side_seis_m, 0)} m square. It needs a raft or ground beams tying the cores to the column bases. R10 shows 4.2 \u00D7 4.0 m bases (B14). ${found.filter((f) => f.uplift).length} column bases lift off.`)}
+        ${v(th > 0.1 ? "warn" : "ok", `P-delta: \u03B8 up to ${th.toFixed(2)}`, "Above 0.10, EN 1998-1 asks for the sway effects to be increased by 1/(1\u2212\u03B8).")}
+        ${v(tors ? "warn" : "ok", tors ? "The building counts as torsionally flexible" : "Not torsionally flexible", tors ? `Its torsional radius (${tors.r_x} m) is below the floor's radius of gyration (${tors.l_s} m) at ${tors.level}. EN 1998-1 then limits q to 2.0, which would put the earthquake forces up by half again. The 2nd and 3rd sway modes twist as much as they slide.` : "")}
+      </div></div>
+      <div><h2>Storey drift in the code-level quake</h2><div class="tbl-wrap"><table>
+        <tr><th>Storey</th><th>Along %</th><th>Across %</th><th>\u03B8</th><th>Shear kN</th></tr>
+        ${R.drift.x.slice().reverse().map((r, i) => { const y = R.drift.y[R.drift.x.length - 1 - i]; return `<tr><td class="txt">${r.level}</td><td>${(r.drift_ratio * 100).toFixed(2)}</td><td>${(y.drift_ratio * 100).toFixed(2)}</td><td>${Math.max(r.theta, y.theta).toFixed(2)}</td><td>${fmt(Math.max(r.V_storey_kN, y.V_storey_kN))}</td></tr>`; }).join("")}
+      </table></div></div>
+      <div><h2>Foundations</h2><div class="tbl-wrap"><table>
+        <tr><th>Under</th><th>G+Q kN</th><th>Pad m</th><th>Quake pad m</th><th>R10 base</th></tr>
+        ${found.map((f) => `<tr><td class="txt">${f.name} ${f.ref}</td><td>${fmt(f.N_sls)}</td><td>${fmt(f.base_side_m, 2)}</td><td>${fmt(f.base_side_seis_m, 1)}${f.uplift ? " \u2191" : ""}</td><td class="txt">${f.r10_base || "\u2013"}</td></tr>`).join("")}
+      </table></div><p class="note" style="margin-top:6px">\u2191 lifts off in the code-level quake. Loads are at the ground floor (+0.300); the bases sit about 4.4 m lower, so add the stub columns and fill.</p></div>
+      <div><h2>Assumptions to confirm</h2><ul class="plain">${(DATA.report.asbuilt || "").includes("seed") ? "<li>Positions are the drawing figures from the as-built record's seed; the site's tapes come in with the as-built backup.</li>" : ""}
+        <li>Floors 5\u20137 and the roof use the 4th floor's slab and beams until their drawings come.</li>
+        <li>Internal block walls are an even ${DATA.report.basis.walls.internal_kPa} kPa; the plan walls will replace this with line loads.</li>
+        <li>Columns and cores are fixed at the ground floor; the stub columns, ground beams and bases below are not in the model.</li>
+        <li>Concrete C25/30 as drawn. Site orders C35 (cube), about C28/35, which adds 3\u201310 % to column capacity.</li></ul></div>`;
+  }
+
+  // ---------------------------------------------------------------- modes
+  let t0 = performance.now();
+  function modesTab() {
+    const M = DATA.modes;
+    $("tab-modes").innerHTML = `<div><h2>How the building sways</h2><p class="note">Each mode is a natural way the building vibrates. Play one to watch it, hugely exaggerated. Bars: share of the mass moving along (x), across (y), and twisting.</p></div>
+      <div class="modes">${M.map((m, i) => `<div class="mode"><button class="btn" aria-pressed="false" id="mode-${i}">${i + 1}</button>
+        <div><div class="num" style="font-size:12.5px">T = ${m.T} s \u00B7 x ${m.mx}% \u00B7 y ${m.my}% \u00B7 twist ${m.twist}%</div>
+        <div class="bar"><i style="width:${m.mx}%;background:var(--accent)"></i><i style="width:${m.my}%;background:var(--warn)"></i></div></div><span></span></div>`).join("")}</div>
+      <div><h2>Exaggeration</h2><input type="range" id="amp" min="0.3" max="3" step="0.1" value="${state.amp}"></div>`;
+    M.forEach((m, i) => $("mode-" + i).addEventListener("click", () => {
+      state.mode = state.mode === i ? -1 : i;
+      M.forEach((_, j) => $("mode-" + j).setAttribute("aria-pressed", j === state.mode ? "true" : "false"));
+      if (state.mode < 0) objects.forEach((o) => o.mesh.position.copy(o.base));
+      t0 = performance.now();
+      legend();
+    }));
+    $("amp").addEventListener("input", (e) => (state.amp = +e.target.value));
+  }
+  function animateMode(now) {
+    if (state.mode < 0) return;
+    const m = DATA.modes[state.mode];
+    const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const s = reduce ? 1 : Math.sin(((now - t0) / 1000) * 2 * Math.PI * 0.6);
+    const byLevel = {};
+    m.floors.forEach((f) => (byLevel[f.level] = f));
+    const disp = (key, x, z) => {
+      const f = byLevel[key];
+      if (!f) return [0, 0];
+      return [(f.ux + f.th * (z - f.cz)) * state.amp * s, (f.uz - f.th * (x - f.cx)) * state.amp * s];
+    };
+    objects.forEach((o) => {
+      if (o.kind === "foundation") return;
+      const key = DATA.levels[o.lvlIdx].key;
+      const above = DATA.levels[o.lvlIdx + 1] ? DATA.levels[o.lvlIdx + 1].key : key;
+      const p = o.base;
+      let d;
+      if (o.kind === "column" || o.kind === "wall" || o.kind === "core") {
+        const a = disp(key, p.x, p.z), b = disp(above, p.x, p.z);
+        d = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+      } else if (o.kind === "slab") d = disp(key, 0, 0);
+      else d = disp(key, p.x, p.z);
+      o.mesh.position.set(p.x + d[0], p.y, p.z + d[1]);
+    });
+  }
+
+  // ---------------------------------------------------------------- go
+  function loop(now) {
+    controls.update();
+    animateMode(now);
+    renderer.render(scene, camera);
+    requestAnimationFrame(loop);
+  }
+
+  function start(data) {
+    DATA = data;
+    maxN = Math.max(...data.layers.structure.columns.map((c) => (c.NG || 0) + (c.NQ || 0)), ...data.layers.structure.cores.map((c) => (c.NG || 0) + (c.NQ || 0)));
+    (data.report.cores_sens || []).forEach((c) => (coreSens[c.core + "|" + c.level] = c));
+    $("stamp").textContent = `Shiashie, East Legon, Accra \u00B7 analysed ${data.generated} \u00B7 ${fmt(data.summary.model.nodes)} nodes, ${fmt(data.summary.model.shells)} shells`;
+    build();
+    layersUI();
+    loadsTab();
+    checksTab();
+    modesTab();
+    resize();
+    themeColours();
+    applyVisibility();
+    $("loading").hidden = true;
+    requestAnimationFrame(loop);
+  }
+
+  $("colour").addEventListener("change", (e) => { state.colour = e.target.value; recolour(); });
+  $("levels").addEventListener("input", (e) => { state.topLevel = +e.target.value; applyVisibility(); });
+
+  const tryUrls = ["viewer-data.json", "../out/viewer-data.json"];
+  (async function load() {
+    for (const u of tryUrls) {
+      try {
+        const r = await fetch(u);
+        if (r.ok) return start(await r.json());
+      } catch (e) {}
+    }
+    $("loading").textContent = "The model data didn't load. Run structure/run.py, then open this page next to viewer-data.json.";
+  })();
+})();
+</script>
