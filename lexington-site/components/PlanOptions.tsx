@@ -6,6 +6,7 @@ import { formatUSD } from "@/lib/format";
 import type { PlanScript } from "@/lib/planOptions";
 import { attachViewerKeys } from "@/lib/viewerKeys";
 import styles from "./PlanOptions.module.css";
+import { VatExcluded } from "./Vat";
 
 // The plans a buyer is choosing between, each as a 3D model (Niko, 12 Nov 2026). The models are in self-contained scripts
 // in /public/3d, built from the penthouse-3d project (build-offer4f.mjs, build-offerlock.mjs); only the one a plan needs is
@@ -92,7 +93,19 @@ const sqmAbout = (v: number) => `about ${Math.round(v).toLocaleString("en-US")} 
 const saving = (o: PlanOptionView) => (o.listPriceUSD && o.listPriceUSD > o.priceUSD ? o.listPriceUSD - o.priceUSD : 0);
 const percent = (o: PlanOptionView) => (o.listPriceUSD ? Math.round((saving(o) / o.listPriceUSD) * 1000) / 10 : 0);
 
-export function PlanOptions({ options, deposit, approx = false }: { options: PlanOptionView[]; deposit: DepositView | null; approx?: boolean }) {
+// exclVat: the account's prices are before VAT and say so, "excl. VAT" (Niko, 19 Nov 2026, Armstrong's). Without it the page
+// says nothing about VAT (Guyman's, 12 Nov 2026: "prices without VAT (But don't mention vat)").
+export function PlanOptions({
+  options,
+  deposit,
+  approx = false,
+  exclVat = false,
+}: {
+  options: PlanOptionView[];
+  deposit: DepositView | null;
+  approx?: boolean;
+  exclVat?: boolean;
+}) {
   const sqm = approx ? sqmAbout : sqmExact;
   const [key, setKey] = useState(options[0].key);
   const option = options.find((o) => o.key === key) ?? options[0];
@@ -163,7 +176,10 @@ export function PlanOptions({ options, deposit, approx = false }: { options: Pla
         {options.map((o) => (
           <button key={o.key} type="button" role="tab" aria-selected={o.key === option.key} className={o.key === option.key ? styles.tabOn : styles.tab} onClick={() => setKey(o.key)}>
             <span className={styles.tabName}>{o.title}</span>
-            <span className={styles.tabPrice}>{formatUSD(o.priceUSD)}</span>
+            <span className={styles.tabPrice}>
+              {formatUSD(o.priceUSD)}
+              {exclVat && " excl. VAT"}
+            </span>
           </button>
         ))}
       </div>
@@ -224,12 +240,19 @@ export function PlanOptions({ options, deposit, approx = false }: { options: Pla
             {option.listPriceUSD !== null && saving(option) > 0 && (
               <div className={styles.fact}>
                 <dt>List price</dt>
-                <dd className={styles.struck}>{formatUSD(option.listPriceUSD)}</dd>
+                <dd>
+                  {/* the line through the number only, not through "excl. VAT" */}
+                  <span className={styles.struck}>{formatUSD(option.listPriceUSD)}</span>
+                  {exclVat && <VatExcluded />}
+                </dd>
               </div>
             )}
             <div className={styles.priceRow}>
               <dt>Your price</dt>
-              <dd>{formatUSD(option.priceUSD)}</dd>
+              <dd>
+                {formatUSD(option.priceUSD)}
+                {exclVat && <span className={styles.priceVat}>excl. VAT</span>}
+              </dd>
             </div>
             {saving(option) > 0 && (
               <div className={styles.saveRow}>
@@ -254,8 +277,24 @@ export function PlanOptions({ options, deposit, approx = false }: { options: Pla
                 <tr>
                   <th scope="col">Plan</th>
                   <th scope="col">Size</th>
-                  <th scope="col">List price</th>
-                  <th scope="col">Your price</th>
+                  <th scope="col">
+                    List price
+                    {exclVat && (
+                      <>
+                        {" "}
+                        <span className={styles.thVat}>excl. VAT</span>
+                      </>
+                    )}
+                  </th>
+                  <th scope="col">
+                    Your price
+                    {exclVat && (
+                      <>
+                        {" "}
+                        <span className={styles.thVat}>excl. VAT</span>
+                      </>
+                    )}
+                  </th>
                   <th scope="col">Your discount</th>
                 </tr>
               </thead>

@@ -53,7 +53,7 @@ export default async function AccountPlansPage() {
           {set.intro}
         </p>
       )}
-      {picks.length ? <PlanPicker picks={picks} viewer={viewer} confirm={confirm} /> : <PlanOptions options={options} deposit={deposit} approx={set?.approxSizes === true} />}
+      {picks.length ? <PlanPicker picks={picks} viewer={viewer} confirm={confirm} /> : <PlanOptions options={options} deposit={deposit} approx={set?.approxSizes === true} exclVat={set?.exclVat === true} />}
       <p className={styles.lead} style={{ marginTop: "var(--space-7)" }}>
         {/* A plain <a> to the public site, not <Link>: a full page load, so the tag manager those pages load can't follow Back into the portal. */}
         {confirm ? "Questions?" : "Questions, or ready to choose?"} <a href="/contact">Talk to us</a>

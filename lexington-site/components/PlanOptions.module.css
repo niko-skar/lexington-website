@@ -314,6 +314,26 @@
   font-weight: 400;
 }
 
+/* "excl. VAT" (planOptions.exclVat): under the buyer's price, small and on a line of its own, so the price itself never wraps. */
+.priceVat {
+  display: block;
+  margin-top: 6px;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  line-height: 1;
+  color: var(--brass-text);
+  white-space: nowrap;
+}
+
+/* ... and under the table's price headings, so those columns stay as narrow as before. */
+.thVat {
+  display: block;
+  margin-top: 3px;
+  font-weight: 400;
+}
+
 .block {
   display: grid;
   gap: var(--space-4);

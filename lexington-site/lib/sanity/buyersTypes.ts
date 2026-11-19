@@ -83,6 +83,8 @@ export interface PlanOptionSet {
   only?: boolean;
   /** The plans' sizes are estimates: the page shows them rounded, "about 161 m²". */
   approxSizes?: boolean;
+  /** The plans' prices are before VAT: the page labels them "excl. VAT" (Armstrong's, 19 Nov 2026). */
+  exclVat?: boolean;
   options?: PlanOption[];
   /** Homes the buyer can pick from, each with its own 3D model and price (the page adds up the ticked ones). */
   picks?: PlanPick[];

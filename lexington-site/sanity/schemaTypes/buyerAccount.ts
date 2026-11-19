@@ -319,6 +319,12 @@ export const buyerAccount = defineType({
           type: "boolean",
         }),
         defineField({
+          name: "exclVat",
+          title: "Prices are before VAT",
+          description: "When on, the plans page labels the prices \"excl. VAT\". When off, it says nothing about VAT.",
+          type: "boolean",
+        }),
+        defineField({
           name: "options",
           title: "Plans",
           type: "array",
