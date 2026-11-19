@@ -196,9 +196,10 @@ async function gatherSite(today: string): Promise<WatchInput["site"]> {
 /** Who still waits for a first reply, and the week's new enquiries (exported for a read-only check). */
 export async function gatherCrm(today: string, nowMs: number): Promise<WatchInput["crm"]> {
   const leads = await getBuyersClient().fetch<
-    Array<{ _id: string; _createdAt: string; name: string; source?: string; stage?: string; tasks?: LeadTask[]; chatReplied?: boolean }>
+    Array<{ _id: string; _createdAt: string; name: string; source?: string; stage?: string; tasks?: LeadTask[]; chatReplied?: boolean; onWhatsApp?: boolean }>
   >(`*[_type == "lead"]{ _id, _createdAt, name, source, stage, tasks,
-    "chatReplied": count(*[_type == "chatThread" && _id == ^.chatThread][0].messages[from in ["agent", "owner"]]) > 0 }`);
+    "chatReplied": count(*[_type == "chatThread" && _id == ^.chatThread][0].messages[from in ["agent", "owner"]]) > 0,
+    "onWhatsApp": source == "whatsapp" || (source == "meta_ads" && defined(metaLeadId) && !defined(metaInboxUrl) && !defined(chatThread)) }`);
   const waiting: WatchInput["crm"]["waiting"] = [];
   const weekAgo = new Date(nowMs - 7 * 86_400_000).toISOString();
   const newLast7 = { website: 0, facebook: 0, other: 0 };
@@ -212,6 +213,10 @@ export async function gatherCrm(today: string, nowMs: number): Promise<WatchInpu
     // and so has one the assistant or Niko answered in their chat (19 Nov 2026: answered chats were counted as waiting).
     // What the assistant hands over to Niko is counted with the chats, not here.
     if ((lead.stage ?? "new") !== "new" || lead.chatReplied) continue;
+    // WhatsApp enquiries are left out (Niko, 19 Nov 2026: "leave the whatsapp out ... because the whatsapp ai responds
+    // to them automatically"): someone who came in on WhatsApp, or from a lead form that opened no Messenger chat (its
+    // conversation carries on in WhatsApp). The CRM can't see WhatsApp, so it can't tell they were answered.
+    if (lead.onWhatsApp) continue;
     const reply = (lead.tasks ?? []).find((t) => !t.done && isFirstReplyStep(t.text) && (t.due ?? today) < today);
     if (reply) {
       const from = (reply.createdAt ?? `${reply.due}T00:00:00Z`).slice(0, 10);
