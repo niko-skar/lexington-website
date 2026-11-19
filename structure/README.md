@@ -20,9 +20,10 @@ Needs `pip install openseespy numpy scipy shapely`, and Node 22+ for the exporte
 | `model/loads.json` | Materials, stiffness, loads, wind and earthquake parameters, each with its source | edit by hand |
 | `model/r10_vertical.json` | Column, wall and foundation schedules transcribed from the engineer's R10 set (Jan 2025) | transcribed from the PDF |
 
-Drawings read so far: R10 (Jan 2025, the full set), R26 (5 Oct 2026: general notes with C30/37 concrete, 1st and
+Drawings read so far: R10 (Jan 2025, the full set), the updated raft details (18 Feb 2026: raft layout and zones,
+sections, reinforcement, rebar seats, columns and walls), R26 (5 Oct 2026: general notes with C30/37 concrete, 1st and
 2nd floor), the 1st floor (10 Oct) and 2nd floor (12 Oct) revisions, and the 3rd/4th floor R28 (2 Nov; R28_1 is the same
-with a duplicate page dropped). Not yet: the raft and foundation sheets, columns and walls after R10, floors 5-7 and roof.
+with a duplicate page dropped). Not yet: floors 5-7 and the roof. As built the raft is on bedrock about 2 m down.
 
 To use the site's tapes, download the full backup from the admin As-built page
 (`/admin/asbuilt/export?format=json`) and run the first exporter with it, then `run.py`.
@@ -35,9 +36,11 @@ To use the site's tapes, download the full backup from the admin As-built page
 - **Columns and shear walls**: frame elements on their own centre lines, tied to the slab by rigid links (a column
   off its line keeps its eccentricity); walls also have stiff arms to the slab at their ends.
 - **Lift cores**: shell walls, three elements per storey, lift door left out.
-- **Foundation**: a full raft (shells on vertical soil springs, held sideways by stiff springs) under the whole
-  footprint, the columns and cores standing on it (`loads.json` > `foundation`). Its thickness, extent and level are
-  assumed until the engineer's raft sheets are read in. Set `type` to `pads` to fix the columns at +0.300 instead.
+- **Foundation**: the full raft of the 18 Feb 2026 raft details (shells on vertical rock springs, held sideways by stiff
+  springs) with its zones: 450 mm in the basement wing, 500 mm elsewhere, 700 mm bases under the lift cores and on lines
+  C, G, L and M; the columns and cores stand on it (`loads.json` > `foundation`). It is placed at the ground floor level
+  (as built it is on bedrock about 2 m down), with the fill, the basement and the water tank as loads on it. Set `type`
+  to `pads` to fix the columns at +0.300 instead.
 - **Stiffness**: cracked sections (columns 0.7 I, walls 0.7, beams 0.35, slab bending 0.25).
 
 ## Analyses and checks
@@ -59,7 +62,6 @@ To use the site's tapes, download the full backup from the admin As-built page
 ## Not in yet
 
 - The site's tapes (needs the as-built backup), and the plan walls as line loads.
-- The raft's own drawings (R26 register items 04-09 and 14-15).
 - Engineer's drawings for floors 5-7 and the roof (the 4th floor's slab and beams are used).
 - Beam and slab reinforcement as drawn (the steel needed is reported instead).
 - The raft's real level and the columns between it and the ground floor; the soil stiffness from the geotech report.

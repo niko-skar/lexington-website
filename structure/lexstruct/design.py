@@ -617,7 +617,7 @@ class Design:
         e_heavy = int(np.argmin(np.hypot(cen[:, 0] - heavy["cx"], cen[:, 1] - heavy["cy"])))
         mh = G.raft[e_heavy]
         sgn = 1.0 if (mh[3] + mh[4]) > 0 else -1.0  # under a column the raft's bottom face is in tension
-        d = (t - cover - 20) / 1000
+        d = (t - cover - 20) / 1000  # at the general thickness
         z = 0.9 * d
 
         def wa(r):
@@ -629,6 +629,7 @@ class Design:
         env = np.zeros((len(rl), 4))
         for r in sets:
             env = np.maximum(env, wa(r.raft))
+        env_p = env.copy()
         if seis:
             st, pk = seis[0].raft, seis[1].raft
             for sm in (1, -1):
@@ -637,8 +638,16 @@ class Design:
                     rr[:, 3:5] = st[:, 3:5] + sm * pk[:, 3:5]
                     rr[:, 5] = st[:, 5] + sx * pk[:, 5]
                     env = np.maximum(env, wa(rr))
-        As = env / (self.fyd * 1000 * z) * 1e6  # mm2 per m: bottom E-W (along x), bottom N-S, top E-W, top N-S
+        d_cell = np.array([(s_["t"] - cover - 20) / 1000 for s_ in rl])
+        As = env / (self.fyd * 1000 * 0.9 * d_cell[:, None]) * 1e6  # mm2 per m: bottom E-W (along x), bottom N-S, top E-W, top N-S
         As_min = 0.0013 * 1000 * d * 1000
+        As_min_cell = 0.0013 * d_cell * 1e6
+        steel = rc.get("steel_mm2_per_m") or {}
+        prov = np.array([[steel.get(str(round(s_["t"])), {}).get(k_, np.nan) for k_ in ("bx", "by", "tx", "ty")] for s_ in rl], dtype=float)
+        use = As / prov
+        use_max = np.nanmax(use, axis=1) if np.isfinite(prov).any() else np.full(len(rl), np.nan)
+        As_p = env_p / (self.fyd * 1000 * 0.9 * d_cell[:, None]) * 1e6
+        use_p = np.nanmax(As_p / prov, axis=1) if np.isfinite(prov).any() else np.full(len(rl), np.nan)
         cell_area = np.array([s_["area"] for s_ in rl])
 
         # ---- punching
@@ -646,10 +655,22 @@ class Design:
         fck = self.fck
         rho = rc.get("rho", 0.005)
 
-        def punch(boxmm, V, p_net_fn, h_mm):
+        links = rc.get("beam_links")
+
+        steel_t = rc.get("steel_mm2_per_m") or {}
+
+        def rho_at(h_mm, dd):
+            st = steel_t.get(str(round(h_mm)))
+            if not st:
+                return rho
+            # bottom bars: under a column the raft's bottom face is in tension
+            return min(0.02, math.sqrt((st["bx"] / 1e6 / dd) * (st["by"] / 1e6 / dd)))
+
+        def punch(boxmm, V, p_net_fn, h_mm, with_links=False, h_actual=None):
             dd = (h_mm - cover - 20) / 1000
             kf = min(2.0, 1 + math.sqrt(0.2 / dd))
-            vrd = 0.12 * kf * (100 * rho * fck) ** (1 / 3)
+            r_l = rho_at(h_actual if h_actual else h_mm, dd)
+            vrd = 0.12 * kf * (100 * r_l * fck) ** (1 / 3)
             vmin = 0.035 * kf**1.5 * math.sqrt(fck)
             col = sbox(*boxmm)
             worst = 0.0
@@ -666,15 +687,22 @@ class Design:
                 dV = p_net_fn(ins)
                 ved = beta * max(0.0, V - dV) / (u * dd) / 1000  # MPa
                 vr = max(vrd, vmin) * 2 / f
+                if with_links and links:
+                    # EN 1992-1-1 6.52 with the raft beams' links crossing the perimeter
+                    asw = links["legs_per_ring"] * math.pi * (links["dia"] / 1000) ** 2 / 4
+                    fy_ef = min(250 + 0.25 * dd * 1000, self.fyd)
+                    vr = max(vr, 0.75 * max(vrd, vmin) + 1.5 * (dd / (links["spacing_mm"] / 1000)) * asw * fy_ef * 1000 / (u * dd) / 1000)
                 worst = max(worst, ved / vr)
             u0 = col.exterior.length / 1000
             vmax = 0.4 * 0.6 * (1 - fck / 250) * self.fcd
             worst = max(worst, 1.15 * V / (u0 * dd) / 1000 / vmax)
             return worst
 
-        selfw = self.b.gamma * t / 1000
-        net_uls = lambda ins: float(((p_uls - 1.35 * selfw) * A)[ins].sum())
-        net_stat = lambda ins: float(((p_stat - selfw) * A)[ins].sum())
+        selfw = self.b.gamma * np.array([b.raft_t(x, y) for x, y in XY]) / 1000
+        gr = np.array([b.raft_ground(x, y) for x, y in XY])
+        gG, gQ = gr[:, 0], gr[:, 1]
+        net_uls = lambda ins: float(((p_uls - 1.35 * (selfw + gG) - 1.5 * gQ) * A)[ins].sum())
+        net_stat = lambda ins: float(((p_stat - (selfw + gG) - psi2 * gQ) * A)[ins].sum())
         items = []
         for idx, fr in enumerate(a.frame_list):
             if fr["kind"] not in ("column", "wall") or fr["level"] != 0:
@@ -698,16 +726,20 @@ class Design:
                                   Nk=ck[i_][2], x=(x0 + x1) / 2, y=(y0 + y1) / 2))
         out = []
         for it in items:
-            uu = punch(it["box"], it["Vu"], net_uls, t)
-            us = punch(it["box"], it["Vs"], net_stat, t) if seis else None
+            t_loc = b.raft_t(it["x"], it["y"])
+            uu = punch(it["box"], it["Vu"], net_uls, t_loc)
+            us = punch(it["box"], it["Vs"], net_stat, t_loc) if seis else None
+            has_links = bool(links) and round(t_loc) in links.get("applies_to_t", []) and it["tag"] is not None
+            ul = max(punch(it["box"], it["Vu"], net_uls, t_loc, True), punch(it["box"], it["Vs"], net_stat, t_loc, True) if seis else 0) if has_links else None
             need = None
             for h in range(400, 2401, 50):
-                if punch(it["box"], it["Vu"], net_uls, h) <= 1.0 and (not seis or punch(it["box"], it["Vs"], net_stat, h) <= 1.0):
+                if punch(it["box"], it["Vu"], net_uls, h, h_actual=t_loc) <= 1.0 and (not seis or punch(it["box"], it["Vs"], net_stat, h, h_actual=t_loc) <= 1.0):
                     need = h
                     break
             near = int(np.argmin(np.hypot(XY[:, 0] - it["x"], XY[:, 1] - it["y"])))
             out.append(dict(name=it["name"], ref=it["ref"], tag=it["tag"], x=round(it["x"]), y=round(it["y"]), N_sls=round(it["Nk"]), N_uls=round(it["Vu"]),
-                            N_seis=round(it["Vs"]), punch_uls=round(uu, 2), punch_seis=round(us, 2) if us is not None else None, t_needed=need,
+                            N_seis=round(it["Vs"]), t_here=round(t_loc), punch_uls=round(uu, 2), punch_seis=round(us, 2) if us is not None else None, t_needed=need,
+                            punch_links=round(ul, 2) if ul is not None else None,
                             settle_mm=round(float(settle[near]), 1), p_sls=round(float(p_sls[near]))))
         out.sort(key=lambda r: -r["N_sls"])
         # angular distortion between neighbouring columns
@@ -728,12 +760,23 @@ class Design:
             As_bottom_x=round(float(As[:, 0].max())), As_bottom_y=round(float(As[:, 1].max())), As_top_x=round(float(As[:, 2].max())), As_top_y=round(float(As[:, 3].max())),
             As_p95_bottom=round(float(np.percentile(As[:, :2].max(axis=1), 95))), As_p95_top=round(float(np.percentile(As[:, 2:].max(axis=1), 95))),
             As_peak_at=self._peak_place(cen[int(np.argmax(As.max(axis=1)))]),
-            As_min=round(As_min), area_over_min=round(float(cell_area[(As > As_min).any(axis=1)].sum()), 1),
+            As_min=round(As_min), area_over_min=round(float(cell_area[(As > As_min_cell[:, None]).any(axis=1)].sum()), 1),
+            zones=[dict(name=zn["name"], box=[round(v) for v in zn["box"]], t=zn["t"]) for zn in b.raft_zones],
+            steel_use_max=round(float(np.nanmax(use_max)), 2) if np.isfinite(use_max).any() else None,
+            steel_over_area=round(float(cell_area[use_max > 1].sum()), 1) if np.isfinite(use_max).any() else None,
+            steel_over_places=sorted({self._peak_place(cen[k_]) for k_ in np.where(use_max > 1)[0]}) if np.isfinite(use_max).any() else [],
+            steel_use_p95=round(float(np.nanpercentile(use_max, 95)), 2) if np.isfinite(use_max).any() else None,
+            steel_grav_max=round(float(np.nanmax(use_p)), 2) if np.isfinite(use_p).any() else None,
+            steel_grav_p95=round(float(np.nanpercentile(use_p, 95)), 2) if np.isfinite(use_p).any() else None,
+            steel_grav_over_area=round(float(cell_area[use_p > 1].sum()), 1) if np.isfinite(use_p).any() else None,
+            steel_grav_over_places=sorted({self._peak_place(cen[k_]) for k_ in np.where(use_p > 1)[0]}) if np.isfinite(use_p).any() else [],
+            punch_fail_links=sum(1 for r in out if (r.get("punch_links") or 0) > 1),
+            punch_need_links=sum(1 for r in out if (r["punch_uls"] > 1 or (r["punch_seis"] or 0) > 1) and r.get("punch_links") is not None and r["punch_links"] <= 1),
             punch_fail=sum(1 for r in out if (r["punch_uls"] > 1 or (r["punch_seis"] or 0) > 1)), t_needed_max=max((r["t_needed"] or 9999) for r in out),
             bearing_ok=bool(p_sls.max() <= qa),
         )
         self.raft_nodes_out = dict(xy=XY, A=A, p_sls=p_sls, p_min=p_min, p_max=p_max, settle=settle)
-        self.raft_cells = dict(cen=cen, As=As, ij=[s_["ij"] for s_ in rl])
+        self.raft_cells = dict(cen=cen, As=As, ij=[s_["ij"] for s_ in rl], use=use_max, use_p=use_p)
         self.found = out
         return out
 

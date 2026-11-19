@@ -273,8 +273,9 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
       const m4 = new THREE.Matrix4();
       R.tiles.forEach((t, i) => {
         const [x0, y0, x1, y1] = t;
-        m4.makeScale(Math.max(0.02, x1 - x0 - 0.02), R.t, Math.max(0.02, y1 - y0 - 0.02));
-        m4.setPosition((x0 + x1) / 2, R.z - R.t / 2, (y0 + y1) / 2);
+        const tt = t[9] || R.t;
+        m4.makeScale(Math.max(0.02, x1 - x0 - 0.02), tt, Math.max(0.02, y1 - y0 - 0.02));
+        m4.setPosition((x0 + x1) / 2, R.z - tt / 2, (y0 + y1) / 2);
         im.setMatrixAt(i, m4);
         im.setColorAt(i, new THREE.Color(0x999999));
       });
@@ -388,8 +389,9 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
     const [, , , , p, pmin, pmax, , As] = t;
     if (state.colour === "type") return T.foundation;
     if (state.colour === "axial") return heat(p / Math.max(1, R.summary.p_sls_max));
-    if (state.colour === "gravity") return scaleUtil(p / R.qa);
-    if (state.colour === "seis") return pmin < 0 ? css("--bad") : scaleUtil(pmax / (1.33 * R.qa));
+    const ug = t[11] === null || t[11] === undefined ? 0 : t[11], ua = t[10] === null || t[10] === undefined ? 0 : t[10];
+    if (state.colour === "gravity") return scaleUtil(Math.max(p / R.qa, ug));
+    if (state.colour === "seis") return pmin < 0 ? css("--bad") : scaleUtil(Math.max(pmax / (1.33 * R.qa), ua));
     return css("--none");
   }
   function recolour() {
@@ -450,12 +452,14 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
   function selectTile(R, i) {
     state.sel = null;
     recolour();
-    const [x0, y0, x1, y1, p, pmin, pmax, st, As] = R.tiles[i];
+    const [x0, y0, x1, y1, p, pmin, pmax, st, As, tt, use, useg] = R.tiles[i];
     const S = R.summary;
     $("detail").innerHTML = `<h3>Raft at x ${fmt((x0 + x1) / 2, 1)} m, y ${fmt((y0 + y1) / 2, 1)} m</h3>` +
-      kv([["Thickness (assumed)", fmt(R.t * 1000) + " mm"], ["Soil pressure, service G + Q", fmt(p) + " kPa"], ["Allowed (geotech)", fmt(R.qa) + " kPa"],
+      kv([["Thickness", fmt((tt || R.t) * 1000) + " mm"], ["Soil pressure, service G + Q", fmt(p) + " kPa"], ["Allowed (geotech)", fmt(R.qa) + " kPa"],
           ["Code-level quake", pmin < 0 ? `lifts off (${fmt(pmin)} to ${fmt(pmax)} kPa)` : `${fmt(pmin)} to ${fmt(pmax)} kPa`],
-          ["Settlement (service)", fmt(st, 1) + " mm"], ["Steel needed, worst face", fmt(As) + " mm\u00B2/m"], ["Minimum steel", fmt(S.As_min) + " mm\u00B2/m"]]);
+          ["Settlement (service)", fmt(st, 1) + " mm"], ["Steel needed, worst face", fmt(As) + " mm\u00B2/m"],
+          ["Steel needed / drawn, everyday", useg === null || useg === undefined ? "\u2013" : verdictPill(useg)],
+          ["Steel needed / drawn, with quake", use === null || use === undefined ? "\u2013" : verdictPill(use)]]);
   }
 
   function kv(rows) {
@@ -491,7 +495,7 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
             ["Earthquake, lower hazard", d.us2 !== null && d.us2 !== undefined ? verdictPill(d.us2) : "needs " + (d.rho_s2 === null ? "over 4 %" : pct(d.rho_s2))],
             ["Steel needed, quake (code)", d.rho_s === null ? "over 4 %" : pct(d.rho_s)],
             ["Taped on site", d.measured ? "yes" : "drawing figures"],
-            ...(punchFor(d) ? [["Punching through the raft", verdictPill(punchFor(d).punch_uls)], ["Raft thickness it needs", fmt(punchFor(d).t_needed) + " mm"]] : [])]) +
+            ...(punchFor(d) ? [["Punching through the raft", verdictPill(punchFor(d).punch_uls)], ["Raft under it", fmt(punchFor(d).t_here) + " mm"], ["Raft thickness it needs", fmt(punchFor(d).t_needed) + " mm"]] : [])]) +
         `<h3 style="margin-top:12px">Load takedown at ${d.ref}</h3><div class="tbl-wrap"><table><tr><th>Storey</th><th>G kN</th><th>Q kN</th><th>ULS kN</th></tr>` +
         stack.slice().reverse().map((c) => `<tr><td class="txt">${lvName(c.level)}</td><td>${fmt(c.NG)}</td><td>${fmt(c.NQ)}</td><td>${fmt(c.Nuls)}</td></tr>`).join("") + "</table></div>";
     } else if (o.kind === "core") {
@@ -605,11 +609,18 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
     const conc = R.basis.materials.concrete;
     const c28 = Object.values(R.concrete_c28 || {}).filter((x) => x !== null && x !== undefined);
     const RS = RAFT ? RAFT.summary : null;
+    const raftDesc = RS ? `raft ${fmt(RS.t_mm)} mm thick${(RS.zones || []).length ? " (" + RS.zones.map((z) => z.name.startsWith(String(z.t)) ? z.name : fmt(z.t) + " mm: " + z.name).join("; ") + ")" : ""}` : "";
+    const needAll = RAFT ? found.filter((f) => f.punch_uls > 1 || (f.punch_seis || 0) > 1) : [];
+    const inWing = (f) => f.t_here === 450;
+    const needSeat = needAll.filter((f) => !inWing(f));
+    const wingSet = needAll.filter(inWing);
+    const rock = RS && RS.k >= 100000;
     const raftEveryday = RAFT ? [
-      v(RS.bearing_ok ? "ok" : "bad", `Raft bearing: ${fmt(RS.p_sls_mean)} kPa average, ${fmt(RS.p_sls_max)} kPa highest`, `Service loads (G + Q) on a ${fmt(RS.t_mm)} mm raft of ${fmt(RS.area_m2)} m\u00B2, against the 400 kPa the geotechnical report gives. A full raft spreads the building over its whole footprint, so pressures are well below what the pads needed.`),
-      v(RS.distortion < 1 / 500 ? "ok" : "warn", `Settlement ${fmt(RS.settle_min, 0)}\u2013${fmt(RS.settle_max, 0)} mm`, `With soil springs of ${fmt(RS.k / 1000)} MN/m\u00B3 (to be replaced by the geotechnical report's figure). Steepest slope between neighbouring columns 1/${fmt(1 / Math.max(RS.distortion, 1e-6))}; the usual limit for a frame is 1/500.`),
-      v(RS.punch_fail ? "bad" : "ok", RS.punch_fail ? `Punching: ${RS.punch_fail} supports need more than ${fmt(RS.t_mm)} mm` : `Punching passes at ${fmt(RS.t_mm)} mm`, `Every column, wall and lift core checked for punching through the raft without links (EN 1992-1-1 6.4.4, soil pressure inside the perimeter taken off). The heaviest needs ${fmt(RS.t_needed_max)} mm; thinner rafts need the engineer's "shear seats" or links under those columns.`),
-      v(RS.area_over_min > 0.25 * RS.area_m2 ? "warn" : "ok", "Raft steel", `Over 95 % of the raft, bending needs up to ${fmt(RS.As_p95_bottom)} mm\u00B2/m in the bottom (under the columns and cores) and ${fmt(RS.As_p95_top)} mm\u00B2/m in the top (between them), against a minimum of ${fmt(RS.As_min)} mm\u00B2/m; ${fmt(RS.area_over_min)} m\u00B2 needs more than the minimum. The peak, ${fmt(Math.max(RS.As_bottom_x, RS.As_bottom_y, RS.As_top_x, RS.As_top_y))} mm\u00B2/m, is a local spike at ${RS.As_peak_at}, where the engineer's detail will add bars.`),
+      v(RS.bearing_ok ? "ok" : rock ? "warn" : "bad", `Raft bearing: ${fmt(RS.p_sls_mean)} kPa average, ${fmt(RS.p_sls_max)} kPa highest`, `Service loads (G + Q), including the fill over the raft and the basement, on the ${raftDesc}, ${fmt(RS.area_m2)} m\u00B2 in all. It bears on bedrock about 2 m down, which normally carries far more than the 400 kPa the geotechnical report gave for soil at 4 m. On rock the pressure gathers under the columns and cores, so the peaks are well above the average: worth the geotechnical engineer confirming the rock takes ${fmt(RS.p_sls_max)} kPa in service.`),
+      v(RS.distortion < 1 / 500 ? "ok" : "warn", `Settlement ${fmt(RS.settle_min, 0)}\u2013${fmt(RS.settle_max, 0)} mm`, `On rock springs of ${fmt(RS.k / 1000)} MN/m\u00B3 (bedrock about 2 m down; replace with the geotechnical report's figure). Steepest slope between neighbouring columns 1/${fmt(1 / Math.max(RS.distortion, 1e-6))}; the usual limit for a frame is 1/500.`),
+      v(needSeat.some((f) => f.punch_links === null || f.punch_links > 1) ? "bad" : needSeat.length ? "warn" : "ok", needSeat.length ? `Punching: ${needSeat.length} supports outside the basement wing are short` : "Punching passes everywhere", `Every column, wall and lift core checked for punching through the raft without links (EN 1992-1-1 6.4.4, soil pressure inside the perimeter taken off), at the raft's thickness under it. ${wingSet.length ? `${wingSet.length} more in the basement wing (${wingSet.map((f) => f.name + " " + f.ref).join(", ")}) stand in or on its 300 mm retaining walls, which spread their load along the raft, so punching is not the right check there. ` : ""}${needSeat.length ? `Plain concrete is not enough under ${needSeat.length}: ${needSeat.slice(0, 14).map((f) => `${f.name}${f.ref ? " " + f.ref : ""}`).join(", ")}${needSeat.length > 14 ? " and more" : ""}. ${needSeat.filter((f) => f.punch_links !== null && f.punch_links <= 1).length} of these are carried by the links of the 550\u00D7300 raft beams running through them; ${needSeat.filter((f) => f.punch_links === null || f.punch_links > 1).length ? "still short: " + needSeat.filter((f) => f.punch_links === null || f.punch_links > 1).map((f) => `${f.name}${f.ref ? " " + f.ref : ""} (${fmt(f.t_here)} mm raft, needs ${fmt(f.t_needed)} mm plain)`).join(", ") + "." : "none is left short."} (The \u201Cshear seats\u201D sheet turned out to be rebar chairs, not thickenings.)` : ""}`),
+      RS.steel_grav_max !== null && RS.steel_grav_max !== undefined ? v(RS.steel_grav_over_area > 0 ? "warn" : "ok", RS.steel_grav_over_area > 0 ? `Raft steel, everyday loads: ${fmt(RS.steel_grav_over_area)} m\u00B2 needs more than drawn` : "Raft steel, everyday loads: the drawn bars are enough", `Bending steel needed (Wood-Armer) against the bars on the raft drawing: H25@75 both faces in the 700 mm bases, H25/H20@150 bottom and H16@150 top in the 500 mm raft, H16@150 in the basement wing (the 550\u00D7300 raft beams' own bars come on top). Over 95 % of the raft the need is at most ${fmt(RS.steel_grav_p95 * 100)} % of what is drawn; the worst spot ${fmt(RS.steel_grav_max * 100)} %${RS.steel_grav_over_places && RS.steel_grav_over_places.length ? ", near " + RS.steel_grav_over_places.slice(0, 8).join(", ") : ""}. With the code-level quake: 95 % within ${fmt(RS.steel_use_p95 * 100)} %, ${fmt(RS.steel_over_area)} m\u00B2 over.`) : "",
+      v(RS.area_over_min > 0.25 * RS.area_m2 ? "warn" : "ok", "Raft steel needed", `Over 95 % of the raft, bending needs up to ${fmt(RS.As_p95_bottom)} mm\u00B2/m in the bottom (under the columns and cores) and ${fmt(RS.As_p95_top)} mm\u00B2/m in the top (between them), against a minimum of ${fmt(RS.As_min)} mm\u00B2/m; ${fmt(RS.area_over_min)} m\u00B2 needs more than the minimum. The peak, ${fmt(Math.max(RS.As_bottom_x, RS.As_bottom_y, RS.As_top_x, RS.As_top_y))} mm\u00B2/m, is a local spike at ${RS.As_peak_at}, where the engineer's detail will add bars.`),
     ].join("") : "";
     const flatSlab = P2.length ? v(P2.some((p) => (p.util_links || 0) > 1 || p.face > 1) ? "bad" : "ok", `2nd floor flat slab: ${P2.filter((p) => p.needs_links).length} of ${P2.length} columns need punching links`, `250 mm flat slab from G to N. Without links the slab manages ${fmt(P2[0].v_rdc, 2)} MPa; the columns ask up to ${fmt(Math.max(...P2.map((p) => p.v_ed)), 2)} MPa. With the engineer's H12@100 link cages the highest use is ${fmt(Math.max(...P2.map((p) => p.util_links || 0)), 2)}, and the links need to reach ${fmt(Math.max(...P2.map((p) => p.reach_m)), 2)} m from the column face (the drawn strips run 1.5 m).`) : "";
     const concV = v("warn", `Concrete: drawings now say ${conc.grade}`, `R26 (5 Oct 2026) raised the grade from C25/30 to C30/37, which needs 37 MPa cubes. Your pours are ordered as 35 MPa and the cubes are tested against 35. If that is a cube strength it is about C28/35, below the drawings; under gravity the columns would still pass (highest use ${fmt(c28.length ? Math.max(...c28) : 0, 2)}). Worth confirming the grade with the engineer and the supplier.`);
@@ -634,16 +645,16 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
         ${R.drift.x.slice().reverse().map((r, i) => { const y = R.drift.y[R.drift.x.length - 1 - i]; return `<tr><td class="txt">${r.level}</td><td>${(r.drift_ratio * 100).toFixed(2)}</td><td>${(y.drift_ratio * 100).toFixed(2)}</td><td>${Math.max(r.theta, y.theta).toFixed(2)}</td><td>${fmt(Math.max(r.V_storey_kN, y.V_storey_kN))}</td></tr>`; }).join("")}
       </table></div></div>
       ${RAFT ? `<div><h2>Raft: punching under each support</h2><div class="tbl-wrap"><table>
-        <tr><th>Under</th><th>G+Q kN</th><th>ULS kN</th><th>Use at ${fmt(RS.t_mm)}</th><th>Needs mm</th><th>Settles mm</th></tr>
-        ${found.map((f) => `<tr><td class="txt">${f.name} ${f.ref}</td><td>${fmt(f.N_sls)}</td><td>${fmt(f.N_uls)}</td><td>${fmt(Math.max(f.punch_uls, f.punch_seis || 0), 2)}</td><td>${fmt(f.t_needed)}</td><td>${fmt(f.settle_mm, 1)}</td></tr>`).join("")}
-      </table></div><p class="note" style="margin-top:6px">Use above 1.00 means that support needs a thicker raft, a shear seat or links. The raft's thickness, level and extent are assumed until its drawing is read in.</p></div>` : `<div><h2>Foundations</h2><div class="tbl-wrap"><table>
+        <tr><th>Under</th><th>G+Q kN</th><th>ULS kN</th><th>Raft mm</th><th>Plain</th><th>With links</th><th>Needs mm</th><th>Settles mm</th></tr>
+        ${found.map((f) => `<tr><td class="txt">${f.name} ${f.ref}</td><td>${fmt(f.N_sls)}</td><td>${fmt(f.N_uls)}</td><td>${fmt(f.t_here)}</td><td>${fmt(Math.max(f.punch_uls, f.punch_seis || 0), 2)}</td><td>${f.punch_links === null || f.punch_links === undefined ? "\u2013" : fmt(f.punch_links, 2)}</td><td>${fmt(f.t_needed)}</td><td>${fmt(f.settle_mm, 1)}</td></tr>`).join("")}
+      </table></div><p class="note" style="margin-top:6px">Punching use above 1.00 fails. \u201CPlain\u201D is the raft concrete alone; \u201CWith links\u201D adds the H10 links of the 550\u00D7300 raft beams that run through the 500 mm raft's columns (spacing assumed 150 mm). \u201CNeeds\u201D is the plain thickness that would do without links.</p></div>` : `<div><h2>Foundations</h2><div class="tbl-wrap"><table>
         <tr><th>Under</th><th>G+Q kN</th><th>Pad m</th><th>Quake pad m</th><th>R10 base</th></tr>
         ${found.map((f) => `<tr><td class="txt">${f.name} ${f.ref}</td><td>${fmt(f.N_sls)}</td><td>${fmt(f.base_side_m, 2)}</td><td>${fmt(f.base_side_seis_m, 1)}${f.uplift ? " \u2191" : ""}</td><td class="txt">${f.r10_base || "\u2013"}</td></tr>`).join("")}
       </table></div><p class="note" style="margin-top:6px">\u2191 lifts off in the code-level quake. Loads are at the ground floor (+0.300); the bases sit about 4.4 m lower, so add the stub columns and fill.</p></div>`}
       <div><h2>Assumptions to confirm</h2><ul class="plain">${(DATA.report.asbuilt || "").includes("seed") ? "<li>Positions are the drawing figures from the as-built record's seed; the site's tapes come in with the as-built backup.</li>" : ""}
         <li>Floors 5\u20137 and the roof use the 4th floor's slab and beams until their drawings come.</li>
         <li>Internal block walls are an even ${DATA.report.basis.walls.internal_kPa} kPa; the plan walls will replace this with line loads.</li>
-        ${RAFT ? `<li>Raft: ${fmt(RS.t_mm)} mm thick, 1.0 m beyond the outer column faces, top at the ground floor, on soil springs of ${fmt(RS.k / 1000)} MN/m\u00B3. The raft sheets (R26 register items 04\u201309, 14\u201315: foundation layout, sleeper walls, raft details, raft shear seats) were not in the files sent; these go in from them.</li>` : "<li>Columns and cores are fixed at the ground floor; the stub columns, ground beams and bases below are not in the model.</li>"}
+        ${RAFT ? `<li>Raft from the updated raft details (18 Feb 2026); its zone edges were read off the 1:100 plan and tied to the as-built grid. As built the raft is founded on bedrock about 2 m down (shallower than the drawing's 2.95 m to the raft top); the model puts it at the ground floor with the fill as a load on it, on rock springs of ${fmt(RS.k / 1000)} MN/m\u00B3 until the geotechnical report gives a figure.</li>` : "<li>Columns and cores are fixed at the ground floor; the stub columns, ground beams and bases below are not in the model.</li>"}
         <li>Concrete ${conc.grade} as in R26. Column bars still from the R10 schedule (no newer column sheets yet).</li></ul></div>`;
   }
 

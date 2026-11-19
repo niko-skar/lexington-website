@@ -125,17 +125,184 @@
   "foundation": {
     "type": "raft",
     "raft": {
-      "t_mm": 900,
-      "projection_mm": 1000,
+      "t_mm": 500,
+      "outline_mm": [
+        [
+          -450,
+          -5525
+        ],
+        [
+          3450,
+          -5525
+        ],
+        [
+          3450,
+          -450
+        ],
+        [
+          6600,
+          -450
+        ],
+        [
+          6600,
+          5200
+        ],
+        [
+          51300,
+          5200
+        ],
+        [
+          51300,
+          17050
+        ],
+        [
+          -450,
+          17050
+        ]
+      ],
+      "zones": [
+        {
+          "name": "700 base on line C (C1a at C/5, C/7)",
+          "box_mm": [
+            4350,
+            9775,
+            7950,
+            17050
+          ],
+          "t_mm": 700
+        },
+        {
+          "name": "700 base on line G (C6 at G/5, G/7)",
+          "box_mm": [
+            21100,
+            9775,
+            24600,
+            17050
+          ],
+          "t_mm": 700
+        },
+        {
+          "name": "700 base on line L (C6 at L/5, L/7)",
+          "box_mm": [
+            37800,
+            9775,
+            41300,
+            17050
+          ],
+          "t_mm": 700
+        },
+        {
+          "name": "700 base on line M (SW7, C1b at M/7)",
+          "box_mm": [
+            43950,
+            9775,
+            47450,
+            17050
+          ],
+          "t_mm": 700
+        },
+        {
+          "name": "700 base under Lift 1",
+          "box_mm": [
+            11450,
+            10525,
+            15150,
+            14550
+          ],
+          "t_mm": 700
+        },
+        {
+          "name": "700 base under Lift 2",
+          "box_mm": [
+            30550,
+            10525,
+            34250,
+            14550
+          ],
+          "t_mm": 700
+        },
+        {
+          "name": "450 raft, basement wing B-E",
+          "box_mm": [
+            -1000,
+            -6000,
+            15050,
+            18000
+          ],
+          "t_mm": 450
+        }
+      ],
+      "ground_loads": [
+        {
+          "name": "basement wing B-E",
+          "box_mm": [
+            -1000,
+            -6000,
+            15050,
+            18000
+          ],
+          "G_kPa": 18.0,
+          "Q_kPa": 7.5,
+          "src": "basement finishes 1.5 + suspended ground floor slab and beams over it 6.0 + ground floor finishes 1.5 + 300 mm retaining walls (90 m) spread 9.0; storage 5.0 + parking 2.5"
+        }
+      ],
+      "extra_loads": [
+        {
+          "name": "underground water tank C-D/3-5",
+          "box_mm": [
+            6150,
+            5750,
+            12300,
+            11375
+          ],
+          "G_kPa": 25.0,
+          "src": "R10/architect: tank inside 300 mm RC walls, 2.5 m of water assumed"
+        }
+      ],
+      "ground_G_kPa": 37.0,
+      "ground_Q_kPa": 2.5,
+      "steel_mm2_per_m": {
+        "700": {
+          "bx": 6545,
+          "by": 6545,
+          "tx": 6545,
+          "ty": 6545,
+          "src": "H25@75 top and bottom both ways (98-H2504@75 T2/B2, 4x46-H2502@75 T1/B1)"
+        },
+        "500": {
+          "bx": 3272,
+          "by": 2094,
+          "tx": 1340,
+          "ty": 1340,
+          "src": "E-W: B1 H25@150 (294-H2501), T1 H16@150 (294-H1601); N-S: B2 H20@150 (82-H2002), T2 H16@150 (82-H1616)"
+        },
+        "450": {
+          "bx": 1340,
+          "by": 1340,
+          "tx": 1340,
+          "ty": 1340,
+          "src": "H16@150 top and bottom both ways (48-H1605/H1606, 84-H1613)"
+        }
+      },
+      "beam_links": {
+        "dia": 10,
+        "spacing_mm": 150,
+        "legs_per_ring": 8,
+        "applies_to_t": [
+          500
+        ],
+        "src": "RAFT BM 550x300 along every grid line F-N, H10 links (H1001, 3850 No.); 2 legs x 4 arms through an interior column, spacing assumed 150"
+      },
+      "projection_mm": 500,
       "closing_mm": 3500,
-      "k_kN_m3": 20000,
+      "k_kN_m3": 150000,
       "bending": 0.5,
       "rho": 0.005,
       "cover_mm": 50,
-      "ground_G_kPa": 1.5,
-      "ground_Q_kPa": 2.5,
-      "outline_mm": null,
-      "src": "Full raft (Niko, 19 Nov 2026). Thickness, extent and level are ASSUMED until the engineer's raft drawing is read in: 900 mm, 1.0 m beyond the outer column faces, top at the ground floor (+0.300). Soil springs k = 20 MN/m3 for a large raft on the laterite of the 400 kPa geotech figure; ground floor on the raft: 1.5 kPa finishes and 2.5 kPa parking (EN 1991-1-1 cat. F)."
+      "level_note": "As built (Niko, 19 Nov 2026): the raft is founded on bedrock about 2 m down on average, shallower than the drawing's 2.95 m to the raft top plus 1 m of stabilisation. Raft underside about -1.7 to -2.0, top about -1.2 to -1.5; the model puts the raft at the ground floor level, with the fill between as a load on it.",
+      "src": "Updated raft details (18 Feb 2026): foundation layout, setting out, sections 01-01 and 03-03, raft details sheet 1 and rebar seats. 450 mm raft in the basement wing (B-E) inside 300 mm retaining walls, 500 mm raft F-N with 550x300 raft beams on every grid line, 700 mm bases under the lift cores and on lines C, G, L and M round the heavy columns. Zone edges read off the 1:100 plan and tied to the as-built grid (the plan's row spacings are the earlier ones).",
+      "k_src": "Rock: modulus of subgrade reaction 150 MN/m3 for weathered rock (Bowles: k ~ 40 x q_ult; dense sands 64-128, rock above 200). Replace with the geotechnical report's figure; the check stays on the geotech's 400 kPa as a conservative bearing limit.",
+      "ground_src": "Over the 500 mm raft: about 1.35 m of earth (19 kN/m3) and 0.3 m hardcore (21) up to the 150 mm ground slab (3.75) plus finishes 1.5 = 37 kPa; parking 2.5 kPa"
     },
     "src": "type 'raft' (full raft on soil springs) or 'pads' (columns fixed at +0.300, pad sizes worked out)"
   },

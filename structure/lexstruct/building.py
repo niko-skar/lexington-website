@@ -134,6 +134,7 @@ class Building:
         fnd = self.cfg.get("foundation", {})
         self.raft_cfg = fnd.get("raft") if fnd.get("type") == "raft" else None
         self.raft = self._raft_outline() if self.raft_cfg else None
+        self.raft_zones = self._raft_zones() if self.raft_cfg else []
         self._mesh_lines()
 
     # ------------------------------------------------------------------ raft
@@ -154,6 +155,48 @@ class Building:
         if poly.geom_type != "Polygon":
             poly = max(poly.geoms, key=lambda g: g.area)
         return Polygon(poly.exterior.coords)
+
+    def _raft_zones(self) -> list[dict]:
+        """Thicker parts of the raft: a box in mm, or a box round a lift core (its outside faces plus a margin)."""
+        out = []
+        for zn in self.raft_cfg.get("zones", []):
+            box = zn.get("box_mm")
+            if not box and zn.get("around"):
+                core = next((c for c in self.base.floor["cores"] if c["name"] == zn["around"]), None)
+                if core is None:
+                    self.warnings.append(f"raft zone round {zn['around']}: no such lift core; left out")
+                    continue
+                m = zn.get("margin_mm", 1000)
+                x0, y0, x1, y1 = core["box"]
+                box = [x0 - m, y0 - m, x1 + m, y1 + m]
+            if box:
+                out.append(dict(name=zn.get("around") or zn.get("name", "zone"), box=box, t=float(zn["t_mm"])))
+        return out
+
+    def raft_ground(self, x: float, y: float) -> tuple[float, float]:
+        """What stands on the raft at a point besides the building's columns (kPa): fill and ground slab, or the
+        basement, plus extras (the water tank)."""
+        rc = self.raft_cfg
+        G, Q = rc.get("ground_G_kPa", 0.0), rc.get("ground_Q_kPa", 0.0)
+        for zn in rc.get("ground_loads", []):
+            x0, y0, x1, y1 = zn["box_mm"]
+            if x0 <= x <= x1 and y0 <= y <= y1:
+                G, Q = zn.get("G_kPa", G), zn.get("Q_kPa", Q)
+                break
+        for zn in rc.get("extra_loads", []):
+            x0, y0, x1, y1 = zn["box_mm"]
+            if x0 <= x <= x1 and y0 <= y <= y1:
+                G += zn.get("G_kPa", 0.0)
+                Q += zn.get("Q_kPa", 0.0)
+        return G, Q
+
+    def raft_t(self, x: float, y: float) -> float:
+        """The raft's thickness (mm) at a point."""
+        for zn in self.raft_zones:
+            x0, y0, x1, y1 = zn["box"]
+            if x0 <= x <= x1 and y0 <= y <= y1:
+                return zn["t"]
+        return float(self.raft_cfg["t_mm"])
 
     # ------------------------------------------------------------------ mesh lines
     def _beam_runs(self, lv: Level):
@@ -244,6 +287,10 @@ class Building:
             for x, y in self.raft.exterior.coords:
                 cx.append((x, 1))
                 cy.append((y, 1))
+            for zn in self.raft_zones:
+                x0, y0, x1, y1 = zn["box"]
+                cx += [(x0, 1), (x1, 1)]
+                cy += [(y0, 1), (y1, 1)]
         self.xs = merge_lines(cx)
         self.ys = merge_lines(cy)
 
@@ -353,19 +400,19 @@ class Building:
             for j in range(len(self.ys) - 1):
                 ym = (self.ys[j] + self.ys[j + 1]) / 2
                 if poly.contains(Point(xm, ym)):
-                    lv.cells[(i, j)] = t
-        sec = self.shell_section(t, "raft")
-        for (i, j) in lv.cells:
+                    lv.cells[(i, j)] = self.raft_t(xm, ym)
+        for (i, j), t in lv.cells.items():
             n = [self.level_node(lv, i, j), self.level_node(lv, i, j + 1), self.level_node(lv, i + 1, j + 1), self.level_node(lv, i + 1, j)]
             self.etag += 1
-            self.ops.element("ShellMITC4", self.etag, *n, sec)
+            self.ops.element("ShellMITC4", self.etag, *n, self.shell_section(t, "raft"))
             area = (self.xs[i + 1] - self.xs[i]) * (self.ys[j + 1] - self.ys[j]) / 1e6
             self.shells.append(dict(tag=self.etag, kind="raft", level=lv.idx, ij=(i, j), nodes=n, t=t, area=area))
             for key in ((i, j), (i, j + 1), (i + 1, j + 1), (i + 1, j)):
                 area_at[key] = area_at.get(key, 0.0) + area / 4
             g_self = t / 1000 * self.gamma * area
-            g_ground = rc.get("ground_G_kPa", 0.0) * area
-            q_ground = rc.get("ground_Q_kPa", 0.0) * area
+            gk, qk = self.raft_ground((self.xs[i] + self.xs[i + 1]) / 2, (self.ys[j] + self.ys[j + 1]) / 2)
+            g_ground = gk * area
+            q_ground = qk * area
             for nn in n:
                 self.add_load("G_self", nn, [0, 0, -g_self / 4])
                 self.add_load("G_super", nn, [0, 0, -g_ground / 4])

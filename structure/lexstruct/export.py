@@ -96,9 +96,11 @@ def export_viewer(b, a, d, results, path):
             ks = [at[(i, j)], at[(i + 1, j)], at[(i, j + 1)], at[(i + 1, j + 1)]]
             tiles.append([r(b.xs[i] / 1000), r(b.ys[j] / 1000), r(b.xs[i + 1] / 1000), r(b.ys[j + 1] / 1000),
                           round(float(np.mean(rn["p_sls"][ks]))), round(float(np.min(rn["p_min"][ks]))), round(float(np.max(rn["p_max"][ks]))),
-                          r(float(np.mean(rn["settle"][ks])), 1), round(float(d.raft_cells["As"][ci].max()))])
+                          r(float(np.mean(rn["settle"][ks])), 1), round(float(d.raft_cells["As"][ci].max())), b.base.cells[(i, j)] / 1000,
+                          r(float(d.raft_cells["use"][ci]), 2) if np.isfinite(d.raft_cells["use"][ci]) else None,
+                          r(float(d.raft_cells["use_p"][ci]), 2) if np.isfinite(d.raft_cells["use_p"][ci]) else None])
         raft = dict(summary=d.raft, z=r(b.base.z / 1000), t=b.raft_cfg["t_mm"] / 1000, qa=b.cfg["soil"]["bearing_kPa"],
-                    tiles=tiles, keys=["x0", "y0", "x1", "y1", "p_sls", "p_min_seis", "p_max_seis", "settle_mm", "As_max"],
+                    tiles=tiles, keys=["x0", "y0", "x1", "y1", "p_sls", "p_min_seis", "p_max_seis", "settle_mm", "As_max", "t", "steel_use", "steel_use_gravity"],
                     punching=d.found, src=b.raft_cfg.get("src"))
     for f in ([] if b.raft is not None else d.found):
         side = max(f["base_side_m"], f.get("base_side_seis_m") or 0)
