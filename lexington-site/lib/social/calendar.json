@@ -1,5 +1,5 @@
 {
- "generated": "2026-11-06T13:41:40.820Z",
+ "generated": "2026-11-19T17:41:28.400Z",
  "postHourUtc": 18,
  "posts": [
   {
@@ -1755,6 +1755,525 @@
      "note": "reservation",
      "q": "*[_type==\"financingPlan\"][0].selfFinanceRows[milestone==\"Reservation\"][0].option1",
      "equals": "$10,000"
+    }
+   ],
+   "notes": ""
+  },
+  {
+   "id": "lx38",
+   "date": "2026-11-20",
+   "pillar": "Offer",
+   "title": "Phase 1 pricing: 10 days left",
+   "images": [
+    "lx38-1.jpg",
+    "lx38-2.jpg"
+   ],
+   "alt": [
+    "Countdown card: Phase 1 pricing ends 30 November. 10. Days left. 15% off with full payment; 8% off with a payment plan up to 12 months.",
+    "Render of The Lexington, eight storeys of white apartments with large windows and palm trees, at sunset."
+   ],
+   "fb": "10 days left on Phase 1 pricing.\n\nPhase 1 pricing at The Lexington ends on 30 November: 15% off with full payment, or 8% off with a payment plan of up to 12 months.\n\nHomes start at $76,800 including VAT, and $10,000 reserves yours.\n\nCome and see the site first. A member of our team will show you the building and the homes, Monday to Saturday, 8am to 6pm.\n\nBook a visit: https://www.lexington.com.gh/visit?utm_source=facebook&utm_medium=organic_social&utm_campaign=daily_post&utm_content=lx38\n\n📍 Shiashie, East Legon, Accra\n\nIllustrative render. Terms apply. Prices include VAT and are subject to change.",
+   "ig": "10 days left on Phase 1 pricing.\n\nPhase 1 pricing at The Lexington ends on 30 November: 15% off with full payment, or 8% off with a payment plan of up to 12 months.\n\nHomes start at $76,800 including VAT, and $10,000 reserves yours.\n\nCome and see the site first. A member of our team will show you the building and the homes, Monday to Saturday, 8am to 6pm.\n\nBook a visit: link in bio (lexington.com.gh/visit)\n\n📍 Shiashie, East Legon, Accra\n\nIllustrative render. Terms apply. Prices include VAT and are subject to change.\n\n#TheLexingtonGH #EastLegon #Shiashie #Accra #GhanaRealEstate #PropertyInvestment #DiasporaInvestors #BuyInGhana #OffPlan #AccraProperty",
+   "checks": [
+    {
+     "note": "promo banner on",
+     "q": "*[_type==\"siteSettings\"][0].promoBanner.enabled",
+     "equals": true
+    },
+    {
+     "note": "banner says 15% off",
+     "q": "*[_type==\"siteSettings\"][0].promoBanner.message",
+     "includes": "15% off"
+    },
+    {
+     "note": "banner says 8% off",
+     "q": "*[_type==\"siteSettings\"][0].promoBanner.message",
+     "includes": "8% off"
+    },
+    {
+     "note": "banner says 12 months",
+     "q": "*[_type==\"siteSettings\"][0].promoBanner.message",
+     "includes": "12 months"
+    },
+    {
+     "note": "banner says 30th of November",
+     "q": "*[_type==\"siteSettings\"][0].promoBanner.message",
+     "includes": "30th of November"
+    },
+    {
+     "note": "page /visit says \"Monday to Saturday, 8am to 6pm\"",
+     "page": "/visit",
+     "includes": "Monday to Saturday, 8am to 6pm"
+    },
+    {
+     "note": "reservation",
+     "q": "*[_type==\"financingPlan\"][0].selfFinanceRows[milestone==\"Reservation\"][0].option1",
+     "equals": "$10,000"
+    },
+    {
+     "note": "from price all",
+     "q": "math::min(*[_type==\"unit\" && status==\"available\"].priceUSD)",
+     "equals": 64000
+    }
+   ],
+   "notes": ""
+  },
+  {
+   "id": "lx39",
+   "date": "2026-11-21",
+   "pillar": "Visits",
+   "title": "Come and see it going up",
+   "images": [
+    "lx39-1.jpg",
+    "lx39-2.jpg"
+   ],
+   "alt": [
+    "Workers in hard hats and safety vests tie steel reinforcement mesh on a slab, with column bars and city buildings behind.",
+    "Card: Book a visit. Pick a day and a time. A member of our team will show you the building and the homes."
+   ],
+   "fb": "Come and see The Lexington going up.\n\nThe frame is rising in Shiashie, East Legon. Pick a day and a time online, and a member of our team will show you the building and the homes.\n\nVisits run Monday to Saturday, 8am to 6pm.\n\nBook a visit: https://www.lexington.com.gh/visit?utm_source=facebook&utm_medium=organic_social&utm_campaign=daily_post&utm_content=lx39\n\n📍 Shiashie, East Legon, Accra\n\nPhoto from the site.",
+   "ig": "Come and see The Lexington going up.\n\nThe frame is rising in Shiashie, East Legon. Pick a day and a time online, and a member of our team will show you the building and the homes.\n\nVisits run Monday to Saturday, 8am to 6pm.\n\nBook a visit: link in bio (lexington.com.gh/visit)\n\n📍 Shiashie, East Legon, Accra\n\nPhoto from the site.\n\n#TheLexingtonGH #EastLegon #Shiashie #Accra #GhanaRealEstate #ConstructionProgress #BuildingGhana #OffPlan #AccraProperty #UnderConstruction",
+   "checks": [
+    {
+     "note": "page /visit says \"Monday to Saturday, 8am to 6pm\"",
+     "page": "/visit",
+     "includes": "Monday to Saturday, 8am to 6pm"
+    },
+    {
+     "note": "page /visit says \"a member of our team will show you the building and the homes\"",
+     "page": "/visit",
+     "includes": "a member of our team will show you the building and the homes"
+    }
+   ],
+   "notes": ""
+  },
+  {
+   "id": "lx40",
+   "date": "2026-11-22",
+   "pillar": "Behind the build",
+   "title": "Third floor going up",
+   "images": [
+    "lx40-1.jpg",
+    "lx40-2.jpg",
+    "lx40-3.jpg",
+    "lx40-4.jpg"
+   ],
+   "alt": [
+    "The frame with props, formwork and column steel, a worker on top.",
+    "A worker in a safety harness fixing column steel.",
+    "Slab formwork edged with steel beam cages and upright column bars, with trees and city buildings in the distance.",
+    "Workers in hard hats and safety vests tie steel reinforcement mesh on a slab, with column bars and city buildings behind."
+   ],
+   "fb": "The third floor is going up.\n\nThe last two weeks on site: the third-floor columns, the beam steel, then the slab steel.\n\nEstimated completion: December 2027. Every update is on our progress page.\n\nWant to see it in person? Visits run Monday to Saturday, 8am to 6pm.\n\nSee every update: https://www.lexington.com.gh/progress?utm_source=facebook&utm_medium=organic_social&utm_campaign=daily_post&utm_content=lx40\n\n📍 Shiashie, East Legon, Accra\n\nPhotos from the site.",
+   "ig": "The third floor is going up.\n\nThe last two weeks on site: the third-floor columns, the beam steel, then the slab steel.\n\nEstimated completion: December 2027. Every update is on our progress page.\n\nWant to see it in person? Visits run Monday to Saturday, 8am to 6pm.\n\nSee every update: link in bio (lexington.com.gh/progress)\n\n📍 Shiashie, East Legon, Accra\n\nPhotos from the site.\n\n#TheLexingtonGH #EastLegon #Shiashie #Accra #GhanaRealEstate #ConstructionProgress #BuildingGhana #OffPlan #AccraProperty #UnderConstruction",
+   "checks": [
+    {
+     "note": "completion date",
+     "q": "*[_type==\"siteSettings\"][0].progressIntro.lede",
+     "includes": "December 2027"
+    },
+    {
+     "note": "page /visit says \"Monday to Saturday, 8am to 6pm\"",
+     "page": "/visit",
+     "includes": "Monday to Saturday, 8am to 6pm"
+    }
+   ],
+   "notes": ""
+  },
+  {
+   "id": "lx41",
+   "date": "2026-11-23",
+   "pillar": "Offer",
+   "title": "Phase 1 pricing: one week left",
+   "images": [
+    "lx41-1.jpg",
+    "lx41-2.jpg"
+   ],
+   "alt": [
+    "Countdown card: One week left on Phase 1 pricing. 7. Days left. 15% off with full payment; 8% off with a payment plan up to 12 months.",
+    "Render of The Lexington, eight storeys of white apartments with large windows and palm trees, at sunset."
+   ],
+   "fb": "One week left.\n\nPhase 1 pricing ends on 30 November: 15% off with full payment, or 8% off with a payment plan of up to 12 months.\n\n$10,000 reserves your home. From 1 December the discounts drop to 10% with full payment and 5% with a payment plan.\n\nCome and see it this week: book a time, Monday to Saturday, 8am to 6pm.\n\nBook a visit: https://www.lexington.com.gh/visit?utm_source=facebook&utm_medium=organic_social&utm_campaign=daily_post&utm_content=lx41\n\n📍 Shiashie, East Legon, Accra\n\nIllustrative render. Terms apply. Prices include VAT and are subject to change.",
+   "ig": "One week left.\n\nPhase 1 pricing ends on 30 November: 15% off with full payment, or 8% off with a payment plan of up to 12 months.\n\n$10,000 reserves your home. From 1 December the discounts drop to 10% with full payment and 5% with a payment plan.\n\nCome and see it this week: book a time, Monday to Saturday, 8am to 6pm.\n\nBook a visit: link in bio (lexington.com.gh/visit)\n\n📍 Shiashie, East Legon, Accra\n\nIllustrative render. Terms apply. Prices include VAT and are subject to change.\n\n#TheLexingtonGH #EastLegon #Shiashie #Accra #GhanaRealEstate #PropertyInvestment #DiasporaInvestors #BuyInGhana #OffPlan #AccraProperty",
+   "checks": [
+    {
+     "note": "promo banner on",
+     "q": "*[_type==\"siteSettings\"][0].promoBanner.enabled",
+     "equals": true
+    },
+    {
+     "note": "banner says 15% off",
+     "q": "*[_type==\"siteSettings\"][0].promoBanner.message",
+     "includes": "15% off"
+    },
+    {
+     "note": "banner says 8% off",
+     "q": "*[_type==\"siteSettings\"][0].promoBanner.message",
+     "includes": "8% off"
+    },
+    {
+     "note": "banner says 12 months",
+     "q": "*[_type==\"siteSettings\"][0].promoBanner.message",
+     "includes": "12 months"
+    },
+    {
+     "note": "banner says 30th of November",
+     "q": "*[_type==\"siteSettings\"][0].promoBanner.message",
+     "includes": "30th of November"
+    },
+    {
+     "note": "page /invest says \"From 1 December: 10% off with full payment, or 5% off with a payment plan.\"",
+     "page": "/invest",
+     "includes": "From 1 December: 10% off with full payment, or 5% off with a payment plan."
+    },
+    {
+     "note": "page /visit says \"Monday to Saturday, 8am to 6pm\"",
+     "page": "/visit",
+     "includes": "Monday to Saturday, 8am to 6pm"
+    },
+    {
+     "note": "reservation",
+     "q": "*[_type==\"financingPlan\"][0].selfFinanceRows[milestone==\"Reservation\"][0].option1",
+     "equals": "$10,000"
+    },
+    {
+     "note": "completion date",
+     "q": "*[_type==\"siteSettings\"][0].progressIntro.lede",
+     "includes": "December 2027"
+    }
+   ],
+   "notes": ""
+  },
+  {
+   "id": "lx42",
+   "date": "2026-11-24",
+   "pillar": "Visits",
+   "title": "The site now, and the building",
+   "images": [
+    "lx42-1.jpg",
+    "lx42-2.jpg",
+    "lx42-3.jpg"
+   ],
+   "alt": [
+    "Concrete frame of the building with steel bars rising above the top slab, timber formwork, metal props and a worker on top.",
+    "Render of The Lexington, eight storeys of white apartments with large windows and palm trees, at sunset.",
+    "Card: Site visits. Monday to Saturday, 8am to 6pm. Pick a day and a time online."
+   ],
+   "fb": "The site this month, and The Lexington when it is finished.\n\nSwipe from the concrete frame on site to the finished building in our render. Estimated completion: December 2027.\n\nSee it for yourself: pick a day and a time online, and a member of our team will show you the building and the homes. Monday to Saturday, 8am to 6pm.\n\nBook a visit: https://www.lexington.com.gh/visit?utm_source=facebook&utm_medium=organic_social&utm_campaign=daily_post&utm_content=lx42\n\n📍 Shiashie, East Legon, Accra\n\nPhoto from the site and illustrative render.",
+   "ig": "The site this month, and The Lexington when it is finished.\n\nSwipe from the concrete frame on site to the finished building in our render. Estimated completion: December 2027.\n\nSee it for yourself: pick a day and a time online, and a member of our team will show you the building and the homes. Monday to Saturday, 8am to 6pm.\n\nBook a visit: link in bio (lexington.com.gh/visit)\n\n📍 Shiashie, East Legon, Accra\n\nPhoto from the site and illustrative render.\n\n#TheLexingtonGH #EastLegon #Shiashie #Accra #GhanaRealEstate #ConstructionProgress #BuildingGhana #OffPlan #AccraProperty #UnderConstruction",
+   "checks": [
+    {
+     "note": "completion date",
+     "q": "*[_type==\"siteSettings\"][0].progressIntro.lede",
+     "includes": "December 2027"
+    },
+    {
+     "note": "page /visit says \"Monday to Saturday, 8am to 6pm\"",
+     "page": "/visit",
+     "includes": "Monday to Saturday, 8am to 6pm"
+    }
+   ],
+   "notes": ""
+  },
+  {
+   "id": "lx43",
+   "date": "2026-11-25",
+   "pillar": "Behind the build",
+   "title": "Floor by floor",
+   "images": [
+    "lx43-1.jpg",
+    "lx43-2.jpg",
+    "lx43-3.jpg",
+    "lx43-4.jpg"
+   ],
+   "alt": [
+    "Crew in hard hats placing concrete from a pump hose over a steel mesh slab, a green pump truck behind.",
+    "Freshly poured concrete slab around a tall cage of steel bars, with a green concrete pump boom overhead.",
+    "Crew placing concrete with a pump hose inside the steel.",
+    "Concrete columns with steel bars on top, trees and city towers beyond."
+   ],
+   "fb": "Floor by floor.\n\nFrom the concrete pours in late October, including the second-floor slab, to the third-floor columns this month.\n\nEstimated completion: December 2027.\n\nSee every update on our progress page, or come and see the site: Monday to Saturday, 8am to 6pm.\n\nSee every update: https://www.lexington.com.gh/progress?utm_source=facebook&utm_medium=organic_social&utm_campaign=daily_post&utm_content=lx43\n\n📍 Shiashie, East Legon, Accra\n\nPhotos from the site.",
+   "ig": "Floor by floor.\n\nFrom the concrete pours in late October, including the second-floor slab, to the third-floor columns this month.\n\nEstimated completion: December 2027.\n\nSee every update on our progress page, or come and see the site: Monday to Saturday, 8am to 6pm.\n\nSee every update: link in bio (lexington.com.gh/progress)\n\n📍 Shiashie, East Legon, Accra\n\nPhotos from the site.\n\n#TheLexingtonGH #EastLegon #Shiashie #Accra #GhanaRealEstate #ConstructionProgress #BuildingGhana #OffPlan #AccraProperty #UnderConstruction",
+   "checks": [
+    {
+     "note": "completion date",
+     "q": "*[_type==\"siteSettings\"][0].progressIntro.lede",
+     "includes": "December 2027"
+    },
+    {
+     "note": "page /visit says \"Monday to Saturday, 8am to 6pm\"",
+     "page": "/visit",
+     "includes": "Monday to Saturday, 8am to 6pm"
+    }
+   ],
+   "notes": ""
+  },
+  {
+   "id": "lx44",
+   "date": "2026-11-26",
+   "pillar": "Offer",
+   "title": "Phase 1 pricing: 4 days left",
+   "images": [
+    "lx44-1.jpg",
+    "lx44-2.jpg"
+   ],
+   "alt": [
+    "Countdown card: Phase 1 pricing ends on Monday, 30 November. 4. Days left. 15% off with full payment; 8% off with a payment plan up to 12 months.",
+    "Card: Before Monday. Come and see the site. Friday, Saturday or Monday, 8am to 6pm."
+   ],
+   "fb": "Four days left.\n\nPhase 1 pricing ends on Monday, 30 November: 15% off with full payment, or 8% off with a payment plan of up to 12 months.\n\nThere is still time to see the site first: Friday, Saturday or Monday, 8am to 6pm.\n\nBook a visit: https://www.lexington.com.gh/visit?utm_source=facebook&utm_medium=organic_social&utm_campaign=daily_post&utm_content=lx44\n\n📍 Shiashie, East Legon, Accra\n\nTerms apply. Prices include VAT and are subject to change.",
+   "ig": "Four days left.\n\nPhase 1 pricing ends on Monday, 30 November: 15% off with full payment, or 8% off with a payment plan of up to 12 months.\n\nThere is still time to see the site first: Friday, Saturday or Monday, 8am to 6pm.\n\nBook a visit: link in bio (lexington.com.gh/visit)\n\n📍 Shiashie, East Legon, Accra\n\nTerms apply. Prices include VAT and are subject to change.\n\n#TheLexingtonGH #EastLegon #Shiashie #Accra #GhanaRealEstate #PropertyInvestment #DiasporaInvestors #BuyInGhana #OffPlan #AccraProperty",
+   "checks": [
+    {
+     "note": "promo banner on",
+     "q": "*[_type==\"siteSettings\"][0].promoBanner.enabled",
+     "equals": true
+    },
+    {
+     "note": "banner says 15% off",
+     "q": "*[_type==\"siteSettings\"][0].promoBanner.message",
+     "includes": "15% off"
+    },
+    {
+     "note": "banner says 8% off",
+     "q": "*[_type==\"siteSettings\"][0].promoBanner.message",
+     "includes": "8% off"
+    },
+    {
+     "note": "banner says 12 months",
+     "q": "*[_type==\"siteSettings\"][0].promoBanner.message",
+     "includes": "12 months"
+    },
+    {
+     "note": "banner says 30th of November",
+     "q": "*[_type==\"siteSettings\"][0].promoBanner.message",
+     "includes": "30th of November"
+    },
+    {
+     "note": "page /visit says \"Monday to Saturday, 8am to 6pm\"",
+     "page": "/visit",
+     "includes": "Monday to Saturday, 8am to 6pm"
+    },
+    {
+     "note": "reservation",
+     "q": "*[_type==\"financingPlan\"][0].selfFinanceRows[milestone==\"Reservation\"][0].option1",
+     "equals": "$10,000"
+    }
+   ],
+   "notes": ""
+  },
+  {
+   "id": "lx45",
+   "date": "2026-11-27",
+   "pillar": "Visits",
+   "title": "Free on Saturday?",
+   "images": [
+    "lx45-1.jpg",
+    "lx45-2.jpg"
+   ],
+   "alt": [
+    "Building frame with concrete columns, slab formwork, props and tall steel bars, workers on the top deck and at ground level.",
+    "Card: Book a visit. Pick a time for Saturday. Or Monday, the last day of Phase 1 pricing."
+   ],
+   "fb": "Free on Saturday? Come and see The Lexington.\n\nVisits run on Saturdays too, from 8am to 6pm. Pick a time online, and a member of our team will show you the building and the homes.\n\nPhase 1 pricing ends on Monday, 30 November.\n\nBook a visit: https://www.lexington.com.gh/visit?utm_source=facebook&utm_medium=organic_social&utm_campaign=daily_post&utm_content=lx45\n\n📍 Shiashie, East Legon, Accra\n\nPhoto from the site.",
+   "ig": "Free on Saturday? Come and see The Lexington.\n\nVisits run on Saturdays too, from 8am to 6pm. Pick a time online, and a member of our team will show you the building and the homes.\n\nPhase 1 pricing ends on Monday, 30 November.\n\nBook a visit: link in bio (lexington.com.gh/visit)\n\n📍 Shiashie, East Legon, Accra\n\nPhoto from the site.\n\n#TheLexingtonGH #EastLegon #Shiashie #Accra #GhanaRealEstate #ConstructionProgress #BuildingGhana #OffPlan #AccraProperty #UnderConstruction",
+   "checks": [
+    {
+     "note": "promo banner on",
+     "q": "*[_type==\"siteSettings\"][0].promoBanner.enabled",
+     "equals": true
+    },
+    {
+     "note": "banner says 15% off",
+     "q": "*[_type==\"siteSettings\"][0].promoBanner.message",
+     "includes": "15% off"
+    },
+    {
+     "note": "banner says 8% off",
+     "q": "*[_type==\"siteSettings\"][0].promoBanner.message",
+     "includes": "8% off"
+    },
+    {
+     "note": "banner says 12 months",
+     "q": "*[_type==\"siteSettings\"][0].promoBanner.message",
+     "includes": "12 months"
+    },
+    {
+     "note": "banner says 30th of November",
+     "q": "*[_type==\"siteSettings\"][0].promoBanner.message",
+     "includes": "30th of November"
+    },
+    {
+     "note": "page /visit says \"Monday to Saturday, 8am to 6pm\"",
+     "page": "/visit",
+     "includes": "Monday to Saturday, 8am to 6pm"
+    },
+    {
+     "note": "page /visit says \"a member of our team will show you the building and the homes\"",
+     "page": "/visit",
+     "includes": "a member of our team will show you the building and the homes"
+    }
+   ],
+   "notes": ""
+  },
+  {
+   "id": "lx46",
+   "date": "2026-11-28",
+   "pillar": "Offer",
+   "title": "Phase 1 pricing: 2 days left",
+   "images": [
+    "lx46-1.jpg",
+    "lx46-2.jpg"
+   ],
+   "alt": [
+    "Countdown card: Phase 1 pricing ends on Monday. 2. Days left. 15% off with full payment; 8% off with a payment plan up to 12 months.",
+    "Render of The Lexington, eight storeys of white apartments with large windows and palm trees, at sunset."
+   ],
+   "fb": "Two days left on Phase 1 pricing.\n\nPhase 1 pricing ends on Monday, 30 November: 15% off with full payment, or 8% off with a payment plan of up to 12 months.\n\n$10,000 reserves your home. Start online: answer a few questions and we email you the reservation fee form straight away.\n\nReserve: https://www.lexington.com.gh/reserve?utm_source=facebook&utm_medium=organic_social&utm_campaign=daily_post&utm_content=lx46\n\n📍 Shiashie, East Legon, Accra\n\nIllustrative render. Terms apply. Prices include VAT and are subject to change.",
+   "ig": "Two days left on Phase 1 pricing.\n\nPhase 1 pricing ends on Monday, 30 November: 15% off with full payment, or 8% off with a payment plan of up to 12 months.\n\n$10,000 reserves your home. Start online: answer a few questions and we email you the reservation fee form straight away.\n\nReserve: link in bio (lexington.com.gh/reserve)\n\n📍 Shiashie, East Legon, Accra\n\nIllustrative render. Terms apply. Prices include VAT and are subject to change.\n\n#TheLexingtonGH #EastLegon #Shiashie #Accra #GhanaRealEstate #PropertyInvestment #DiasporaInvestors #BuyInGhana #OffPlan #AccraProperty",
+   "checks": [
+    {
+     "note": "promo banner on",
+     "q": "*[_type==\"siteSettings\"][0].promoBanner.enabled",
+     "equals": true
+    },
+    {
+     "note": "banner says 15% off",
+     "q": "*[_type==\"siteSettings\"][0].promoBanner.message",
+     "includes": "15% off"
+    },
+    {
+     "note": "banner says 8% off",
+     "q": "*[_type==\"siteSettings\"][0].promoBanner.message",
+     "includes": "8% off"
+    },
+    {
+     "note": "banner says 12 months",
+     "q": "*[_type==\"siteSettings\"][0].promoBanner.message",
+     "includes": "12 months"
+    },
+    {
+     "note": "banner says 30th of November",
+     "q": "*[_type==\"siteSettings\"][0].promoBanner.message",
+     "includes": "30th of November"
+    },
+    {
+     "note": "reservation",
+     "q": "*[_type==\"financingPlan\"][0].selfFinanceRows[milestone==\"Reservation\"][0].option1",
+     "equals": "$10,000"
+    },
+    {
+     "note": "page /reserve says \"reservation fee form straight away\"",
+     "page": "/reserve",
+     "includes": "reservation fee form straight away"
+    }
+   ],
+   "notes": ""
+  },
+  {
+   "id": "lx47",
+   "date": "2026-11-29",
+   "pillar": "Offer",
+   "title": "Phase 1 pricing ends tomorrow",
+   "images": [
+    "lx47-1.jpg",
+    "lx47-2.jpg"
+   ],
+   "alt": [
+    "Countdown card: Phase 1 pricing ends tomorrow, 30 November. 1. Day left. 15% off with full payment; 8% off with a payment plan up to 12 months.",
+    "Card: From 1 December. The discounts drop. 10% off with full payment, or 5% off with a payment plan."
+   ],
+   "fb": "Phase 1 pricing ends tomorrow.\n\nTomorrow, 30 November, is the last day for 15% off with full payment, or 8% off with a payment plan of up to 12 months.\n\nFrom 1 December: 10% off with full payment, or 5% off with a payment plan.\n\nVisits run tomorrow from 8am to 6pm.\n\nBook a visit: https://www.lexington.com.gh/visit?utm_source=facebook&utm_medium=organic_social&utm_campaign=daily_post&utm_content=lx47\n\n📍 Shiashie, East Legon, Accra\n\nTerms apply. Prices include VAT and are subject to change.",
+   "ig": "Phase 1 pricing ends tomorrow.\n\nTomorrow, 30 November, is the last day for 15% off with full payment, or 8% off with a payment plan of up to 12 months.\n\nFrom 1 December: 10% off with full payment, or 5% off with a payment plan.\n\nVisits run tomorrow from 8am to 6pm.\n\nBook a visit: link in bio (lexington.com.gh/visit)\n\n📍 Shiashie, East Legon, Accra\n\nTerms apply. Prices include VAT and are subject to change.\n\n#TheLexingtonGH #EastLegon #Shiashie #Accra #GhanaRealEstate #PropertyInvestment #DiasporaInvestors #BuyInGhana #OffPlan #AccraProperty",
+   "checks": [
+    {
+     "note": "promo banner on",
+     "q": "*[_type==\"siteSettings\"][0].promoBanner.enabled",
+     "equals": true
+    },
+    {
+     "note": "banner says 15% off",
+     "q": "*[_type==\"siteSettings\"][0].promoBanner.message",
+     "includes": "15% off"
+    },
+    {
+     "note": "banner says 8% off",
+     "q": "*[_type==\"siteSettings\"][0].promoBanner.message",
+     "includes": "8% off"
+    },
+    {
+     "note": "banner says 12 months",
+     "q": "*[_type==\"siteSettings\"][0].promoBanner.message",
+     "includes": "12 months"
+    },
+    {
+     "note": "banner says 30th of November",
+     "q": "*[_type==\"siteSettings\"][0].promoBanner.message",
+     "includes": "30th of November"
+    },
+    {
+     "note": "page /invest says \"From 1 December: 10% off with full payment, or 5% off with a payment plan.\"",
+     "page": "/invest",
+     "includes": "From 1 December: 10% off with full payment, or 5% off with a payment plan."
+    },
+    {
+     "note": "page /visit says \"Monday to Saturday, 8am to 6pm\"",
+     "page": "/visit",
+     "includes": "Monday to Saturday, 8am to 6pm"
+    }
+   ],
+   "notes": ""
+  },
+  {
+   "id": "lx48",
+   "date": "2026-11-30",
+   "pillar": "Offer",
+   "title": "Last day of Phase 1 pricing",
+   "images": [
+    "lx48-1.jpg",
+    "lx48-2.jpg"
+   ],
+   "alt": [
+    "Countdown card: Phase 1 pricing ends today. Today. Last day. 15% off with full payment; 8% off with a payment plan up to 12 months.",
+    "Card: Reserve. Hold your home with $10,000. Answer a few questions online and we email you the reservation fee form."
+   ],
+   "fb": "Last day of Phase 1 pricing.\n\nToday is the last day for 15% off with full payment, or 8% off with a payment plan of up to 12 months.\n\nStart your reservation online: answer a few questions and we email you the reservation fee form straight away.\n\nReserve: https://www.lexington.com.gh/reserve?utm_source=facebook&utm_medium=organic_social&utm_campaign=daily_post&utm_content=lx48\n\n📍 Shiashie, East Legon, Accra\n\nTerms apply. Prices include VAT and are subject to change.",
+   "ig": "Last day of Phase 1 pricing.\n\nToday is the last day for 15% off with full payment, or 8% off with a payment plan of up to 12 months.\n\nStart your reservation online: answer a few questions and we email you the reservation fee form straight away.\n\nReserve: link in bio (lexington.com.gh/reserve)\n\n📍 Shiashie, East Legon, Accra\n\nTerms apply. Prices include VAT and are subject to change.\n\n#TheLexingtonGH #EastLegon #Shiashie #Accra #GhanaRealEstate #PropertyInvestment #DiasporaInvestors #BuyInGhana #OffPlan #AccraProperty",
+   "checks": [
+    {
+     "note": "promo banner on",
+     "q": "*[_type==\"siteSettings\"][0].promoBanner.enabled",
+     "equals": true
+    },
+    {
+     "note": "banner says 15% off",
+     "q": "*[_type==\"siteSettings\"][0].promoBanner.message",
+     "includes": "15% off"
+    },
+    {
+     "note": "banner says 8% off",
+     "q": "*[_type==\"siteSettings\"][0].promoBanner.message",
+     "includes": "8% off"
+    },
+    {
+     "note": "banner says 12 months",
+     "q": "*[_type==\"siteSettings\"][0].promoBanner.message",
+     "includes": "12 months"
+    },
+    {
+     "note": "banner says 30th of November",
+     "q": "*[_type==\"siteSettings\"][0].promoBanner.message",
+     "includes": "30th of November"
+    },
+    {
+     "note": "reservation",
+     "q": "*[_type==\"financingPlan\"][0].selfFinanceRows[milestone==\"Reservation\"][0].option1",
+     "equals": "$10,000"
+    },
+    {
+     "note": "page /reserve says \"reservation fee form straight away\"",
+     "page": "/reserve",
+     "includes": "reservation fee form straight away"
     }
    ],
    "notes": ""

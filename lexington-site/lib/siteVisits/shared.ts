@@ -45,7 +45,7 @@ export const BOOKED_VIA: Record<VisitSource, string> = {
 export const VISIT_PLACE = "18 Duala Close, opposite Oak Plaza Hotel, East Legon";
 
 /** What they would like to see (the booking page's choices; "" when they don't say). */
-export const VISIT_INTERESTS = ["One bedroom", "Two bedrooms", "Three bedrooms", "Penthouse", "Not sure yet"] as const;
+export const VISIT_INTERESTS = ["Studio", "One bedroom", "Two bedrooms", "Three bedrooms", "Penthouse", "Not sure yet"] as const;
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
