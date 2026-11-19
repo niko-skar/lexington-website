@@ -10,7 +10,7 @@ export type PlanLevel = "lower" | "upper" | "main";
 // browsers fetch the new one. Kept here, beside the list of what is in it, because two places load it: the Residences
 // page (components/Penthouse3D.tsx) and a buyer's homes to pick from (components/PlanPicker.tsx).
 // v14 (16 Nov 2026): PH2b, 405B, 204B, the 3rd floor's studios 304B and 305B, and the 1st floor's homes 101A-109B.
-export const SITE_VIEWER_SRC = "/3d/ph2b.iife.js?v=17"; // v17 (18 Nov 2026): PH2b's new layout (curved stair, glass wall to the terrace, BBQ bar under a pergola, a light over the stair, lit steps). (v16, 17 Nov 2026: 405B as the two-bedroom its buyer chose, the 5th floor's studios 504B and 505B. (v15, 17 Nov 2026: new layouts of 103B, 105B, 106B, 108B; the cooker hood's chimney)
+export const SITE_VIEWER_SRC = "/3d/ph2b.iife.js?v=18"; // v18 (19 Nov 2026): 306B as a three-bedroom home (the rest unchanged). (v17, 18 Nov 2026): PH2b's new layout (curved stair, glass wall to the terrace, BBQ bar under a pergola, a light over the stair, lit steps). (v16, 17 Nov 2026: 405B as the two-bedroom its buyer chose, the 5th floor's studios 504B and 505B. (v15, 17 Nov 2026: new layouts of 103B, 105B, 106B, 108B; the cooker hood's chimney)
 
 export interface Model3D {
   viewerId: string;
@@ -122,6 +122,13 @@ export const MODELS: Record<string, Model3D> = {
     name: "studio 109B",
     levels: ["main"],
     posters: { main: { wide: "/3d/u1h-plan.jpg?v=1", phone: "/3d/u1h-plan-m.jpg?v=1" } },
+  },
+  // 306B (19 Nov 2026): the 3rd floor's east end as a three-bedroom home (penthouse-3d u306b).
+  "306B": {
+    viewerId: "u306b",
+    name: "apartment 306B",
+    levels: ["main"],
+    posters: { main: { wide: "/3d/u306b-plan.jpg?v=1", phone: "/3d/u306b-plan-m.jpg?v=1" } },
   },
 };
 
