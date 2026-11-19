@@ -2,12 +2,12 @@
   "_about": "Design basis for the structural model. Every value here is an input you can change; run.py reads it each time. Units: kN, m, kPa (kN/m2). 'src' says where each value comes from.",
   "materials": {
     "concrete": {
-      "grade": "C25/30",
-      "fck": 25,
-      "Ecm_GPa": 31,
+      "grade": "C30/37",
+      "fck": 30,
+      "Ecm_GPa": 33,
       "nu": 0.2,
       "gamma": 25,
-      "src": "R10 general notes (Jan 2025): C25/30. Site pour orders say C35 (lib/concrete/pourOrder.ts); the drawings' grade is used for capacity so it stays on the safe side."
+      "src": "R26 general notes (5 Oct 2026): C30/37 (cube 37 MPa), up from C25/30 in R10. Site pour orders say C35 / 35 MPa (lib/concrete/pourOrder.ts); as a cube strength that is about C28/35, run as a check."
     },
     "steel": {
       "fyk": 500,
@@ -77,12 +77,12 @@
   },
   "pool": {
     "floor": "1",
-    "water_depth_m": 1.5,
-    "base_slab_m": 0.25,
-    "wall_depth_m": 1.8,
+    "water_depth_m": 1.2,
+    "base_slab_m": 0.3,
+    "wall_depth_m": 1.85,
     "wall_t_m": 0.3,
     "finishes_kPa": 1.0,
-    "src": "R10 swimming pool GA (sheet 56): pool hangs below the 1st floor (SSL +3900) on 1800x300 wall-beams to a 250 mm base slab at SSL +2100; water depth assumed 1.5 m"
+    "src": "1st floor sections (rev. 10 Oct 2026): 300 mm suspended pool slab between B1-C and 4-7, 0.9 m deep at grid 4 sloping to 1.35 m from 5 to 7 (1.2 m average), 200/300 mm pool walls on 600x950/750/600 beams and 950x300 columns below; walls modelled as 1850 x 300 deep beams"
   },
   "lifts": {
     "G_kN": 60,
@@ -121,5 +121,34 @@
   },
   "combinations": {
     "src": "EN 1990 Eq. 6.10 (STR), 6.12b (seismic), characteristic SLS for bearing pressures"
+  },
+  "foundation": {
+    "type": "raft",
+    "raft": {
+      "t_mm": 900,
+      "projection_mm": 1000,
+      "closing_mm": 3500,
+      "k_kN_m3": 20000,
+      "bending": 0.5,
+      "rho": 0.005,
+      "cover_mm": 50,
+      "ground_G_kPa": 1.5,
+      "ground_Q_kPa": 2.5,
+      "outline_mm": null,
+      "src": "Full raft (Niko, 19 Nov 2026). Thickness, extent and level are ASSUMED until the engineer's raft drawing is read in: 900 mm, 1.0 m beyond the outer column faces, top at the ground floor (+0.300). Soil springs k = 20 MN/m3 for a large raft on the laterite of the 400 kPa geotech figure; ground floor on the raft: 1.5 kPa finishes and 2.5 kPa parking (EN 1991-1-1 cat. F)."
+    },
+    "src": "type 'raft' (full raft on soil springs) or 'pads' (columns fixed at +0.300, pad sizes worked out)"
+  },
+  "flat_slab": {
+    "level": "2",
+    "from_grid": "G",
+    "t_mm": 250,
+    "rho": 0.006,
+    "links": {
+      "dia": 12,
+      "spacing_mm": 100,
+      "legs_per_ring": 8
+    },
+    "src": "2nd floor punching shear details (rev. 12 Oct 2026): 250 mm flat slab G-N, column strips with H12@100 links (H1201, 919 No.) both ways through every column; legs per perimeter assumed 8 (2 legs x 4 strips)"
   }
 }

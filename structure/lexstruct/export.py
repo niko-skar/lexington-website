@@ -87,7 +87,20 @@ def export_viewer(b, a, d, results, path):
                               As_bot=row["As_bottom"], As_comp=row["As_comp"], links=row["links_mm2_per_m"], ok=row["ok"], seis=row["seis"]))
 
     foundations = []
-    for f in d.found:
+    raft = None
+    if b.raft is not None:
+        rn = d.raft_nodes_out
+        at = {r_["ij"]: k for k, r_ in enumerate(b.raft_nodes)}
+        tiles = []
+        for ci, (i, j) in enumerate(d.raft_cells["ij"]):
+            ks = [at[(i, j)], at[(i + 1, j)], at[(i, j + 1)], at[(i + 1, j + 1)]]
+            tiles.append([r(b.xs[i] / 1000), r(b.ys[j] / 1000), r(b.xs[i + 1] / 1000), r(b.ys[j + 1] / 1000),
+                          round(float(np.mean(rn["p_sls"][ks]))), round(float(np.min(rn["p_min"][ks]))), round(float(np.max(rn["p_max"][ks]))),
+                          r(float(np.mean(rn["settle"][ks])), 1), round(float(d.raft_cells["As"][ci].max()))])
+        raft = dict(summary=d.raft, z=r(b.base.z / 1000), t=b.raft_cfg["t_mm"] / 1000, qa=b.cfg["soil"]["bearing_kPa"],
+                    tiles=tiles, keys=["x0", "y0", "x1", "y1", "p_sls", "p_min_seis", "p_max_seis", "settle_mm", "As_max"],
+                    punching=d.found, src=b.raft_cfg.get("src"))
+    for f in ([] if b.raft is not None else d.found):
         side = max(f["base_side_m"], f.get("base_side_seis_m") or 0)
         foundations.append(dict(group=f["group"], name=f["name"], ref=f["ref"], x=r(f["x"] / 1000), y=r(f["y"] / 1000), z=r(b.base.z / 1000),
                                 side=side, side_sls=f["base_side_m"], Nsls=f["N_sls"], Nuls=f["N_uls"], NG=f["N_G"], NQ=f["N_Q"],
@@ -107,7 +120,7 @@ def export_viewer(b, a, d, results, path):
         grid=dict(x=[dict(id=g["id"], p=r(g["pos"] / 1000)) for g in b.asbuilt["floors"][1]["grid"]["x"]],
                   y=[dict(id=g["id"], p=r(g["pos"] / 1000)) for g in b.asbuilt["floors"][1]["grid"]["y"]]),
         layers=dict(
-            structure=dict(slabs=slabs, columns=columns, cores=cores, beams=beams, foundations=foundations),
+            structure=dict(slabs=slabs, columns=columns, cores=cores, beams=beams, foundations=foundations, raft=raft),
             architecture=dict(walls=[], note="Plan walls from the as-built plans go here next."),
             mep=dict(items=[], note="Services (water, drainage, electrical, lifts) go here."),
             other=dict(items=[], note="Site, landscaping and anything else."),
@@ -118,7 +131,8 @@ def export_viewer(b, a, d, results, path):
             asbuilt=results["inputs"]["asbuilt"], floors=results["floors"], drift=results["drift"],
             drift_sens=(results.get("seismic_sensitivity") or {}).get("drift"), sens_ag=(results.get("seismic_sensitivity") or {}).get("agR_g"),
             torsion=results["torsion"], modes=results["modes"], deflection=results["deflection"], warnings=results["warnings"],
-            foundations=d.found, cores=d.cores,
+            foundations=d.found, cores=d.cores, flat_slab_punching=getattr(d, "punch2", None),
+            concrete_c28=results.get("concrete_c28"),
             cores_sens=(results.get("seismic_sensitivity") or {}).get("cores"),
             basis={k: v for k, v in b.cfg.items() if k != "_about"},
         ),

@@ -23,27 +23,39 @@ from scipy.linalg import eigh
 from .building import G_ACC, Building
 
 
+PARTS = ("frames", "cores", "disp", "react", "raft")
+
+
 class Results:
-    def __init__(self, frames, cores, disp, react):
+    """One load case's results. raft: per raft shell, the mean over its Gauss points of
+    (p11 p22 p12 m11 m22 m12 q1 q2), forces per metre."""
+
+    def __init__(self, frames, cores, disp, react, raft=None):
         self.frames = frames
         self.cores = cores
         self.disp = disp
         self.react = react
+        self.raft = raft if raft is not None else np.zeros((0, 8))
+
+    def _map(self, fn, o=None):
+        if o is None:
+            return Results(*[fn(getattr(self, p)) for p in PARTS])
+        return Results(*[fn(getattr(self, p), getattr(o, p)) for p in PARTS])
 
     def __add__(self, o):
-        return Results(self.frames + o.frames, self.cores + o.cores, self.disp + o.disp, self.react + o.react)
+        return self._map(lambda a, b: a + b, o)
 
     def __mul__(self, k: float):
-        return Results(self.frames * k, self.cores * k, self.disp * k, self.react * k)
+        return self._map(lambda a: a * k)
 
     __rmul__ = __mul__
 
     def abs(self):
-        return Results(np.abs(self.frames), np.abs(self.cores), np.abs(self.disp), np.abs(self.react))
+        return self._map(np.abs)
 
     @staticmethod
     def maximum(a, b):
-        return Results(np.maximum(a.frames, b.frames), np.maximum(a.cores, b.cores), np.maximum(a.disp, b.disp), np.maximum(a.react, b.react))
+        return a._map(np.maximum, b)
 
 
 class Analysis:
@@ -52,6 +64,7 @@ class Analysis:
         self.ops = b.ops
         self.frame_list = [f for f in b.frames if f["kind"] in ("column", "wall", "beam")]
         self.core_list = [s for s in b.shells if s["kind"] == "core"]
+        self.raft_list = [s for s in b.shells if s["kind"] == "raft"]
         self.base_nodes = sorted(b.fixed)
         self.pattern = 0
         self.cases: dict[str, Results] = {}
@@ -85,7 +98,8 @@ class Analysis:
             disp[t] = ops.nodeDisp(t)
         ops.reactions()
         react = np.array([ops.nodeReaction(n) for n in self.base_nodes])
-        return Results(frames, cores, disp, react)
+        raft = np.array([np.asarray(ops.eleResponse(s["tag"], "stresses")).reshape(-1, 8).mean(axis=0) for s in self.raft_list]) if self.raft_list else np.zeros((0, 8))
+        return Results(frames, cores, disp, react, raft)
 
     def run_gravity(self):
         for case, loads in self.b.loads.items():
@@ -221,10 +235,10 @@ class Analysis:
         for d in ("x", "y"):
             amp = self.gamma[d] * sd  # mode k response = amp[k] * unit response
             comb = {}
-            for part in ("frames", "cores", "disp", "react"):
+            for part in ("frames", "cores", "disp", "react", "raft"):
                 R = np.array([amp[k] * getattr(self.mode_res[k], part) for k in range(nm)])
-                comb[part] = self.cqc(R)
-            rsa = Results(comb["frames"], comb["cores"], comb["disp"], comb["react"])
+                comb[part] = self.cqc(R) if R.size else getattr(self.mode_res[0], part) * 0
+            rsa = Results(comb["frames"], comb["cores"], comb["disp"], comb["react"], comb["raft"])
             # floor motion per mode for drifts (at each floor's centre of mass)
             modal_floor = np.array([amp[k] * self.phi[:, k] / self.omega[k] ** 2 for k in range(nm)])  # (modes, 3n)
             # accidental torsion: torques e * F_i from the lateral force distribution

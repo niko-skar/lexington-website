@@ -131,7 +131,29 @@ class Building:
         self.nu = c["nu"]
         self.G = self.E / (2 * (1 + self.nu))
         self.gamma = c["gamma"]
+        fnd = self.cfg.get("foundation", {})
+        self.raft_cfg = fnd.get("raft") if fnd.get("type") == "raft" else None
+        self.raft = self._raft_outline() if self.raft_cfg else None
         self._mesh_lines()
+
+    # ------------------------------------------------------------------ raft
+    def _raft_outline(self) -> Polygon:
+        """The raft's plan: every ground-floor column, wall and lift core, grown by the raft's projection
+        beyond their faces, with the gaps between them filled (a closing, kept square-cornered)."""
+        from shapely.ops import unary_union
+        from shapely.geometry import box as sbox
+
+        rc = self.raft_cfg
+        if rc.get("outline_mm"):
+            return Polygon(rc["outline_mm"])
+        proj = rc.get("projection_mm", 1000)
+        close = rc.get("closing_mm", 3500)
+        boxes = [sbox(*c["box"]) for c in self.base.floor["columns"] if c.get("box")] + [sbox(*c["box"]) for c in self.base.floor["cores"]]
+        poly = unary_union([b.buffer(proj, join_style=2) for b in boxes])
+        poly = poly.buffer(close, join_style=2).buffer(-close, join_style=2)
+        if poly.geom_type != "Polygon":
+            poly = max(poly.geoms, key=lambda g: g.area)
+        return Polygon(poly.exterior.coords)
 
     # ------------------------------------------------------------------ mesh lines
     def _beam_runs(self, lv: Level):
@@ -218,6 +240,10 @@ class Building:
                 (cy if axis == "row" else cx).append((at, 2))
             for axis, at, *_ in self._pool_walls(lv):
                 (cy if axis == "row" else cx).append((at, 1))
+        if self.raft is not None:
+            for x, y in self.raft.exterior.coords:
+                cx.append((x, 1))
+                cy.append((y, 1))
         self.xs = merge_lines(cx)
         self.ys = merge_lines(cy)
 
@@ -264,6 +290,9 @@ class Building:
         ops.geomTransf("Linear", 2, 1.0, 0.0, 0.0)  # vertical members: local z = global X, local y = -Y
         self._sections = {}
         self._core_nodes = {}
+        self.raft_nodes: list[dict] = []
+        if self.raft is not None:
+            self._raft()
         self._mesh_slabs()
         self._cores()
         self._beams()
@@ -287,7 +316,7 @@ class Building:
         key = (i, j)
         if key not in lv.nodes:
             lv.nodes[key] = self.node(lv.idx, self.xs[i], self.ys[j], lv.z)
-            if lv.idx == self.base.idx:
+            if lv.idx == self.base.idx and self.raft is None:
                 self.ops.fix(lv.nodes[key], 1, 1, 1, 1, 1, 1)
         return lv.nodes[key]
 
@@ -298,6 +327,8 @@ class Building:
             st = self.cfg["stiffness"]
             if kind == "slab":
                 self.ops.section("ElasticMembranePlateSection", tag, self.E, self.nu, t_mm / 1000, 0.0, st["slab_bending"])
+            elif kind == "raft":
+                self.ops.section("ElasticMembranePlateSection", tag, self.E, self.nu, t_mm / 1000, 0.0, self.raft_cfg.get("bending", 0.5))
             else:
                 self.ops.section("ElasticMembranePlateSection", tag, self.E * st["core_E"], self.nu, t_mm / 1000, 0.0, 1.0)
             self._sections[key] = tag
@@ -307,6 +338,53 @@ class Building:
         node = self.slaves.get(node, node) if case != "_keep" else node
         arr = self.loads[case].setdefault(node, np.zeros(6))
         arr[: len(f)] += f
+
+    def _raft(self):
+        """The raft: shells on the mesh under its plan, each node on a vertical soil spring (k x its share of the
+        area) and held sideways (the soil and the fill round the raft take the base shear)."""
+        rc = self.raft_cfg
+        lv = self.base
+        t = float(rc["t_mm"])
+        k = float(rc["k_kN_m3"])
+        poly = prep(self.raft)
+        area_at: dict[tuple, float] = {}
+        for i in range(len(self.xs) - 1):
+            xm = (self.xs[i] + self.xs[i + 1]) / 2
+            for j in range(len(self.ys) - 1):
+                ym = (self.ys[j] + self.ys[j + 1]) / 2
+                if poly.contains(Point(xm, ym)):
+                    lv.cells[(i, j)] = t
+        sec = self.shell_section(t, "raft")
+        for (i, j) in lv.cells:
+            n = [self.level_node(lv, i, j), self.level_node(lv, i, j + 1), self.level_node(lv, i + 1, j + 1), self.level_node(lv, i + 1, j)]
+            self.etag += 1
+            self.ops.element("ShellMITC4", self.etag, *n, sec)
+            area = (self.xs[i + 1] - self.xs[i]) * (self.ys[j + 1] - self.ys[j]) / 1e6
+            self.shells.append(dict(tag=self.etag, kind="raft", level=lv.idx, ij=(i, j), nodes=n, t=t, area=area))
+            for key in ((i, j), (i, j + 1), (i + 1, j + 1), (i + 1, j)):
+                area_at[key] = area_at.get(key, 0.0) + area / 4
+            g_self = t / 1000 * self.gamma * area
+            g_ground = rc.get("ground_G_kPa", 0.0) * area
+            q_ground = rc.get("ground_Q_kPa", 0.0) * area
+            for nn in n:
+                self.add_load("G_self", nn, [0, 0, -g_self / 4])
+                self.add_load("G_super", nn, [0, 0, -g_ground / 4])
+                self.add_load("Q", nn, [0, 0, -q_ground / 4])
+        # sideways the soil holds the raft with stiff springs rather than fixities: a raft node is also what the
+        # columns are rigidly linked to, and fixities on those nodes upset the constraint handler
+        kh = rc.get("k_side_kN_m", 1e7)
+        self.ops.uniaxialMaterial("Elastic", 900001, kh)
+        self.ops.uniaxialMaterial("Elastic", 900002, kh)
+        for key, A in area_at.items():
+            rn = lv.nodes[key]
+            x, y, z = self.xyz[rn]
+            gn = self.node(-1, x, y, z)
+            self.ops.fix(gn, 1, 1, 1, 1, 1, 1)
+            self.etag += 1
+            self.ops.uniaxialMaterial("Elastic", self.etag, k * A)
+            self.ops.element("zeroLength", self.etag, gn, rn, "-mat", self.etag, 900001, 900001, 900002, "-dir", 3, 1, 2, 6)
+            self.fixed[gn] = "raft"
+            self.raft_nodes.append(dict(node=rn, ground=gn, area=A, x=x, y=y, ij=key))
 
     def _mesh_slabs(self):
         for lv in self.levels:
@@ -390,13 +468,13 @@ class Building:
             w = area * t / 1000 * self.gamma
             for nn in n:
                 self._apply_or_base("G_self", nn, w / 4, core)
-        if lv.idx == self.base.idx:
+        if lv.idx == self.base.idx and self.raft is None:
             for ij in (ij0, ij1):
                 self.fixed[self.level_node(lv, *ij)] = core
 
     def _apply_or_base(self, case, node, fz_down, group):
         """A vertical load (kN, downward) at a node; on a base node it's kept aside for the foundation sums."""
-        if self.node_level.get(node) == self.base.idx and self.xyz[node][2] == self.base.z:
+        if self.raft is None and self.node_level.get(node) == self.base.idx and self.xyz[node][2] == self.base.z:
             d = self.base_direct.setdefault(group, {})
             d[case] = d.get(case, 0.0) + fz_down
             return
@@ -472,7 +550,7 @@ class Building:
                 group = f"{lv.key}:{c['key']}"
                 ends = []
                 for L in (lv, top):
-                    if L.idx == self.base.idx:
+                    if L.idx == self.base.idx and self.raft is None:
                         n = self.node(L.idx, cx, cy, L.z)
                         self.ops.fix(n, 1, 1, 1, 1, 1, 1)
                         self.fixed[n] = group

@@ -56,6 +56,7 @@ def main():
     cores = d.check_cores()
     beams = d.check_beams()
     found = d.foundations()
+    punch2 = d.flat_slab_punching()
     drift = d.drift()
     tors = d.torsional_radius()
     log("checks done")
@@ -70,8 +71,16 @@ def main():
         G_super=round(sum(-v[2] for v in b.loads["G_super"].values()) + sum(v.get("G_super", 0) for v in b.base_direct.values())),
         Q=round(sum(-v[2] for v in b.loads["Q"].values()) + sum(v.get("Q", 0) for v in b.base_direct.values())),
         seismic_weight=round(sum(f["W"] for f in a.floors)),
-        slab_area_m2=round(sum((b.xs[i + 1] - b.xs[i]) * (b.ys[j + 1] - b.ys[j]) for lv in b.levels for (i, j) in lv.cells) / 1e6),
+        slab_area_m2=round(sum((b.xs[i + 1] - b.xs[i]) * (b.ys[j + 1] - b.ys[j]) for lv in b.levels if not (b.raft is not None and lv.idx == b.base.idx) for (i, j) in lv.cells) / 1e6),
     )
+    if b.raft is not None:
+        ra = sum((b.xs[i + 1] - b.xs[i]) * (b.ys[j + 1] - b.ys[j]) for (i, j) in b.base.cells) / 1e6
+        rcfg = b.raft_cfg
+        totals.update(raft_area_m2=round(ra), raft_self=round(ra * rcfg["t_mm"] / 1000 * b.gamma), ground_G=round(ra * rcfg.get("ground_G_kPa", 0)),
+                      ground_Q=round(ra * rcfg.get("ground_Q_kPa", 0)))
+        totals.update(G_frame=totals["G_self"] - totals["raft_self"], G_super_frame=totals["G_super"] - totals["ground_G"], Q_frame=totals["Q"] - totals["ground_Q"])
+    else:
+        totals.update(G_frame=totals["G_self"], G_super_frame=totals["G_super"], Q_frame=totals["Q"])
     floors = []
     for fl in a.floors:
         lv = b.levels[fl["level"]]
@@ -91,6 +100,7 @@ def main():
                      rsa_base_shear_x=round(float(drift["x"][0]["V_storey_kN"])), rsa_base_shear_y=round(float(drift["y"][0]["V_storey_kN"]))),
         seismic_sensitivity=dict(agR_g=sens) if sens else None,
         wind={d_: dict(F=[round(float(f), 1) for f in a.cases["W"][d_]["F"]], base_shear=round(float(a.cases["W"][d_]["base_shear"]))) for d_ in ("x", "y")},
+        raft=getattr(d, "raft", None) if b.raft is not None else None, flat_slab_punching=punch2,
         drift=drift, columns=cols, cores=cores, beams=[{k: v for k, v in r.items() if k != "tags"} for r in beams], foundations=found,
         deflection=dict(max_mm=round(float(sag[worst_sag]) * 1000, 1), at=[round(c) for c in b.xyz[worst_sag]]),
     )

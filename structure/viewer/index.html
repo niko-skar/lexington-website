@@ -265,6 +265,24 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
       const y0 = along ? ay - w : Math.min(ay, by), y1 = along ? ay + w : Math.max(ay, by);
       addBox(groups.beams, "beam", b, lv[b.level], x0, x1, y0, y1, b.z - b.h, b.z - 0.005);
     });
+    // the raft: one tile per mesh cell, coloured by what the raft is doing there
+    if (S.raft) {
+      const R = S.raft, n = R.tiles.length;
+      const geo = new THREE.BoxGeometry(1, 1, 1);
+      const im = new THREE.InstancedMesh(geo, new THREE.MeshLambertMaterial({ color: 0xffffff }), n);
+      const m4 = new THREE.Matrix4();
+      R.tiles.forEach((t, i) => {
+        const [x0, y0, x1, y1] = t;
+        m4.makeScale(Math.max(0.02, x1 - x0 - 0.02), R.t, Math.max(0.02, y1 - y0 - 0.02));
+        m4.setPosition((x0 + x1) / 2, R.z - R.t / 2, (y0 + y1) / 2);
+        im.setMatrixAt(i, m4);
+        im.setColorAt(i, new THREE.Color(0x999999));
+      });
+      groups.foundations.add(im);
+      const o = { mesh: im, kind: "raft", data: R, lvlIdx: 0, base: im.position.clone() };
+      im.userData.o = o;
+      objects.push(o);
+    }
     // foundations (pad size needed), 600 thick under the ground floor
     S.foundations.forEach((f) => {
       const h = (f.side_sls || f.side) / 2; // drawn at the service-load size; the quake size is in the details
@@ -365,9 +383,24 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
     return T[o.kind];
   }
   let maxN = 1, coreSens = {};
+  function raftColour(t, R) {
+    const T = isDark() ? TYPE_DARK : TYPE;
+    const [, , , , p, pmin, pmax, , As] = t;
+    if (state.colour === "type") return T.foundation;
+    if (state.colour === "axial") return heat(p / Math.max(1, R.summary.p_sls_max));
+    if (state.colour === "gravity") return scaleUtil(p / R.qa);
+    if (state.colour === "seis") return pmin < 0 ? css("--bad") : scaleUtil(pmax / (1.33 * R.qa));
+    return css("--none");
+  }
   function recolour() {
     if (!DATA) return;
     objects.forEach((o) => {
+      if (o.kind === "raft") {
+        const c = new THREE.Color();
+        o.data.tiles.forEach((t, i) => o.mesh.setColorAt(i, c.set(raftColour(t, o.data))));
+        o.mesh.instanceColor.needsUpdate = true;
+        return;
+      }
       o.mesh.material.color.set(colourFor(o));
       o.mesh.material.emissive && o.mesh.material.emissive.set(state.sel && state.sel.data === o.data ? css("--accent") : "#000000");
       if (o.mesh.material.emissive) o.mesh.material.emissiveIntensity = state.sel && state.sel.data === o.data ? 0.45 : 0;
@@ -379,7 +412,7 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
     const sw = (c, t) => `<span><i class="sw" style="background:${c}"></i>${t}</span>`;
     const T = isDark() ? TYPE_DARK : TYPE;
     let h = "";
-    if (state.colour === "type") h = sw(T.column, "Columns") + sw(T.wall, "Shear walls") + sw(T.core, "Lift cores") + sw(T.beam, "Beams") + sw(T.slab, "Slabs") + sw(T.foundation, "Foundations (size needed)");
+    if (state.colour === "type") h = sw(T.column, "Columns") + sw(T.wall, "Shear walls") + sw(T.core, "Lift cores") + sw(T.beam, "Beams") + sw(T.slab, "Slabs") + sw(T.foundation, DATA.layers.structure.raft ? "Raft" : "Foundations (size needed)");
     else if (state.colour === "axial") h = sw(heat(0.1), "Light") + sw(heat(0.5), "") + sw(heat(1), `Heaviest, ${fmt(maxN)} kN`);
     else h = sw(css("--ok"), "Passes") + sw(css("--warn"), "Close, or needs extra steel") + sw(css("--bad"), "Fails") + sw(css("--none"), "No bars known");
     L.innerHTML = h;
@@ -410,9 +443,20 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
     const p = new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
     ray.setFromCamera(p, camera);
     const hits = ray.intersectObjects(objects.filter((o) => o.mesh.visible && groups[groupOf(o.kind)].visible).map((o) => o.mesh));
+    if (hits.length && hits[0].object.userData.o.kind === "raft") return selectTile(hits[0].object.userData.o.data, hits[0].instanceId);
     select(hits.length ? hits[0].object.userData.o : null);
   });
-  function groupOf(k) { return { slab: "slabs", column: "columns", wall: "columns", core: "cores", beam: "beams", foundation: "foundations" }[k]; }
+  function groupOf(k) { return { slab: "slabs", column: "columns", wall: "columns", core: "cores", beam: "beams", foundation: "foundations", raft: "foundations" }[k]; }
+  function selectTile(R, i) {
+    state.sel = null;
+    recolour();
+    const [x0, y0, x1, y1, p, pmin, pmax, st, As] = R.tiles[i];
+    const S = R.summary;
+    $("detail").innerHTML = `<h3>Raft at x ${fmt((x0 + x1) / 2, 1)} m, y ${fmt((y0 + y1) / 2, 1)} m</h3>` +
+      kv([["Thickness (assumed)", fmt(R.t * 1000) + " mm"], ["Soil pressure, service G + Q", fmt(p) + " kPa"], ["Allowed (geotech)", fmt(R.qa) + " kPa"],
+          ["Code-level quake", pmin < 0 ? `lifts off (${fmt(pmin)} to ${fmt(pmax)} kPa)` : `${fmt(pmin)} to ${fmt(pmax)} kPa`],
+          ["Settlement (service)", fmt(st, 1) + " mm"], ["Steel needed, worst face", fmt(As) + " mm\u00B2/m"], ["Minimum steel", fmt(S.As_min) + " mm\u00B2/m"]]);
+  }
 
   function kv(rows) {
     return `<dl class="kv">${rows.filter(Boolean).map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl>`;
@@ -424,6 +468,11 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
   }
   function rhoPill(r) { return r === null ? '<span class="pill bad">over 4 %</span>' : `<span class="pill ${r <= 0.02 ? "ok" : "warn"}">${pct(r)}</span>`; }
 
+  function punchFor(d) {
+    const R = DATA.layers.structure.raft;
+    if (!R || d.level !== DATA.levels[0].key) return null;
+    return R.punching.find((p) => p.tag === d.id) || null;
+  }
   function select(o) {
     state.sel = o;
     recolour();
@@ -441,7 +490,8 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
             ["Earthquake, code level", d.us !== null && d.us !== undefined ? verdictPill(d.us) : "needs " + (d.rho_s === null ? "over 4 %" : pct(d.rho_s))],
             ["Earthquake, lower hazard", d.us2 !== null && d.us2 !== undefined ? verdictPill(d.us2) : "needs " + (d.rho_s2 === null ? "over 4 %" : pct(d.rho_s2))],
             ["Steel needed, quake (code)", d.rho_s === null ? "over 4 %" : pct(d.rho_s)],
-            ["Taped on site", d.measured ? "yes" : "drawing figures"]]) +
+            ["Taped on site", d.measured ? "yes" : "drawing figures"],
+            ...(punchFor(d) ? [["Punching through the raft", verdictPill(punchFor(d).punch_uls)], ["Raft thickness it needs", fmt(punchFor(d).t_needed) + " mm"]] : [])]) +
         `<h3 style="margin-top:12px">Load takedown at ${d.ref}</h3><div class="tbl-wrap"><table><tr><th>Storey</th><th>G kN</th><th>Q kN</th><th>ULS kN</th></tr>` +
         stack.slice().reverse().map((c) => `<tr><td class="txt">${lvName(c.level)}</td><td>${fmt(c.NG)}</td><td>${fmt(c.NQ)}</td><td>${fmt(c.Nuls)}</td></tr>`).join("") + "</table></div>";
     } else if (o.kind === "core") {
@@ -495,12 +545,12 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
     $("tab-loads").innerHTML = `
       <div><h2>What the building weighs</h2>
         <div class="tiles">
-          ${tile(fmt(T.G_self), "kN", "Structure's own weight")}
-          ${tile(fmt(T.G_super), "kN", "Finishes, walls, pool, lifts")}
-          ${tile(fmt(T.Q), "kN", "People and furniture (imposed)")}
+          ${tile(fmt(T.G_frame), "kN", "Structure's own weight")}
+          ${tile(fmt(T.G_super_frame), "kN", "Finishes, walls, pool, lifts")}
+          ${tile(fmt(T.Q_frame), "kN", "People and furniture (imposed)")}
           ${tile(fmt(T.seismic_weight), "kN", "Weight that sways in a quake")}
         </div>
-        <p class="note" style="margin-top:8px">${fmt(T.slab_area_m2)} m\u00B2 of suspended slab. Permanent load averages ${fmt((T.G_self + T.G_super) / T.slab_area_m2, 1)} kN/m\u00B2 of floor; at 1.35G + 1.5Q the building puts about ${fmt((1.35 * (T.G_self + T.G_super) + 1.5 * T.Q) / 1000, 1)} MN on its foundations.</p>
+        <p class="note" style="margin-top:8px">${fmt(T.slab_area_m2)} m\u00B2 of suspended slab. Permanent load averages ${fmt((T.G_frame + T.G_super_frame) / T.slab_area_m2, 1)} kN/m\u00B2 of floor; at 1.35G + 1.5Q the building puts about ${fmt((1.35 * (T.G_frame + T.G_super_frame) + 1.5 * T.Q_frame) / 1000, 1)} MN on its foundation.${T.raft_self ? ` The raft (${fmt(T.raft_area_m2)} m\u00B2) weighs another ${fmt(T.raft_self)} kN, and the ground floor on it ${fmt(T.ground_G)} kN plus ${fmt(T.ground_Q)} kN of parking load.` : ""}</p>
       </div>
       <div><h2>Floor by floor</h2><div class="tbl-wrap"><table>
         <tr><th>Level</th><th>SSL m</th><th>Slab m\u00B2</th><th>Quake weight kN</th></tr>
@@ -548,20 +598,34 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
     const th = Math.max(...R.drift.x.map((r) => r.theta || 0), ...R.drift.y.map((r) => r.theta || 0));
     const tors = R.torsion.find((t) => t.r_x < t.l_s || t.r_y < t.l_s);
     const v = (cls, title, body) => `<div class="verdict"><i style="background:var(--${cls})"></i><div><h3>${title}</h3><p class="note">${body}</p></div></div>`;
-    const found = R.foundations;
-    const lift = found.filter((f) => f.name.startsWith("Lift"));
+    const RAFT = S.raft;
+    const found = R.foundations || [];
+    const lift = RAFT ? [] : found.filter((f) => f.name.startsWith("Lift"));
+    const P2 = R.flat_slab_punching || [];
+    const conc = R.basis.materials.concrete;
+    const c28 = Object.values(R.concrete_c28 || {}).filter((x) => x !== null && x !== undefined);
+    const RS = RAFT ? RAFT.summary : null;
+    const raftEveryday = RAFT ? [
+      v(RS.bearing_ok ? "ok" : "bad", `Raft bearing: ${fmt(RS.p_sls_mean)} kPa average, ${fmt(RS.p_sls_max)} kPa highest`, `Service loads (G + Q) on a ${fmt(RS.t_mm)} mm raft of ${fmt(RS.area_m2)} m\u00B2, against the 400 kPa the geotechnical report gives. A full raft spreads the building over its whole footprint, so pressures are well below what the pads needed.`),
+      v(RS.distortion < 1 / 500 ? "ok" : "warn", `Settlement ${fmt(RS.settle_min, 0)}\u2013${fmt(RS.settle_max, 0)} mm`, `With soil springs of ${fmt(RS.k / 1000)} MN/m\u00B3 (to be replaced by the geotechnical report's figure). Steepest slope between neighbouring columns 1/${fmt(1 / Math.max(RS.distortion, 1e-6))}; the usual limit for a frame is 1/500.`),
+      v(RS.punch_fail ? "bad" : "ok", RS.punch_fail ? `Punching: ${RS.punch_fail} supports need more than ${fmt(RS.t_mm)} mm` : `Punching passes at ${fmt(RS.t_mm)} mm`, `Every column, wall and lift core checked for punching through the raft without links (EN 1992-1-1 6.4.4, soil pressure inside the perimeter taken off). The heaviest needs ${fmt(RS.t_needed_max)} mm; thinner rafts need the engineer's "shear seats" or links under those columns.`),
+      v(RS.area_over_min > 0.25 * RS.area_m2 ? "warn" : "ok", "Raft steel", `Over 95 % of the raft, bending needs up to ${fmt(RS.As_p95_bottom)} mm\u00B2/m in the bottom (under the columns and cores) and ${fmt(RS.As_p95_top)} mm\u00B2/m in the top (between them), against a minimum of ${fmt(RS.As_min)} mm\u00B2/m; ${fmt(RS.area_over_min)} m\u00B2 needs more than the minimum. The peak, ${fmt(Math.max(RS.As_bottom_x, RS.As_bottom_y, RS.As_top_x, RS.As_top_y))} mm\u00B2/m, is a local spike at ${RS.As_peak_at}, where the engineer's detail will add bars.`),
+    ].join("") : "";
+    const flatSlab = P2.length ? v(P2.some((p) => (p.util_links || 0) > 1 || p.face > 1) ? "bad" : "ok", `2nd floor flat slab: ${P2.filter((p) => p.needs_links).length} of ${P2.length} columns need punching links`, `250 mm flat slab from G to N. Without links the slab manages ${fmt(P2[0].v_rdc, 2)} MPa; the columns ask up to ${fmt(Math.max(...P2.map((p) => p.v_ed)), 2)} MPa. With the engineer's H12@100 link cages the highest use is ${fmt(Math.max(...P2.map((p) => p.util_links || 0)), 2)}, and the links need to reach ${fmt(Math.max(...P2.map((p) => p.reach_m)), 2)} m from the column face (the drawn strips run 1.5 m).`) : "";
+    const concV = v("warn", `Concrete: drawings now say ${conc.grade}`, `R26 (5 Oct 2026) raised the grade from C25/30 to C30/37, which needs 37 MPa cubes. Your pours are ordered as 35 MPa and the cubes are tested against 35. If that is a cube strength it is about C28/35, below the drawings; under gravity the columns would still pass (highest use ${fmt(c28.length ? Math.max(...c28) : 0, 2)}). Worth confirming the grade with the engineer and the supplier.`);
     $("tab-checks").innerHTML = `
       <div><h2>Every day: gravity and wind</h2><div style="display:flex;flex-direction:column;gap:12px">
         ${v(gFail ? "bad" : "ok", `Columns ${gFail ? gFail + " fail" : "pass"}`, `${withBars.length} column storeys checked with the bars on the R10 schedule (EN 1992-1-1, biaxial bending, imperfections and slenderness). Highest use ${gMax.toFixed(2)} of capacity. The shear walls have no matching R10 schedule; they need no more than ${pct(Math.max(...S.columns.filter((c) => c.kind === "wall").map((c) => c.rho_g)))} steel for these loads.`)}
         ${v(beamsG ? "warn" : "ok", `Beams ${beamsG ? beamsG + " need attention" : "pass"}`, `${S.beams.length} beam runs designed for bending and shear. ${S.beams.filter((b) => b.As_comp > 0).length ? "Compression steel needed in: " + [...new Set(S.beams.filter((b) => b.As_comp > 0).map((b) => lvName(b.level) + " " + b.label))].join(", ") + "." : ""}`)}
         ${v("ok", "Lift cores pass", "Under gravity the cores use a few per cent of their capacity.")}
         ${v("ok", "Wind sway is small", `Largest storey drift under wind is h/${fmt(1 / Math.max(...R.drift.wind_x.map((r) => r.ratio), ...R.drift.wind_y.map((r) => r.ratio)))}; the usual limit is h/500.`)}
-        ${v(found.some((f) => f.r10_sls_kPa > 400) ? "warn" : "ok", "Foundations: pad sizes for service loads", `At 400 kPa the heaviest pads need ${fmt(found[0].base_side_m, 1)} m square (lift cores) and about ${fmt((found.find((f) => /^C\d/.test(f.name)) || found[0]).base_side_m, 1)} m under the heaviest columns. ${found.filter((f) => f.r10_sls_kPa).length} bases match an R10 base by grid reference; ${found.filter((f) => f.r10_sls_kPa > 400).length} of those would be over 400 kPa.`)}
+        ${raftEveryday}${flatSlab}${concV}
+        ${RAFT ? "" : v(found.some((f) => f.r10_sls_kPa > 400) ? "warn" : "ok", "Foundations: pad sizes for service loads", `At 400 kPa the heaviest pads need ${fmt(found[0].base_side_m, 1)} m square (lift cores) and about ${fmt((found.find((f) => /^C\d/.test(f.name)) || found[0]).base_side_m, 1)} m under the heaviest columns. ${found.filter((f) => f.r10_sls_kPa).length} bases match an R10 base by grid reference; ${found.filter((f) => f.r10_sls_kPa > 400).length} of those would be over 400 kPa.`)}
       </div></div>
       <div><h2>Earthquake</h2><div style="display:flex;flex-direction:column;gap:12px">
-        ${v(sFail ? "bad" : "ok", `At the Ghana code level (${DATA.summary.seismic.agR_g} g): ${sFail} of ${withBars.length} column storeys fail`, `With the R10 bars. ${cols.filter((c) => c.rho_s === null).length} would need more than the 4 % maximum steel. Lift cores need ${coreRho(coreG)} vertical steel at ground floor; the R10 lift-wall bars come to about 1.8 %. Storey drift reaches ${(Math.max(dx, dy) * 100).toFixed(2)} % of the height against a 1.0 % limit for block walls.`)}
-        ${v(s2Fail || coresSens.some((c) => c.level === "g" && (c.rho_needed_seismic === null || c.rho_needed_seismic > 0.018)) ? "warn" : "ok", `At ${R.sens_ag} g (upper end of hazard studies): ${s2Fail} column storeys fail`, `Lift cores need ${coreRho(coresSens.filter((c) => c.level === "g"))} at ground floor. Drift ${dsx ? (dsx * 100).toFixed(2) + " %" : "\u2013"}, inside the 1.0 % limit.`)}
-        ${v(lift.some((f) => f.base_side_seis_m > f.base_side_m * 2) ? "bad" : "ok", "Overturning at the lift cores", `In the code-level earthquake each core pushes ${fmt(lift[0].M_seis)} kNm of overturning into its foundation; a pad alone would need to be about ${fmt(lift[0].base_side_seis_m, 0)} m square. It needs a raft or ground beams tying the cores to the column bases. R10 shows 4.2 \u00D7 4.0 m bases (B14). ${found.filter((f) => f.uplift).length} column bases lift off.`)}
+        ${v(sFail ? "bad" : "ok", `At the Ghana code level (${DATA.summary.seismic.agR_g} g): ${sFail} of ${withBars.length} column storeys fail`, `With the R10 bars. ${cols.filter((c) => c.rho_s === null).length} would need more than the 4 % maximum steel. Lift cores need ${coreRho(coreG)} vertical steel at ground floor; the R10 lift-wall bars come to about 1.8 %. Storey drift reaches ${(Math.max(dx, dy) * 100).toFixed(2)} % of the height against a 1.0 % limit for block walls${RAFT ? ", partly from the building rocking on the raft" : ""}.`)}
+        ${v(s2Fail || coresSens.some((c) => c.level === "g" && (c.rho_needed_seismic === null || c.rho_needed_seismic > 0.018)) ? "warn" : "ok", `At ${R.sens_ag} g (upper end of hazard studies): ${s2Fail} column storeys fail`, `Lift cores need ${coreRho(coresSens.filter((c) => c.level === "g"))} at ground floor. Drift ${dsx ? (dsx * 100).toFixed(2) + " %" : "\u2013"}, ${dsx && dsx > 0.01 ? "just over" : "inside"} the 1.0 % limit${RAFT ? " (part of it is the whole building rocking on the raft, which doesn't crack walls)" : ""}.`)}
+        ${RAFT ? v(RS.uplift_frac > 0.15 ? "bad" : RS.uplift_frac > 0 ? "warn" : "ok", `Overturning on the raft: ${fmt(RS.uplift_frac * 100, 0)} % of it lifts`, `In the code-level quake the raft would lose contact over about ${fmt(RS.uplift_area_m2)} m\u00B2 at its ends (a linear model; the real soil just lets go there), and the highest edge pressure is ${fmt(RS.p_seis_max)} kPa against about ${fmt(1.33 * 400)} kPa for a short-term load. The raft replaces the separate core bases that could not resist the cores' overturning.`) : v(lift.some((f) => f.base_side_seis_m > f.base_side_m * 2) ? "bad" : "ok", "Overturning at the lift cores", `In the code-level earthquake each core pushes ${fmt(lift[0].M_seis)} kNm of overturning into its foundation; a pad alone would need to be about ${fmt(lift[0].base_side_seis_m, 0)} m square. It needs a raft or ground beams tying the cores to the column bases. R10 shows 4.2 \u00D7 4.0 m bases (B14). ${found.filter((f) => f.uplift).length} column bases lift off.`)}
         ${v(th > 0.1 ? "warn" : "ok", `P-delta: \u03B8 up to ${th.toFixed(2)}`, "Above 0.10, EN 1998-1 asks for the sway effects to be increased by 1/(1\u2212\u03B8).")}
         ${v(tors ? "warn" : "ok", tors ? "The building counts as torsionally flexible" : "Not torsionally flexible", tors ? `Its torsional radius (${tors.r_x} m) is below the floor's radius of gyration (${tors.l_s} m) at ${tors.level}. EN 1998-1 then limits q to 2.0, which would put the earthquake forces up by half again. The 2nd and 3rd sway modes twist as much as they slide.` : "")}
       </div></div>
@@ -569,15 +633,18 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
         <tr><th>Storey</th><th>Along %</th><th>Across %</th><th>\u03B8</th><th>Shear kN</th></tr>
         ${R.drift.x.slice().reverse().map((r, i) => { const y = R.drift.y[R.drift.x.length - 1 - i]; return `<tr><td class="txt">${r.level}</td><td>${(r.drift_ratio * 100).toFixed(2)}</td><td>${(y.drift_ratio * 100).toFixed(2)}</td><td>${Math.max(r.theta, y.theta).toFixed(2)}</td><td>${fmt(Math.max(r.V_storey_kN, y.V_storey_kN))}</td></tr>`; }).join("")}
       </table></div></div>
-      <div><h2>Foundations</h2><div class="tbl-wrap"><table>
+      ${RAFT ? `<div><h2>Raft: punching under each support</h2><div class="tbl-wrap"><table>
+        <tr><th>Under</th><th>G+Q kN</th><th>ULS kN</th><th>Use at ${fmt(RS.t_mm)}</th><th>Needs mm</th><th>Settles mm</th></tr>
+        ${found.map((f) => `<tr><td class="txt">${f.name} ${f.ref}</td><td>${fmt(f.N_sls)}</td><td>${fmt(f.N_uls)}</td><td>${fmt(Math.max(f.punch_uls, f.punch_seis || 0), 2)}</td><td>${fmt(f.t_needed)}</td><td>${fmt(f.settle_mm, 1)}</td></tr>`).join("")}
+      </table></div><p class="note" style="margin-top:6px">Use above 1.00 means that support needs a thicker raft, a shear seat or links. The raft's thickness, level and extent are assumed until its drawing is read in.</p></div>` : `<div><h2>Foundations</h2><div class="tbl-wrap"><table>
         <tr><th>Under</th><th>G+Q kN</th><th>Pad m</th><th>Quake pad m</th><th>R10 base</th></tr>
         ${found.map((f) => `<tr><td class="txt">${f.name} ${f.ref}</td><td>${fmt(f.N_sls)}</td><td>${fmt(f.base_side_m, 2)}</td><td>${fmt(f.base_side_seis_m, 1)}${f.uplift ? " \u2191" : ""}</td><td class="txt">${f.r10_base || "\u2013"}</td></tr>`).join("")}
-      </table></div><p class="note" style="margin-top:6px">\u2191 lifts off in the code-level quake. Loads are at the ground floor (+0.300); the bases sit about 4.4 m lower, so add the stub columns and fill.</p></div>
+      </table></div><p class="note" style="margin-top:6px">\u2191 lifts off in the code-level quake. Loads are at the ground floor (+0.300); the bases sit about 4.4 m lower, so add the stub columns and fill.</p></div>`}
       <div><h2>Assumptions to confirm</h2><ul class="plain">${(DATA.report.asbuilt || "").includes("seed") ? "<li>Positions are the drawing figures from the as-built record's seed; the site's tapes come in with the as-built backup.</li>" : ""}
         <li>Floors 5\u20137 and the roof use the 4th floor's slab and beams until their drawings come.</li>
         <li>Internal block walls are an even ${DATA.report.basis.walls.internal_kPa} kPa; the plan walls will replace this with line loads.</li>
-        <li>Columns and cores are fixed at the ground floor; the stub columns, ground beams and bases below are not in the model.</li>
-        <li>Concrete C25/30 as drawn. Site orders C35 (cube), about C28/35, which adds 3\u201310 % to column capacity.</li></ul></div>`;
+        ${RAFT ? `<li>Raft: ${fmt(RS.t_mm)} mm thick, 1.0 m beyond the outer column faces, top at the ground floor, on soil springs of ${fmt(RS.k / 1000)} MN/m\u00B3. The raft sheets (R26 register items 04\u201309, 14\u201315: foundation layout, sleeper walls, raft details, raft shear seats) were not in the files sent; these go in from them.</li>` : "<li>Columns and cores are fixed at the ground floor; the stub columns, ground beams and bases below are not in the model.</li>"}
+        <li>Concrete ${conc.grade} as in R26. Column bars still from the R10 schedule (no newer column sheets yet).</li></ul></div>`;
   }
 
   // ---------------------------------------------------------------- modes
@@ -611,7 +678,7 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
       return [(f.ux + f.th * (z - f.cz)) * state.amp * s, (f.uz - f.th * (x - f.cx)) * state.amp * s];
     };
     objects.forEach((o) => {
-      if (o.kind === "foundation") return;
+      if (o.kind === "foundation" || o.kind === "raft") return;
       const key = DATA.levels[o.lvlIdx].key;
       const above = DATA.levels[o.lvlIdx + 1] ? DATA.levels[o.lvlIdx + 1].key : key;
       const p = o.base;

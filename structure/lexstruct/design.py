@@ -449,6 +449,8 @@ class Design:
         Seismic: G + psi2 Q +/- E with the overturning moments; the pad is sized so the pressure under
         it stays within 1.33 x 400 kPa with no uplift (e <= B/6), the usual allowance for a transient load."""
         b = self.b
+        if b.raft is not None:
+            return self.raft_checks()
         qa = b.cfg["soil"]["bearing_kPa"]
         self._groups_setup()
         G = self.group_react(self.a.cases["G"])
@@ -494,6 +496,244 @@ class Design:
             row["x"], row["y"] = round(float(np.mean(xs))), round(float(np.mean(ys)))
             out.append(row)
         out.sort(key=lambda r: -r["N_sls"])
+        self.found = out
+        return out
+
+    # ------------------------------------------------------------------ flat slab punching
+    def flat_slab_punching(self):
+        """EN 1992-1-1 6.4 at the columns of the 2nd floor's flat slab (G to N): the slab's reaction at each
+        column (axial force just below the slab less just above), with and without the engineer's link cages."""
+        from shapely.geometry import box as sbox
+
+        fsl = self.b.cfg.get("flat_slab")
+        if not fsl:
+            return []
+        b, a = self.b, self.a
+        lv = next((l for l in b.levels if l.key == fsl["level"]), None)
+        if lv is None or lv.outline is None:
+            return []
+        x_from = b.grid_lookup(lv, "x").get(fsl["from_grid"], -1e9)
+        t = fsl["t_mm"]
+        d = (t - self.cover["slab"] - 16) / 1000
+        fck = self.fck
+        k = min(2.0, 1 + math.sqrt(0.2 / d))
+        vrdc = max(0.12 * k * (100 * fsl["rho"] * fck) ** (1 / 3), 0.035 * k**1.5 * math.sqrt(fck))
+        vrdmax = 0.4 * 0.6 * (1 - fck / 250) * self.fcd
+        L = fsl["links"]
+        Asw = L["legs_per_ring"] * math.pi * (L["dia"] / 1000) ** 2 / 4
+        fywd_ef = min(250 + 0.25 * d * 1000, self.fyd)
+        idx = {f["tag"]: i for i, f in enumerate(a.frame_list)}
+        below = [f for f in a.frame_list if f["kind"] == "column" and f["level"] == lv.idx - 1 and f["cx"] >= x_from - 200]
+        above = {(f["name"], f["ref"]): f for f in a.frame_list if f["kind"] in ("column", "wall") and f["level"] == lv.idx}
+        pairs = [(f, above.get((f["name"], f["ref"]))) for f in below]
+
+        def react(res):
+            out = []
+            for fb, fa in pairs:
+                v = -res.frames[idx[fb["tag"]]][6]
+                if fa is not None:
+                    v -= res.frames[idx[fa["tag"]]][0]
+                out.append(v)
+            return np.array(out)
+
+        uls = react(1.35 * a.cases["G"] + 1.5 * a.cases["Q"])
+        seis = None
+        if "E" in a.cases:
+            st = react(a.cases["G"] + b.cfg["imposed"]["psi2"] * a.cases["Q"])
+            seis = st + a.env_peak("E", react)
+        outline = lv.outline
+        rows = []
+        for i, (fb, fa) in enumerate(pairs):
+            x0, y0 = fb["cx"] - fb["bx"] / 2, fb["cy"] - fb["by"] / 2
+            col = sbox(x0, y0, x0 + fb["bx"], y0 + fb["by"])
+            ctl = col.buffer(2 * d * 1000, join_style=1)
+            u1 = ctl.exterior.intersection(outline.buffer(-1)).length / 1000
+            u0 = col.exterior.intersection(outline.buffer(-1)).length / 1000 or col.exterior.length / 1000
+            full = ctl.within(outline)
+            beta = 1.15 if full else 1.4
+            V = max(uls[i], seis[i] if seis is not None else 0)
+            ved = beta * V / (u1 * d) / 1000 if u1 > 0 else 99
+            v0 = beta * V / (u0 * d) / 1000
+            vrdcs = 0.75 * vrdc + 1.5 * (d / (L["spacing_mm"] / 1000)) * Asw * fywd_ef * 1000 / (u1 * d) / 1000 if u1 > 0 else 0
+            uout = beta * V / (vrdc * 1000 * d)  # m
+            reach = max(0.0, (uout - col.exterior.length / 1000) / (2 * math.pi))  # how far from the face the links must go
+            rows.append(dict(name=fb["name"], ref=fb["ref"], V_uls=round(uls[i]), V_seis=round(seis[i]) if seis is not None else None, beta=beta,
+                             u1=round(u1, 2), v_ed=round(ved, 2), v_rdc=round(vrdc, 2), needs_links=ved > vrdc, v_rdcs=round(vrdcs, 2),
+                             util_links=round(ved / vrdcs, 2) if vrdcs else None, face=round(v0 / vrdmax, 2), reach_m=round(reach, 2)))
+        rows.sort(key=lambda r: -(r["util_links"] or 0))
+        self.punch2 = rows
+        return rows
+
+    # ------------------------------------------------------------------ raft
+    def _peak_place(self, xy):
+        """Name the support nearest a point (mm), for saying where a peak is."""
+        best, bd = None, 1e18
+        for f in self.a.frame_list:
+            if f["kind"] in ("column", "wall") and f["level"] == 0:
+                dd = math.hypot(f["cx"] - xy[0], f["cy"] - xy[1])
+                if dd < bd:
+                    best, bd = f"{f['name']} at {f['ref']}", dd
+        for name, info in self.b.cores.items():
+            x0, y0, x1, y1 = info["box"]
+            dd = math.hypot(max(x0 - xy[0], 0, xy[0] - x1), max(y0 - xy[1], 0, xy[1] - y1))
+            if dd < bd:
+                best, bd = name, dd
+        return best
+
+    def raft_checks(self):
+        """The full raft (EN 1992-1-1 6.4.4, 9.3; EN 1997 bearing by the geotech's 400 kPa):
+        contact pressure and settlement, uplift in the earthquake, the steel the raft's bending needs
+        (Wood-Armer), and punching round every column, wall and lift core (with the soil pressure inside
+        the control perimeter taken off, as 6.4.4(2) allows), with the thickness each would need."""
+        from shapely.geometry import Point as SPoint, box as sbox
+
+        b, a = self.b, self.a
+        rc = b.raft_cfg
+        qa = b.cfg["soil"]["bearing_kPa"]
+        t = float(rc["t_mm"])
+        cover = rc.get("cover_mm", 50)
+        rows = b.raft_nodes
+        pos = {n: k for k, n in enumerate(a.base_nodes)}
+        kk = np.array([pos[r["ground"]] for r in rows])
+        A = np.array([r["area"] for r in rows])
+        rn = np.array([r["node"] for r in rows])
+        XY = np.array([(r["x"], r["y"]) for r in rows])
+        press = lambda res: res.react[kk, 2] / A  # kPa, + = soil pushing up
+        G, Q = a.cases["G"], a.cases["Q"]
+        psi2 = b.cfg["imposed"]["psi2"]
+        sls = G + Q
+        uls = 1.35 * G + 1.5 * Q
+        p_sls, p_uls = press(sls), press(uls)
+        settle = -sls.disp[rn, 2] * 1000  # mm
+        seis = self.seismic_env("E") if "E" in a.cases else None
+        p_stat = press(G + psi2 * Q)
+        p_E = seis[1].react[kk, 2] / A if seis else np.zeros_like(p_stat)
+        p_min, p_max = p_stat - p_E, p_stat + p_E
+
+        # ---- bending steel (Wood-Armer), calibrated so + means tension in the bottom face
+        rl = a.raft_list
+        cen = np.array([((b.xs[s_["ij"][0]] + b.xs[s_["ij"][0] + 1]) / 2, (b.ys[s_["ij"][1]] + b.ys[s_["ij"][1] + 1]) / 2) for s_ in rl])
+        heavy = max((f for f in a.frame_list if f["kind"] == "column" and f["level"] == 0), key=lambda f: G.frames[a.frame_list.index(f)][0])
+        e_heavy = int(np.argmin(np.hypot(cen[:, 0] - heavy["cx"], cen[:, 1] - heavy["cy"])))
+        mh = G.raft[e_heavy]
+        sgn = 1.0 if (mh[3] + mh[4]) > 0 else -1.0  # under a column the raft's bottom face is in tension
+        d = (t - cover - 20) / 1000
+        z = 0.9 * d
+
+        def wa(r):
+            m = sgn * r[:, 3:6]
+            mx, my, mxy = m[:, 1], m[:, 0], np.abs(m[:, 2])  # local 1 runs down the page (y), local 2 across (x)
+            return np.stack([np.maximum(0, mx + mxy), np.maximum(0, my + mxy), np.maximum(0, mxy - mx), np.maximum(0, mxy - my)], axis=1)
+
+        sets = [r for k_, v in self.combos.items() if k_.startswith("ULS") for r in v]
+        env = np.zeros((len(rl), 4))
+        for r in sets:
+            env = np.maximum(env, wa(r.raft))
+        if seis:
+            st, pk = seis[0].raft, seis[1].raft
+            for sm in (1, -1):
+                for sx in (1, -1):
+                    rr = st.copy()
+                    rr[:, 3:5] = st[:, 3:5] + sm * pk[:, 3:5]
+                    rr[:, 5] = st[:, 5] + sx * pk[:, 5]
+                    env = np.maximum(env, wa(rr))
+        As = env / (self.fyd * 1000 * z) * 1e6  # mm2 per m: bottom E-W (along x), bottom N-S, top E-W, top N-S
+        As_min = 0.0013 * 1000 * d * 1000
+        cell_area = np.array([s_["area"] for s_ in rl])
+
+        # ---- punching
+        poly = b.raft
+        fck = self.fck
+        rho = rc.get("rho", 0.005)
+
+        def punch(boxmm, V, p_net_fn, h_mm):
+            dd = (h_mm - cover - 20) / 1000
+            kf = min(2.0, 1 + math.sqrt(0.2 / dd))
+            vrd = 0.12 * kf * (100 * rho * fck) ** (1 / 3)
+            vmin = 0.035 * kf**1.5 * math.sqrt(fck)
+            col = sbox(*boxmm)
+            worst = 0.0
+            for f in (0.5, 1.0, 1.5, 2.0):
+                am = f * dd * 1000
+                ctl = col.buffer(am, join_style=1)
+                inside = ctl.intersection(poly)
+                u = ctl.exterior.intersection(poly.buffer(-1)).length / 1000
+                if u <= 0:
+                    continue
+                full = ctl.within(poly)
+                beta = 1.15 if full else 1.4
+                ins = np.array([inside.contains(SPoint(x, y)) for x, y in XY])
+                dV = p_net_fn(ins)
+                ved = beta * max(0.0, V - dV) / (u * dd) / 1000  # MPa
+                vr = max(vrd, vmin) * 2 / f
+                worst = max(worst, ved / vr)
+            u0 = col.exterior.length / 1000
+            vmax = 0.4 * 0.6 * (1 - fck / 250) * self.fcd
+            worst = max(worst, 1.15 * V / (u0 * dd) / 1000 / vmax)
+            return worst
+
+        selfw = self.b.gamma * t / 1000
+        net_uls = lambda ins: float(((p_uls - 1.35 * selfw) * A)[ins].sum())
+        net_stat = lambda ins: float(((p_stat - selfw) * A)[ins].sum())
+        items = []
+        for idx, fr in enumerate(a.frame_list):
+            if fr["kind"] not in ("column", "wall") or fr["level"] != 0:
+                continue
+            x0, y0 = fr["cx"] - fr["bx"] / 2, fr["cy"] - fr["by"] / 2
+            items.append(dict(name=fr["name"], ref=fr["ref"], tag=fr["tag"], box=(x0, y0, x0 + fr["bx"], y0 + fr["by"]),
+                              Vu=uls.frames[idx][0], Vs=(seis[0].frames[idx][0] + seis[1].frames[idx][0]) if seis else 0.0,
+                              Nk=sls.frames[idx][0], x=fr["cx"], y=fr["cy"]))
+        if hasattr(self, "cut_keys") or True:
+            self._cut_setup()
+            cu = self.core_cut(uls)
+            cs = self.core_cut(seis[0]) if seis else None
+            ce = a.env_peak("E", self.core_cut) if seis else None
+            ck = self.core_cut(sls)
+            for i_, (name, lvl) in enumerate(self.cut_keys):
+                if lvl != 0:
+                    continue
+                info = b.cores[name]
+                x0, y0, x1, y1 = info["box"]
+                items.append(dict(name=name, ref="", tag=None, box=(x0, y0, x1, y1), Vu=cu[i_][2], Vs=(cs[i_][2] + ce[i_][2]) if seis else 0.0,
+                                  Nk=ck[i_][2], x=(x0 + x1) / 2, y=(y0 + y1) / 2))
+        out = []
+        for it in items:
+            uu = punch(it["box"], it["Vu"], net_uls, t)
+            us = punch(it["box"], it["Vs"], net_stat, t) if seis else None
+            need = None
+            for h in range(400, 2401, 50):
+                if punch(it["box"], it["Vu"], net_uls, h) <= 1.0 and (not seis or punch(it["box"], it["Vs"], net_stat, h) <= 1.0):
+                    need = h
+                    break
+            near = int(np.argmin(np.hypot(XY[:, 0] - it["x"], XY[:, 1] - it["y"])))
+            out.append(dict(name=it["name"], ref=it["ref"], tag=it["tag"], x=round(it["x"]), y=round(it["y"]), N_sls=round(it["Nk"]), N_uls=round(it["Vu"]),
+                            N_seis=round(it["Vs"]), punch_uls=round(uu, 2), punch_seis=round(us, 2) if us is not None else None, t_needed=need,
+                            settle_mm=round(float(settle[near]), 1), p_sls=round(float(p_sls[near]))))
+        out.sort(key=lambda r: -r["N_sls"])
+        # angular distortion between neighbouring columns
+        pts = [(r["x"], r["y"], r["settle_mm"]) for r in out]
+        dist = 0.0
+        for i_, p in enumerate(pts):
+            for q in pts[i_ + 1 :]:
+                L = math.hypot(p[0] - q[0], p[1] - q[1])
+                if 2000 < L < 7000:
+                    dist = max(dist, abs(p[2] - q[2]) / L)
+        uplift_area = float(A[p_min < 0].sum())
+        self.raft = dict(
+            t_mm=t, area_m2=round(float(A.sum()), 1), k=rc["k_kN_m3"], outline=[[round(x), round(y)] for x, y in poly.exterior.coords],
+            p_sls_mean=round(float((p_sls * A).sum() / A.sum())), p_sls_max=round(float(p_sls.max())), p_sls_min=round(float(p_sls.min())),
+            p_uls_max=round(float(p_uls.max())), p_seis_max=round(float(p_max.max())), p_seis_min=round(float(p_min.min())),
+            uplift_area_m2=round(uplift_area, 1), uplift_frac=round(uplift_area / float(A.sum()), 3),
+            settle_max=round(float(settle.max()), 1), settle_min=round(float(settle.min()), 1), distortion=round(dist, 5),
+            As_bottom_x=round(float(As[:, 0].max())), As_bottom_y=round(float(As[:, 1].max())), As_top_x=round(float(As[:, 2].max())), As_top_y=round(float(As[:, 3].max())),
+            As_p95_bottom=round(float(np.percentile(As[:, :2].max(axis=1), 95))), As_p95_top=round(float(np.percentile(As[:, 2:].max(axis=1), 95))),
+            As_peak_at=self._peak_place(cen[int(np.argmax(As.max(axis=1)))]),
+            As_min=round(As_min), area_over_min=round(float(cell_area[(As > As_min).any(axis=1)].sum()), 1),
+            punch_fail=sum(1 for r in out if (r["punch_uls"] > 1 or (r["punch_seis"] or 0) > 1)), t_needed_max=max((r["t_needed"] or 9999) for r in out),
+            bearing_ok=bool(p_sls.max() <= qa),
+        )
+        self.raft_nodes_out = dict(xy=XY, A=A, p_sls=p_sls, p_min=p_min, p_max=p_max, settle=settle)
+        self.raft_cells = dict(cen=cen, As=As, ij=[s_["ij"] for s_ in rl])
         self.found = out
         return out
 

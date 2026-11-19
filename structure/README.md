@@ -20,6 +20,10 @@ Needs `pip install openseespy numpy scipy shapely`, and Node 22+ for the exporte
 | `model/loads.json` | Materials, stiffness, loads, wind and earthquake parameters, each with its source | edit by hand |
 | `model/r10_vertical.json` | Column, wall and foundation schedules transcribed from the engineer's R10 set (Jan 2025) | transcribed from the PDF |
 
+Drawings read so far: R10 (Jan 2025, the full set), R26 (5 Oct 2026: general notes with C30/37 concrete, 1st and
+2nd floor), the 1st floor (10 Oct) and 2nd floor (12 Oct) revisions, and the 3rd/4th floor R28 (2 Nov; R28_1 is the same
+with a duplicate page dropped). Not yet: the raft and foundation sheets, columns and walls after R10, floors 5-7 and roof.
+
 To use the site's tapes, download the full backup from the admin As-built page
 (`/admin/asbuilt/export?format=json`) and run the first exporter with it, then `run.py`.
 
@@ -27,11 +31,13 @@ To use the site's tapes, download the full backup from the admin As-built page
 
 - **Slabs**: shell elements (ShellMITC4) on a mesh along the grid lines, beam lines, slab edges, openings and lift
   walls; voids, stairs, the pool and the lift shafts are holes.
-- **Beams**: frame elements along their grid lines (sizes from `slabs.json`); the pool's 1800 x 300 walls as deep beams.
+- **Beams**: frame elements along their grid lines (sizes from `slabs.json`); the pool's walls (1850 x 300, per the Oct 2026 1st floor sections) as deep beams.
 - **Columns and shear walls**: frame elements on their own centre lines, tied to the slab by rigid links (a column
   off its line keeps its eccentricity); walls also have stiff arms to the slab at their ends.
 - **Lift cores**: shell walls, three elements per storey, lift door left out.
-- **Base**: fixed at the ground floor (+0.300). Foundation loads are reported there.
+- **Foundation**: a full raft (shells on vertical soil springs, held sideways by stiff springs) under the whole
+  footprint, the columns and cores standing on it (`loads.json` > `foundation`). Its thickness, extent and level are
+  assumed until the engineer's raft sheets are read in. Set `type` to `pads` to fix the columns at +0.300 instead.
 - **Stiffness**: cracked sections (columns 0.7 I, walls 0.7, beams 0.35, slab bending 0.25).
 
 ## Analyses and checks
@@ -44,14 +50,17 @@ To use the site's tapes, download the full backup from the admin As-built page
   second-order effects (nominal curvature); the steel needed is worked out for every column.
 - Lift cores: section forces at each storey, vertical steel needed.
 - Beams: bending (with compression steel where needed) and shear (variable strut angle).
-- Foundations: pad size at 400 kPa for service loads; overturning and uplift in the earthquake; comparison with
-  the R10 bases.
+- Raft: soil pressure against the 400 kPa bearing figure, settlement and distortion, uplift in the earthquake,
+  bending steel (Wood-Armer) and punching under every column, wall and core (EN 1992-1-1 6.4.4), with the thickness
+  each support needs. With `type: pads`: pad sizes and the R10 bases instead.
+- The 2nd floor's flat slab: punching at every column, with and without the engineer's link cages.
 - Drift, P-delta (theta) and the torsional-flexibility check.
 
 ## Not in yet
 
 - The site's tapes (needs the as-built backup), and the plan walls as line loads.
+- The raft's own drawings (R26 register items 04-09 and 14-15).
 - Engineer's drawings for floors 5-7 and the roof (the 4th floor's slab and beams are used).
 - Beam and slab reinforcement as drawn (the steel needed is reported instead).
-- Stub columns, ground beams and bases below +0.300; soil springs.
+- The raft's real level and the columns between it and the ground floor; the soil stiffness from the geotech report.
 - Capacity design (strong column / weak beam) and detailing rules of EN 1998-1 chapter 5.
