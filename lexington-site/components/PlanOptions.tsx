@@ -12,7 +12,7 @@ import styles from "./PlanOptions.module.css";
 // downloaded, and only on this page. Bump the number after a script is rebuilt so browsers fetch the new one.
 const SCRIPTS: Record<PlanScript, { src: string; global: string }> = {
   offer4f: { src: "/3d/offer4f.iife.js?v=1", global: "LEX4F" },
-  lock: { src: "/3d/offerlock.iife.js?v=1", global: "LEXLOCK" }, // (Armstrong's lock-off, 18 Nov 2026)
+  lock: { src: "/3d/offerlock.iife.js?v=2", global: "LEXLOCK" }, // (Armstrong's lock-off, 18 Nov 2026; v2 19 Nov: option D)
 };
 
 export interface PlanOptionView {
