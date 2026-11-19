@@ -7,11 +7,11 @@ import { claudeConfigured, writeWithClaude } from "@/lib/ai/claude";
 import { leadsOf, metaConfig, type MetaConfig } from "@/lib/ads/meta";
 import { MetaError, metaGraph } from "@/lib/ads/metaGraph";
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
-import { client } from "@/lib/sanity/client";
+import { SITE_URL } from "@/lib/seo";
 
 import {
-  ANGLES,
   AD_COPY_SCHEMA,
+  AD_PICTURE,
   AD_COPY_SYSTEM,
   MARKET_CITIES,
   MARKET_NAMES,
@@ -277,48 +277,20 @@ async function readAccount(config: MetaConfig, nowMs: number): Promise<Account> 
 interface Picture {
   assetId: string;
   url: string;
-  category: string;
-  alt: string;
-  w: number;
-  h: number;
 }
 
-/** The website's gallery and the latest site-update photos, without people's names or family pictures. */
-async function pictures(): Promise<Picture[]> {
-  const [gallery, updates] = await Promise.all([
-    client.fetch<Picture[]>(
-      `*[_type == "galleryImage" && defined(image.asset) && category in ["exterior","interior","amenity","progress","floorplan"]]{
-        "assetId": image.asset._ref, "url": image.asset->url, category, "alt": coalesce(alt, ""),
-        "w": image.asset->metadata.dimensions.width, "h": image.asset->metadata.dimensions.height }`,
-      {},
-      { cache: "no-store" }
-    ),
-    client.fetch<Array<{ photos?: Picture[] }>>(
-      `*[_type == "progressReport"] | order(date desc)[0...3]{ "photos": photos[defined(image.asset)]{
-        "assetId": image.asset._ref, "url": image.asset->url, "category": "progress", "alt": coalesce(alt, ""),
-        "w": image.asset->metadata.dimensions.width, "h": image.asset->metadata.dimensions.height } }`,
-      {},
-      { cache: "no-store" }
-    ),
-  ]);
-  const people = /niko|leo|skarlatos|groundbreaking|breaking ground|family/i;
-  return [...updates.flatMap((u) => u.photos ?? []), ...gallery].filter((p) => p.url && p.w >= 900 && !people.test(p.alt));
+/**
+ * The picture for every new ad: the rendered image of the building, never a construction photo (AD_PICTURE). It is
+ * fetched from the live website (AD_PICTURE_BASE stands in for it on a laptop with the stand-ins).
+ */
+function adPicture(): Picture {
+  const base = (process.env.AD_PICTURE_BASE?.trim() || SITE_URL).replace(/\/+$/, "");
+  return { assetId: AD_PICTURE.id, url: `${base}${AD_PICTURE.path}` };
 }
 
-/** A picture for this angle that the ad set isn't using, the least used first. */
-function choosePicture(all: Picture[], angle: AngleKey, used: Map<string, number>, inSet: Set<string>): Picture | null {
-  for (const category of ANGLES[angle].pictures) {
-    const options = all.filter((p) => p.category === category && !inSet.has(p.assetId));
-    if (options.length) return [...options].sort((a, b) => (used.get(a.assetId) ?? 0) - (used.get(b.assetId) ?? 0) || a.assetId.localeCompare(b.assetId))[0];
-  }
-  return null;
-}
-
-/** The picture cropped for the feed (square, or 4:5 when it stands upright) and sent to Meta; its hash. */
+/** The picture sent to Meta (already a 1080 x 1080 square); its hash. The same picture always gets the same hash. */
 async function uploadPicture(config: MetaConfig, picture: Picture): Promise<string> {
-  const upright = picture.h > picture.w * 1.1;
-  const url = `${picture.url}?w=1080&h=${upright ? 1350 : 1080}&fit=crop&fm=jpg&q=85`;
-  const response = await fetch(url, { signal: AbortSignal.timeout(20_000), cache: "no-store" });
+  const response = await fetch(picture.url, { signal: AbortSignal.timeout(20_000), cache: "no-store" });
   if (!response.ok) throw new Error(`The picture could not be fetched (${response.status}).`);
   const bytes = Buffer.from(await response.arrayBuffer()).toString("base64");
   const out = await metaGraph<{ images?: Record<string, { hash?: string }> }>(config, "POST", `act_${config.accountId}/adimages`, { bytes });
@@ -381,7 +353,7 @@ interface Context {
   /** The buyers' form that ends with a WhatsApp button, for the WhatsApp campaigns' form ad sets. */
   waFormId: string | null;
   igUserId: string | null;
-  pictures: Picture[];
+  picture: Picture;
   used: Map<string, number>;
   today: string;
 }
@@ -398,8 +370,7 @@ async function makeAd(
   if (!formId) throw new Error('No active lead form with "WhatsApp" in its name, for the WhatsApp campaign\'s form ads.');
   const written = await writeAd(ctx.pack, item, running, learnings);
   if ("error" in written) throw new Error(written.error);
-  const picture = choosePicture(ctx.pictures, item.angle, ctx.used, inSet);
-  if (!picture) throw new Error(`No picture for the ${item.angle} angle.`);
+  const picture = ctx.picture;
   const hash = await uploadPicture(ctx.config, picture);
   const offerUntil = item.withOffer ? (ctx.pack.offer?.endsOn ?? null) : null;
   const name = adName({ market: item.market, angle: item.angle, made: ctx.today, offerUntil });
@@ -642,7 +613,7 @@ export async function runAdsManager(opts: { mode?: "full" | "guard"; nowMs?: num
       return await save(today);
     }
 
-    // The things new ads need: the lead form, and the pictures.
+    // The things new ads need: the lead form, and the picture.
     const needsAds = plan.create.length > 0 || plan.markets.length > 0;
     let ctx: Context | null = null;
     if (needsAds) {
@@ -662,7 +633,7 @@ export async function runAdsManager(opts: { mode?: "full" | "guard"; nowMs?: num
           formId: form.id,
           waFormId: waForm?.id ?? null,
           igUserId: process.env.META_IG_USER_ID?.trim() || null,
-          pictures: await pictures(),
+          picture: adPicture(),
           used,
           today,
         };

@@ -60,35 +60,35 @@ export type AngleKey = "price" | "plan" | "location" | "progress" | "amenities" 
 /** The longest payment plan on offer (Niko, 17 Nov 2026: "from now on 12 month payment plan is all we offer"). */
 export const PLAN_MONTHS = 12;
 
-/** What each kind of ad leads with. The copywriter gets the brief; the picture comes from the matching gallery. */
-export const ANGLES: Record<AngleKey, { brief: string; pictures: Array<"exterior" | "interior" | "amenity" | "progress" | "floorplan">; markets?: Market[] }> = {
+/**
+ * The one picture every ad shows: the rendered image of the building (eight storeys), a 1080 x 1080 square with a
+ * small "Illustrative render" note. Niko, 19 Nov 2026: "change all ads content to the rendered image, never use a
+ * progress shot as ad content". It is a file on the website; a new picture needs a new id and file name.
+ */
+export const AD_PICTURE = { id: "render-8-storeys-2026-11-19", path: "/ad-pictures/lexington-render-1080.jpg" } as const;
+
+/** What each kind of ad leads with. The copywriter gets the brief; the picture is always AD_PICTURE. */
+export const ANGLES: Record<AngleKey, { brief: string; markets?: Market[] }> = {
   price: {
     brief: "Lead with the lowest price of the homes on sale ('from $...') and that $10,000 reserves one.",
-    pictures: ["exterior", "interior"],
   },
   plan: {
     brief: `Lead with how to pay: in full, or on a plan of up to ${PLAN_MONTHS} months, or with a mortgage, and that $10,000 reserves a home.`,
-    pictures: ["exterior", "interior"],
   },
   location: {
     brief: "Lead with where it is: 18 Duala Close, Shiashie, East Legon, Accra. Do not name landmarks, roads or distances the facts don't give.",
-    pictures: ["exterior"],
   },
   progress: {
     brief: "Lead with the building going up now (the latest site update) and the estimated completion, said to be an estimate. Point to the progress page.",
-    pictures: ["progress"],
   },
   amenities: {
     brief: "Lead with the shared amenities, named exactly as in the facts. Only the residents' rooftop garden is on the roof; the pool is not.",
-    pictures: ["amenity"],
   },
   homes: {
     brief: "Lead with the range of homes, from studios to duplex penthouses, with sizes in m² (and sq ft for the US and Canada).",
-    pictures: ["interior", "floorplan"],
   },
   abroad: {
     brief: "For someone living abroad: reserving and paying for a home in Accra from wherever they are, with the sales team arranging it. Never say or suggest who the reader is (nationality, origin, age, money).",
-    pictures: ["exterior", "interior"],
     markets: ["us", "uk", "canada"],
   },
 };
