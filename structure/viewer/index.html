@@ -751,7 +751,8 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
         <li>Floors 5\u20137 and the roof use the 4th floor's slab and beams until their drawings come.</li>
         <li>Internal block walls are an even ${DATA.report.basis.walls.internal_kPa} kPa; the plan walls will replace this with line loads.</li>
         ${RAFT ? `<li>Raft from the updated raft details (18 Feb 2026); its zone edges were read off the 1:100 plan and tied to the as-built grid. As built the raft is founded on bedrock about 2 m down (shallower than the drawing's 2.95 m to the raft top); the model puts it at the ground floor with the fill as a load on it, on rock springs of ${fmt(RS.k / 1000)} MN/m\u00B3 until the geotechnical report gives a figure.</li>` : "<li>Columns and cores are fixed at the ground floor; the stub columns, ground beams and bases below are not in the model.</li>"}
-        <li>Concrete ${conc.grade} as in R26. Column bars still from the R10 schedule (no newer column sheets yet).</li></ul></div>`;
+        <li>Concrete ${conc.grade} as in R26. Column bars from the column schedule (R10, unchanged in the Feb 2026 set apart from C1's H25s).</li>
+        ${(DATA.report.asbuilt || "").includes("backup") || (DATA.report.asbuilt || "").includes("live") ? "<li>Positions are the live as-built record's: taped where taped. A column not yet taped on a floor is taken to stand on the taped column below it.</li>" : ""}</ul></div>`;
   }
 
   // ---------------------------------------------------------------- modes
@@ -772,6 +773,21 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
     }));
     $("amp").addEventListener("input", (e) => (state.amp = +e.target.value));
   }
+  function layoutsSection() {
+    const A = DATA.layers.architecture || {};
+    const L = A.layouts || {};
+    const keys = Object.keys(L);
+    if (!keys.length) return "";
+    const outl = A.home_outlines || [];
+    const order = DATA.levels.map((l) => l.key);
+    keys.sort((a, b) => order.indexOf(b) - order.indexOf(a));
+    return `<div><h2>Layouts from the plans editor</h2><div class="tbl-wrap"><table>
+      <tr><th>Floor</th><th class="txt">Layout</th><th>Walls</th><th class="txt">Homes (net internal m\u00B2)</th></tr>
+      ${keys.map((k) => { const hs = outl.filter((h) => h.level === k); return `<tr><td class="txt">${lvName(k)}</td><td class="txt">${String(L[k].option).toUpperCase()}${L[k].updatedAt ? ", " + L[k].updatedAt.slice(0, 10) : ""}</td><td>${fmt(L[k].walls)}</td><td class="txt">${hs.length ? hs.map((h) => `${h.unit} ${fmt(h.nia, 1)}`).join(", ") : "rooms not yet labelled with homes"}</td></tr>`; }).join("")}
+      </table></div>
+      ${keys.some((k) => (L[k].problems || []).length) ? `<p class="note" style="margin-top:6px">The plans editor flags: ${keys.filter((k) => (L[k].problems || []).length).map((k) => `${lvName(k)}: ${L[k].problems.slice(0, 2).join(" ")}`).join(" \u00B7 ")}</p>` : ""}</div>`;
+  }
+
   function homesTab() {
     const A = DATA.layers.architecture || {};
     const H = A.homes || [];
@@ -790,6 +806,7 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
           <div class="tile"><b>${count("reserved") + count("sold")}</b><small>reserved or sold</small></div>
         </div>
         <p class="note" style="margin-top:8px">Live from the website${A.homes_fetched ? " on " + A.homes_fetched : ""}. Where each home sits, and its walls, doors and windows, come in from the plans editor's layouts.</p></div>
+      ${layoutsSection()}
       ${floors.map((f) => `<div><h2>${fname(f)}</h2><div class="tbl-wrap"><table>
         <tr><th>Home</th><th class="txt">Type</th><th>m\u00B2</th><th>Outdoor m\u00B2</th><th>Price</th><th class="txt">Status</th></tr>
         ${byFloor[f].map((h) => `<tr><td class="txt">${h.unit}</td><td class="txt">${h.type || "\u2013"}</td><td>${fmt(h.area)}</td><td>${h.terrace ? fmt(h.terrace) + " terrace" : h.balcony ? fmt(h.balcony) : "\u2013"}</td><td>${h.price ? "$" + fmt(h.price) : "\u2013"}</td><td class="txt">${pill(h.status)}</td></tr>`).join("")}

@@ -123,6 +123,7 @@ class Building:
         self.cfg = read(loads)
         self.warnings: list[str] = []
         self.levels: list[Level] = []
+        self.stacked = self._stack_untaped()
         for i, f in enumerate(sorted(self.asbuilt["floors"], key=lambda f: f["order"])):
             outline = None
             if f.get("outline"):
@@ -152,6 +153,26 @@ class Building:
         self.raft = self._raft_outline() if self.raft_cfg else None
         self.raft_zones = self._raft_zones() if self.raft_cfg else []
         self._mesh_lines()
+
+    def _stack_untaped(self) -> int:
+        """A column not taped on a floor stands where the same column was taped on the floor below: it is built on
+        top of it. (Untaped floors otherwise carry the drawing's position, and a column taped 0.2 m off its drawn
+        line would then step sideways at the next floor.)"""
+        floors = sorted(self.asbuilt["floors"], key=lambda f: f["order"])
+        last: dict[str, list] = {}
+        moved = 0
+        for f in floors:
+            for c in f.get("columns", []):
+                if c.get("measured") and c.get("box"):
+                    last[c["key"]] = c["box"]
+                elif c["key"] in last and c.get("box") and c["box"] != last[c["key"]]:
+                    x0, y0, x1, y1 = c["box"]
+                    lx0, ly0, lx1, ly1 = last[c["key"]]
+                    if abs((x1 - x0) - (lx1 - lx0)) < 1 and abs((y1 - y0) - (ly1 - ly0)) < 1:  # same size: same column carried up
+                        c["box"] = list(last[c["key"]])
+                        c["stacked"] = True
+                        moved += 1
+        return moved
 
     # ------------------------------------------------------------------ raft
     def _raft_outline(self) -> Polygon:

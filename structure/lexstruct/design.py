@@ -542,13 +542,42 @@ class Design:
             st = react(a.cases["G"] + b.cfg["imposed"]["psi2"] * a.cases["Q"])
             seis = st + a.env_peak("E", react)
         outline = lv.outline
+        from shapely.geometry import MultiPoint
+        from shapely.ops import unary_union
+
+        def shadow(col, cx, cy):
+            """EN 1992-1-1 6.4.2(3): openings within 6d of the column take out the part of the control perimeter
+            between the tangents from the column's centre to the opening."""
+            parts = []
+            for h in lv.holes:
+                hb = sbox(*h["box"]).difference(col)  # an opening recorded over the column: only the part beside it
+                if hb.is_empty or hb.distance(col) > 6 * d * 1000:
+                    continue
+                if hb.geom_type != "Polygon":
+                    hb = max(hb.geoms, key=lambda g: g.area)
+                far = []
+                for hx, hy in hb.exterior.coords:
+                    vx, vy = hx - cx, hy - cy
+                    L = math.hypot(vx, vy) or 1.0
+                    far.append((cx + vx / L * 20000, cy + vy / L * 20000))
+                parts.append(MultiPoint([(cx, cy)] + list(hb.exterior.coords) + far).convex_hull)
+            return unary_union(parts) if parts else None
+
         rows = []
         for i, (fb, fa) in enumerate(pairs):
             x0, y0 = fb["cx"] - fb["bx"] / 2, fb["cy"] - fb["by"] / 2
             col = sbox(x0, y0, x0 + fb["bx"], y0 + fb["by"])
             ctl = col.buffer(2 * d * 1000, join_style=1)
-            u1 = ctl.exterior.intersection(outline.buffer(-1)).length / 1000
-            u0 = col.exterior.intersection(outline.buffer(-1)).length / 1000 or col.exterior.length / 1000
+            line = ctl.exterior.intersection(outline.buffer(-1))
+            sh = shadow(col, fb["cx"], fb["cy"])
+            near_hole = sh is not None
+            if near_hole:
+                line = line.difference(sh)
+            u1 = line.length / 1000
+            face = col.exterior.intersection(outline.buffer(-1))
+            if near_hole:
+                face = face.difference(sh.buffer(1))
+            u0 = face.length / 1000 or col.exterior.length / 1000
             full = ctl.within(outline)
             beta = 1.15 if full else 1.4
             V = max(uls[i], seis[i] if seis is not None else 0)
@@ -557,7 +586,7 @@ class Design:
             vrdcs = 0.75 * vrdc + 1.5 * (d / (L["spacing_mm"] / 1000)) * Asw * fywd_ef * 1000 / (u1 * d) / 1000 if u1 > 0 else 0
             uout = beta * V / (vrdc * 1000 * d)  # m
             reach = max(0.0, (uout - col.exterior.length / 1000) / (2 * math.pi))  # how far from the face the links must go
-            rows.append(dict(name=fb["name"], ref=fb["ref"], V_uls=round(uls[i]), V_seis=round(seis[i]) if seis is not None else None, beta=beta,
+            rows.append(dict(name=fb["name"], ref=fb["ref"], hole_beside=near_hole, V_uls=round(uls[i]), V_seis=round(seis[i]) if seis is not None else None, beta=beta,
                              u1=round(u1, 2), v_ed=round(ved, 2), v_rdc=round(vrdc, 2), needs_links=ved > vrdc, v_rdcs=round(vrdcs, 2),
                              util_links=round(ved / vrdcs, 2) if vrdcs else None, face=round(v0 / vrdmax, 2), reach_m=round(reach, 2)))
         rows.sort(key=lambda r: -(r["util_links"] or 0))
