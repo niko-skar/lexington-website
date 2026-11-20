@@ -34,7 +34,7 @@ function ctaButton(href: string, label: string) {
     </tr>`;
 }
 
-function shell(siteSettings: SiteSettings, bodyHtml: string) {
+function shell(siteSettings: Pick<SiteSettings, "officeAddress" | "contactPhone" | "contactEmail">, bodyHtml: string) {
   return `
 <div style="background:#ede7d8; padding:32px 12px; font-family:${FONT_SANS};">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px; margin:0 auto; background:#f7f4ec;">
@@ -477,23 +477,103 @@ export function reservationNotificationEmail({
 
 // ---- the lead responder's replies -------------------------------------------
 
+/** The eight-storey render on the website (public/email), the picture the Phase 1 emails open with. */
+const EMAIL_RENDER = "https://www.lexington.com.gh/email/lexington-render-8-storeys-1200.jpg";
+const URL_IN_TEXT = /(https?:\/\/[^\s<]+[^\s<.,;:!?)])/g;
+const C = { ink: "#15181a", body: "#3a3a36", muted: "#6b6b66", dim: "#ede7d8", brass: "#b08d57", clay: "#8b4a34", stone: "#c9c2b2" };
+
+/** Escaped text with its links working, each shown short (lexington.com.gh/visit). */
+function linkedText(line: string) {
+  return escapeHtml(line).replace(
+    URL_IN_TEXT,
+    (url) => `<a href="${url}" style="color:${C.clay}; text-decoration:underline;">${url.replace(/^https?:\/\/(www\.)?/, "")}</a>`
+  );
+}
+
+/** One home in the reply's list: "104B, one-bedroom, 1st floor, 44 m², list $103,200, offer $87,720 in full or ...". */
+function replyHome(item: { text: string; url?: string }, first: boolean) {
+  const split = /^(.*?)[,;]\s*(list\b.*)$/i.exec(item.text);
+  const head = split ? split[1] : item.text;
+  const prices = split ? split[2].replace(/^l/, "L") : "";
+  const named = /^([A-Z0-9]{2,6})\b[,\s]+(.+)$/i.exec(head);
+  const unit = named?.[1];
+  const title = named
+    ? `${escapeHtml(named[1])}<span style="font-family:${FONT_SANS}; font-size:14px; color:${C.muted};">&nbsp; ${escapeHtml(named[2])}</span>`
+    : escapeHtml(head);
+  return `<tr><td style="padding:13px 0 12px;${first ? "" : ` border-top:1px solid ${C.stone};`}">
+    <div style="font-family:${FONT_SERIF}; font-size:17px; line-height:1.35; color:${C.ink};">${title}</div>
+    ${prices ? `<div style="font-family:${FONT_SANS}; font-size:14.5px; line-height:1.55; color:${C.body}; margin-top:3px;">${escapeHtml(prices).replace(/(offer\s+)(\$[\d,]+(?:\.\d+)?)/i, "$1<strong style=\"color:#15181a;\">$2</strong>")}</div>` : ""}
+    ${item.url ? `<div style="margin-top:6px;"><a href="${escapeHtml(item.url)}" style="font-family:${FONT_SANS}; font-size:13.5px; color:${C.clay}; text-decoration:underline;">See ${unit ? escapeHtml(unit) : "this home"} &rarr;</a></div>` : ""}
+  </td></tr>`;
+}
+
 /**
- * A reply to a buyer, as a person would send it: plain paragraphs, links that
- * work, no banner. (The branded shell above reads as a newsletter; a first reply
- * should read like the sales team wrote it, because they did: Niko sends it.)
+ * A first reply to a buyer (the lead responder's, sent by Niko or by itself) in The Lexington's own email look, the
+ * one the Phase 1 emails have: the navy banner, the building's render, the homes in a box, a "Book a site visit"
+ * button and the footer. Only the look is added; the words are the reply as written and fact-checked, line for line
+ * (a "- " line is a home in the box, the link under it its "See 104B" link).
  */
-export function personalEmailHtml(text: string) {
-  const linked = (line: string) =>
-    escapeHtml(line).replace(
-      /(https?:\/\/[^\s<]+[^\s<.,;:!?)])/g,
-      '<a href="$1" style="color:#8b4a34; text-decoration:underline;">$1</a>'
-    );
-  const paragraphs = text
-    .trim()
-    .split(/\n\s*\n/)
-    .map((block) => `<p style="margin:0 0 14px;">${block.split("\n").map(linked).join("<br />")}</p>`)
-    .join("");
-  return `<div style="font-family:${FONT_SANS}; font-size:15px; line-height:1.6; color:#15181a; max-width:600px;">${paragraphs}</div>`;
+export function leadReplyEmailHtml(text: string, siteSettings: Pick<SiteSettings, "officeAddress" | "contactPhone" | "contactEmail">) {
+  const p = (html: string) => `<p style="font-family:${FONT_SANS}; font-size:15.5px; line-height:1.65; color:${C.body}; margin:0 0 16px;">${html}</p>`;
+  const parts: string[] = [];
+  let visitButton = false;
+  for (const block of text.trim().split(/\n\s*\n/)) {
+    const lines = block.split("\n").map((l) => l.trim()).filter(Boolean);
+    if (!lines.length) continue;
+    if (/^(?:(?:kind|warm|best)\s+)?regards,?$/i.test(lines[0])) {
+      const [greeting, who, ...rest] = lines;
+      parts.push(`<div style="padding-top:6px;">
+        <div style="font-family:${FONT_SANS}; font-size:15.5px; line-height:1.65; color:${C.body}; margin-bottom:4px;">${escapeHtml(greeting)}</div>
+        ${who ? `<div style="font-family:${FONT_SERIF}; font-size:18px; color:${C.ink}; margin-bottom:4px;">${escapeHtml(who)}</div>` : ""}
+        ${rest
+          .map((line) => {
+            const phone = /^\+?[\d\s()-]{9,}$/.test(line) ? line.replace(/\(0\)|[^\d+]/g, "") : "";
+            const shown = phone ? `<a href="tel:${phone}" style="color:${C.clay}; text-decoration:underline;">${escapeHtml(line)}</a>` : linkedText(line);
+            return `<div style="font-family:${FONT_SANS}; font-size:14px; line-height:1.6; color:${C.muted};">${shown}</div>`;
+          })
+          .join("")}
+      </div>`);
+      continue;
+    }
+    let words: string[] = [];
+    let homes: Array<{ text: string; url?: string }> = [];
+    const flushWords = () => {
+      if (words.length) parts.push(p(words.map(linkedText).join("<br />")));
+      words = [];
+    };
+    const flushHomes = () => {
+      if (homes.length)
+        parts.push(`<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.dim}; border-left:3px solid ${C.brass}; margin:2px 0 20px;">
+          <tr><td style="padding:6px 22px 6px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0">${homes.map((h, i) => replyHome(h, i === 0)).join("")}</table></td></tr>
+        </table>`);
+      homes = [];
+    };
+    for (const line of lines) {
+      if (/^[-•–]\s+/.test(line)) {
+        flushWords();
+        homes.push({ text: line.replace(/^[-•–]\s+/, "") });
+      } else if (/^https?:\/\/\S+$/.test(line) && homes.length && !homes[homes.length - 1].url) {
+        homes[homes.length - 1].url = line;
+      } else {
+        flushHomes();
+        words.push(line);
+      }
+    }
+    flushWords();
+    flushHomes();
+    const visit = !visitButton && /https?:\/\/[^\s<]*\/visit\b/.test(block) ? block.match(URL_IN_TEXT)?.find((u) => /\/visit\b/.test(u)) : undefined;
+    if (visit) {
+      visitButton = true;
+      parts.push(`<table role="presentation" cellpadding="0" cellspacing="0" style="margin:2px 0 24px;"><tr><td style="background:${C.brass};">
+        <a href="${escapeHtml(visit)}" style="display:block; padding:14px 26px; font-family:${FONT_SANS}; font-size:13px; letter-spacing:1px; text-transform:uppercase; color:${C.ink}; text-decoration:none; font-weight:bold;">Book a site visit</a>
+      </td></tr></table>`);
+    }
+  }
+  const body = `
+    <tr><td style="padding:0; background:#0f141b;"><img src="${EMAIL_RENDER}" width="600" alt="The Lexington, Shiashie, East Legon (artist's impression)" style="display:block; width:100%; max-width:600px; height:auto; border:0;" /></td></tr>
+    <tr><td style="padding:10px 36px 0; font-family:${FONT_SANS}; font-size:12px; line-height:1.5; color:${C.muted};">The Lexington, Shiashie, East Legon (artist's impression).</td></tr>
+    <tr><td style="padding:26px 36px 34px;">${parts.join("\n")}</td></tr>`;
+  return shell(siteSettings, body);
 }
 
 // ---- site visits (lib/siteVisits) ---------------------------------------------------------------------

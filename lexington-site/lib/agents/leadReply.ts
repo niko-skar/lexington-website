@@ -6,7 +6,7 @@ import { Resend } from "resend";
 
 import { claudeConfigured, writeWithClaude } from "@/lib/ai/claude";
 import { addDaysISO, firstName, todayISO } from "@/lib/crm";
-import { personalEmailHtml } from "@/lib/email/templates";
+import { leadReplyEmailHtml } from "@/lib/email/templates";
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
 import { answeredAnotherWay } from "@/lib/crmReplies";
 import { client } from "@/lib/sanity/client";
@@ -156,13 +156,17 @@ export async function sendReplyEmail(lead: Pick<Lead, "email" | "name">, subject
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) return { ok: false, error: "Email sending is not set up (RESEND_API_KEY)." };
   try {
-    const settings = await client.fetch<{ contactEmail?: string } | null>(`*[_type == "siteSettings"][0]{ contactEmail }`);
+    const settings = await client.fetch<{ contactEmail?: string; contactPhone?: string; officeAddress?: string } | null>(
+      `*[_type == "siteSettings"][0]{ contactEmail, contactPhone, officeAddress }`
+    );
+    const contactEmail = settings?.contactEmail || "sales@lexington.com.gh";
     const result = await new Resend(apiKey).emails.send({
       from: "The Lexington <sales@lexington.com.gh>",
       to: lead.email,
-      replyTo: settings?.contactEmail || "sales@lexington.com.gh",
+      replyTo: contactEmail,
       subject,
-      html: personalEmailHtml(body),
+      // The Lexington's own email look (banner, render, homes box, visit button), the words exactly as written.
+      html: leadReplyEmailHtml(body, { contactEmail, contactPhone: settings?.contactPhone ?? "", officeAddress: settings?.officeAddress ?? "" }),
       text: body,
     });
     // Resend reports a refused email in `error` rather than by throwing.
