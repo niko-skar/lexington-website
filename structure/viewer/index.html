@@ -74,7 +74,8 @@ th, td { padding: 4px 6px; border-bottom: 1px solid var(--line); text-align: rig
 th:first-child, td:first-child { text-align: left; }
 th { font-weight: 500; color: var(--muted); font-size: 11.5px; }
 td { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
-td.txt { font-family: var(--font-ui); }
+td.txt { font-family: var(--font-ui); text-align: left; }
+th.txt { text-align: left; }
 .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .tile { border: 1px solid var(--line); border-radius: 8px; padding: 10px; }
 .tile b { display: block; font: 500 18px var(--font-num); }
@@ -111,7 +112,7 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
   </div>
   <aside class="panel">
     <div class="panel-head">
-      <h1>The Lexington &#xB7; structural model</h1>
+      <h1>The Lexington &#xB7; 3D model</h1>
       <p id="stamp">Shiashie, East Legon, Accra</p>
     </div>
     <div class="tabs" role="tablist">
@@ -119,6 +120,7 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
       <button role="tab" aria-selected="false" data-tab="loads" id="t-loads">Loads</button>
       <button role="tab" aria-selected="false" data-tab="checks" id="t-checks">Checks</button>
       <button role="tab" aria-selected="false" data-tab="modes" id="t-modes">Sway</button>
+      <button role="tab" aria-selected="false" data-tab="homes" id="t-homes">Homes</button>
     </div>
 
     <section class="tab" id="tab-model">
@@ -150,6 +152,7 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
     <section class="tab" id="tab-loads" hidden></section>
     <section class="tab" id="tab-checks" hidden></section>
     <section class="tab" id="tab-modes" hidden></section>
+    <section class="tab" id="tab-homes" hidden></section>
   </aside>
 </div>
 
@@ -164,7 +167,7 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
   const pct = (v) => (v === null || v === undefined) ? "over 4 %" : (v * 100).toFixed(v < 0.01 ? 1 : (v * 100 % 1 ? 2 : 0)).replace(/\.?0+$/, "") + " %";
 
   let DATA = null;
-  const state = { colour: "type", topLevel: 8, layers: { slabs: true, columns: true, cores: true, beams: true, foundations: true, grid: true }, sel: null, mode: -1, amp: 1.2 };
+  const state = { colour: "type", topLevel: 8, layers: { slabs: true, columns: true, cores: true, beams: true, foundations: true, grid: true, architecture: true }, sel: null, mode: -1, amp: 1.2 };
 
   // ---------------------------------------------------------------- scene
   const canvas = $("c");
@@ -182,7 +185,7 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
 
   const objects = []; // { mesh, kind, level, data, base: Vector3, lvlIdx }
   const groups = {};
-  ["slabs", "columns", "cores", "beams", "foundations", "grid"].forEach((k) => { groups[k] = new THREE.Group(); scene.add(groups[k]); });
+  ["slabs", "columns", "cores", "beams", "foundations", "grid", "architecture"].forEach((k) => { groups[k] = new THREE.Group(); scene.add(groups[k]); });
 
   function resize() {
     const r = canvas.parentElement.getBoundingClientRect();
@@ -264,6 +267,29 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
       const x0 = along ? Math.min(ax, bx) : ax - w, x1 = along ? Math.max(ax, bx) : ax + w;
       const y0 = along ? ay - w : Math.min(ay, by), y1 = along ? ay + w : Math.max(ay, by);
       addBox(groups.beams, "beam", b, lv[b.level], x0, x1, y0, y1, b.z - b.h, b.z - 0.005);
+    });
+    // architecture: the shell (facades, balustrades, parapet) and the stair shafts, see-through so the frame shows
+    const A = DATA.layers.architecture || {};
+    (A.walls || []).forEach((w) => {
+      const [ax, ay] = w.a, [bx, by] = w.b;
+      const L = Math.hypot(bx - ax, by - ay);
+      if (L < 0.05) return;
+      const g = new THREE.BoxGeometry(L, Math.max(0.05, w.z1 - w.z0), w.t);
+      const glassy = w.kind === "balustrade";
+      const m = new THREE.Mesh(g, mat(0xcccccc, { transparent: true, opacity: glassy ? 0.35 : w.kind === "parapet" ? 0.85 : 0.28, depthWrite: false }));
+      m.position.set((ax + bx) / 2, (w.z0 + w.z1) / 2, (ay + by) / 2);
+      m.rotation.y = -Math.atan2(by - ay, bx - ax);
+      groups.architecture.add(m);
+      const o = { mesh: m, kind: w.kind, data: w, lvlIdx: lv[w.level] ?? 0, base: m.position.clone() };
+      m.userData.o = o;
+      objects.push(o);
+    });
+    (A.stairs || []).forEach((st) => {
+      const [x0, y0, x1, y1] = st.box;
+      const o = addBox(groups.architecture, "stair", st, lv[st.level] ?? 0, x0, x1, y0, y1, st.z0, st.z1 - 0.02);
+      o.mesh.material.transparent = true;
+      o.mesh.material.opacity = 0.35;
+      o.mesh.material.depthWrite = false;
     });
     // the raft: one tile per mesh cell, coloured by what the raft is doing there
     if (S.raft) {
@@ -348,13 +374,15 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
     if (t > 0.85) c.lerp(new THREE.Color(css("--bad")), (t - 0.85) / 0.15 * 0.6);
     return "#" + c.getHexString();
   }
-  const TYPE = { slab: "#c9d1d5", column: "#7e8c94", wall: "#5c6c76", core: "#4f6470", beam: "#a7b3b9", foundation: "#b59a6a" };
-  const TYPE_DARK = { slab: "#3a4950", column: "#8c9aa2", wall: "#a2b0b8", core: "#7e939e", beam: "#5d6d75", foundation: "#8d7650" };
+  const TYPE = { slab: "#c9d1d5", column: "#7e8c94", wall: "#5c6c76", core: "#4f6470", beam: "#a7b3b9", foundation: "#b59a6a", facade: "#d8cbb2", balustrade: "#8fc0d6", parapet: "#cbbda3", stair: "#c79a6e" };
+  const TYPE_DARK = { slab: "#3a4950", column: "#8c9aa2", wall: "#a2b0b8", core: "#7e939e", beam: "#5d6d75", foundation: "#8d7650", facade: "#8a7d66", balustrade: "#5d9ab4", parapet: "#7d715d", stair: "#9c7552" };
+  const ARCH = { facade: 1, balustrade: 1, parapet: 1, stair: 1 };
   function isDark() { return css("--bg").toLowerCase() === "#10161a"; }
 
   function colourFor(o) {
     const d = o.data, mode = state.colour;
     const T = isDark() ? TYPE_DARK : TYPE;
+    if (ARCH[o.kind]) return T[o.kind];
     if (mode === "type") return T[o.kind];
     if (o.kind === "slab") return T.slab;
     if (mode === "axial") {
@@ -448,7 +476,7 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
     if (hits.length && hits[0].object.userData.o.kind === "raft") return selectTile(hits[0].object.userData.o.data, hits[0].instanceId);
     select(hits.length ? hits[0].object.userData.o : null);
   });
-  function groupOf(k) { return { slab: "slabs", column: "columns", wall: "columns", core: "cores", beam: "beams", foundation: "foundations", raft: "foundations" }[k]; }
+  function groupOf(k) { return { slab: "slabs", column: "columns", wall: "columns", core: "cores", beam: "beams", foundation: "foundations", raft: "foundations", facade: "architecture", balustrade: "architecture", parapet: "architecture", stair: "architecture" }[k]; }
   function selectTile(R, i) {
     state.sel = null;
     recolour();
@@ -520,6 +548,13 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
             d.M ? ["Quake: overturning", fmt(d.M) + " kNm"] : null,
             ["Pad needed with quake", fmt(d.side, 2) + " m"], ["Lifts off in a quake", d.uplift ? "yes" : "no"],
             d.r10_base ? ["R10 base", d.r10_base] : null, d.r10_sls_kPa ? ["Pressure on R10 base", fmt(d.r10_sls_kPa) + " kPa"] : null]);
+    } else if (o.kind === "facade" || o.kind === "balustrade" || o.kind === "parapet") {
+      const len = Math.hypot(d.b[0] - d.a[0], d.b[1] - d.a[1]);
+      const what = { facade: "External wall", balustrade: "Balcony / terrace balustrade", parapet: "Roof parapet" }[o.kind];
+      D.innerHTML = `<h3>${what} <span class="note">\u00B7 ${lvName(d.level)}</span></h3>` + kv([["Length", fmt(len, 2) + " m"], ["Height", fmt(d.z1 - d.z0, 2) + " m"], ["Thickness", fmt(d.t * 1000) + " mm"]]) +
+        `<p class="note" style="margin-top:8px">${o.kind === "facade" ? "225 mm sandcrete block on the as-built slab edge" + (d.note ? ", " + d.note : "") + ". Windows and doors come in with the plans editor's layouts." : o.kind === "balustrade" ? "1.1 m guard on the balcony or terrace edge." : "Parapet round the roof."}</p>`;
+    } else if (o.kind === "stair") {
+      D.innerHTML = `<h3>${d.name} <span class="note">\u00B7 ${lvName(d.level)} to the floor above</span></h3>` + kv([["Opening", `${fmt(d.box[2] - d.box[0], 2)} \u00D7 ${fmt(d.box[3] - d.box[1], 2)} m`]]);
     } else if (o.kind === "slab") {
       const f = DATA.report.floors.find((x) => x.level === d.level) || {};
       D.innerHTML = `<h3>${lvName(d.level)} slab</h3>` + kv([["Thickness", Math.round(d.t * 1000) + " mm (thickest zone)"], ["Area", fmt(f.area_m2, 1) + " m\u00B2"], ["Seismic weight", fmt(f.W_seis) + " kN"]]) +
@@ -537,8 +572,9 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
     const L = $("layers");
     const item = (k, label, on = true, enabled = true) => `<label class="${enabled ? "" : "off"}"><input type="checkbox" id="ly-${k}" ${on ? "checked" : ""} ${enabled ? "" : "disabled"}> ${label}</label>`;
     L.innerHTML = '<div class="group-label">Structure</div>' + item("slabs", "Slabs") + item("columns", "Columns, walls") + item("cores", "Lift cores") + item("beams", "Beams") + item("foundations", "Foundations") + item("grid", "Grid") +
-      '<div class="group-label">Coming next</div>' + item("arch", "Architecture", false, false) + item("mep", "MEP", false, false) + item("other", "Other", false, false);
-    ["slabs", "columns", "cores", "beams", "foundations", "grid"].forEach((k) => $("ly-" + k).addEventListener("change", (e) => { state.layers[k] = e.target.checked; applyVisibility(); }));
+      '<div class="group-label">Architecture</div>' + item("architecture", "Shell and stairs") +
+      '<div class="group-label">Coming next</div>' + item("mep", "MEP", false, false) + item("other", "Other", false, false);
+    ["slabs", "columns", "cores", "beams", "foundations", "grid", "architecture"].forEach((k) => $("ly-" + k).addEventListener("change", (e) => { state.layers[k] = e.target.checked; applyVisibility(); }));
   }
 
   // ---------------------------------------------------------------- loads tab
@@ -676,6 +712,30 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
     }));
     $("amp").addEventListener("input", (e) => (state.amp = +e.target.value));
   }
+  function homesTab() {
+    const A = DATA.layers.architecture || {};
+    const H = A.homes || [];
+    const pill = (st) => `<span class="pill ${st === "available" ? "ok" : st === "reserved" ? "warn" : "bad"}">${st || "\u2013"}</span>`;
+    const byFloor = {};
+    H.forEach((h) => (byFloor[h.floor] = byFloor[h.floor] || []).push(h));
+    const floors = Object.keys(byFloor).map(Number).sort((a, b) => b - a);
+    const count = (st) => H.filter((h) => h.status === st).length;
+    const area = H.reduce((s, h) => s + (h.area || 0), 0);
+    const fname = (f) => (f === 0 ? "Ground floor" : ((DATA.levels[f] || {}).name || "Floor " + f));
+    $("tab-homes").innerHTML = `<div><h2>Homes on the website</h2>
+        <div class="tiles">
+          <div class="tile"><b>${H.length}</b><small>homes listed</small></div>
+          <div class="tile"><b>${fmt(area)}<span class="note" style="font-size:12px"> m\u00B2</span></b><small>of homes</small></div>
+          <div class="tile"><b>${count("available")}</b><small>available</small></div>
+          <div class="tile"><b>${count("reserved") + count("sold")}</b><small>reserved or sold</small></div>
+        </div>
+        <p class="note" style="margin-top:8px">Live from the website${A.homes_fetched ? " on " + A.homes_fetched : ""}. Where each home sits, and its walls, doors and windows, come in from the plans editor's layouts.</p></div>
+      ${floors.map((f) => `<div><h2>${fname(f)}</h2><div class="tbl-wrap"><table>
+        <tr><th>Home</th><th class="txt">Type</th><th>m\u00B2</th><th>Outdoor m\u00B2</th><th>Price</th><th class="txt">Status</th></tr>
+        ${byFloor[f].map((h) => `<tr><td class="txt">${h.unit}</td><td class="txt">${h.type || "\u2013"}</td><td>${fmt(h.area)}</td><td>${h.terrace ? fmt(h.terrace) + " terrace" : h.balcony ? fmt(h.balcony) : "\u2013"}</td><td>${h.price ? "$" + fmt(h.price) : "\u2013"}</td><td class="txt">${pill(h.status)}</td></tr>`).join("")}
+      </table></div></div>`).join("")}`;
+  }
+
   function animateMode(now) {
     if (state.mode < 0) return;
     const m = DATA.modes[state.mode];
@@ -698,6 +758,7 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
         const a = disp(key, p.x, p.z), b = disp(above, p.x, p.z);
         d = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
       } else if (o.kind === "slab") d = disp(key, 0, 0);
+      else if (o.kind === "stair") { const a = disp(key, p.x, p.z), b = disp(above, p.x, p.z); d = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]; }
       else d = disp(key, p.x, p.z);
       o.mesh.position.set(p.x + d[0], p.y, p.z + d[1]);
     });
@@ -721,6 +782,7 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
     loadsTab();
     checksTab();
     modesTab();
+    homesTab();
     resize();
     themeColours();
     applyVisibility();

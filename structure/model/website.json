@@ -1,0 +1,585 @@
+{
+ "amenities": [
+  {
+   "category": "building feature",
+   "name": "Back-up Power Generator & Water"
+  },
+  {
+   "category": "building feature",
+   "name": "Built-in Earthquake-Resistant Features"
+  },
+  {
+   "category": "building feature",
+   "name": "CCTV & Fire Safety Systems"
+  },
+  {
+   "category": "building feature",
+   "name": "Energy-Saving LED Spotlights"
+  },
+  {
+   "category": "building feature",
+   "name": "Garbage Management Chutes"
+  },
+  {
+   "category": "building feature",
+   "name": "High-Speed Elevators"
+  },
+  {
+   "category": "building feature",
+   "name": "Natural Stone Flooring"
+  },
+  {
+   "category": "building feature",
+   "name": "On-site Boys' Quarters"
+  },
+  {
+   "category": "building feature",
+   "name": "Premium Kitchen Appliances"
+  },
+  {
+   "category": "building feature",
+   "name": "Storage Facilities"
+  },
+  {
+   "category": "building feature",
+   "name": "Ultra-Fast Internet Connectivity"
+  },
+  {
+   "category": "rooftop",
+   "name": "Private Resident's Rooftop Garden"
+  },
+  {
+   "category": "signature",
+   "name": "Caf\u00e9"
+  },
+  {
+   "category": "signature",
+   "name": "Gym"
+  },
+  {
+   "category": "signature",
+   "name": "Ice Bath"
+  },
+  {
+   "category": "signature",
+   "name": "Jacuzzi"
+  },
+  {
+   "category": "signature",
+   "name": "Sauna"
+  },
+  {
+   "category": "signature",
+   "name": "Swimming Pool"
+  }
+ ],
+ "locationPlans": [
+  {
+   "floor": 7,
+   "units": [
+    "PH2b"
+   ]
+  },
+  {
+   "floor": 1,
+   "units": [
+    "101A",
+    "102B",
+    "103B",
+    "104B",
+    "105B",
+    "106B",
+    "107B",
+    "108B",
+    "109B"
+   ]
+  },
+  {
+   "floor": 1,
+   "units": [
+    "104B"
+   ]
+  },
+  {
+   "floor": 2,
+   "units": [
+    "202A",
+    "203B",
+    "204B"
+   ]
+  },
+  {
+   "floor": 2,
+   "units": [
+    "201A",
+    "205B"
+   ]
+  },
+  {
+   "floor": 3,
+   "units": [
+    "301A",
+    "302A",
+    "303B",
+    "304B",
+    "305B",
+    "306B"
+   ]
+  },
+  {
+   "floor": 4,
+   "units": [
+    "402A",
+    "403B",
+    "404B"
+   ]
+  },
+  {
+   "floor": 4,
+   "units": [
+    "401A",
+    "405B"
+   ]
+  },
+  {
+   "floor": 6,
+   "units": [
+    "501A",
+    "502B",
+    "503B"
+   ]
+  }
+ ],
+ "units": [
+  {
+   "areaSqm": 36,
+   "balconySqm": null,
+   "bedroomType": "Studio",
+   "floor": 0,
+   "notes": null,
+   "priceUSD": 72000,
+   "status": "available",
+   "terraceSqm": null,
+   "unitNumber": "Studio 1"
+  },
+  {
+   "areaSqm": 73,
+   "balconySqm": 2,
+   "bedroomType": "One Bedroom",
+   "floor": 1,
+   "notes": null,
+   "priceUSD": 144000,
+   "status": "available",
+   "terraceSqm": null,
+   "unitNumber": "101A"
+  },
+  {
+   "areaSqm": 42,
+   "balconySqm": 2,
+   "bedroomType": "Studio",
+   "floor": 1,
+   "notes": null,
+   "priceUSD": 82000,
+   "status": "available",
+   "terraceSqm": null,
+   "unitNumber": "102B"
+  },
+  {
+   "areaSqm": 35,
+   "balconySqm": null,
+   "bedroomType": "Studio",
+   "floor": 1,
+   "notes": null,
+   "priceUSD": 70000,
+   "status": "available",
+   "terraceSqm": null,
+   "unitNumber": "103B"
+  },
+  {
+   "areaSqm": 44,
+   "balconySqm": 2,
+   "bedroomType": "One Bedroom",
+   "floor": 1,
+   "notes": null,
+   "priceUSD": 86000,
+   "status": "available",
+   "terraceSqm": null,
+   "unitNumber": "104B"
+  },
+  {
+   "areaSqm": 34,
+   "balconySqm": null,
+   "bedroomType": "Studio",
+   "floor": 1,
+   "notes": null,
+   "priceUSD": 68000,
+   "status": "available",
+   "terraceSqm": null,
+   "unitNumber": "105B"
+  },
+  {
+   "areaSqm": 36,
+   "balconySqm": 3,
+   "bedroomType": "Studio",
+   "floor": 1,
+   "notes": null,
+   "priceUSD": 69000,
+   "status": "available",
+   "terraceSqm": null,
+   "unitNumber": "106B"
+  },
+  {
+   "areaSqm": 39,
+   "balconySqm": null,
+   "bedroomType": "Studio",
+   "floor": 1,
+   "notes": null,
+   "priceUSD": 78000,
+   "status": "available",
+   "terraceSqm": null,
+   "unitNumber": "107B"
+  },
+  {
+   "areaSqm": 33,
+   "balconySqm": 2,
+   "bedroomType": "Studio",
+   "floor": 1,
+   "notes": null,
+   "priceUSD": 64000,
+   "status": "available",
+   "terraceSqm": null,
+   "unitNumber": "108B"
+  },
+  {
+   "areaSqm": 36,
+   "balconySqm": null,
+   "bedroomType": "Studio",
+   "floor": 1,
+   "notes": null,
+   "priceUSD": 72000,
+   "status": "available",
+   "terraceSqm": null,
+   "unitNumber": "109B"
+  },
+  {
+   "areaSqm": 165,
+   "balconySqm": null,
+   "bedroomType": "Two Bedroom",
+   "floor": 2,
+   "notes": null,
+   "priceUSD": 346500,
+   "status": "reserved",
+   "terraceSqm": null,
+   "unitNumber": "201A"
+  },
+  {
+   "areaSqm": 84,
+   "balconySqm": null,
+   "bedroomType": "One Bedroom",
+   "floor": 2,
+   "notes": null,
+   "priceUSD": 175500,
+   "status": "available",
+   "terraceSqm": null,
+   "unitNumber": "202A"
+  },
+  {
+   "areaSqm": 70,
+   "balconySqm": null,
+   "bedroomType": "One Bedroom",
+   "floor": 2,
+   "notes": null,
+   "priceUSD": 154000,
+   "status": "available",
+   "terraceSqm": null,
+   "unitNumber": "203B"
+  },
+  {
+   "areaSqm": 37,
+   "balconySqm": 2,
+   "bedroomType": "Studio",
+   "floor": 2,
+   "notes": null,
+   "priceUSD": 77700,
+   "status": "reserved",
+   "terraceSqm": null,
+   "unitNumber": "204B"
+  },
+  {
+   "areaSqm": 44,
+   "balconySqm": null,
+   "bedroomType": "One Bedroom",
+   "floor": 2,
+   "notes": null,
+   "priceUSD": 92400,
+   "status": "available",
+   "terraceSqm": null,
+   "unitNumber": "205B"
+  },
+  {
+   "areaSqm": 60,
+   "balconySqm": null,
+   "bedroomType": "One Bedroom",
+   "floor": 2,
+   "notes": null,
+   "priceUSD": 126000,
+   "status": "available",
+   "terraceSqm": null,
+   "unitNumber": "206B"
+  },
+  {
+   "areaSqm": 72,
+   "balconySqm": null,
+   "bedroomType": "Two Bedroom",
+   "floor": 2,
+   "notes": null,
+   "priceUSD": 151200,
+   "status": "available",
+   "terraceSqm": null,
+   "unitNumber": "207B"
+  },
+  {
+   "areaSqm": 136,
+   "balconySqm": null,
+   "bedroomType": "Two Bedroom",
+   "floor": 3,
+   "notes": null,
+   "priceUSD": 299200,
+   "status": "available",
+   "terraceSqm": null,
+   "unitNumber": "301A"
+  },
+  {
+   "areaSqm": 84,
+   "balconySqm": null,
+   "bedroomType": "Two Bedroom",
+   "floor": 3,
+   "notes": null,
+   "priceUSD": 184800,
+   "status": "available",
+   "terraceSqm": null,
+   "unitNumber": "302A"
+  },
+  {
+   "areaSqm": 79,
+   "balconySqm": null,
+   "bedroomType": "Two Bedroom",
+   "floor": 3,
+   "notes": null,
+   "priceUSD": 173800,
+   "status": "available",
+   "terraceSqm": null,
+   "unitNumber": "303B"
+  },
+  {
+   "areaSqm": 37,
+   "balconySqm": 2,
+   "bedroomType": "Studio",
+   "floor": 3,
+   "notes": null,
+   "priceUSD": 79200,
+   "status": "sold",
+   "terraceSqm": null,
+   "unitNumber": "304B"
+  },
+  {
+   "areaSqm": 31,
+   "balconySqm": null,
+   "bedroomType": "Studio",
+   "floor": 3,
+   "notes": null,
+   "priceUSD": 68200,
+   "status": "reserved",
+   "terraceSqm": null,
+   "unitNumber": "305B"
+  },
+  {
+   "areaSqm": 141,
+   "balconySqm": 4,
+   "bedroomType": "Three Bedroom",
+   "floor": 3,
+   "notes": null,
+   "priceUSD": 305800,
+   "status": "available",
+   "terraceSqm": null,
+   "unitNumber": "306B"
+  },
+  {
+   "areaSqm": 149,
+   "balconySqm": null,
+   "bedroomType": "Two Bedroom",
+   "floor": 4,
+   "notes": null,
+   "priceUSD": 342700,
+   "status": "available",
+   "terraceSqm": null,
+   "unitNumber": "401A"
+  },
+  {
+   "areaSqm": 80,
+   "balconySqm": null,
+   "bedroomType": "One Bedroom",
+   "floor": 4,
+   "notes": null,
+   "priceUSD": 183000,
+   "status": "reserved",
+   "terraceSqm": null,
+   "unitNumber": "402A"
+  },
+  {
+   "areaSqm": 76,
+   "balconySqm": null,
+   "bedroomType": "One Bedroom",
+   "floor": 4,
+   "notes": null,
+   "priceUSD": 175000,
+   "status": "available",
+   "terraceSqm": null,
+   "unitNumber": "403B"
+  },
+  {
+   "areaSqm": 70,
+   "balconySqm": null,
+   "bedroomType": "One Bedroom",
+   "floor": 4,
+   "notes": null,
+   "priceUSD": 160000,
+   "status": "available",
+   "terraceSqm": null,
+   "unitNumber": "404B"
+  },
+  {
+   "areaSqm": 123,
+   "balconySqm": null,
+   "bedroomType": "Two Bedroom",
+   "floor": 4,
+   "notes": null,
+   "priceUSD": 275200,
+   "status": "reserved",
+   "terraceSqm": null,
+   "unitNumber": "405B"
+  },
+  {
+   "areaSqm": 149,
+   "balconySqm": null,
+   "bedroomType": "Two Bedroom",
+   "floor": 5,
+   "notes": null,
+   "priceUSD": 372500,
+   "status": "available",
+   "terraceSqm": null,
+   "unitNumber": "501A"
+  },
+  {
+   "areaSqm": 80,
+   "balconySqm": null,
+   "bedroomType": "One Bedroom",
+   "floor": 5,
+   "notes": null,
+   "priceUSD": 192000,
+   "status": "available",
+   "terraceSqm": null,
+   "unitNumber": "502A"
+  },
+  {
+   "areaSqm": 76,
+   "balconySqm": null,
+   "bedroomType": "One Bedroom",
+   "floor": 5,
+   "notes": null,
+   "priceUSD": 182400,
+   "status": "available",
+   "terraceSqm": null,
+   "unitNumber": "503B"
+  },
+  {
+   "areaSqm": 37,
+   "balconySqm": null,
+   "bedroomType": "Studio",
+   "floor": 5,
+   "notes": null,
+   "priceUSD": 85200,
+   "status": "reserved",
+   "terraceSqm": null,
+   "unitNumber": "504B"
+  },
+  {
+   "areaSqm": 35,
+   "balconySqm": null,
+   "bedroomType": "Studio",
+   "floor": 5,
+   "notes": null,
+   "priceUSD": 83100,
+   "status": "available",
+   "terraceSqm": null,
+   "unitNumber": "505B"
+  },
+  {
+   "areaSqm": 138,
+   "balconySqm": null,
+   "bedroomType": "Two Bedroom",
+   "floor": 5,
+   "notes": null,
+   "priceUSD": 331200,
+   "status": "available",
+   "terraceSqm": null,
+   "unitNumber": "506B"
+  },
+  {
+   "areaSqm": 85,
+   "balconySqm": null,
+   "bedroomType": "One Bedroom",
+   "floor": 6,
+   "notes": null,
+   "priceUSD": 212500,
+   "status": "available",
+   "terraceSqm": null,
+   "unitNumber": "601A"
+  },
+  {
+   "areaSqm": 88,
+   "balconySqm": null,
+   "bedroomType": "One Bedroom",
+   "floor": 6,
+   "notes": null,
+   "priceUSD": 220000,
+   "status": "reserved",
+   "terraceSqm": null,
+   "unitNumber": "602B"
+  },
+  {
+   "areaSqm": 79,
+   "balconySqm": null,
+   "bedroomType": "One Bedroom",
+   "floor": 6,
+   "notes": null,
+   "priceUSD": 197500,
+   "status": "available",
+   "terraceSqm": null,
+   "unitNumber": "603B"
+  },
+  {
+   "areaSqm": 409,
+   "balconySqm": null,
+   "bedroomType": "3BR Duplex Penthouse",
+   "floor": 7,
+   "notes": null,
+   "priceUSD": 1104000,
+   "status": "available",
+   "terraceSqm": 82,
+   "unitNumber": "PH1a"
+  },
+  {
+   "areaSqm": 440,
+   "balconySqm": 8,
+   "bedroomType": "3BR Duplex Penthouse",
+   "floor": 7,
+   "notes": null,
+   "priceUSD": 1201500,
+   "status": "available",
+   "terraceSqm": 71,
+   "unitNumber": "PH2b"
+  }
+ ],
+ "fetched": "2026-11-20 07:23"
+}

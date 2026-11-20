@@ -109,6 +109,8 @@ def export_viewer(b, a, d, results, path):
                                 Nmax=f.get("N_seis_max"), Nmin=f.get("N_seis_min"), M=f.get("M_seis"), uplift=f.get("uplift"),
                                 r10_base=f.get("r10_base"), r10_sls_kPa=f.get("r10_sls_kPa")))
 
+    architecture = architecture_layer(b)
+
     modes = []
     for k in range(min(9, len(a.T))):
         ph = a.phi[:, k]
@@ -123,7 +125,7 @@ def export_viewer(b, a, d, results, path):
                   y=[dict(id=g["id"], p=r(g["pos"] / 1000)) for g in b.asbuilt["floors"][1]["grid"]["y"]]),
         layers=dict(
             structure=dict(slabs=slabs, columns=columns, cores=cores, beams=beams, foundations=foundations, raft=raft),
-            architecture=dict(walls=[], note="Plan walls from the as-built plans go here next."),
+            architecture=architecture,
             mep=dict(items=[], note="Services (water, drainage, electrical, lifts) go here."),
             other=dict(items=[], note="Site, landscaping and anything else."),
         ),
@@ -140,3 +142,87 @@ def export_viewer(b, a, d, results, path):
         ),
     )
     path.write_text(json.dumps(data, separators=(",", ":"), default=lambda o: o.item() if hasattr(o, "item") else str(o)))
+
+
+def architecture_layer(b):
+    """The building's shell from the as-built record, and the homes as the live website lists them.
+
+    - Facade walls on every slab edge that is not a balcony (225 mm block, slab to the slab above), and on grid 7
+      behind the balconies; glass-like balustrades on balcony edges; a parapet round the roof.
+    - On the 7th floor (penthouses and roof terraces) the walls follow the roof's outline (what the roof covers is
+      indoors); the rest of its slab edge gets a terrace balustrade.
+    - Stair shafts from the as-built openings.
+    The walls inside each home come in from the plans editor's layouts when they can be read."""
+    import json as _json
+    from pathlib import Path as _Path
+    from shapely.geometry import LineString
+
+    walls, stairs = [], []
+    lv_by_key = {lv.key: lv for lv in b.levels}
+    roof = b.levels[-1]
+    for i, lv in enumerate(b.levels[:-1]):
+        if lv.outline is None:
+            continue
+        nxt = b.levels[i + 1]
+        t_next = (max(z["t"] for z in (nxt.spec or {}).get("zones", [{"t": 200}])) if nxt.outline is not None else 0) / 1000
+        z0, z1 = lv.z / 1000, nxt.z / 1000 - t_next
+        y7 = b.grid_lookup(lv, "y").get("7")
+        enclosed = lv.outline
+        if nxt.key == roof.key and roof.outline is not None:
+            enclosed = roof.outline.intersection(lv.outline)
+        def edges(poly):
+            cs = list(poly.exterior.coords)
+            return list(zip(cs[:-1], cs[1:]))
+        balc = lambda y: y7 is not None and y > y7 + 150
+        if enclosed.geom_type == "Polygon" and not enclosed.is_empty:
+            for (xa, ya), (xb, yb) in edges(enclosed):
+                if math.dist((xa, ya), (xb, yb)) < 50:
+                    continue
+                if balc((ya + yb) / 2) and enclosed is lv.outline:
+                    walls.append(dict(level=lv.key, kind="balustrade", a=[r(xa / 1000), r(ya / 1000)], b=[r(xb / 1000), r(yb / 1000)], z0=r(z0), z1=r(z0 + 1.1), t=0.06))
+                else:
+                    walls.append(dict(level=lv.key, kind="facade", a=[r(xa / 1000), r(ya / 1000)], b=[r(xb / 1000), r(yb / 1000)], z0=r(z0), z1=r(z1), t=0.225))
+            if y7 is not None and enclosed is lv.outline:
+                # the facade behind the balconies: on grid 7 wherever the slab runs past it
+                minx, _, maxx, _ = lv.outline.bounds
+                line = LineString([(minx, y7), (maxx, y7)])
+                beyond = lv.outline.intersection(line)
+                for seg in getattr(beyond, "geoms", [beyond]):
+                    if seg.is_empty or seg.length < 300:
+                        continue
+                    (xa, ya), (xb, yb) = list(seg.coords)[0], list(seg.coords)[-1]
+                    mid = ((xa + xb) / 2, y7 + 400)
+                    from shapely.geometry import Point as _P
+                    if lv.outline.contains(_P(*mid)):
+                        walls.append(dict(level=lv.key, kind="facade", a=[r(xa / 1000), r(y7 / 1000)], b=[r(xb / 1000), r(y7 / 1000)], z0=r(z0), z1=r(z1), t=0.225, note="behind the balconies, on grid 7 (assumed)"))
+        if enclosed is not lv.outline:
+            # roof terraces round the penthouses: a balustrade on the slab edge outside the roof
+            for (xa, ya), (xb, yb) in edges(lv.outline):
+                seg = LineString([(xa, ya), (xb, yb)])
+                if seg.length < 50:
+                    continue
+                if roof.outline is not None and roof.outline.buffer(10).contains(seg):
+                    continue
+                walls.append(dict(level=lv.key, kind="balustrade", a=[r(xa / 1000), r(ya / 1000)], b=[r(xb / 1000), r(yb / 1000)], z0=r(z0), z1=r(z0 + 1.1), t=0.06))
+        for h in lv.holes:
+            if h["kind"] == "stair":
+                x0, y0, x1, y1 = h["box"]
+                stairs.append(dict(level=lv.key, name=h["name"], box=[r(x0 / 1000), r(y0 / 1000), r(x1 / 1000), r(y1 / 1000)], z0=r(z0), z1=r(nxt.z / 1000)))
+    if roof.outline is not None:
+        cs = list(roof.outline.exterior.coords)
+        for (xa, ya), (xb, yb) in zip(cs[:-1], cs[1:]):
+            walls.append(dict(level=roof.key, kind="parapet", a=[r(xa / 1000), r(ya / 1000)], b=[r(xb / 1000), r(yb / 1000)], z0=r(roof.z / 1000), z1=r(roof.z / 1000 + 0.6), t=0.15))
+
+    homes, fetched = [], None
+    wp = _Path(__file__).resolve().parents[1] / "model" / "website.json"
+    if wp.exists():
+        w = _json.loads(wp.read_text())
+        fetched = w.get("fetched")
+        keys = [lv.key for lv in b.levels]
+        for u in w.get("units", []):
+            f = u.get("floor")
+            homes.append(dict(unit=u.get("unitNumber"), floor=f, level=keys[f] if isinstance(f, int) and 0 <= f < len(keys) else None,
+                              type=u.get("bedroomType"), area=u.get("areaSqm"), balcony=u.get("balconySqm"), terrace=u.get("terraceSqm"),
+                              price=u.get("priceUSD"), status=u.get("status")))
+    return dict(walls=walls, stairs=stairs, homes=homes, homes_fetched=fetched,
+                note="Shell from the as-built slab edges; homes from the live website. Walls inside the homes come from the plans editor's layouts once they can be read.")
