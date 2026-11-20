@@ -1,15 +1,20 @@
 # The Lexington: structural model
 
 A 3D finite-element model of the building, built from the as-built record, with its loads, a
-gravity / wind / earthquake analysis and Eurocode checks, and a 3D viewer with layers
-(structure now; architecture, MEP and the rest to follow).
+gravity / wind / earthquake analysis and Eurocode checks, and a 3D viewer with layers: the structure, the
+architecture (walls, windows, balconies, layouts, homes) and the site; MEP to follow.
 
 ```
-python3 structure/run.py                 # builds the model, runs everything (about 4 minutes)
-open structure/viewer/index.html         # the 3D viewer (serve the repo folder: it fetches ../out/viewer-data.json)
+python3 structure/run.py                          # builds the model, runs everything (about 4 minutes)
+python3 structure/tools/refresh_architecture.py   # only the viewer's architecture and site layers (seconds)
+open structure/viewer/index.html                  # the 3D viewer (serve the repo folder: it fetches ../out/viewer-data.json)
 ```
 
-Needs `pip install openseespy numpy scipy shapely`, and Node 22+ for the exporters.
+Needs `pip install openseespy numpy scipy shapely`, and Node 22+ for the exporters (`pymupdf` to re-read the
+architect's windows).
+
+**Private mode.** `LEX_PRIVATE=1` in front of any of these reads the live as-built tapes and plans-editor layouts from
+`structure/private/` (git-ignored) and writes to `structure/private/out/`, so they never reach the repository.
 
 ## Where the building comes from
 
@@ -19,6 +24,10 @@ Needs `pip install openseespy numpy scipy shapely`, and Node 22+ for the exporte
 | `model/slabs.json` | Each floor's slab thickness and beam schedule, as the concrete estimator reads the engineer's drawings | `node --import ./structure/tools/alias.mjs structure/tools/export-slabs.ts > structure/model/slabs.json` |
 | `model/loads.json` | Materials, stiffness, loads, wind and earthquake parameters, each with its source | edit by hand |
 | `model/r10_vertical.json` | Column, wall and foundation schedules transcribed from the engineer's R10 set (Jan 2025) | transcribed from the PDF |
+| `model/arch_windows.json` | Every window on the architect's floor plans (A105-A110) with the wall it is in, as grid references, and its size, sill and head from the window schedule (A119) | `python3 structure/tools/read_arch_windows.py Architecture_FINAL_FINAL_PRIINT.pdf > structure/model/arch_windows.json` |
+| `model/architecture.json` | Which plans-editor layout to show per floor, open areas (the pool deck, the roof terrace between the penthouses), the room words allowed through | edit by hand |
+| `model/website.json` | The homes as the live website lists them | `python3 structure/tools/fetch_website.py` |
+| `private/plans.json` | The plans editor's floor layouts (walls, doors, windows, rooms, homes) on the as-built geometry | `node --import ./structure/tools/alias.mjs structure/tools/export-plans.ts plans_live.json asbuilt_live.json` |
 
 Drawings read so far: R10 (Jan 2025, the full set), the updated raft details (18 Feb 2026: raft layout and zones,
 sections, reinforcement, rebar seats, columns and walls), R26 (5 Oct 2026: general notes with C30/37 concrete, 1st and
@@ -43,6 +52,22 @@ To use the site's tapes, download the full backup from the admin As-built page
   to `pads` to fix the columns at +0.300 instead.
 - **Stiffness**: cracked sections (columns 0.7 I, walls 0.7, beams 0.35, slab bending 0.25).
 
+## The architecture layer (viewer)
+
+- **Walls** (225 mm block) on the as-built slab edges, outer face flush; on the 7th floor, under the roof.
+- **Windows** from the architect's plans, put on the as-built grid: the wall line keeps its offset from the nearest grid
+  line, the window its place in the bay. A window within 0.75 m of the slab edge goes on the edge (the as-built edge
+  wins); one 0.75-3 m behind it sets the wall back between the grid lines either side, and the slab in front becomes a
+  balcony with a glass balustrade. That gives the staggered boxes and balconies of the renders floor by floor. The
+  architect's sheets are a storey behind the as-built names (their ground floor is the 1st; their first & second floor
+  plan serves the 2nd and 3rd; their sixth is the 7th). Windows too wide for the as-built wall are narrowed to fit.
+- Where the plans editor has a layout with external walls (the 1st floor), its walls, windows and doors are used
+  instead; rough layouts that trace the outside walls as partitions give way to the facade.
+- Glass balustrades, a white band at every slab edge, soffit downlights, the roof parapet, the ground-floor lift lobbies
+  with their entrance doors, and set dressing (cars, palms on the roof terraces, parasols on the pool deck).
+- Two looks: *Like the renders* (white, frames matt black, glass lit warm, sky and shadows) and *Engineering* (see-through
+  skin over the structure coloured by the checks).
+
 ## Analyses and checks
 
 - Gravity: self-weight, finishes and walls, imposed load. Every reaction adds back to the applied load.
@@ -61,7 +86,8 @@ To use the site's tapes, download the full backup from the admin As-built page
 
 ## Not in yet
 
-- The site's tapes (needs the as-built backup), and the plan walls as line loads.
+- The plan walls as line loads (the internal walls are an even 2.5 kPa).
+- Window sills and heads as built (the schedule's 0.9 m / 2.1 m are used); doors onto the balconies.
 - Engineer's drawings for floors 5-7 and the roof (the 4th floor's slab and beams are used).
 - Beam and slab reinforcement as drawn (the steel needed is reported instead).
 - The raft's real level and the columns between it and the ground floor; the soil stiffness from the geotech report.

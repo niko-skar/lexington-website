@@ -1,5 +1,21 @@
 {
   "_about": "Which layout of the plans editor the 3D model shows on each floor (the option key); floors not listed show their first layout ('a'). Room names are shown only when they are made of everyday room words; anything else is replaced by the room type, so no personal name reaches the model.",
   "layout_pick": { "1": "c" },
+  "open_areas": [
+    {
+      "floor": "1",
+      "name": "Pool deck",
+      "x": [null, "C"],
+      "y": ["4", null],
+      "src": "Architect's ground floor plan (A105, the as-built 1st floor): the pool and its paved deck west of grid C and south of row 4 are open, with the gym's glazing on C and the cafe to the north; the renders show the deck open behind a glass balustrade. null = to the slab edge."
+    },
+    {
+      "floor": "7",
+      "name": "Roof terrace between the penthouses",
+      "x": ["F", "H"],
+      "y": ["3", null],
+      "src": "Architect's sixth floor plan (A110, the as-built 7th floor): between the penthouses (C-F and H-M) F to H is roof terrace with planters; the as-built roof outline covers its western half, so that half is a covered terrace."
+    }
+  ],
   "room_words": ["studio", "bedroom", "bed", "master", "guest", "en-suite", "ensuite", "bath", "bathroom", "shower", "wc", "toilet", "kitchen", "living", "dining", "lounge", "family", "room", "hall", "entrance", "foyer", "store", "storage", "laundry", "utility", "balcony", "terrace", "roof", "garden", "corridor", "lobby", "lift", "stair", "stairs", "plant", "duct", "riser", "office", "study", "gym", "cafe", "café", "sauna", "pool", "jacuzzi", "ice", "reception", "security", "bin", "bins", "dressing", "closet", "walk-in", "open", "plan", "and", "&", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f", "g", "h", "bar", "bbq", "pergola", "kids", "maid", "staff", "quarters", "service", "porch", "deck", "void", "spa", "steam", "changing", "male", "female", "men", "women"]
 }

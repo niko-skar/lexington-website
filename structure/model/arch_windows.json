@@ -1,0 +1,5022 @@
+{
+ "source": {
+  "drawing": "Architecture_FINAL_FINAL_PRIINT.pdf (A105-A110 floor plans, A119 window schedule; Jan/Feb 2025)",
+  "note": "dir h: wall along x (line = a row and offset in mm, +y down the sheet); dir v: wall along y (line = a lettered grid line and offset). along: the window's middle as a fraction between two grid lines. facing: +1 means the outside is towards +x / +y. Sizes, sills and heads from the schedule: frames anodised aluminium in matt black, laminated glass in reflective ocean grey.",
+  "sheets": {
+   "5": {
+    "title": "A105 ground floor plan",
+    "floors": [
+     "1"
+    ]
+   },
+   "6": {
+    "title": "A106 first & second floor plan",
+    "floors": [
+     "2",
+     "3"
+    ]
+   },
+   "7": {
+    "title": "A107 third floor plan",
+    "floors": [
+     "4"
+    ]
+   },
+   "8": {
+    "title": "A108 fourth floor plan",
+    "floors": [
+     "5"
+    ]
+   },
+   "9": {
+    "title": "A109 fifth floor plan",
+    "floors": [
+     "6"
+    ]
+   },
+   "10": {
+    "title": "A110 sixth floor plan",
+    "floors": [
+     "7"
+    ]
+   }
+  },
+  "schedule": {
+   "W1": [
+    4950,
+    1200,
+    900,
+    "sliding",
+    3
+   ],
+   "W2": [
+    4700,
+    1200,
+    900,
+    "sliding",
+    3
+   ],
+   "W3": [
+    4000,
+    1200,
+    900,
+    "sliding",
+    3
+   ],
+   "W4": [
+    2000,
+    1200,
+    900,
+    "sliding",
+    3
+   ],
+   "W5": [
+    2400,
+    1200,
+    900,
+    "sliding",
+    2
+   ],
+   "W6": [
+    1700,
+    1200,
+    900,
+    "sliding",
+    2
+   ],
+   "W7": [
+    1500,
+    1200,
+    900,
+    "sliding",
+    2
+   ],
+   "W8": [
+    1200,
+    1200,
+    900,
+    "awning",
+    2
+   ],
+   "W9": [
+    900,
+    900,
+    1200,
+    "awning",
+    1
+   ],
+   "W10": [
+    750,
+    900,
+    1200,
+    "awning",
+    1
+   ],
+   "CW1": [
+    10577,
+    2700,
+    0,
+    "curtain",
+    8
+   ],
+   "CW2": [
+    6137,
+    2700,
+    0,
+    "curtain",
+    5
+   ],
+   "CW3": [
+    4807,
+    2700,
+    0,
+    "curtain",
+    4
+   ],
+   "CW4": [
+    2600,
+    2700,
+    0,
+    "curtain",
+    2
+   ],
+   "CW5": [
+    1200,
+    2700,
+    0,
+    "curtain",
+    1
+   ]
+  }
+ },
+ "windows": [
+  {
+   "sheet": "A105 ground floor plan",
+   "page": 5,
+   "floors": [
+    "1"
+   ],
+   "tag": "W5",
+   "w": 2400,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 2,
+   "dir": "h",
+   "line": [
+    "1",
+    1210
+   ],
+   "along": [
+    "A",
+    "B",
+    0.1891
+   ],
+   "facing": 1,
+   "gap_mm": 2400,
+   "jambs": 1,
+   "fit": 2.34
+  },
+  {
+   "sheet": "A105 ground floor plan",
+   "page": 5,
+   "floors": [
+    "1"
+   ],
+   "tag": "W5",
+   "w": 2400,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 2,
+   "dir": "v",
+   "line": [
+    "A",
+    -68
+   ],
+   "along": [
+    "2",
+    "2A",
+    0.2455
+   ],
+   "facing": -1,
+   "gap_mm": 2400,
+   "jambs": 1,
+   "fit": 2.87
+  },
+  {
+   "sheet": "A105 ground floor plan",
+   "page": 5,
+   "floors": [
+    "1"
+   ],
+   "tag": "W5",
+   "w": 2400,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 2,
+   "dir": "h",
+   "line": [
+    "2A",
+    76
+   ],
+   "along": [
+    "A",
+    "B",
+    0.527
+   ],
+   "facing": 1,
+   "gap_mm": 2399,
+   "jambs": 2,
+   "fit": 0.81
+  },
+  {
+   "sheet": "A105 ground floor plan",
+   "page": 5,
+   "floors": [
+    "1"
+   ],
+   "tag": "W9",
+   "w": 900,
+   "h": 900,
+   "sill": 1200,
+   "kind": "awning",
+   "panes": 1,
+   "dir": "h",
+   "line": [
+    "2",
+    -77
+   ],
+   "along": [
+    "B1",
+    "C",
+    0.8052
+   ],
+   "facing": -1,
+   "gap_mm": 895,
+   "jambs": 2,
+   "fit": 0.82
+  },
+  {
+   "sheet": "A105 ground floor plan",
+   "page": 5,
+   "floors": [
+    "1"
+   ],
+   "tag": "W2",
+   "w": 4700,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 3,
+   "dir": "h",
+   "line": [
+    "7",
+    77
+   ],
+   "along": [
+    "F",
+    "G",
+    0.5
+   ],
+   "facing": 1,
+   "gap_mm": 4699,
+   "jambs": 2,
+   "fit": 0.57
+  },
+  {
+   "sheet": "A105 ground floor plan",
+   "page": 5,
+   "floors": [
+    "1"
+   ],
+   "tag": "W9",
+   "w": 900,
+   "h": 900,
+   "sill": 1200,
+   "kind": "awning",
+   "panes": 1,
+   "dir": "h",
+   "line": [
+    "3",
+    -75
+   ],
+   "along": [
+    "D",
+    "F",
+    0.326
+   ],
+   "facing": -1,
+   "gap_mm": 904,
+   "jambs": 2,
+   "fit": 0.82
+  },
+  {
+   "sheet": "A105 ground floor plan",
+   "page": 5,
+   "floors": [
+    "1"
+   ],
+   "tag": "W9",
+   "w": 900,
+   "h": 900,
+   "sill": 1200,
+   "kind": "awning",
+   "panes": 1,
+   "dir": "h",
+   "line": [
+    "3",
+    -75
+   ],
+   "along": [
+    "C",
+    "D",
+    0.4562
+   ],
+   "facing": -1,
+   "gap_mm": 904,
+   "jambs": 2,
+   "fit": 0.86
+  },
+  {
+   "sheet": "A105 ground floor plan",
+   "page": 5,
+   "floors": [
+    "1"
+   ],
+   "tag": "W8",
+   "w": 1200,
+   "h": 1200,
+   "sill": 900,
+   "kind": "awning",
+   "panes": 2,
+   "dir": "h",
+   "line": [
+    "3",
+    -75
+   ],
+   "along": [
+    "D",
+    "F",
+    0.797
+   ],
+   "facing": -1,
+   "gap_mm": 1199,
+   "jambs": 2,
+   "fit": 0.8
+  },
+  {
+   "sheet": "A105 ground floor plan",
+   "page": 5,
+   "floors": [
+    "1"
+   ],
+   "tag": "W9",
+   "w": 900,
+   "h": 900,
+   "sill": 1200,
+   "kind": "awning",
+   "panes": 1,
+   "dir": "h",
+   "line": [
+    "3",
+    -75
+   ],
+   "along": [
+    "F",
+    "G",
+    0.2514
+   ],
+   "facing": -1,
+   "gap_mm": 895,
+   "jambs": 2,
+   "fit": 0.7
+  },
+  {
+   "sheet": "A105 ground floor plan",
+   "page": 5,
+   "floors": [
+    "1"
+   ],
+   "tag": "W5",
+   "w": 2400,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 2,
+   "dir": "h",
+   "line": [
+    "3",
+    -95
+   ],
+   "along": [
+    "F",
+    "G",
+    0.6789
+   ],
+   "facing": -1,
+   "gap_mm": 2400,
+   "jambs": 1,
+   "fit": 2.84
+  },
+  {
+   "sheet": "A105 ground floor plan",
+   "page": 5,
+   "floors": [
+    "1"
+   ],
+   "tag": "W5",
+   "w": 2400,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 2,
+   "dir": "h",
+   "line": [
+    "3",
+    -95
+   ],
+   "along": [
+    "G",
+    "H",
+    0.3216
+   ],
+   "facing": -1,
+   "gap_mm": 2400,
+   "jambs": 1,
+   "fit": 3.32
+  },
+  {
+   "sheet": "A105 ground floor plan",
+   "page": 5,
+   "floors": [
+    "1"
+   ],
+   "tag": "W8",
+   "w": 1200,
+   "h": 1200,
+   "sill": 900,
+   "kind": "awning",
+   "panes": 2,
+   "dir": "h",
+   "line": [
+    "3",
+    -75
+   ],
+   "along": [
+    "H",
+    "J",
+    0.4479
+   ],
+   "facing": -1,
+   "gap_mm": 1199,
+   "jambs": 2,
+   "fit": 1.16
+  },
+  {
+   "sheet": "A105 ground floor plan",
+   "page": 5,
+   "floors": [
+    "1"
+   ],
+   "tag": "W8",
+   "w": 1200,
+   "h": 1200,
+   "sill": 900,
+   "kind": "awning",
+   "panes": 2,
+   "dir": "h",
+   "line": [
+    "3",
+    -75
+   ],
+   "along": [
+    "J",
+    "K",
+    0.7812
+   ],
+   "facing": -1,
+   "gap_mm": 1809,
+   "jambs": 2,
+   "fit": 2.69
+  },
+  {
+   "sheet": "A105 ground floor plan",
+   "page": 5,
+   "floors": [
+    "1"
+   ],
+   "tag": "W2",
+   "w": 4700,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 3,
+   "dir": "h",
+   "line": [
+    "7",
+    -271
+   ],
+   "along": [
+    "J",
+    "K",
+    0.0104
+   ],
+   "facing": 1,
+   "gap_mm": 4699,
+   "jambs": 2,
+   "fit": 0.68
+  },
+  {
+   "sheet": "A105 ground floor plan",
+   "page": 5,
+   "floors": [
+    "1"
+   ],
+   "tag": "W5",
+   "w": 2400,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 2,
+   "dir": "h",
+   "line": [
+    "6",
+    1211
+   ],
+   "along": [
+    "K",
+    "L",
+    0.695
+   ],
+   "facing": 1,
+   "gap_mm": 2399,
+   "jambs": 2,
+   "fit": 0.56
+  },
+  {
+   "sheet": "A105 ground floor plan",
+   "page": 5,
+   "floors": [
+    "1"
+   ],
+   "tag": "W2",
+   "w": 4700,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 3,
+   "dir": "h",
+   "line": [
+    "7",
+    77
+   ],
+   "along": [
+    "L",
+    "M",
+    0.4737
+   ],
+   "facing": 1,
+   "gap_mm": 4699,
+   "jambs": 2,
+   "fit": 0.85
+  },
+  {
+   "sheet": "A105 ground floor plan",
+   "page": 5,
+   "floors": [
+    "1"
+   ],
+   "tag": "W5",
+   "w": 2400,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 2,
+   "dir": "h",
+   "line": [
+    "3",
+    -75
+   ],
+   "along": [
+    "K",
+    "L",
+    0.2969
+   ],
+   "facing": -1,
+   "gap_mm": 2399,
+   "jambs": 2,
+   "fit": 1.16
+  },
+  {
+   "sheet": "A105 ground floor plan",
+   "page": 5,
+   "floors": [
+    "1"
+   ],
+   "tag": "W9",
+   "w": 900,
+   "h": 900,
+   "sill": 1200,
+   "kind": "awning",
+   "panes": 1,
+   "dir": "h",
+   "line": [
+    "3",
+    -75
+   ],
+   "along": [
+    "K",
+    "L",
+    0.7418
+   ],
+   "facing": -1,
+   "gap_mm": 895,
+   "jambs": 2,
+   "fit": 1.18
+  },
+  {
+   "sheet": "A105 ground floor plan",
+   "page": 5,
+   "floors": [
+    "1"
+   ],
+   "tag": "W5",
+   "w": 2400,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 2,
+   "dir": "h",
+   "line": [
+    "3",
+    -75
+   ],
+   "along": [
+    "L",
+    "M",
+    0.501
+   ],
+   "facing": -1,
+   "gap_mm": 2399,
+   "jambs": 2,
+   "fit": 1.16
+  },
+  {
+   "sheet": "A105 ground floor plan",
+   "page": 5,
+   "floors": [
+    "1"
+   ],
+   "tag": "W5",
+   "w": 2400,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 2,
+   "dir": "h",
+   "line": [
+    "3",
+    -75
+   ],
+   "along": [
+    "M",
+    "N",
+    0.4594
+   ],
+   "facing": -1,
+   "gap_mm": 2399,
+   "jambs": 2,
+   "fit": 1.16
+  },
+  {
+   "sheet": "A105 ground floor plan",
+   "page": 5,
+   "floors": [
+    "1"
+   ],
+   "tag": "W9",
+   "w": 900,
+   "h": 900,
+   "sill": 1200,
+   "kind": "awning",
+   "panes": 1,
+   "dir": "v",
+   "line": [
+    "N",
+    75
+   ],
+   "along": [
+    "4",
+    "5",
+    0.5771
+   ],
+   "facing": 1,
+   "gap_mm": 895,
+   "jambs": 2,
+   "fit": 1.26
+  },
+  {
+   "sheet": "A105 ground floor plan",
+   "page": 5,
+   "floors": [
+    "1"
+   ],
+   "tag": "W9",
+   "w": 900,
+   "h": 900,
+   "sill": 1200,
+   "kind": "awning",
+   "panes": 1,
+   "dir": "v",
+   "line": [
+    "N",
+    75
+   ],
+   "along": [
+    "4",
+    "5",
+    0.9207
+   ],
+   "facing": 1,
+   "gap_mm": 1376,
+   "jambs": 2,
+   "fit": 2.83
+  },
+  {
+   "sheet": "A105 ground floor plan",
+   "page": 5,
+   "floors": [
+    "1"
+   ],
+   "tag": "W9",
+   "w": 900,
+   "h": 900,
+   "sill": 1200,
+   "kind": "awning",
+   "panes": 1,
+   "dir": "v",
+   "line": [
+    "N",
+    75
+   ],
+   "along": [
+    "5",
+    "6",
+    0.4346
+   ],
+   "facing": 1,
+   "gap_mm": 895,
+   "jambs": 2,
+   "fit": 1.26
+  },
+  {
+   "sheet": "A105 ground floor plan",
+   "page": 5,
+   "floors": [
+    "1"
+   ],
+   "tag": "W8",
+   "w": 1200,
+   "h": 1200,
+   "sill": 900,
+   "kind": "awning",
+   "panes": 2,
+   "dir": "v",
+   "line": [
+    "N",
+    75
+   ],
+   "along": [
+    "6",
+    "7",
+    0.6092
+   ],
+   "facing": 1,
+   "gap_mm": 1199,
+   "jambs": 2,
+   "fit": 1.24
+  },
+  {
+   "sheet": "A105 ground floor plan",
+   "page": 5,
+   "floors": [
+    "1"
+   ],
+   "tag": "W2",
+   "w": 4700,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 3,
+   "dir": "h",
+   "line": [
+    "7",
+    77
+   ],
+   "along": [
+    "D",
+    "F",
+    0.5152
+   ],
+   "facing": 1,
+   "gap_mm": 4699,
+   "jambs": 2,
+   "fit": 0.55
+  },
+  {
+   "sheet": "A105 ground floor plan",
+   "page": 5,
+   "floors": [
+    "1"
+   ],
+   "tag": "W9",
+   "w": 900,
+   "h": 900,
+   "sill": 1200,
+   "kind": "awning",
+   "panes": 1,
+   "dir": "h",
+   "line": [
+    "3",
+    -75
+   ],
+   "along": [
+    "G",
+    "H",
+    0.8143
+   ],
+   "facing": -1,
+   "gap_mm": 895,
+   "jambs": 2,
+   "fit": 0.68
+  },
+  {
+   "sheet": "A105 ground floor plan",
+   "page": 5,
+   "floors": [
+    "1"
+   ],
+   "tag": "W2",
+   "w": 4700,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 3,
+   "dir": "h",
+   "line": [
+    "7",
+    77
+   ],
+   "along": [
+    "M",
+    "N",
+    0.5016
+   ],
+   "facing": 1,
+   "gap_mm": 4699,
+   "jambs": 2,
+   "fit": 0.55
+  },
+  {
+   "sheet": "A105 ground floor plan",
+   "page": 5,
+   "floors": [
+    "1"
+   ],
+   "tag": "W9",
+   "w": 900,
+   "h": 900,
+   "sill": 1200,
+   "kind": "awning",
+   "panes": 1,
+   "dir": "v",
+   "line": [
+    "C",
+    88
+   ],
+   "along": [
+    "2A",
+    "3",
+    0.246
+   ],
+   "facing": 1,
+   "gap_mm": 895,
+   "jambs": 2,
+   "fit": 0.55
+  },
+  {
+   "sheet": "A105 ground floor plan",
+   "page": 5,
+   "floors": [
+    "1"
+   ],
+   "tag": "W2",
+   "w": 4700,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 3,
+   "dir": "h",
+   "line": [
+    "7",
+    77
+   ],
+   "along": [
+    "K",
+    "L",
+    0.4762
+   ],
+   "facing": 1,
+   "gap_mm": 4699,
+   "jambs": 2,
+   "fit": 0.55
+  },
+  {
+   "sheet": "A105 ground floor plan",
+   "page": 5,
+   "floors": [
+    "1"
+   ],
+   "tag": "CW4",
+   "w": 2605,
+   "h": 2700,
+   "sill": 0,
+   "kind": "curtain",
+   "panes": 2,
+   "dir": "v",
+   "line": [
+    "C",
+    -76
+   ],
+   "along": [
+    "5",
+    "6",
+    0.7429
+   ],
+   "facing": -1,
+   "gap_mm": 2605,
+   "jambs": 2,
+   "fit": 0.57
+  },
+  {
+   "sheet": "A105 ground floor plan",
+   "page": 5,
+   "floors": [
+    "1"
+   ],
+   "tag": "CW5",
+   "w": 1199,
+   "h": 2700,
+   "sill": 0,
+   "kind": "curtain",
+   "panes": 1,
+   "dir": "v",
+   "line": [
+    "C",
+    -76
+   ],
+   "along": [
+    "4",
+    "5",
+    0.6621
+   ],
+   "facing": -1,
+   "gap_mm": 1199,
+   "jambs": 2,
+   "fit": 0.9
+  },
+  {
+   "sheet": "A106 first & second floor plan",
+   "page": 6,
+   "floors": [
+    "2",
+    "3"
+   ],
+   "tag": "W2",
+   "w": 4700,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 3,
+   "dir": "h",
+   "line": [
+    "2A",
+    -497
+   ],
+   "along": [
+    "B1",
+    "C",
+    0.3134
+   ],
+   "facing": -1,
+   "gap_mm": 5978,
+   "jambs": 2,
+   "fit": 1.04
+  },
+  {
+   "sheet": "A106 first & second floor plan",
+   "page": 6,
+   "floors": [
+    "2",
+    "3"
+   ],
+   "tag": "W5",
+   "w": 2400,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 2,
+   "dir": "v",
+   "line": [
+    "B",
+    -1577
+   ],
+   "along": [
+    "2A",
+    "3",
+    0.346
+   ],
+   "facing": -1,
+   "gap_mm": 2399,
+   "jambs": 2,
+   "fit": 0.8
+  },
+  {
+   "sheet": "A106 first & second floor plan",
+   "page": 6,
+   "floors": [
+    "2",
+    "3"
+   ],
+   "tag": "W5",
+   "w": 2400,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 2,
+   "dir": "v",
+   "line": [
+    "B",
+    -573
+   ],
+   "along": [
+    "4",
+    "5",
+    0.4688
+   ],
+   "facing": -1,
+   "gap_mm": 2399,
+   "jambs": 2,
+   "fit": 0.6
+  },
+  {
+   "sheet": "A106 first & second floor plan",
+   "page": 6,
+   "floors": [
+    "2",
+    "3"
+   ],
+   "tag": "W2",
+   "w": 4700,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 3,
+   "dir": "h",
+   "line": [
+    "5",
+    19
+   ],
+   "along": [
+    "B1",
+    "C",
+    0.3046
+   ],
+   "facing": 1,
+   "gap_mm": 4699,
+   "jambs": 2,
+   "fit": 0.71
+  },
+  {
+   "sheet": "A106 first & second floor plan",
+   "page": 6,
+   "floors": [
+    "2",
+    "3"
+   ],
+   "tag": "W2",
+   "w": 4700,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 3,
+   "dir": "v",
+   "line": [
+    "C",
+    -61
+   ],
+   "along": [
+    "6",
+    "7",
+    0.0337
+   ],
+   "facing": -1,
+   "gap_mm": 5299,
+   "jambs": 2,
+   "fit": 1.3
+  },
+  {
+   "sheet": "A106 first & second floor plan",
+   "page": 6,
+   "floors": [
+    "2",
+    "3"
+   ],
+   "tag": "W2",
+   "w": 4700,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 3,
+   "dir": "h",
+   "line": [
+    "7",
+    1737
+   ],
+   "along": [
+    "C",
+    "D",
+    0.5045
+   ],
+   "facing": 1,
+   "gap_mm": 4699,
+   "jambs": 2,
+   "fit": 0.87
+  },
+  {
+   "sheet": "A106 first & second floor plan",
+   "page": 6,
+   "floors": [
+    "2",
+    "3"
+   ],
+   "tag": "W2",
+   "w": 4700,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 3,
+   "dir": "h",
+   "line": [
+    "7",
+    78
+   ],
+   "along": [
+    "E",
+    "F",
+    0.0093
+   ],
+   "facing": 1,
+   "gap_mm": 4699,
+   "jambs": 2,
+   "fit": 0.75
+  },
+  {
+   "sheet": "A106 first & second floor plan",
+   "page": 6,
+   "floors": [
+    "2",
+    "3"
+   ],
+   "tag": "W2",
+   "w": 4700,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 3,
+   "dir": "h",
+   "line": [
+    "7",
+    671
+   ],
+   "along": [
+    "F",
+    "G",
+    0.5
+   ],
+   "facing": 1,
+   "gap_mm": 4699,
+   "jambs": 2,
+   "fit": 0.8
+  },
+  {
+   "sheet": "A106 first & second floor plan",
+   "page": 6,
+   "floors": [
+    "2",
+    "3"
+   ],
+   "tag": "W2",
+   "w": 4700,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 3,
+   "dir": "h",
+   "line": [
+    "7",
+    78
+   ],
+   "along": [
+    "G",
+    "H",
+    0.4852
+   ],
+   "facing": 1,
+   "gap_mm": 6105,
+   "jambs": 2,
+   "fit": 1.64
+  },
+  {
+   "sheet": "A106 first & second floor plan",
+   "page": 6,
+   "floors": [
+    "2",
+    "3"
+   ],
+   "tag": "W2",
+   "w": 4700,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 3,
+   "dir": "h",
+   "line": [
+    "7",
+    118
+   ],
+   "along": [
+    "J",
+    "K",
+    0.0028
+   ],
+   "facing": 1,
+   "gap_mm": 4699,
+   "jambs": 2,
+   "fit": 0.66
+  },
+  {
+   "sheet": "A106 first & second floor plan",
+   "page": 6,
+   "floors": [
+    "2",
+    "3"
+   ],
+   "tag": "W2",
+   "w": 4700,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 3,
+   "dir": "h",
+   "line": [
+    "7",
+    1573
+   ],
+   "along": [
+    "K",
+    "L",
+    0.4777
+   ],
+   "facing": 1,
+   "gap_mm": 4699,
+   "jambs": 2,
+   "fit": 0.83
+  },
+  {
+   "sheet": "A106 first & second floor plan",
+   "page": 6,
+   "floors": [
+    "2",
+    "3"
+   ],
+   "tag": "W2",
+   "w": 4700,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 3,
+   "dir": "h",
+   "line": [
+    "7",
+    -168
+   ],
+   "along": [
+    "L",
+    "M",
+    0.5002
+   ],
+   "facing": 1,
+   "gap_mm": 4699,
+   "jambs": 2,
+   "fit": 1.05
+  },
+  {
+   "sheet": "A106 first & second floor plan",
+   "page": 6,
+   "floors": [
+    "2",
+    "3"
+   ],
+   "tag": "W5",
+   "w": 2400,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 2,
+   "dir": "h",
+   "line": [
+    "3",
+    -84
+   ],
+   "along": [
+    "C",
+    "D",
+    0.2581
+   ],
+   "facing": -1,
+   "gap_mm": 2399,
+   "jambs": 2,
+   "fit": 0.73
+  },
+  {
+   "sheet": "A106 first & second floor plan",
+   "page": 6,
+   "floors": [
+    "2",
+    "3"
+   ],
+   "tag": "W9",
+   "w": 900,
+   "h": 900,
+   "sill": 1200,
+   "kind": "awning",
+   "panes": 1,
+   "dir": "h",
+   "line": [
+    "3",
+    -84
+   ],
+   "along": [
+    "E",
+    "F",
+    0.5419
+   ],
+   "facing": -1,
+   "gap_mm": 904,
+   "jambs": 2,
+   "fit": 1.12
+  },
+  {
+   "sheet": "A106 first & second floor plan",
+   "page": 6,
+   "floors": [
+    "2",
+    "3"
+   ],
+   "tag": "W5",
+   "w": 2400,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 2,
+   "dir": "h",
+   "line": [
+    "3",
+    -84
+   ],
+   "along": [
+    "F",
+    "G",
+    0.6151
+   ],
+   "facing": -1,
+   "gap_mm": 2399,
+   "jambs": 2,
+   "fit": 1.11
+  },
+  {
+   "sheet": "A106 first & second floor plan",
+   "page": 6,
+   "floors": [
+    "2",
+    "3"
+   ],
+   "tag": "W5",
+   "w": 2400,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 2,
+   "dir": "h",
+   "line": [
+    "3",
+    -84
+   ],
+   "along": [
+    "G",
+    "H",
+    0.3214
+   ],
+   "facing": -1,
+   "gap_mm": 2400,
+   "jambs": 2,
+   "fit": 2.61
+  },
+  {
+   "sheet": "A106 first & second floor plan",
+   "page": 6,
+   "floors": [
+    "2",
+    "3"
+   ],
+   "tag": "W9",
+   "w": 900,
+   "h": 900,
+   "sill": 1200,
+   "kind": "awning",
+   "panes": 1,
+   "dir": "h",
+   "line": [
+    "3",
+    -84
+   ],
+   "along": [
+    "G",
+    "H",
+    0.8143
+   ],
+   "facing": -1,
+   "gap_mm": 895,
+   "jambs": 2,
+   "fit": 1.12
+  },
+  {
+   "sheet": "A106 first & second floor plan",
+   "page": 6,
+   "floors": [
+    "2",
+    "3"
+   ],
+   "tag": "W8",
+   "w": 1200,
+   "h": 1200,
+   "sill": 900,
+   "kind": "awning",
+   "panes": 2,
+   "dir": "h",
+   "line": [
+    "3",
+    -84
+   ],
+   "along": [
+    "H",
+    "J",
+    0.4479
+   ],
+   "facing": -1,
+   "gap_mm": 1199,
+   "jambs": 2,
+   "fit": 1.11
+  },
+  {
+   "sheet": "A106 first & second floor plan",
+   "page": 6,
+   "floors": [
+    "2",
+    "3"
+   ],
+   "tag": "W8",
+   "w": 1200,
+   "h": 1200,
+   "sill": 900,
+   "kind": "awning",
+   "panes": 2,
+   "dir": "h",
+   "line": [
+    "3",
+    -84
+   ],
+   "along": [
+    "J",
+    "K",
+    0.7812
+   ],
+   "facing": -1,
+   "gap_mm": 1809,
+   "jambs": 2,
+   "fit": 2.63
+  },
+  {
+   "sheet": "A106 first & second floor plan",
+   "page": 6,
+   "floors": [
+    "2",
+    "3"
+   ],
+   "tag": "W5",
+   "w": 2400,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 2,
+   "dir": "h",
+   "line": [
+    "3",
+    -84
+   ],
+   "along": [
+    "K",
+    "L",
+    0.2969
+   ],
+   "facing": -1,
+   "gap_mm": 2399,
+   "jambs": 2,
+   "fit": 1.11
+  },
+  {
+   "sheet": "A106 first & second floor plan",
+   "page": 6,
+   "floors": [
+    "2",
+    "3"
+   ],
+   "tag": "W9",
+   "w": 900,
+   "h": 900,
+   "sill": 1200,
+   "kind": "awning",
+   "panes": 1,
+   "dir": "h",
+   "line": [
+    "3",
+    -84
+   ],
+   "along": [
+    "K",
+    "L",
+    0.7252
+   ],
+   "facing": -1,
+   "gap_mm": 904,
+   "jambs": 2,
+   "fit": 1.12
+  },
+  {
+   "sheet": "A106 first & second floor plan",
+   "page": 6,
+   "floors": [
+    "2",
+    "3"
+   ],
+   "tag": "W9",
+   "w": 900,
+   "h": 900,
+   "sill": 1200,
+   "kind": "awning",
+   "panes": 1,
+   "dir": "v",
+   "line": [
+    "N",
+    725
+   ],
+   "along": [
+    "4",
+    "5",
+    0.7808
+   ],
+   "facing": 1,
+   "gap_mm": 904,
+   "jambs": 2,
+   "fit": 1.25
+  },
+  {
+   "sheet": "A106 first & second floor plan",
+   "page": 6,
+   "floors": [
+    "2",
+    "3"
+   ],
+   "tag": "W9",
+   "w": 900,
+   "h": 900,
+   "sill": 1200,
+   "kind": "awning",
+   "panes": 1,
+   "dir": "v",
+   "line": [
+    "N",
+    725
+   ],
+   "along": [
+    "5",
+    "6",
+    0.3506
+   ],
+   "facing": 1,
+   "gap_mm": 904,
+   "jambs": 2,
+   "fit": 1.25
+  },
+  {
+   "sheet": "A106 first & second floor plan",
+   "page": 6,
+   "floors": [
+    "2",
+    "3"
+   ],
+   "tag": "W5",
+   "w": 2400,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 2,
+   "dir": "h",
+   "line": [
+    "3",
+    -84
+   ],
+   "along": [
+    "L",
+    "M",
+    0.5002
+   ],
+   "facing": -1,
+   "gap_mm": 2399,
+   "jambs": 2,
+   "fit": 1.11
+  },
+  {
+   "sheet": "A106 first & second floor plan",
+   "page": 6,
+   "floors": [
+    "2",
+    "3"
+   ],
+   "tag": "W5",
+   "w": 2400,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 2,
+   "dir": "h",
+   "line": [
+    "3",
+    -84
+   ],
+   "along": [
+    "M",
+    "N",
+    0.4584
+   ],
+   "facing": -1,
+   "gap_mm": 2399,
+   "jambs": 2,
+   "fit": 1.11
+  },
+  {
+   "sheet": "A106 first & second floor plan",
+   "page": 6,
+   "floors": [
+    "2",
+    "3"
+   ],
+   "tag": "W5",
+   "w": 2400,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 2,
+   "dir": "v",
+   "line": [
+    "N",
+    90
+   ],
+   "along": [
+    "3",
+    "4",
+    0.8958
+   ],
+   "facing": 1,
+   "gap_mm": 2409,
+   "jambs": 2,
+   "fit": 1.6
+  },
+  {
+   "sheet": "A106 first & second floor plan",
+   "page": 6,
+   "floors": [
+    "2",
+    "3"
+   ],
+   "tag": "W8",
+   "w": 1200,
+   "h": 1200,
+   "sill": 900,
+   "kind": "awning",
+   "panes": 2,
+   "dir": "v",
+   "line": [
+    "N",
+    90
+   ],
+   "along": [
+    "6",
+    "7",
+    0.578
+   ],
+   "facing": 1,
+   "gap_mm": 1209,
+   "jambs": 2,
+   "fit": 1.17
+  },
+  {
+   "sheet": "A106 first & second floor plan",
+   "page": 6,
+   "floors": [
+    "2",
+    "3"
+   ],
+   "tag": "W2",
+   "w": 4700,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 3,
+   "dir": "h",
+   "line": [
+    "7",
+    815
+   ],
+   "along": [
+    "M",
+    "N",
+    0.5006
+   ],
+   "facing": 1,
+   "gap_mm": 4699,
+   "jambs": 2,
+   "fit": 0.79
+  },
+  {
+   "sheet": "A106 first & second floor plan",
+   "page": 6,
+   "floors": [
+    "2",
+    "3"
+   ],
+   "tag": "W10",
+   "w": 750,
+   "h": 900,
+   "sill": 1200,
+   "kind": "awning",
+   "panes": 1,
+   "dir": "v",
+   "line": [
+    "B",
+    -81
+   ],
+   "along": [
+    "3",
+    "4",
+    0.7192
+   ],
+   "facing": -1,
+   "gap_mm": 747,
+   "jambs": 2,
+   "fit": 0.61
+  },
+  {
+   "sheet": "A106 first & second floor plan",
+   "page": 6,
+   "floors": [
+    "2",
+    "3"
+   ],
+   "tag": "W10",
+   "w": 750,
+   "h": 900,
+   "sill": 1200,
+   "kind": "awning",
+   "panes": 1,
+   "dir": "v",
+   "line": [
+    "B",
+    -1577
+   ],
+   "along": [
+    "2A",
+    "3",
+    0.8933
+   ],
+   "facing": -1,
+   "gap_mm": 747,
+   "jambs": 2,
+   "fit": 0.75
+  },
+  {
+   "sheet": "A107 third floor plan",
+   "page": 7,
+   "floors": [
+    "4"
+   ],
+   "tag": "W2",
+   "w": 4700,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 3,
+   "dir": "h",
+   "line": [
+    "2A",
+    -500
+   ],
+   "along": [
+    "B1",
+    "C",
+    0.3149
+   ],
+   "facing": -1,
+   "gap_mm": 5976,
+   "jambs": 2,
+   "fit": 0.91
+  },
+  {
+   "sheet": "A107 third floor plan",
+   "page": 7,
+   "floors": [
+    "4"
+   ],
+   "tag": "W5",
+   "w": 2400,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 2,
+   "dir": "v",
+   "line": [
+    "B",
+    -1063
+   ],
+   "along": [
+    "2A",
+    "3",
+    0.3471
+   ],
+   "facing": -1,
+   "gap_mm": 2407,
+   "jambs": 2,
+   "fit": 0.41
+  },
+  {
+   "sheet": "A107 third floor plan",
+   "page": 7,
+   "floors": [
+    "4"
+   ],
+   "tag": "W5",
+   "w": 2400,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 2,
+   "dir": "h",
+   "line": [
+    "3",
+    -87
+   ],
+   "along": [
+    "C",
+    "D",
+    0.5231
+   ],
+   "facing": -1,
+   "gap_mm": 2398,
+   "jambs": 2,
+   "fit": 0.94
+  },
+  {
+   "sheet": "A107 third floor plan",
+   "page": 7,
+   "floors": [
+    "4"
+   ],
+   "tag": "W5",
+   "w": 2400,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 2,
+   "dir": "h",
+   "line": [
+    "5",
+    36
+   ],
+   "along": [
+    "B1",
+    "C",
+    0.3171
+   ],
+   "facing": 1,
+   "gap_mm": 2398,
+   "jambs": 2,
+   "fit": 1.01
+  },
+  {
+   "sheet": "A107 third floor plan",
+   "page": 7,
+   "floors": [
+    "4"
+   ],
+   "tag": "W5",
+   "w": 2400,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 2,
+   "dir": "v",
+   "line": [
+    "B",
+    -60
+   ],
+   "along": [
+    "4",
+    "5",
+    0.5597
+   ],
+   "facing": -1,
+   "gap_mm": 2397,
+   "jambs": 2,
+   "fit": 0.93
+  },
+  {
+   "sheet": "A107 third floor plan",
+   "page": 7,
+   "floors": [
+    "4"
+   ],
+   "tag": "W2",
+   "w": 4700,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 3,
+   "dir": "v",
+   "line": [
+    "C",
+    -766
+   ],
+   "along": [
+    "6",
+    "7",
+    0.215
+   ],
+   "facing": -1,
+   "gap_mm": 4697,
+   "jambs": 2,
+   "fit": 0.77
+  },
+  {
+   "sheet": "A107 third floor plan",
+   "page": 7,
+   "floors": [
+    "4"
+   ],
+   "tag": "W2",
+   "w": 4700,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 3,
+   "dir": "h",
+   "line": [
+    "7",
+    474
+   ],
+   "along": [
+    "C",
+    "D",
+    0.4876
+   ],
+   "facing": 1,
+   "gap_mm": 4699,
+   "jambs": 2,
+   "fit": 0.82
+  },
+  {
+   "sheet": "A107 third floor plan",
+   "page": 7,
+   "floors": [
+    "4"
+   ],
+   "tag": "W2",
+   "w": 4700,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 3,
+   "dir": "h",
+   "line": [
+    "7",
+    658
+   ],
+   "along": [
+    "E",
+    "F",
+    0.0056
+   ],
+   "facing": 1,
+   "gap_mm": 4699,
+   "jambs": 2,
+   "fit": 0.71
+  },
+  {
+   "sheet": "A107 third floor plan",
+   "page": 7,
+   "floors": [
+    "4"
+   ],
+   "tag": "W1",
+   "w": 4950,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 3,
+   "dir": "h",
+   "line": [
+    "7",
+    -427
+   ],
+   "along": [
+    "F",
+    "G",
+    0.4672
+   ],
+   "facing": 1,
+   "gap_mm": 5003,
+   "jambs": 2,
+   "fit": 0.65
+  },
+  {
+   "sheet": "A107 third floor plan",
+   "page": 7,
+   "floors": [
+    "4"
+   ],
+   "tag": "W2",
+   "w": 4700,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 3,
+   "dir": "h",
+   "line": [
+    "7",
+    1661
+   ],
+   "along": [
+    "G",
+    "H",
+    0.5004
+   ],
+   "facing": 1,
+   "gap_mm": 4699,
+   "jambs": 2,
+   "fit": 0.94
+  },
+  {
+   "sheet": "A107 third floor plan",
+   "page": 7,
+   "floors": [
+    "4"
+   ],
+   "tag": "W2",
+   "w": 4700,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 3,
+   "dir": "h",
+   "line": [
+    "7",
+    105
+   ],
+   "along": [
+    "J",
+    "K",
+    0.0028
+   ],
+   "facing": 1,
+   "gap_mm": 4699,
+   "jambs": 2,
+   "fit": 0.75
+  },
+  {
+   "sheet": "A107 third floor plan",
+   "page": 7,
+   "floors": [
+    "4"
+   ],
+   "tag": "W2",
+   "w": 4700,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 3,
+   "dir": "h",
+   "line": [
+    "7",
+    515
+   ],
+   "along": [
+    "K",
+    "L",
+    0.4777
+   ],
+   "facing": 1,
+   "gap_mm": 4699,
+   "jambs": 2,
+   "fit": 0.92
+  },
+  {
+   "sheet": "A107 third floor plan",
+   "page": 7,
+   "floors": [
+    "4"
+   ],
+   "tag": "W2",
+   "w": 4700,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 3,
+   "dir": "h",
+   "line": [
+    "7",
+    1579
+   ],
+   "along": [
+    "L",
+    "M",
+    0.5018
+   ],
+   "facing": 1,
+   "gap_mm": 4699,
+   "jambs": 2,
+   "fit": 0.77
+  },
+  {
+   "sheet": "A107 third floor plan",
+   "page": 7,
+   "floors": [
+    "4"
+   ],
+   "tag": "W3",
+   "w": 4000,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 3,
+   "dir": "h",
+   "line": [
+    "7",
+    -181
+   ],
+   "along": [
+    "M",
+    "N",
+    0.5942
+   ],
+   "facing": 1,
+   "gap_mm": 4001,
+   "jambs": 2,
+   "fit": 0.75
+  },
+  {
+   "sheet": "A107 third floor plan",
+   "page": 7,
+   "floors": [
+    "4"
+   ],
+   "tag": "W9",
+   "w": 900,
+   "h": 900,
+   "sill": 1200,
+   "kind": "awning",
+   "panes": 1,
+   "dir": "v",
+   "line": [
+    "N",
+    920
+   ],
+   "along": [
+    "5",
+    "6",
+    0.6694
+   ],
+   "facing": -1,
+   "gap_mm": 900,
+   "jambs": 1,
+   "fit": 2.44
+  },
+  {
+   "sheet": "A107 third floor plan",
+   "page": 7,
+   "floors": [
+    "4"
+   ],
+   "tag": "W9",
+   "w": 900,
+   "h": 900,
+   "sill": 1200,
+   "kind": "awning",
+   "panes": 1,
+   "dir": "v",
+   "line": [
+    "N",
+    81
+   ],
+   "along": [
+    "4",
+    "5",
+    0.7833
+   ],
+   "facing": 1,
+   "gap_mm": 904,
+   "jambs": 2,
+   "fit": 1.48
+  },
+  {
+   "sheet": "A107 third floor plan",
+   "page": 7,
+   "floors": [
+    "4"
+   ],
+   "tag": "W5",
+   "w": 2400,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 2,
+   "dir": "v",
+   "line": [
+    "N",
+    1535
+   ],
+   "along": [
+    "3",
+    "4",
+    0.921
+   ],
+   "facing": 1,
+   "gap_mm": 2397,
+   "jambs": 2,
+   "fit": 1.41
+  },
+  {
+   "sheet": "A107 third floor plan",
+   "page": 7,
+   "floors": [
+    "4"
+   ],
+   "tag": "W7",
+   "w": 1500,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 2,
+   "dir": "h",
+   "line": [
+    "3",
+    -87
+   ],
+   "along": [
+    "M",
+    "N",
+    0.5272
+   ],
+   "facing": -1,
+   "gap_mm": 1494,
+   "jambs": 2,
+   "fit": 0.73
+  },
+  {
+   "sheet": "A107 third floor plan",
+   "page": 7,
+   "floors": [
+    "4"
+   ],
+   "tag": "W8",
+   "w": 1200,
+   "h": 1200,
+   "sill": 900,
+   "kind": "awning",
+   "panes": 2,
+   "dir": "h",
+   "line": [
+    "3",
+    -87
+   ],
+   "along": [
+    "L",
+    "M",
+    0.9056
+   ],
+   "facing": -1,
+   "gap_mm": 1779,
+   "jambs": 2,
+   "fit": 2.63
+  },
+  {
+   "sheet": "A107 third floor plan",
+   "page": 7,
+   "floors": [
+    "4"
+   ],
+   "tag": "W5",
+   "w": 2400,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 2,
+   "dir": "h",
+   "line": [
+    "3",
+    -87
+   ],
+   "along": [
+    "L",
+    "M",
+    0.3642
+   ],
+   "facing": -1,
+   "gap_mm": 2398,
+   "jambs": 2,
+   "fit": 1.18
+  },
+  {
+   "sheet": "A107 third floor plan",
+   "page": 7,
+   "floors": [
+    "4"
+   ],
+   "tag": "W9",
+   "w": 900,
+   "h": 900,
+   "sill": 1200,
+   "kind": "awning",
+   "panes": 1,
+   "dir": "h",
+   "line": [
+    "3",
+    -87
+   ],
+   "along": [
+    "K",
+    "L",
+    0.726
+   ],
+   "facing": -1,
+   "gap_mm": 894,
+   "jambs": 2,
+   "fit": 1.2
+  },
+  {
+   "sheet": "A107 third floor plan",
+   "page": 7,
+   "floors": [
+    "4"
+   ],
+   "tag": "W5",
+   "w": 2400,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 2,
+   "dir": "h",
+   "line": [
+    "3",
+    -87
+   ],
+   "along": [
+    "K",
+    "L",
+    0.2985
+   ],
+   "facing": -1,
+   "gap_mm": 2398,
+   "jambs": 2,
+   "fit": 1.18
+  },
+  {
+   "sheet": "A107 third floor plan",
+   "page": 7,
+   "floors": [
+    "4"
+   ],
+   "tag": "W9",
+   "w": 900,
+   "h": 900,
+   "sill": 1200,
+   "kind": "awning",
+   "panes": 1,
+   "dir": "h",
+   "line": [
+    "3",
+    -87
+   ],
+   "along": [
+    "J",
+    "K",
+    0.7749
+   ],
+   "facing": -1,
+   "gap_mm": 900,
+   "jambs": 2,
+   "fit": 2.68
+  },
+  {
+   "sheet": "A107 third floor plan",
+   "page": 7,
+   "floors": [
+    "4"
+   ],
+   "tag": "W6",
+   "w": 1700,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 2,
+   "dir": "h",
+   "line": [
+    "3",
+    -87
+   ],
+   "along": [
+    "H",
+    "J",
+    0.3316
+   ],
+   "facing": -1,
+   "gap_mm": 2290,
+   "jambs": 2,
+   "fit": 2.22
+  },
+  {
+   "sheet": "A107 third floor plan",
+   "page": 7,
+   "floors": [
+    "4"
+   ],
+   "tag": "W9",
+   "w": 900,
+   "h": 900,
+   "sill": 1200,
+   "kind": "awning",
+   "panes": 1,
+   "dir": "h",
+   "line": [
+    "3",
+    -87
+   ],
+   "along": [
+    "G",
+    "H",
+    0.8015
+   ],
+   "facing": -1,
+   "gap_mm": 894,
+   "jambs": 2,
+   "fit": 1.2
+  },
+  {
+   "sheet": "A107 third floor plan",
+   "page": 7,
+   "floors": [
+    "4"
+   ],
+   "tag": "W5",
+   "w": 2400,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 2,
+   "dir": "h",
+   "line": [
+    "3",
+    -108
+   ],
+   "along": [
+    "G",
+    "H",
+    0.3216
+   ],
+   "facing": -1,
+   "gap_mm": 2400,
+   "jambs": 1,
+   "fit": 3.34
+  },
+  {
+   "sheet": "A107 third floor plan",
+   "page": 7,
+   "floors": [
+    "4"
+   ],
+   "tag": "W5",
+   "w": 2400,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 2,
+   "dir": "h",
+   "line": [
+    "3",
+    -108
+   ],
+   "along": [
+    "F",
+    "G",
+    0.6789
+   ],
+   "facing": -1,
+   "gap_mm": 2400,
+   "jambs": 1,
+   "fit": 3.34
+  },
+  {
+   "sheet": "A107 third floor plan",
+   "page": 7,
+   "floors": [
+    "4"
+   ],
+   "tag": "W9",
+   "w": 900,
+   "h": 900,
+   "sill": 1200,
+   "kind": "awning",
+   "panes": 1,
+   "dir": "h",
+   "line": [
+    "3",
+    -87
+   ],
+   "along": [
+    "F",
+    "G",
+    0.2578
+   ],
+   "facing": -1,
+   "gap_mm": 894,
+   "jambs": 2,
+   "fit": 1.2
+  },
+  {
+   "sheet": "A107 third floor plan",
+   "page": 7,
+   "floors": [
+    "4"
+   ],
+   "tag": "W9",
+   "w": 900,
+   "h": 900,
+   "sill": 1200,
+   "kind": "awning",
+   "panes": 1,
+   "dir": "h",
+   "line": [
+    "3",
+    -87
+   ],
+   "along": [
+    "E",
+    "F",
+    0.6099
+   ],
+   "facing": -1,
+   "gap_mm": 904,
+   "jambs": 2,
+   "fit": 0.95
+  },
+  {
+   "sheet": "A107 third floor plan",
+   "page": 7,
+   "floors": [
+    "4"
+   ],
+   "tag": "W5",
+   "w": 2400,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 2,
+   "dir": "h",
+   "line": [
+    "6",
+    1085
+   ],
+   "along": [
+    "K",
+    "L",
+    0.6966
+   ],
+   "facing": -1,
+   "gap_mm": 2398,
+   "jambs": 2,
+   "fit": 0.71
+  },
+  {
+   "sheet": "A107 third floor plan",
+   "page": 7,
+   "floors": [
+    "4"
+   ],
+   "tag": "W6",
+   "w": 1700,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 2,
+   "dir": "h",
+   "line": [
+    "3",
+    -87
+   ],
+   "along": [
+    "D",
+    "E",
+    0.4713
+   ],
+   "facing": -1,
+   "gap_mm": 1701,
+   "jambs": 2,
+   "fit": 0.74
+  },
+  {
+   "sheet": "A107 third floor plan",
+   "page": 7,
+   "floors": [
+    "4"
+   ],
+   "tag": "W5",
+   "w": 2400,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 2,
+   "dir": "v",
+   "line": [
+    "N",
+    1064
+   ],
+   "along": [
+    "6",
+    "7",
+    0.4144
+   ],
+   "facing": 1,
+   "gap_mm": 2397,
+   "jambs": 2,
+   "fit": 0.61
+  },
+  {
+   "sheet": "A107 third floor plan",
+   "page": 7,
+   "floors": [
+    "4"
+   ],
+   "tag": "W7",
+   "w": 1500,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 2,
+   "dir": "v",
+   "line": [
+    "G",
+    -71
+   ],
+   "along": [
+    "6",
+    "7",
+    1.1562
+   ],
+   "facing": -1,
+   "gap_mm": 2103,
+   "jambs": 2,
+   "fit": 1.81
+  },
+  {
+   "sheet": "A107 third floor plan",
+   "page": 7,
+   "floors": [
+    "4"
+   ],
+   "tag": "W9",
+   "w": 900,
+   "h": 900,
+   "sill": 1200,
+   "kind": "awning",
+   "panes": 1,
+   "dir": "v",
+   "line": [
+    "B",
+    -1063
+   ],
+   "along": [
+    "3",
+    "4",
+    0.499
+   ],
+   "facing": -1,
+   "gap_mm": 904,
+   "jambs": 2,
+   "fit": 0.43
+  },
+  {
+   "sheet": "A107 third floor plan",
+   "page": 7,
+   "floors": [
+    "4"
+   ],
+   "tag": "W10",
+   "w": 750,
+   "h": 900,
+   "sill": 1200,
+   "kind": "awning",
+   "panes": 1,
+   "dir": "v",
+   "line": [
+    "B",
+    -1063
+   ],
+   "along": [
+    "2A",
+    "3",
+    0.8933
+   ],
+   "facing": -1,
+   "gap_mm": 747,
+   "jambs": 2,
+   "fit": 0.44
+  },
+  {
+   "sheet": "A108 fourth floor plan",
+   "page": 8,
+   "floors": [
+    "5"
+   ],
+   "tag": "W5",
+   "w": 2400,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 2,
+   "dir": "h",
+   "line": [
+    "3",
+    -73
+   ],
+   "along": [
+    "L",
+    "M",
+    0.3634
+   ],
+   "facing": -1,
+   "gap_mm": 2408,
+   "jambs": 2,
+   "fit": 0.96
+  },
+  {
+   "sheet": "A108 fourth floor plan",
+   "page": 8,
+   "floors": [
+    "5"
+   ],
+   "tag": "W5",
+   "w": 2400,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 2,
+   "dir": "h",
+   "line": [
+    "3",
+    -73
+   ],
+   "along": [
+    "M",
+    "N",
+    0.4584
+   ],
+   "facing": -1,
+   "gap_mm": 2408,
+   "jambs": 2,
+   "fit": 0.96
+  },
+  {
+   "sheet": "A108 fourth floor plan",
+   "page": 8,
+   "floors": [
+    "5"
+   ],
+   "tag": "W5",
+   "w": 2400,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 2,
+   "dir": "v",
+   "line": [
+    "N",
+    63
+   ],
+   "along": [
+    "3",
+    "4",
+    0.8941
+   ],
+   "facing": 1,
+   "gap_mm": 2399,
+   "jambs": 2,
+   "fit": 0.83
+  },
+  {
+   "sheet": "A108 fourth floor plan",
+   "page": 8,
+   "floors": [
+    "5"
+   ],
+   "tag": "W8",
+   "w": 1200,
+   "h": 1200,
+   "sill": 900,
+   "kind": "awning",
+   "panes": 2,
+   "dir": "v",
+   "line": [
+    "N",
+    63
+   ],
+   "along": [
+    "6",
+    "7",
+    0.4059
+   ],
+   "facing": 1,
+   "gap_mm": 1199,
+   "jambs": 2,
+   "fit": 0.57
+  },
+  {
+   "sheet": "A108 fourth floor plan",
+   "page": 8,
+   "floors": [
+    "5"
+   ],
+   "tag": "W2",
+   "w": 4700,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 3,
+   "dir": "h",
+   "line": [
+    "7",
+    1573
+   ],
+   "along": [
+    "M",
+    "N",
+    0.4997
+   ],
+   "facing": 1,
+   "gap_mm": 4699,
+   "jambs": 2,
+   "fit": 0.64
+  },
+  {
+   "sheet": "A108 fourth floor plan",
+   "page": 8,
+   "floors": [
+    "5"
+   ],
+   "tag": "W2",
+   "w": 4700,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 3,
+   "dir": "h",
+   "line": [
+    "7",
+    979
+   ],
+   "along": [
+    "L",
+    "M",
+    0.4746
+   ],
+   "facing": 1,
+   "gap_mm": 4699,
+   "jambs": 2,
+   "fit": 0.63
+  },
+  {
+   "sheet": "A108 fourth floor plan",
+   "page": 8,
+   "floors": [
+    "5"
+   ],
+   "tag": "W2",
+   "w": 4700,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 3,
+   "dir": "h",
+   "line": [
+    "7",
+    529
+   ],
+   "along": [
+    "K",
+    "L",
+    0.4778
+   ],
+   "facing": 1,
+   "gap_mm": 4699,
+   "jambs": 2,
+   "fit": 0.73
+  },
+  {
+   "sheet": "A108 fourth floor plan",
+   "page": 8,
+   "floors": [
+    "5"
+   ],
+   "tag": "W3",
+   "w": 4000,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 3,
+   "dir": "h",
+   "line": [
+    "7",
+    979
+   ],
+   "along": [
+    "J",
+    "K",
+    0.0105
+   ],
+   "facing": 1,
+   "gap_mm": 3991,
+   "jambs": 2,
+   "fit": 0.62
+  },
+  {
+   "sheet": "A108 fourth floor plan",
+   "page": 8,
+   "floors": [
+    "5"
+   ],
+   "tag": "W2",
+   "w": 4700,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 3,
+   "dir": "h",
+   "line": [
+    "7",
+    -577
+   ],
+   "along": [
+    "G",
+    "H",
+    0.5004
+   ],
+   "facing": -1,
+   "gap_mm": 4708,
+   "jambs": 2,
+   "fit": 0.47
+  },
+  {
+   "sheet": "A108 fourth floor plan",
+   "page": 8,
+   "floors": [
+    "5"
+   ],
+   "tag": "W2",
+   "w": 4700,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 3,
+   "dir": "h",
+   "line": [
+    "7",
+    119
+   ],
+   "along": [
+    "F",
+    "G",
+    0.5319
+   ],
+   "facing": 1,
+   "gap_mm": 4699,
+   "jambs": 2,
+   "fit": 0.84
+  },
+  {
+   "sheet": "A108 fourth floor plan",
+   "page": 8,
+   "floors": [
+    "5"
+   ],
+   "tag": "W3",
+   "w": 4000,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 3,
+   "dir": "h",
+   "line": [
+    "7",
+    1676
+   ],
+   "along": [
+    "E",
+    "F",
+    0.0131
+   ],
+   "facing": 1,
+   "gap_mm": 3991,
+   "jambs": 2,
+   "fit": 0.84
+  },
+  {
+   "sheet": "A108 fourth floor plan",
+   "page": 8,
+   "floors": [
+    "5"
+   ],
+   "tag": "W2",
+   "w": 4700,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 3,
+   "dir": "h",
+   "line": [
+    "7",
+    58
+   ],
+   "along": [
+    "C",
+    "D",
+    0.4715
+   ],
+   "facing": 1,
+   "gap_mm": 4699,
+   "jambs": 2,
+   "fit": 0.79
+  },
+  {
+   "sheet": "A108 fourth floor plan",
+   "page": 8,
+   "floors": [
+    "5"
+   ],
+   "tag": "W3",
+   "w": 4000,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 3,
+   "dir": "v",
+   "line": [
+    "C",
+    -67
+   ],
+   "along": [
+    "6",
+    "7",
+    0.142
+   ],
+   "facing": -1,
+   "gap_mm": 4001,
+   "jambs": 2,
+   "fit": 0.87
+  },
+  {
+   "sheet": "A108 fourth floor plan",
+   "page": 8,
+   "floors": [
+    "5"
+   ],
+   "tag": "W5",
+   "w": 2400,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 2,
+   "dir": "h",
+   "line": [
+    "5",
+    675
+   ],
+   "along": [
+    "B1",
+    "C",
+    0.4285
+   ],
+   "facing": 1,
+   "gap_mm": 2398,
+   "jambs": 2,
+   "fit": 0.89
+  },
+  {
+   "sheet": "A108 fourth floor plan",
+   "page": 8,
+   "floors": [
+    "5"
+   ],
+   "tag": "W5",
+   "w": 2400,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 2,
+   "dir": "v",
+   "line": [
+    "B",
+    -1060
+   ],
+   "along": [
+    "4",
+    "5",
+    0.5622
+   ],
+   "facing": -1,
+   "gap_mm": 2399,
+   "jambs": 2,
+   "fit": 0.81
+  },
+  {
+   "sheet": "A108 fourth floor plan",
+   "page": 8,
+   "floors": [
+    "5"
+   ],
+   "tag": "W5",
+   "w": 2400,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 2,
+   "dir": "h",
+   "line": [
+    "3",
+    -94
+   ],
+   "along": [
+    "G",
+    "H",
+    0.3221
+   ],
+   "facing": -1,
+   "gap_mm": 2400,
+   "jambs": 1,
+   "fit": 3.07
+  },
+  {
+   "sheet": "A108 fourth floor plan",
+   "page": 8,
+   "floors": [
+    "5"
+   ],
+   "tag": "W5",
+   "w": 2400,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 2,
+   "dir": "h",
+   "line": [
+    "3",
+    -94
+   ],
+   "along": [
+    "F",
+    "G",
+    0.6789
+   ],
+   "facing": -1,
+   "gap_mm": 2400,
+   "jambs": 1,
+   "fit": 3.07
+  },
+  {
+   "sheet": "A108 fourth floor plan",
+   "page": 8,
+   "floors": [
+    "5"
+   ],
+   "tag": "W5",
+   "w": 2400,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 2,
+   "dir": "h",
+   "line": [
+    "6",
+    1213
+   ],
+   "along": [
+    "K",
+    "L",
+    0.6498
+   ],
+   "facing": 1,
+   "gap_mm": 2408,
+   "jambs": 2,
+   "fit": 0.87
+  },
+  {
+   "sheet": "A108 fourth floor plan",
+   "page": 8,
+   "floors": [
+    "5"
+   ],
+   "tag": "W9",
+   "w": 900,
+   "h": 900,
+   "sill": 1200,
+   "kind": "awning",
+   "panes": 1,
+   "dir": "v",
+   "line": [
+    "N",
+    760
+   ],
+   "along": [
+    "5",
+    "6",
+    0.428
+   ],
+   "facing": 1,
+   "gap_mm": 895,
+   "jambs": 2,
+   "fit": 1.46
+  },
+  {
+   "sheet": "A108 fourth floor plan",
+   "page": 8,
+   "floors": [
+    "5"
+   ],
+   "tag": "W9",
+   "w": 900,
+   "h": 900,
+   "sill": 1200,
+   "kind": "awning",
+   "panes": 1,
+   "dir": "v",
+   "line": [
+    "N",
+    760
+   ],
+   "along": [
+    "4",
+    "5",
+    0.7612
+   ],
+   "facing": 1,
+   "gap_mm": 904,
+   "jambs": 2,
+   "fit": 1.46
+  },
+  {
+   "sheet": "A108 fourth floor plan",
+   "page": 8,
+   "floors": [
+    "5"
+   ],
+   "tag": "W5",
+   "w": 2400,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 2,
+   "dir": "h",
+   "line": [
+    "3",
+    -73
+   ],
+   "along": [
+    "K",
+    "L",
+    0.2985
+   ],
+   "facing": -1,
+   "gap_mm": 2398,
+   "jambs": 2,
+   "fit": 0.95
+  },
+  {
+   "sheet": "A108 fourth floor plan",
+   "page": 8,
+   "floors": [
+    "5"
+   ],
+   "tag": "W8",
+   "w": 1200,
+   "h": 1200,
+   "sill": 900,
+   "kind": "awning",
+   "panes": 2,
+   "dir": "h",
+   "line": [
+    "3",
+    -73
+   ],
+   "along": [
+    "J",
+    "K",
+    0.7851
+   ],
+   "facing": -1,
+   "gap_mm": 1809,
+   "jambs": 2,
+   "fit": 2.19
+  },
+  {
+   "sheet": "A108 fourth floor plan",
+   "page": 8,
+   "floors": [
+    "5"
+   ],
+   "tag": "W8",
+   "w": 1200,
+   "h": 1200,
+   "sill": 900,
+   "kind": "awning",
+   "panes": 2,
+   "dir": "h",
+   "line": [
+    "3",
+    -73
+   ],
+   "along": [
+    "H",
+    "J",
+    0.4518
+   ],
+   "facing": -1,
+   "gap_mm": 1199,
+   "jambs": 2,
+   "fit": 0.95
+  },
+  {
+   "sheet": "A108 fourth floor plan",
+   "page": 8,
+   "floors": [
+    "5"
+   ],
+   "tag": "W9",
+   "w": 900,
+   "h": 900,
+   "sill": 1200,
+   "kind": "awning",
+   "panes": 1,
+   "dir": "h",
+   "line": [
+    "3",
+    -73
+   ],
+   "along": [
+    "G",
+    "H",
+    0.8636
+   ],
+   "facing": -1,
+   "gap_mm": 894,
+   "jambs": 2,
+   "fit": 0.97
+  },
+  {
+   "sheet": "A108 fourth floor plan",
+   "page": 8,
+   "floors": [
+    "5"
+   ],
+   "tag": "W9",
+   "w": 900,
+   "h": 900,
+   "sill": 1200,
+   "kind": "awning",
+   "panes": 1,
+   "dir": "h",
+   "line": [
+    "3",
+    -73
+   ],
+   "along": [
+    "F",
+    "G",
+    0.2474
+   ],
+   "facing": -1,
+   "gap_mm": 904,
+   "jambs": 2,
+   "fit": 0.92
+  },
+  {
+   "sheet": "A108 fourth floor plan",
+   "page": 8,
+   "floors": [
+    "5"
+   ],
+   "tag": "W8",
+   "w": 1200,
+   "h": 1200,
+   "sill": 900,
+   "kind": "awning",
+   "panes": 2,
+   "dir": "h",
+   "line": [
+    "3",
+    -73
+   ],
+   "along": [
+    "E",
+    "F",
+    0.5155
+   ],
+   "facing": -1,
+   "gap_mm": 1199,
+   "jambs": 2,
+   "fit": 0.91
+  },
+  {
+   "sheet": "A108 fourth floor plan",
+   "page": 8,
+   "floors": [
+    "5"
+   ],
+   "tag": "W3",
+   "w": 4000,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 3,
+   "dir": "h",
+   "line": [
+    "3",
+    -73
+   ],
+   "along": [
+    "C",
+    "D",
+    0.2747
+   ],
+   "facing": -1,
+   "gap_mm": 2398,
+   "jambs": 2,
+   "fit": 2.11
+  },
+  {
+   "sheet": "A108 fourth floor plan",
+   "page": 8,
+   "floors": [
+    "5"
+   ],
+   "tag": "W9",
+   "w": 900,
+   "h": 900,
+   "sill": 1200,
+   "kind": "awning",
+   "panes": 1,
+   "dir": "h",
+   "line": [
+    "3",
+    -73
+   ],
+   "along": [
+    "K",
+    "L",
+    0.7252
+   ],
+   "facing": -1,
+   "gap_mm": 904,
+   "jambs": 2,
+   "fit": 0.96
+  },
+  {
+   "sheet": "A108 fourth floor plan",
+   "page": 8,
+   "floors": [
+    "5"
+   ],
+   "tag": "W10",
+   "w": 750,
+   "h": 900,
+   "sill": 1200,
+   "kind": "awning",
+   "panes": 1,
+   "dir": "v",
+   "line": [
+    "B",
+    -671
+   ],
+   "along": [
+    "2A",
+    "3",
+    0.8896
+   ],
+   "facing": -1,
+   "gap_mm": 757,
+   "jambs": 2,
+   "fit": 0.78
+  },
+  {
+   "sheet": "A108 fourth floor plan",
+   "page": 8,
+   "floors": [
+    "5"
+   ],
+   "tag": "W9",
+   "w": 900,
+   "h": 900,
+   "sill": 1200,
+   "kind": "awning",
+   "panes": 1,
+   "dir": "v",
+   "line": [
+    "B",
+    -57
+   ],
+   "along": [
+    "3",
+    "4",
+    0.7137
+   ],
+   "facing": -1,
+   "gap_mm": 816,
+   "jambs": 2,
+   "fit": 1.09
+  },
+  {
+   "sheet": "A108 fourth floor plan",
+   "page": 8,
+   "floors": [
+    "5"
+   ],
+   "tag": "W2",
+   "w": 4700,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 3,
+   "dir": "h",
+   "line": [
+    "2A",
+    -496
+   ],
+   "along": [
+    "B1",
+    "C",
+    0.3149
+   ],
+   "facing": -1,
+   "gap_mm": 5976,
+   "jambs": 2,
+   "fit": 1.04
+  },
+  {
+   "sheet": "A108 fourth floor plan",
+   "page": 8,
+   "floors": [
+    "5"
+   ],
+   "tag": "W5",
+   "w": 2400,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 2,
+   "dir": "v",
+   "line": [
+    "B",
+    -671
+   ],
+   "along": [
+    "2A",
+    "3",
+    0.319
+   ],
+   "facing": -1,
+   "gap_mm": 2399,
+   "jambs": 2,
+   "fit": 0.76
+  },
+  {
+   "sheet": "A109 fifth floor plan",
+   "page": 9,
+   "floors": [
+    "6"
+   ],
+   "tag": "W2",
+   "w": 4700,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 3,
+   "dir": "h",
+   "line": [
+    "2A",
+    -512
+   ],
+   "along": [
+    "B1",
+    "C",
+    0.3149
+   ],
+   "facing": -1,
+   "gap_mm": 5978,
+   "jambs": 2,
+   "fit": 0.89
+  },
+  {
+   "sheet": "A109 fifth floor plan",
+   "page": 9,
+   "floors": [
+    "6"
+   ],
+   "tag": "W5",
+   "w": 2400,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 2,
+   "dir": "v",
+   "line": [
+    "B",
+    -86
+   ],
+   "along": [
+    "2A",
+    "3",
+    0.4648
+   ],
+   "facing": -1,
+   "gap_mm": 2399,
+   "jambs": 2,
+   "fit": 0.51
+  },
+  {
+   "sheet": "A109 fifth floor plan",
+   "page": 9,
+   "floors": [
+    "6"
+   ],
+   "tag": "W10",
+   "w": 750,
+   "h": 900,
+   "sill": 1200,
+   "kind": "awning",
+   "panes": 1,
+   "dir": "v",
+   "line": [
+    "B",
+    -86
+   ],
+   "along": [
+    "3",
+    "4",
+    0.6977
+   ],
+   "facing": -1,
+   "gap_mm": 747,
+   "jambs": 2,
+   "fit": 0.77
+  },
+  {
+   "sheet": "A109 fifth floor plan",
+   "page": 9,
+   "floors": [
+    "6"
+   ],
+   "tag": "W5",
+   "w": 2400,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 2,
+   "dir": "v",
+   "line": [
+    "B",
+    -86
+   ],
+   "along": [
+    "4",
+    "5",
+    0.6187
+   ],
+   "facing": -1,
+   "gap_mm": 2399,
+   "jambs": 2,
+   "fit": 0.67
+  },
+  {
+   "sheet": "A109 fifth floor plan",
+   "page": 9,
+   "floors": [
+    "6"
+   ],
+   "tag": "W2",
+   "w": 4700,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 3,
+   "dir": "h",
+   "line": [
+    "5",
+    331
+   ],
+   "along": [
+    "B1",
+    "C",
+    0.2297
+   ],
+   "facing": 1,
+   "gap_mm": 4699,
+   "jambs": 2,
+   "fit": 0.61
+  },
+  {
+   "sheet": "A109 fifth floor plan",
+   "page": 9,
+   "floors": [
+    "6"
+   ],
+   "tag": "W5",
+   "w": 2400,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 2,
+   "dir": "h",
+   "line": [
+    "3",
+    -69
+   ],
+   "along": [
+    "C",
+    "D",
+    0.7058
+   ],
+   "facing": -1,
+   "gap_mm": 2399,
+   "jambs": 2,
+   "fit": 1.2
+  },
+  {
+   "sheet": "A109 fifth floor plan",
+   "page": 9,
+   "floors": [
+    "6"
+   ],
+   "tag": "W9",
+   "w": 900,
+   "h": 900,
+   "sill": 1200,
+   "kind": "awning",
+   "panes": 1,
+   "dir": "h",
+   "line": [
+    "3",
+    -69
+   ],
+   "along": [
+    "D",
+    "E",
+    0.6151
+   ],
+   "facing": -1,
+   "gap_mm": 904,
+   "jambs": 2,
+   "fit": 1.21
+  },
+  {
+   "sheet": "A109 fifth floor plan",
+   "page": 9,
+   "floors": [
+    "6"
+   ],
+   "tag": "W9",
+   "w": 900,
+   "h": 900,
+   "sill": 1200,
+   "kind": "awning",
+   "panes": 1,
+   "dir": "h",
+   "line": [
+    "3",
+    -69
+   ],
+   "along": [
+    "F",
+    "G",
+    0.2362
+   ],
+   "facing": -1,
+   "gap_mm": 904,
+   "jambs": 2,
+   "fit": 1.21
+  },
+  {
+   "sheet": "A109 fifth floor plan",
+   "page": 9,
+   "floors": [
+    "6"
+   ],
+   "tag": "W9",
+   "w": 900,
+   "h": 900,
+   "sill": 1200,
+   "kind": "awning",
+   "panes": 1,
+   "dir": "h",
+   "line": [
+    "3",
+    -69
+   ],
+   "along": [
+    "G",
+    "H",
+    0.8518
+   ],
+   "facing": -1,
+   "gap_mm": 904,
+   "jambs": 2,
+   "fit": 1.15
+  },
+  {
+   "sheet": "A109 fifth floor plan",
+   "page": 9,
+   "floors": [
+    "6"
+   ],
+   "tag": "W8",
+   "w": 1200,
+   "h": 1200,
+   "sill": 900,
+   "kind": "awning",
+   "panes": 2,
+   "dir": "h",
+   "line": [
+    "3",
+    -69
+   ],
+   "along": [
+    "H",
+    "J",
+    0.2301
+   ],
+   "facing": -1,
+   "gap_mm": 1779,
+   "jambs": 2,
+   "fit": 2.58
+  },
+  {
+   "sheet": "A109 fifth floor plan",
+   "page": 9,
+   "floors": [
+    "6"
+   ],
+   "tag": "W8",
+   "w": 1200,
+   "h": 1200,
+   "sill": 900,
+   "kind": "awning",
+   "panes": 2,
+   "dir": "h",
+   "line": [
+    "3",
+    -69
+   ],
+   "along": [
+    "J",
+    "K",
+    0.787
+   ],
+   "facing": -1,
+   "gap_mm": 1779,
+   "jambs": 2,
+   "fit": 2.58
+  },
+  {
+   "sheet": "A109 fifth floor plan",
+   "page": 9,
+   "floors": [
+    "6"
+   ],
+   "tag": "W5",
+   "w": 2400,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 2,
+   "dir": "h",
+   "line": [
+    "3",
+    -69
+   ],
+   "along": [
+    "K",
+    "L",
+    0.297
+   ],
+   "facing": -1,
+   "gap_mm": 2399,
+   "jambs": 2,
+   "fit": 1.14
+  },
+  {
+   "sheet": "A109 fifth floor plan",
+   "page": 9,
+   "floors": [
+    "6"
+   ],
+   "tag": "W9",
+   "w": 900,
+   "h": 900,
+   "sill": 1200,
+   "kind": "awning",
+   "panes": 1,
+   "dir": "h",
+   "line": [
+    "3",
+    -69
+   ],
+   "along": [
+    "K",
+    "L",
+    0.7196
+   ],
+   "facing": -1,
+   "gap_mm": 895,
+   "jambs": 2,
+   "fit": 1.15
+  },
+  {
+   "sheet": "A109 fifth floor plan",
+   "page": 9,
+   "floors": [
+    "6"
+   ],
+   "tag": "W5",
+   "w": 2400,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 2,
+   "dir": "h",
+   "line": [
+    "3",
+    -69
+   ],
+   "along": [
+    "L",
+    "M",
+    0.3632
+   ],
+   "facing": -1,
+   "gap_mm": 2399,
+   "jambs": 2,
+   "fit": 1.14
+  },
+  {
+   "sheet": "A109 fifth floor plan",
+   "page": 9,
+   "floors": [
+    "6"
+   ],
+   "tag": "W9",
+   "w": 900,
+   "h": 900,
+   "sill": 1200,
+   "kind": "awning",
+   "panes": 1,
+   "dir": "h",
+   "line": [
+    "3",
+    -69
+   ],
+   "along": [
+    "L",
+    "M",
+    0.843
+   ],
+   "facing": -1,
+   "gap_mm": 895,
+   "jambs": 2,
+   "fit": 1.15
+  },
+  {
+   "sheet": "A109 fifth floor plan",
+   "page": 9,
+   "floors": [
+    "6"
+   ],
+   "tag": "W5",
+   "w": 2400,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 2,
+   "dir": "h",
+   "line": [
+    "3",
+    -69
+   ],
+   "along": [
+    "M",
+    "N",
+    0.4594
+   ],
+   "facing": -1,
+   "gap_mm": 2399,
+   "jambs": 2,
+   "fit": 1.14
+  },
+  {
+   "sheet": "A109 fifth floor plan",
+   "page": 9,
+   "floors": [
+    "6"
+   ],
+   "tag": "W5",
+   "w": 2400,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 2,
+   "dir": "v",
+   "line": [
+    "N",
+    1376
+   ],
+   "along": [
+    "3",
+    "4",
+    0.7799
+   ],
+   "facing": 1,
+   "gap_mm": 2399,
+   "jambs": 2,
+   "fit": 3.41
+  },
+  {
+   "sheet": "A109 fifth floor plan",
+   "page": 9,
+   "floors": [
+    "6"
+   ],
+   "tag": "W9",
+   "w": 900,
+   "h": 900,
+   "sill": 1200,
+   "kind": "awning",
+   "panes": 1,
+   "dir": "v",
+   "line": [
+    "N",
+    65
+   ],
+   "along": [
+    "4",
+    "5",
+    0.7145
+   ],
+   "facing": 1,
+   "gap_mm": 904,
+   "jambs": 2,
+   "fit": 1.43
+  },
+  {
+   "sheet": "A109 fifth floor plan",
+   "page": 9,
+   "floors": [
+    "6"
+   ],
+   "tag": "W9",
+   "w": 900,
+   "h": 900,
+   "sill": 1200,
+   "kind": "awning",
+   "panes": 1,
+   "dir": "v",
+   "line": [
+    "N",
+    65
+   ],
+   "along": [
+    "5",
+    "6",
+    0.4301
+   ],
+   "facing": 1,
+   "gap_mm": 904,
+   "jambs": 2,
+   "fit": 1.17
+  },
+  {
+   "sheet": "A109 fifth floor plan",
+   "page": 9,
+   "floors": [
+    "6"
+   ],
+   "tag": "W5",
+   "w": 2400,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 2,
+   "dir": "v",
+   "line": [
+    "N",
+    1069
+   ],
+   "along": [
+    "6",
+    "7",
+    0.7403
+   ],
+   "facing": 1,
+   "gap_mm": 2399,
+   "jambs": 2,
+   "fit": 3.44
+  },
+  {
+   "sheet": "A109 fifth floor plan",
+   "page": 9,
+   "floors": [
+    "6"
+   ],
+   "tag": "W2",
+   "w": 4700,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 3,
+   "dir": "h",
+   "line": [
+    "7",
+    1065
+   ],
+   "along": [
+    "M",
+    "N",
+    0.5016
+   ],
+   "facing": 1,
+   "gap_mm": 4699,
+   "jambs": 2,
+   "fit": 0.82
+  },
+  {
+   "sheet": "A109 fifth floor plan",
+   "page": 9,
+   "floors": [
+    "6"
+   ],
+   "tag": "W4",
+   "w": 2000,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 3,
+   "dir": "h",
+   "line": [
+    "7",
+    -286
+   ],
+   "along": [
+    "L",
+    "M",
+    0.5544
+   ],
+   "facing": 1,
+   "gap_mm": 2000,
+   "jambs": 2,
+   "fit": 2.09
+  },
+  {
+   "sheet": "A109 fifth floor plan",
+   "page": 9,
+   "floors": [
+    "6"
+   ],
+   "tag": "W2",
+   "w": 4700,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 3,
+   "dir": "h",
+   "line": [
+    "7",
+    1475
+   ],
+   "along": [
+    "K",
+    "L",
+    0.477
+   ],
+   "facing": 1,
+   "gap_mm": 4709,
+   "jambs": 2,
+   "fit": 0.77
+  },
+  {
+   "sheet": "A109 fifth floor plan",
+   "page": 9,
+   "floors": [
+    "6"
+   ],
+   "tag": "W5",
+   "w": 2400,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 2,
+   "dir": "h",
+   "line": [
+    "7",
+    -286
+   ],
+   "along": [
+    "K",
+    "L",
+    0.5999
+   ],
+   "facing": 1,
+   "gap_mm": 2399,
+   "jambs": 2,
+   "fit": 0.41
+  },
+  {
+   "sheet": "A109 fifth floor plan",
+   "page": 9,
+   "floors": [
+    "6"
+   ],
+   "tag": "W4",
+   "w": 2000,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 3,
+   "dir": "h",
+   "line": [
+    "7",
+    1188
+   ],
+   "along": [
+    "J",
+    "K",
+    0.5134
+   ],
+   "facing": 1,
+   "gap_mm": 1996,
+   "jambs": 2,
+   "fit": 0.69
+  },
+  {
+   "sheet": "A109 fifth floor plan",
+   "page": 9,
+   "floors": [
+    "6"
+   ],
+   "tag": "W4",
+   "w": 2000,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 3,
+   "dir": "h",
+   "line": [
+    "7",
+    1188
+   ],
+   "along": [
+    "H",
+    "J",
+    0.5037
+   ],
+   "facing": 1,
+   "gap_mm": 1996,
+   "jambs": 2,
+   "fit": 0.69
+  },
+  {
+   "sheet": "A109 fifth floor plan",
+   "page": 9,
+   "floors": [
+    "6"
+   ],
+   "tag": "W2",
+   "w": 4700,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 3,
+   "dir": "h",
+   "line": [
+    "7",
+    82
+   ],
+   "along": [
+    "G",
+    "H",
+    0.4844
+   ],
+   "facing": -1,
+   "gap_mm": 6115,
+   "jambs": 2,
+   "fit": 1.19
+  },
+  {
+   "sheet": "A109 fifth floor plan",
+   "page": 9,
+   "floors": [
+    "6"
+   ],
+   "tag": "W2",
+   "w": 4700,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 3,
+   "dir": "h",
+   "line": [
+    "7",
+    1885
+   ],
+   "along": [
+    "C",
+    "D",
+    0.5045
+   ],
+   "facing": 1,
+   "gap_mm": 4699,
+   "jambs": 2,
+   "fit": 0.77
+  },
+  {
+   "sheet": "A109 fifth floor plan",
+   "page": 9,
+   "floors": [
+    "6"
+   ],
+   "tag": "W8",
+   "w": 1200,
+   "h": 1200,
+   "sill": 900,
+   "kind": "awning",
+   "panes": 2,
+   "dir": "h",
+   "line": [
+    "3",
+    -69
+   ],
+   "along": [
+    "E",
+    "F",
+    0.7629
+   ],
+   "facing": -1,
+   "gap_mm": 1838,
+   "jambs": 2,
+   "fit": 2.79
+  },
+  {
+   "sheet": "A109 fifth floor plan",
+   "page": 9,
+   "floors": [
+    "6"
+   ],
+   "tag": "W4",
+   "w": 2000,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 3,
+   "dir": "h",
+   "line": [
+    "7",
+    -430
+   ],
+   "along": [
+    "L",
+    "M",
+    0.6937
+   ],
+   "facing": -1,
+   "gap_mm": 2000,
+   "jambs": 1,
+   "fit": 2.9
+  },
+  {
+   "sheet": "A109 fifth floor plan",
+   "page": 9,
+   "floors": [
+    "6"
+   ],
+   "tag": "W5",
+   "w": 2400,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 2,
+   "dir": "h",
+   "line": [
+    "3",
+    -69
+   ],
+   "along": [
+    "F",
+    "G",
+    0.6215
+   ],
+   "facing": -1,
+   "gap_mm": 2399,
+   "jambs": 2,
+   "fit": 0.78
+  },
+  {
+   "sheet": "A109 fifth floor plan",
+   "page": 9,
+   "floors": [
+    "6"
+   ],
+   "tag": "W5",
+   "w": 2400,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 2,
+   "dir": "h",
+   "line": [
+    "3",
+    -69
+   ],
+   "along": [
+    "G",
+    "H",
+    0.3214
+   ],
+   "facing": -1,
+   "gap_mm": 2400,
+   "jambs": 2,
+   "fit": 2.28
+  },
+  {
+   "sheet": "A109 fifth floor plan",
+   "page": 9,
+   "floors": [
+    "6"
+   ],
+   "tag": "W8",
+   "w": 1200,
+   "h": 1200,
+   "sill": 900,
+   "kind": "awning",
+   "panes": 2,
+   "dir": "h",
+   "line": [
+    "3",
+    -69
+   ],
+   "along": [
+    "C",
+    "D",
+    0.1873
+   ],
+   "facing": -1,
+   "gap_mm": 1199,
+   "jambs": 2,
+   "fit": 0.68
+  },
+  {
+   "sheet": "A109 fifth floor plan",
+   "page": 9,
+   "floors": [
+    "6"
+   ],
+   "tag": "W2",
+   "w": 4700,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 3,
+   "dir": "h",
+   "line": [
+    "7",
+    881
+   ],
+   "along": [
+    "F",
+    "G",
+    0.5
+   ],
+   "facing": -1,
+   "gap_mm": 4699,
+   "jambs": 2,
+   "fit": 0.73
+  },
+  {
+   "sheet": "A109 fifth floor plan",
+   "page": 9,
+   "floors": [
+    "6"
+   ],
+   "tag": "W3",
+   "w": 4000,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 3,
+   "dir": "h",
+   "line": [
+    "7",
+    410
+   ],
+   "along": [
+    "E",
+    "F",
+    0.0112
+   ],
+   "facing": -1,
+   "gap_mm": 4001,
+   "jambs": 2,
+   "fit": 0.63
+  },
+  {
+   "sheet": "A110 sixth floor plan",
+   "page": 10,
+   "floors": [
+    "7"
+   ],
+   "tag": "W2",
+   "w": 4700,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 3,
+   "dir": "h",
+   "line": [
+    "3",
+    -70
+   ],
+   "along": [
+    "C",
+    "D",
+    0.4997
+   ],
+   "facing": -1,
+   "gap_mm": 4699,
+   "jambs": 2,
+   "fit": 1.21
+  },
+  {
+   "sheet": "A110 sixth floor plan",
+   "page": 10,
+   "floors": [
+    "7"
+   ],
+   "tag": "W4",
+   "w": 2000,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 3,
+   "dir": "h",
+   "line": [
+    "7",
+    1024
+   ],
+   "along": [
+    "E",
+    "F",
+    0.506
+   ],
+   "facing": 1,
+   "gap_mm": 1996,
+   "jambs": 2,
+   "fit": 1.19
+  },
+  {
+   "sheet": "A110 sixth floor plan",
+   "page": 10,
+   "floors": [
+    "7"
+   ],
+   "tag": "W4",
+   "w": 2000,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 3,
+   "dir": "h",
+   "line": [
+    "7",
+    1024
+   ],
+   "along": [
+    "D",
+    "E",
+    0.5147
+   ],
+   "facing": 1,
+   "gap_mm": 1996,
+   "jambs": 2,
+   "fit": 0.87
+  },
+  {
+   "sheet": "A110 sixth floor plan",
+   "page": 10,
+   "floors": [
+    "7"
+   ],
+   "tag": "W2",
+   "w": 4700,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 3,
+   "dir": "h",
+   "line": [
+    "7",
+    1884
+   ],
+   "along": [
+    "C",
+    "D",
+    0.5045
+   ],
+   "facing": 1,
+   "gap_mm": 4699,
+   "jambs": 2,
+   "fit": 1.05
+  },
+  {
+   "sheet": "A110 sixth floor plan",
+   "page": 10,
+   "floors": [
+    "7"
+   ],
+   "tag": "W2",
+   "w": 4700,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 3,
+   "dir": "h",
+   "line": [
+    "3",
+    -70
+   ],
+   "along": [
+    "K",
+    "L",
+    0.4643
+   ],
+   "facing": -1,
+   "gap_mm": 4699,
+   "jambs": 2,
+   "fit": 0.95
+  },
+  {
+   "sheet": "A110 sixth floor plan",
+   "page": 10,
+   "floors": [
+    "7"
+   ],
+   "tag": "W2",
+   "w": 4700,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 3,
+   "dir": "h",
+   "line": [
+    "3",
+    -70
+   ],
+   "along": [
+    "L",
+    "M",
+    0.5458
+   ],
+   "facing": -1,
+   "gap_mm": 4699,
+   "jambs": 2,
+   "fit": 0.95
+  },
+  {
+   "sheet": "A110 sixth floor plan",
+   "page": 10,
+   "floors": [
+    "7"
+   ],
+   "tag": "W2",
+   "w": 4700,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 3,
+   "dir": "h",
+   "line": [
+    "7",
+    1474
+   ],
+   "along": [
+    "L",
+    "M",
+    0.4737
+   ],
+   "facing": 1,
+   "gap_mm": 4699,
+   "jambs": 2,
+   "fit": 0.73
+  },
+  {
+   "sheet": "A110 sixth floor plan",
+   "page": 10,
+   "floors": [
+    "7"
+   ],
+   "tag": "W2",
+   "w": 4700,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 3,
+   "dir": "h",
+   "line": [
+    "7",
+    -287
+   ],
+   "along": [
+    "K",
+    "L",
+    0.477
+   ],
+   "facing": 1,
+   "gap_mm": 4699,
+   "jambs": 2,
+   "fit": 0.93
+  },
+  {
+   "sheet": "A110 sixth floor plan",
+   "page": 10,
+   "floors": [
+    "7"
+   ],
+   "tag": "W4",
+   "w": 2000,
+   "h": 1200,
+   "sill": 900,
+   "kind": "sliding",
+   "panes": 3,
+   "dir": "h",
+   "line": [
+    "7",
+    1044
+   ],
+   "along": [
+    "H",
+    "J",
+    0.5405
+   ],
+   "facing": 1,
+   "gap_mm": 1996,
+   "jambs": 2,
+   "fit": 0.73
+  },
+  {
+   "sheet": "A110 sixth floor plan",
+   "page": 10,
+   "floors": [
+    "7"
+   ],
+   "tag": "W9",
+   "w": 900,
+   "h": 900,
+   "sill": 1200,
+   "kind": "awning",
+   "panes": 1,
+   "dir": "h",
+   "line": [
+    "3",
+    -70
+   ],
+   "along": [
+    "J",
+    "K",
+    0.6675
+   ],
+   "facing": -1,
+   "gap_mm": 895,
+   "jambs": 2,
+   "fit": 0.97
+  },
+  {
+   "sheet": "A110 sixth floor plan",
+   "page": 10,
+   "floors": [
+    "7"
+   ],
+   "tag": "W9",
+   "w": 900,
+   "h": 900,
+   "sill": 1200,
+   "kind": "awning",
+   "panes": 1,
+   "dir": "h",
+   "line": [
+    "3",
+    -70
+   ],
+   "along": [
+    "E",
+    "F",
+    0.4739
+   ],
+   "facing": -1,
+   "gap_mm": 904,
+   "jambs": 2,
+   "fit": 1.17
+  },
+  {
+   "sheet": "A105 ground floor plan",
+   "page": 5,
+   "floors": [
+    "1"
+   ],
+   "tag": "CW1",
+   "w": 2700,
+   "h": 2700,
+   "sill": 0,
+   "kind": "curtain",
+   "panes": 2,
+   "dir": "h",
+   "line": [
+    "2",
+    0
+   ],
+   "along": [
+    "B1",
+    "C",
+    0.317
+   ],
+   "facing": -1,
+   "gap_mm": 2700,
+   "jambs": 0,
+   "fit": null,
+   "read_by_eye": "cafe's north front, B1 to the WC"
+  },
+  {
+   "sheet": "A105 ground floor plan",
+   "page": 5,
+   "floors": [
+    "1"
+   ],
+   "tag": "CW3",
+   "w": 4807,
+   "h": 2700,
+   "sill": 0,
+   "kind": "curtain",
+   "panes": 4,
+   "dir": "h",
+   "line": [
+    "7",
+    530
+   ],
+   "along": [
+    "C",
+    "D",
+    0.5
+   ],
+   "facing": 1,
+   "gap_mm": 4807,
+   "jambs": 0,
+   "fit": null,
+   "read_by_eye": "gym's west front"
+  },
+  {
+   "sheet": "A110 sixth floor plan",
+   "page": 10,
+   "floors": [
+    "7"
+   ],
+   "tag": "CW3",
+   "w": 3800,
+   "h": 2700,
+   "sill": 0,
+   "kind": "curtain",
+   "panes": 3,
+   "dir": "v",
+   "line": [
+    "C",
+    0
+   ],
+   "along": [
+    "4",
+    "5",
+    0.5
+   ],
+   "facing": -1,
+   "gap_mm": 3800,
+   "jambs": 0,
+   "fit": null,
+   "read_by_eye": "penthouse C-F, dining area's north wall"
+  },
+  {
+   "sheet": "A110 sixth floor plan",
+   "page": 10,
+   "floors": [
+    "7"
+   ],
+   "tag": "CW1",
+   "w": 5600,
+   "h": 2700,
+   "sill": 0,
+   "kind": "curtain",
+   "panes": 4,
+   "dir": "v",
+   "line": [
+    "M",
+    -58
+   ],
+   "along": [
+    "3",
+    "5",
+    0.5
+   ],
+   "facing": 1,
+   "gap_mm": 5600,
+   "jambs": 0,
+   "fit": null,
+   "read_by_eye": "penthouse H-M, dining area onto the M-N terrace"
+  },
+  {
+   "sheet": "A110 sixth floor plan",
+   "page": 10,
+   "floors": [
+    "7"
+   ],
+   "tag": "CW1",
+   "w": 2350,
+   "h": 2700,
+   "sill": 0,
+   "kind": "curtain",
+   "panes": 2,
+   "dir": "v",
+   "line": [
+    "M",
+    -58
+   ],
+   "along": [
+    "6",
+    "7",
+    0.41
+   ],
+   "facing": 1,
+   "gap_mm": 2350,
+   "jambs": 0,
+   "fit": null,
+   "read_by_eye": "penthouse H-M, lounge onto the terrace"
+  }
+ ]
+}

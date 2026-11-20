@@ -88,6 +88,10 @@ th.txt { text-align: left; }
 .pill.bad { background: color-mix(in srgb, var(--bad) 18%, transparent); color: var(--bad); }
 .btn { border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 6px; padding: 5px 10px; font: 500 13px var(--font-ui); cursor: pointer; }
 .btn[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); }
+.seg { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+.seg .btn { border-radius: 0; padding: 7px 10px; }
+.seg .btn:first-child { border-radius: 6px 0 0 6px; }
+.seg .btn:last-child { border-radius: 0 6px 6px 0; border-left: 0; }
 .modes { display: flex; flex-direction: column; gap: 6px; }
 .mode { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; }
 .bar { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; display: flex; }
@@ -125,6 +129,20 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
 
     <section class="tab" id="tab-model">
       <div>
+        <h2>Look</h2>
+        <div class="seg" role="group" aria-label="Look">
+          <button class="btn" id="look-render" aria-pressed="true">Like the renders</button>
+          <button class="btn" id="look-eng" aria-pressed="false">Engineering</button>
+        </div>
+        <div class="row" style="margin-top:8px;flex-wrap:wrap;gap:6px">
+          <span class="note">View:</span>
+          <button class="btn" id="view-front">West front</button>
+          <button class="btn" id="view-corner">3D</button>
+          <button class="btn" id="view-east">East</button>
+          <button class="btn" id="view-top">From above</button>
+        </div>
+      </div>
+      <div>
         <h2>Layers</h2>
         <div class="layers" id="layers"></div>
       </div>
@@ -146,7 +164,7 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
       </div>
       <div>
         <h2>Selected</h2>
-        <div class="detail" id="detail"><p class="note">Tap a column, wall, lift core, beam, slab or foundation to see its loads and checks.</p></div>
+        <div class="detail" id="detail"><p class="note">Tap a column, wall, lift core, beam, slab or foundation to see its loads and checks, or a window or wall to see where it comes from.</p></div>
       </div>
     </section>
 
@@ -168,7 +186,7 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
   const pct = (v) => (v === null || v === undefined) ? "over 4 %" : (v * 100).toFixed(v < 0.01 ? 1 : (v * 100 % 1 ? 2 : 0)).replace(/\.?0+$/, "") + " %";
 
   let DATA = null;
-  const state = { colour: "type", topLevel: 8, layers: { slabs: true, columns: true, cores: true, beams: true, foundations: true, grid: true, architecture: true }, sel: null, mode: -1, amp: 1.2 };
+  const state = { colour: "type", look: "render", topLevel: 8, layers: { slabs: true, columns: true, cores: true, beams: true, foundations: true, grid: false, architecture: true, site: true }, sel: null, mode: -1, amp: 1.2 };
 
   // ---------------------------------------------------------------- scene
   const canvas = $("c");
@@ -179,14 +197,28 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
   const controls = new THREE.OrbitControls(camera, canvas);
   controls.enableDamping = true;
   controls.dampingFactor = 0.08;
-  scene.add(new THREE.HemisphereLight(0xffffff, 0x8899a0, 0.85));
+  const hemi = new THREE.HemisphereLight(0xffffff, 0x8899a0, 0.85);
+  scene.add(hemi);
   const sun = new THREE.DirectionalLight(0xffffff, 0.55);
   sun.position.set(-30, 60, 40);
   scene.add(sun);
+  scene.add(sun.target);
+  // shadows (the renders' look only): an orthographic box round the building
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  sun.shadow.mapSize.set(2048, 2048);
+  Object.assign(sun.shadow.camera, { left: -48, right: 48, top: 40, bottom: -40, near: 1, far: 220 });
+  sun.shadow.camera.updateProjectionMatrix();
+  sun.shadow.bias = -0.0004;
+  sun.shadow.normalBias = 0.03;
+  const fill = new THREE.DirectionalLight(0xffffff, 0);
+  fill.position.set(40, 20, -60);
+  scene.add(fill);
 
   const objects = []; // { mesh, kind, level, data, base: Vector3, lvlIdx }
   const groups = {};
-  ["slabs", "columns", "cores", "beams", "foundations", "grid", "architecture"].forEach((k) => { groups[k] = new THREE.Group(); scene.add(groups[k]); });
+  ["slabs", "columns", "cores", "beams", "foundations", "grid", "architecture", "site"].forEach((k) => { groups[k] = new THREE.Group(); scene.add(groups[k]); });
+  const glows = []; // soffit downlights, one Points per level: { points, lvlIdx }
+  let skyTex = null, ground = null, view0 = null;
 
   function resize() {
     const r = canvas.parentElement.getBoundingClientRect();
@@ -197,8 +229,8 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
   window.addEventListener("resize", resize);
 
   function themeColours() {
-    scene.background = new THREE.Color(css("--canvas"));
-    recolour();
+    if (DATA) applyLook();
+    else scene.background = new THREE.Color(css("--canvas"));
   }
   try { window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", themeColours); } catch (e) {}
   new MutationObserver(themeColours).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
@@ -216,6 +248,238 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
     m.userData.o = o;
     objects.push(o);
     return o;
+  }
+
+  // ---------------------------------------------------------------- merged geometry
+  // The skin has thousands of wall pieces and window parts: they go into a few meshes per floor (one per material),
+  // and a triangle-to-item table lets a tap still find the wall or window it hit.
+  function Builder() { this.p = []; this.n = []; this.c = []; this.tri = []; this.items = []; }
+  Builder.prototype.item = function (it) { this.items.push(it); return this.items.length - 1; };
+  Builder.prototype.box = function (c, u, v, hu, hv, hw, item, col) {
+    const w = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]];
+    const P = (a, b, d) => [c[0] + u[0] * a * hu + v[0] * b * hv + w[0] * d * hw, c[1] + u[1] * a * hu + v[1] * b * hv + w[1] * d * hw, c[2] + u[2] * a * hu + v[2] * b * hv + w[2] * d * hw];
+    const faces = [[[1, -1, -1], [1, 1, -1], [1, 1, 1], [1, -1, 1], u, 1], [[-1, -1, -1], [-1, 1, -1], [-1, 1, 1], [-1, -1, 1], u, -1],
+      [[-1, 1, -1], [1, 1, -1], [1, 1, 1], [-1, 1, 1], v, 1], [[-1, -1, -1], [1, -1, -1], [1, -1, 1], [-1, -1, 1], v, -1],
+      [[-1, -1, 1], [1, -1, 1], [1, 1, 1], [-1, 1, 1], w, 1], [[-1, -1, -1], [1, -1, -1], [1, 1, -1], [-1, 1, -1], w, -1]];
+    for (const [q0, q1, q2, q3, ax, s] of faces) {
+      const A = P(...q0), B = P(...q1), C = P(...q2), D = P(...q3);
+      const nx = ax[0] * s, ny = ax[1] * s, nz = ax[2] * s;
+      const e1 = [B[0] - A[0], B[1] - A[1], B[2] - A[2]], e2 = [C[0] - A[0], C[1] - A[1], C[2] - A[2]];
+      const ok = (e1[1] * e2[2] - e1[2] * e2[1]) * nx + (e1[2] * e2[0] - e1[0] * e2[2]) * ny + (e1[0] * e2[1] - e1[1] * e2[0]) * nz >= 0;
+      const tris = ok ? [A, B, C, A, C, D] : [A, C, B, A, D, C];
+      for (const V of tris) {
+        this.p.push(V[0], V[1], V[2]);
+        this.n.push(nx, ny, nz);
+        if (col) this.c.push(col.r, col.g, col.b);
+      }
+      this.tri.push(item, item);
+    }
+  };
+  Builder.prototype.mesh = function (mat) {
+    if (!this.p.length) return null;
+    const g = new THREE.BufferGeometry();
+    g.setAttribute("position", new THREE.Float32BufferAttribute(this.p, 3));
+    g.setAttribute("normal", new THREE.Float32BufferAttribute(this.n, 3));
+    if (this.c.length) g.setAttribute("color", new THREE.Float32BufferAttribute(this.c, 3));
+    g.computeBoundingSphere();
+    const m = new THREE.Mesh(g, mat);
+    m.userData.items = this.items;
+    m.userData.tri = Int32Array.from(this.tri);
+    return m;
+  };
+  // the skin's materials, one per kind of part; applyLook() sets them for the look chosen
+  const AMAT = {
+    facade: mat(0xf3f1ec), fascia: mat(0xf6f4ef), surround: mat(0xf7f5f0),
+    "plan-external": mat(0xf3f1ec), "plan-party": mat(0xf0eee9), "plan-corridor": mat(0xf0eee9), "plan-partition": mat(0xf3f1ec),
+    glass: mat(0x506a7a, { transparent: true, opacity: 0.8 }), bglass: mat(0xc4dae4, { transparent: true, opacity: 0.42, depthWrite: false, side: THREE.DoubleSide }),
+    frame: mat(0x22262a), leaf: mat(0x3b4045), entrance: mat(0xe5b324),
+  };
+  const GLASS_TINTS = ["#d39a66", "#c48857", "#b5805f", "#dfae7b", "#34434e", "#6f86a8", "#cc9466", "#3f4f5c"].map((h) => new THREE.Color(h));
+  function wallBox(B, w, item) {
+    const [ax, ay] = w.a, [bx, by] = w.b;
+    const L = Math.hypot(bx - ax, by - ay);
+    if (L < 0.01) return;
+    B.box([(ax + bx) / 2, (w.z0 + w.z1) / 2, (ay + by) / 2], [(bx - ax) / L, 0, (by - ay) / L], [0, 1, 0], L / 2, Math.max(0.005, (w.z1 - w.z0) / 2), Math.max(0.005, w.t / 2), item);
+  }
+  // a window: black aluminium frame and mullions round reflective glass set 90 mm into the wall, and outside it the
+  // white box frame of the renders; doors get a leaf instead of glass
+  function windowParts(Bs, wd, lvlZ) {
+    const [ax, ay] = wd.a, [bx, by] = wd.b;
+    const L = Math.hypot(bx - ax, by - ay);
+    if (L < 0.05) return;
+    const u = [(bx - ax) / L, 0, (by - ay) / L], up = [0, 1, 0], n = [wd.n[0], 0, wd.n[1]];
+    const H = wd.z1 - wd.z0, mx = (ax + bx) / 2, mz = (ay + by) / 2, cy = (wd.z0 + wd.z1) / 2;
+    const at = (s, y, d) => [mx + u[0] * s + n[0] * d, y, mz + u[2] * s + n[2] * d];
+    const it = {};
+    ["frame", "glass", "surround", "leaf", "entrance"].forEach((k) => (it[k] = Bs[k].item({ kind: "window", data: wd })));
+    const put = (k, s, y, d, hu, hv, hn, col) => Bs[k].box(at(s, y, d), u, up, hu, hv, hn, it[k], col);
+    const g = -0.09, fw = 0.055, fd = 0.035;
+    const door = wd.kind === "door" || wd.kind === "entrance";
+    // the renders at dusk: most rooms lit warm behind the glass, some dark, some catching the sky
+    const hsh = Math.abs(Math.sin(mx * 12.9898 + mz * 78.233 + wd.z0 * 37.719) * 43758.5453) % 1;
+    const tint = GLASS_TINTS[Math.floor(hsh * GLASS_TINTS.length)];
+    if (door) put(wd.kind === "entrance" ? "entrance" : "leaf", 0, cy - fw / 2, g, L / 2 - fw, H / 2 - fw / 2, 0.025);
+    else put("glass", 0, cy, g, L / 2 - fw, H / 2 - fw, 0.006, tint);
+    put("frame", 0, wd.z1 - fw / 2, g, L / 2, fw / 2, fd);
+    if (!door) put("frame", 0, wd.z0 + fw / 2, g, L / 2, fw / 2, fd);
+    put("frame", -L / 2 + fw / 2, cy, g, fw / 2, H / 2, fd);
+    put("frame", L / 2 - fw / 2, cy, g, fw / 2, H / 2, fd);
+    const panes = Math.max(1, wd.panes || 1);
+    if (!door) for (let k = 1; k < panes; k++) put("frame", -L / 2 + (k * L) / panes, cy, g, 0.025, H / 2, fd);
+    if (!door && H > 2.4) put("frame", 0, wd.z0 + 2.15, g, L / 2, 0.025, fd);
+    if (wd.kind === "awning") put("frame", 0, wd.z0 + H * 0.55, g, L / 2, 0.022, fd);
+    if (!wd.inner) {
+      const s = 0.14, d = 0.16;
+      put("surround", 0, wd.z1 + s / 2, d / 2, L / 2 + s, s / 2, d / 2);
+      if (wd.z0 - lvlZ > 0.1) put("surround", 0, wd.z0 - s / 2, d / 2, L / 2 + s, s / 2, d / 2);
+      const bot = wd.z0 - lvlZ > 0.1 ? wd.z0 - s : wd.z0;
+      const hh = (wd.z1 + s - bot) / 2;
+      put("surround", -L / 2 - s / 2, bot + hh, d / 2, s / 2, hh, d / 2);
+      put("surround", L / 2 + s / 2, bot + hh, d / 2, s / 2, hh, d / 2);
+    }
+  }
+  function glowTexture() {
+    const cv = document.createElement("canvas");
+    cv.width = cv.height = 64;
+    const x = cv.getContext("2d");
+    const gr = x.createRadialGradient(32, 32, 0, 32, 32, 32);
+    gr.addColorStop(0, "rgba(255,246,225,1)");
+    gr.addColorStop(0.22, "rgba(255,214,160,0.9)");
+    gr.addColorStop(1, "rgba(255,190,120,0)");
+    x.fillStyle = gr;
+    x.fillRect(0, 0, 64, 64);
+    return new THREE.CanvasTexture(cv);
+  }
+  function skyTexture() {
+    const cv = document.createElement("canvas");
+    cv.width = 8; cv.height = 512;
+    const x = cv.getContext("2d");
+    const gr = x.createLinearGradient(0, 0, 0, 512);
+    gr.addColorStop(0, "#7d97c9");
+    gr.addColorStop(0.42, "#b3bfe0");
+    gr.addColorStop(0.72, "#e8cdd0");
+    gr.addColorStop(1, "#f5dcc2");
+    x.fillStyle = gr;
+    x.fillRect(0, 0, 8, 512);
+    return new THREE.CanvasTexture(cv);
+  }
+
+  function buildArchitecture(lv) {
+    const A = DATA.layers.architecture || {};
+    const zOf = {};
+    DATA.levels.forEach((l) => (zOf[l.key] = l.z));
+    const perLevel = {};
+    const Bs = (key) => perLevel[key] || (perLevel[key] = Object.fromEntries(Object.keys(AMAT).map((k) => [k, new Builder()])));
+    (A.walls || []).forEach((w) => {
+      const B = Bs(w.level);
+      let k = w.kind;
+      if (k === "parapet") k = "facade";
+      if (k === "balustrade" || (k.startsWith("plan-") && w.glass)) {
+        const it = B.bglass.item({ kind: w.kind, data: w });
+        const top = w.kind === "balustrade" || w.kind === "plan-balustrade";
+        wallBox(B.bglass, Object.assign({}, w, { t: 0.02, z1: top ? w.z1 - 0.04 : w.z1 }), it);
+        if (top) {
+          const rail = Object.assign({}, w, { z0: w.z1 - 0.045, t: 0.05 });
+          wallBox(B.frame, rail, B.frame.item({ kind: w.kind, data: w }));
+        }
+        return;
+      }
+      if (!AMAT[k]) k = k.startsWith("plan-") ? "plan-partition" : "facade";
+      wallBox(B[k], w, B[k].item({ kind: w.kind, data: w }));
+    });
+    (A.windows || []).forEach((wd) => windowParts(Bs(wd.level), wd, zOf[wd.level] || 0));
+    Object.entries(perLevel).forEach(([key, B]) => {
+      Object.entries(B).forEach(([type, b]) => {
+        const m = b.mesh(AMAT[type]);
+        if (!m) return;
+        groups.architecture.add(m);
+        const o = { mesh: m, kind: "arch-merged", type, data: null, lvlIdx: lv[key] ?? 0, base: m.position.clone() };
+        m.userData.o = o;
+        objects.push(o);
+      });
+    });
+    // soffit downlights: one cloud of points per floor
+    const tex = glowTexture();
+    const byLevel = {};
+    (A.lights || []).forEach(([x, y, z, key]) => (byLevel[key] = byLevel[key] || []).push(x, z, y));
+    Object.entries(byLevel).forEach(([key, arr]) => {
+      const g = new THREE.BufferGeometry();
+      g.setAttribute("position", new THREE.Float32BufferAttribute(arr, 3));
+      const pts = new THREE.Points(g, new THREE.PointsMaterial({ size: 1.7, map: tex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, color: 0xffffff }));
+      groups.architecture.add(pts);
+      glows.push({ points: pts, lvlIdx: lv[key] ?? 0, base: pts.position.clone(), key });
+    });
+  }
+
+  function buildSite(lv) {
+    const site = (DATA.layers.other || {}).site;
+    if (!site) return;
+    const g0 = site.ground;
+    // ground: paving round the building, the road in front of the west face
+    const pave = new THREE.Mesh(new THREE.PlaneGeometry(260, 200), mat(0xd6d0c6));
+    pave.rotation.x = -Math.PI / 2;
+    pave.position.set(25, g0 - 0.01, 9);
+    groups.site.add(pave);
+    const road = new THREE.Mesh(new THREE.PlaneGeometry(260, 8), mat(0x5c5f63));
+    road.rotation.x = -Math.PI / 2;
+    road.position.set(25, g0, 25.5);
+    groups.site.add(road);
+    const kerb = new THREE.Mesh(new THREE.BoxGeometry(260, 0.15, 0.3), mat(0xbdb7ad));
+    kerb.position.set(25, g0 + 0.05, 21.4);
+    groups.site.add(kerb);
+    ground = pave;
+    // cars and palms, all in one mesh with their own colours
+    const B = new Builder(), C = (h) => new THREE.Color(h);
+    const X = [1, 0, 0], UP = [0, 1, 0];
+    (site.cars || []).forEach(([x, y, dir, colour]) => {
+      const body = C(colour), glass = C("#1e252b"), tyre = C("#141414"), lamp = C("#fff1d6");
+      B.box([x, g0 + 0.56, y], X, UP, 0.9, 0.3, 2.25, -1, body);
+      B.box([x, g0 + 1.1, y - dir * 0.3], X, UP, 0.76, 0.25, 1.12, -1, glass);
+      B.box([x, g0 + 1.37, y - dir * 0.36], X, UP, 0.72, 0.03, 0.92, -1, body);
+      for (const sx of [-0.8, 0.8]) for (const sz of [-1.42, 1.42]) B.box([x + sx, g0 + 0.32, y + sz], X, UP, 0.13, 0.32, 0.32, -1, tyre);
+      for (const sx of [-0.62, 0.62]) B.box([x + sx, g0 + 0.66, y + dir * 2.255], X, UP, 0.17, 0.05, 0.01, -1, lamp);
+    });
+    const palmB = new Builder();
+    (site.palms || []).forEach(([x, y, z, h]) => {
+      const white = C("#f2f0eb"), trunk = C("#8a6a48"), leaf = C("#4f7b37");
+      palmB.box([x, z + 0.3, y], X, UP, 0.6, 0.3, 0.6, -1, white);
+      for (let k = 0; k < 4; k++) palmB.box([x + 0.07 * k, z + 0.6 + h * (k / 4 + 0.125), y], X, UP, 0.17 - 0.025 * k, h / 8, 0.17 - 0.025 * k, -1, trunk);
+      const top = [x + 0.28, z + 0.6 + h, y];
+      for (let k = 0; k < 11; k++) {
+        const a = (k / 11) * Math.PI * 2, tilt = 0.3 + (k % 3) * 0.18, Lf = 2.4;
+        const d = [Math.cos(a) * Math.cos(tilt), -Math.sin(tilt), Math.sin(a) * Math.cos(tilt)];
+        const side = [-Math.sin(a), 0, Math.cos(a)];
+        palmB.box([top[0] + (d[0] * Lf) / 2, top[1] + (d[1] * Lf) / 2, top[2] + (d[2] * Lf) / 2], d, side, Lf / 2, 0.24, 0.02, -1, leaf);
+      }
+    });
+    // water in the pool
+    DATA.layers.structure.slabs.forEach((s) => s.holes.filter((h) => h.kind === "pool").forEach((h) => {
+      const [x0, y0, x1, y1] = h.box;
+      const wtr = new THREE.Mesh(new THREE.BoxGeometry(x1 - x0, 0.05, y1 - y0), mat(0x3fa9c4, { transparent: true, opacity: 0.85 }));
+      wtr.position.set((x0 + x1) / 2, s.z - 0.25, (y0 + y1) / 2);
+      groups.site.add(wtr);
+    }));
+    // parasols on the pool deck: red, as in the renders
+    (site.umbrellas || []).forEach(([x, y, z]) => {
+      const red = C("#c8432f"), pole = C("#8c8f93");
+      B.box([x, z + 0.04, y], X, UP, 0.22, 0.04, 0.22, -1, pole);
+      B.box([x, z + 1.2, y], X, UP, 0.025, 1.2, 0.025, -1, pole);
+      for (let k = 0; k < 10; k++) {
+        const a = (k / 10) * Math.PI * 2, tilt = 0.32, Lr = 1.45;
+        const d = [Math.cos(a) * Math.cos(tilt), -Math.sin(tilt), Math.sin(a) * Math.cos(tilt)];
+        const side = [-Math.sin(a), 0, Math.cos(a)];
+        B.box([x + (d[0] * Lr) / 2, z + 2.42 + (d[1] * Lr) / 2, y + (d[2] * Lr) / 2], d, side, Lr / 2, 0.47, 0.012, -1, red);
+      }
+    });
+    const vc = mat(0xffffff, { vertexColors: true });
+    const cars = B.mesh(vc);
+    if (cars) groups.site.add(cars);
+    const pm = palmB.mesh(vc);
+    if (pm) {
+      groups.site.add(pm);
+      const top = DATA.levels.length - 2;
+      glows.push({ points: pm, lvlIdx: top, base: pm.position.clone(), palms: true });
+    }
   }
 
   function build() {
@@ -269,23 +533,10 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
       const y0 = along ? ay - w : Math.min(ay, by), y1 = along ? ay + w : Math.max(ay, by);
       addBox(groups.beams, "beam", b, lv[b.level], x0, x1, y0, y1, b.z - b.h, b.z - 0.005);
     });
-    // architecture: the shell (facades, balustrades, parapet) and the stair shafts, see-through so the frame shows
+    // architecture: walls, windows, balustrades, downlights (merged per floor), rooms, labels and stairs; the site
     const A = DATA.layers.architecture || {};
-    (A.walls || []).forEach((w) => {
-      const [ax, ay] = w.a, [bx, by] = w.b;
-      const L = Math.hypot(bx - ax, by - ay);
-      if (L < 0.05) return;
-      const g = new THREE.BoxGeometry(L, Math.max(0.05, w.z1 - w.z0), w.t);
-      const isPlan = w.kind.startsWith("plan-");
-      const glassy = w.kind === "balustrade" || w.glass;
-      const m = new THREE.Mesh(g, mat(0xcccccc, { transparent: true, opacity: glassy ? 0.35 : isPlan ? 0.9 : w.kind === "parapet" ? 0.85 : 0.28, depthWrite: isPlan && !glassy }));
-      m.position.set((ax + bx) / 2, (w.z0 + w.z1) / 2, (ay + by) / 2);
-      m.rotation.y = -Math.atan2(by - ay, bx - ax);
-      groups.architecture.add(m);
-      const o = { mesh: m, kind: w.kind, data: w, lvlIdx: lv[w.level] ?? 0, base: m.position.clone() };
-      m.userData.o = o;
-      objects.push(o);
-    });
+    buildArchitecture(lv);
+    buildSite(lv);
     (A.rooms || []).forEach((rm) => {
       rm.loops.forEach((loop, li) => {
         if (li > 0 || loop.length < 3) return; // the outer loop; inner loops (columns) are small
@@ -379,10 +630,8 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
     gx.forEach((g) => { addLine(new THREE.Vector3(g.p, 0.3, ymin), new THREE.Vector3(g.p, 0.3, ymax)); bubble(g.id, g.p, ymin - 0.9); });
     gy.forEach((g) => { addLine(new THREE.Vector3(xmin, 0.3, g.p), new THREE.Vector3(xmax, 0.3, g.p)); bubble(g.id, xmin - 0.9, g.p); });
     // camera
-    const cx = (xmin + xmax) / 2, cz = (ymin + ymax) / 2;
-    controls.target.set(cx, 11, cz);
-    camera.position.set(cx + 34, 34, cz + 52);
-    controls.update();
+    view0 = { xmin: xmin + 3, xmax: xmax - 3, zmin: ymin + 3, zmax: ymax - 3, top: Math.max(...DATA.levels.map((l) => l.z)) };
+    setView("corner");
     $("levels").max = DATA.levels.length - 1;
     $("levels").value = DATA.levels.length - 1;
     state.topLevel = DATA.levels.length - 1;
@@ -416,6 +665,8 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
   const homeStatus = () => { const m = {}; ((DATA.layers.architecture || {}).homes || []).forEach((h) => (m[String(h.unit).toUpperCase()] = h)); return m; };
   function isDark() { return css("--bg").toLowerCase() === "#10161a"; }
 
+  // the renders' palette: everything white, floors warm
+  const RENDER = { slab: "#f1f1ee", column: "#f3f3f0", wall: "#f3f3f0", core: "#efefec", beam: "#ededea", foundation: "#cdc6b9", stair: "#d9d2c7", room: "#d8c7ab" };
   function colourFor(o) {
     const d = o.data, mode = state.colour;
     const T = isDark() ? TYPE_DARK : TYPE;
@@ -424,8 +675,9 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
         const h = o.data.unit ? homeStatus()[String(o.data.unit).toUpperCase()] : null;
         return !o.data.unit ? css("--none") : !h ? "#b9b3a8" : h.status === "available" ? css("--ok") : h.status === "reserved" ? css("--warn") : css("--bad");
       }
-      return ROOM[o.data.type] || ROOM.other;
+      return state.look === "render" ? RENDER.room : ROOM[o.data.type] || ROOM.other;
     }
+    if (state.look === "render" && (mode === "type" || mode === "homes") && RENDER[o.kind]) return RENDER[o.kind];
     if (o.kind && o.kind.startsWith && o.kind.startsWith("plan-")) return o.data.glass ? PLANWALL.glazing : PLANWALL[o.kind.slice(5)] || PLANWALL.partition;
     if (ARCH[o.kind]) return T[o.kind];
     if (mode === "type") return T[o.kind];
@@ -470,6 +722,7 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
   function recolour() {
     if (!DATA) return;
     objects.forEach((o) => {
+      if (o.kind === "arch-merged") return; // shared materials, set by applyLook()
       if (o.kind === "raft") {
         const c = new THREE.Color();
         o.data.tiles.forEach((t, i) => o.mesh.setColorAt(i, c.set(raftColour(t, o.data))));
@@ -487,25 +740,117 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
     const sw = (c, t) => `<span><i class="sw" style="background:${c}"></i>${t}</span>`;
     const T = isDark() ? TYPE_DARK : TYPE;
     let h = "";
-    if (state.colour === "type") h = sw(T.column, "Columns") + sw(T.wall, "Shear walls") + sw(T.core, "Lift cores") + sw(T.beam, "Beams") + sw(T.slab, "Slabs") + sw(T.foundation, DATA.layers.structure.raft ? "Raft" : "Foundations (size needed)");
+    if (state.colour === "type" && state.look === "render") h = sw("#f3f1ec", "Walls and frames, white render") + sw("#4d6676", "Windows (architect's plans)") + sw("#d6e8ef", "Glass balustrades") + sw("#e5b324", "Lobby doors");
+    else if (state.colour === "type") h = sw(T.column, "Columns") + sw(T.wall, "Shear walls") + sw(T.core, "Lift cores") + sw(T.beam, "Beams") + sw(T.slab, "Slabs") + sw(T.foundation, DATA.layers.structure.raft ? "Raft" : "Foundations (size needed)");
     else if (state.colour === "axial") h = sw(heat(0.1), "Light") + sw(heat(0.5), "") + sw(heat(1), `Heaviest, ${fmt(maxN)} kN`);
     else if (state.colour === "homes") h = sw(css("--ok"), "Available") + sw(css("--warn"), "Reserved") + sw(css("--bad"), "Sold") + sw(css("--none"), "Shared space");
     else h = sw(css("--ok"), "Passes") + sw(css("--warn"), "Close, or needs extra steel") + sw(css("--bad"), "Fails") + sw(css("--none"), "No bars known");
     L.innerHTML = h;
     const hud = $("hud");
-    const label = { type: "Element type", gravity: "Gravity + wind, EN 1992 checks with the R10 bars", seis: `Earthquake at ${DATA.summary.seismic.agR_g} g (Ghana code level), q = ${DATA.summary.seismic.q}`, seis2: `Earthquake at ${DATA.report.sens_ag} g (upper end of hazard studies)`, axial: "Axial load in service, G + Q", homes: "Homes by availability on the website (needs the floor layouts)" }[state.colour];
+    const label = { type: state.look === "render" ? "Like the renders: windows from the architect's plans on the as-built slab edges" : "Element type", gravity: "Gravity + wind, EN 1992 checks with the R10 bars", seis: `Earthquake at ${DATA.summary.seismic.agR_g} g (Ghana code level), q = ${DATA.summary.seismic.q}`, seis2: `Earthquake at ${DATA.report.sens_ag} g (upper end of hazard studies)`, axial: "Axial load in service, G + Q", homes: "Homes by availability on the website (needs the floor layouts)" }[state.colour];
     hud.innerHTML = `<div class="chip">${label}</div>` + (state.mode >= 0 ? `<div class="chip">Mode ${state.mode + 1}, T = ${DATA.modes[state.mode].T} s (exaggerated)</div>` : "");
+  }
+
+  // ---------------------------------------------------------------- views and looks
+  function setView(name) {
+    const v = view0;
+    if (!v) return;
+    const cx = (v.xmin + v.xmax) / 2, cz = (v.zmin + v.zmax) / 2, halfW = (v.xmax - v.xmin) / 2 + 2, H = v.top + 1;
+    const vf = (camera.fov * Math.PI) / 180, hf = 2 * Math.atan(Math.tan(vf / 2) * camera.aspect);
+    const fit = (w, h) => Math.max(w / Math.tan(hf / 2), h / Math.tan(vf / 2)) * 1.06;
+    if (name === "front") {
+      const d = fit(halfW, H / 2 + 1);
+      camera.position.set(cx, 3.2, v.zmax + d);
+      controls.target.set(cx, H * 0.47, v.zmax);
+    } else if (name === "east") {
+      const d = fit(halfW, H / 2 + 1);
+      camera.position.set(cx, 3.2, v.zmin - d);
+      controls.target.set(cx, H * 0.47, v.zmin);
+    } else if (name === "top") {
+      camera.position.set(cx, fit(halfW, (v.zmax - v.zmin) / 2 + 4) + H, cz + 0.01);
+      controls.target.set(cx, 0, cz);
+    } else {
+      const d = fit(halfW, H / 2 + 2);
+      camera.position.set(cx - d * 0.5, H * 0.42, v.zmax + d * 0.92);
+      controls.target.set(cx + 1, H * 0.4, cz + 3);
+    }
+    controls.update();
+  }
+  function applyLook() {
+    const R = state.look === "render";
+    $("look-render").setAttribute("aria-pressed", R ? "true" : "false");
+    $("look-eng").setAttribute("aria-pressed", R ? "false" : "true");
+    const solid = (m, colour, opacity) => {
+      m.color.set(colour);
+      m.transparent = opacity < 1;
+      m.opacity = opacity;
+      m.depthWrite = opacity >= 1;
+      m.needsUpdate = true;
+    };
+    const dark = isDark();
+    solid(AMAT.facade, R ? "#f5f5f2" : dark ? "#8a7d66" : "#d8cbb2", R ? 1 : 0.28);
+    solid(AMAT.fascia, "#f8f8f6", 1);
+    solid(AMAT.surround, "#fafaf8", 1);
+    ["external", "party", "corridor", "partition"].forEach((k) => solid(AMAT["plan-" + k], R ? "#f5f5f2" : PLANWALL[k], R ? 1 : 0.9));
+    AMAT.glass.vertexColors = R;
+    AMAT.glass.color.set(R ? "#ffffff" : "#8fc0d6");
+    AMAT.glass.opacity = R ? 0.93 : 0.4;
+    AMAT.glass.emissive.set(R ? "#ffb066" : "#000000");
+    AMAT.glass.emissiveIntensity = R ? 0.1 : 0;
+    AMAT.glass.needsUpdate = true;
+    AMAT.bglass.color.set(R ? "#c4dae4" : "#8fc0d6");
+    AMAT.bglass.opacity = R ? 0.42 : 0.35;
+    AMAT.frame.color.set(R ? "#202427" : dark ? "#9aa6ad" : "#4a555c");
+    scene.background = R ? skyTex : new THREE.Color(css("--canvas"));
+    hemi.color.set(R ? "#eef2fa" : "#ffffff");
+    hemi.groundColor.set(R ? "#b4aa9c" : "#8899a0");
+    hemi.intensity = R ? 0.58 : 0.85;
+    sun.color.set(R ? "#fff6ea" : "#ffffff");
+    sun.intensity = R ? 0.9 : 0.55;
+    if (view0) {
+      const c = new THREE.Vector3((view0.xmin + view0.xmax) / 2, 10, (view0.zmin + view0.zmax) / 2);
+      sun.target.position.copy(c);
+      sun.position.copy(c).add(R ? new THREE.Vector3(-55, 62, 85) : new THREE.Vector3(-30, 60, 40));
+    }
+    fill.intensity = R ? 0.38 : 0;
+    objects.forEach((o) => {
+      if (o.kind !== "slab") return;
+      o.mesh.material.transparent = !R;
+      o.mesh.material.opacity = R ? 1 : 0.92;
+    });
+    // shadows only for the renders' look; every material recompiles when they switch
+    if (renderer.shadowMap.enabled !== R) {
+      renderer.shadowMap.enabled = R;
+      sun.castShadow = R;
+      scene.traverse((o) => { if (o.material) [].concat(o.material).forEach((m) => (m.needsUpdate = true)); });
+    }
+    recolour();
+    applyVisibility();
+  }
+  function setLook(look) {
+    state.look = look;
+    if (look === "render" && state.colour !== "type" && state.colour !== "homes") {
+      state.colour = "type";
+      $("colour").value = "type";
+    }
+    state.layers.site = look === "render";
+    const cb = $("ly-site");
+    if (cb) cb.checked = state.layers.site;
+    applyLook();
   }
 
   // ---------------------------------------------------------------- visibility
   function applyVisibility() {
     Object.keys(groups).forEach((k) => (groups[k].visible = !!state.layers[k]));
+    const R = state.look === "render";
     objects.forEach((o) => {
       let show = o.lvlIdx <= state.topLevel;
-      if (o.kind === "slab") show = o.lvlIdx <= state.topLevel;
+      if (o.type === "surround" || o.type === "fascia") show = show && R;
       o.mesh.visible = show;
     });
+    glows.forEach((gl) => (gl.points.visible = gl.palms ? gl.lvlIdx <= state.topLevel : R && gl.lvlIdx < state.topLevel));
     labelSprites.forEach((ls) => (ls.sprite.visible = ls.lvlIdx === state.topLevel));
+    if (state.sel && state.sel.merged) hilite.visible = state.sel.lvlIdx <= state.topLevel && !!state.layers.architecture;
     const l = DATA.levels[state.topLevel];
     $("levels-out").textContent = l ? l.name : "";
   }
@@ -521,9 +866,31 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
     ray.setFromCamera(p, camera);
     const hits = ray.intersectObjects(objects.filter((o) => o.mesh.visible && groups[groupOf(o.kind)].visible).map((o) => o.mesh));
     if (hits.length && hits[0].object.userData.o.kind === "raft") return selectTile(hits[0].object.userData.o.data, hits[0].instanceId);
+    if (hits.length && hits[0].object.userData.o.kind === "arch-merged") {
+      const ud = hits[0].object.userData, k = ud.tri[hits[0].faceIndex];
+      const it = k >= 0 ? ud.items[k] : null;
+      return select(it ? { kind: it.kind, data: it.data, mesh: hits[0].object, lvlIdx: ud.o.lvlIdx, merged: true } : null);
+    }
     select(hits.length ? hits[0].object.userData.o : null);
   });
-  function groupOf(k) { return { slab: "slabs", column: "columns", wall: "columns", core: "cores", beam: "beams", foundation: "foundations", raft: "foundations", facade: "architecture", balustrade: "architecture", parapet: "architecture", stair: "architecture", room: "architecture" }[k] || (String(k).startsWith("plan-") ? "architecture" : undefined); }
+  function groupOf(k) { return { slab: "slabs", column: "columns", wall: "columns", core: "cores", beam: "beams", foundation: "foundations", raft: "foundations", facade: "architecture", balustrade: "architecture", parapet: "architecture", stair: "architecture", room: "architecture", "arch-merged": "architecture" }[k] || (String(k).startsWith("plan-") ? "architecture" : undefined); }
+  // a see-through box round a wall or window picked out of a merged mesh
+  const hilite = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({ color: 0x23708a, transparent: true, opacity: 0.35, depthTest: false }));
+  hilite.visible = false;
+  hilite.renderOrder = 10;
+  scene.add(hilite);
+  function showHilite(o) {
+    const d = o && o.merged ? o.data : null;
+    if (!d || !d.a) { hilite.visible = false; return; }
+    const [ax, ay] = d.a, [bx, by] = d.b;
+    const L = Math.max(0.05, Math.hypot(bx - ax, by - ay));
+    hilite.scale.set(L + 0.06, Math.max(0.05, d.z1 - d.z0) + 0.06, Math.max(0.08, (d.t || 0.1) + 0.06));
+    hilite.position.set((ax + bx) / 2, (d.z0 + d.z1) / 2, (ay + by) / 2);
+    hilite.rotation.set(0, -Math.atan2(by - ay, bx - ax), 0);
+    hilite.material.color.set(css("--accent"));
+    hilite.userData.lvlIdx = o.lvlIdx;
+    hilite.visible = o.lvlIdx <= state.topLevel;
+  }
   function selectTile(R, i) {
     state.sel = null;
     recolour();
@@ -555,9 +922,25 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
   function select(o) {
     state.sel = o;
     recolour();
+    showHilite(o);
     const D = $("detail");
-    if (!o) { D.innerHTML = '<p class="note">Tap a column, wall, lift core, beam, slab or foundation to see its loads and checks.</p>'; return; }
+    if (!o) { D.innerHTML = '<p class="note">Tap a column, wall, lift core, beam, slab or foundation to see its loads and checks, or a window or wall to see where it comes from.</p>'; return; }
     const d = o.data;
+    if (o.kind === "window") {
+      const len = Math.hypot(d.b[0] - d.a[0], d.b[1] - d.a[1]);
+      const lz = (DATA.levels.find((l) => l.key === d.level) || {}).z || 0;
+      const what = { sliding: "Sliding window", awning: "Awning window", curtain: "Glazed wall", slider: "Sliding glass door", door: "Door", entrance: "Lobby entrance" }[d.kind] || "Window";
+      const from = d.src === "architect" ? `the architect's ${d.sheet}, placed on the as-built grid` : d.src === "layout" ? "the plans editor's layout" : "the renders (assumed)";
+      D.innerHTML = `<h3>${what}${d.src === "architect" && d.tag ? " " + d.tag : ""} <span class="note">\u00B7 ${lvName(d.level)}</span></h3>` +
+        kv([["Width", fmt(len, 2) + " m"], d.narrowed && d.w_drawn ? ["Drawn", fmt(d.w_drawn / 1000, 2) + " m, narrowed to fit the as-built wall"] : null,
+            ["Sill / head", `${fmt(d.z0 - lz, 2)} / ${fmt(d.z1 - lz, 2)} m above the floor`], ["From", from]]) +
+        `<p class="note" style="margin-top:8px">${d.src === "architect" ? "Window schedule A119: frames anodised aluminium in matt black, laminated glass in reflective ocean grey. Where the plan puts the window behind a balcony, the wall is set back and the slab in front gets a glass balustrade." : d.src === "layout" ? "Sills and heads are typical (0.9 m and 2.1 m) until the layout records them." : "Placed in front of the lift as the renders show; not on the drawings read so far."}</p>`;
+      return;
+    }
+    if (o.kind === "fascia") {
+      D.innerHTML = `<h3>Slab edge band <span class="note">\u00B7 ${lvName(d.level)}</span></h3><p class="note">The white floor line of the renders, round the as-built slab edge.</p>`;
+      return;
+    }
     if (o.kind === "column" || o.kind === "wall") {
       const stack = DATA.layers.structure.columns.filter((c) => c.ref === d.ref && c.name === d.name).sort((a, b) => a.z0 - b.z0);
       D.innerHTML = `<h3>${d.name} at ${d.ref} <span class="note">\u00B7 ${lvName(d.level)} to the floor above</span></h3>` +
@@ -599,7 +982,7 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
       const len = Math.hypot(d.b[0] - d.a[0], d.b[1] - d.a[1]);
       const what = { facade: "External wall", balustrade: "Balcony / terrace balustrade", parapet: "Roof parapet" }[o.kind];
       D.innerHTML = `<h3>${what} <span class="note">\u00B7 ${lvName(d.level)}</span></h3>` + kv([["Length", fmt(len, 2) + " m"], ["Height", fmt(d.z1 - d.z0, 2) + " m"], ["Thickness", fmt(d.t * 1000) + " mm"]]) +
-        `<p class="note" style="margin-top:8px">${o.kind === "facade" ? "225 mm sandcrete block on the as-built slab edge" + (d.note ? ", " + d.note : "") + ". Windows and doors come in with the plans editor's layouts." : o.kind === "balustrade" ? "1.1 m guard on the balcony or terrace edge." : "Parapet round the roof."}</p>`;
+        `<p class="note" style="margin-top:8px">${o.kind === "facade" ? "225 mm sandcrete block, outer face on the as-built slab edge, or set back where the architect's plan puts the window behind a balcony" + (d.note ? "; " + d.note : "") + "." : o.kind === "balustrade" ? "1.1 m glass guard on the balcony or terrace edge, as in the renders." : "Parapet round the roof."}</p>`;
     } else if (o.kind === "room") {
       const h = d.unit ? homeStatus()[String(d.unit).toUpperCase()] : null;
       const ho = d.unit ? ((DATA.layers.architecture || {}).home_outlines || []).find((x) => x.unit === d.unit) : null;
@@ -631,10 +1014,10 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
   function layersUI() {
     const L = $("layers");
     const item = (k, label, on = true, enabled = true) => `<label class="${enabled ? "" : "off"}"><input type="checkbox" id="ly-${k}" ${on ? "checked" : ""} ${enabled ? "" : "disabled"}> ${label}</label>`;
-    L.innerHTML = '<div class="group-label">Structure</div>' + item("slabs", "Slabs") + item("columns", "Columns, walls") + item("cores", "Lift cores") + item("beams", "Beams") + item("foundations", "Foundations") + item("grid", "Grid") +
-      '<div class="group-label">Architecture</div>' + item("architecture", "Shell and stairs") +
-      '<div class="group-label">Coming next</div>' + item("mep", "MEP", false, false) + item("other", "Other", false, false);
-    ["slabs", "columns", "cores", "beams", "foundations", "grid", "architecture"].forEach((k) => $("ly-" + k).addEventListener("change", (e) => { state.layers[k] = e.target.checked; applyVisibility(); }));
+    L.innerHTML = '<div class="group-label">Structure</div>' + item("slabs", "Slabs") + item("columns", "Columns, walls") + item("cores", "Lift cores") + item("beams", "Beams") + item("foundations", "Foundations") + item("grid", "Grid", state.layers.grid) +
+      '<div class="group-label">Architecture</div>' + item("architecture", "Walls, windows, stairs") + item("site", "Site: cars, palms", state.layers.site) +
+      '<div class="group-label">Coming next</div>' + item("mep", "MEP", false, false);
+    ["slabs", "columns", "cores", "beams", "foundations", "grid", "architecture", "site"].forEach((k) => $("ly-" + k).addEventListener("change", (e) => { state.layers[k] = e.target.checked; applyVisibility(); }));
   }
 
   // ---------------------------------------------------------------- loads tab
@@ -767,7 +1150,10 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
     M.forEach((m, i) => $("mode-" + i).addEventListener("click", () => {
       state.mode = state.mode === i ? -1 : i;
       M.forEach((_, j) => $("mode-" + j).setAttribute("aria-pressed", j === state.mode ? "true" : "false"));
-      if (state.mode < 0) objects.forEach((o) => o.mesh.position.copy(o.base));
+      if (state.mode < 0) {
+        objects.forEach((o) => o.mesh.position.copy(o.base));
+        glows.forEach((gl) => gl.points.position.copy(gl.base));
+      }
       t0 = performance.now();
       legend();
     }));
@@ -836,9 +1222,13 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
         d = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
       } else if (o.kind === "slab") d = disp(key, 0, 0);
       else if (o.kind === "stair") { const a = disp(key, p.x, p.z), b = disp(above, p.x, p.z); d = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]; }
-      else if (o.kind === "room") d = disp(key, 0, 0);
+      else if (o.kind === "room" || o.kind === "arch-merged") d = disp(key, 0, 0);
       else d = disp(key, p.x, p.z);
       o.mesh.position.set(p.x + d[0], p.y, p.z + d[1]);
+    });
+    glows.forEach((gl) => {
+      const d = disp(DATA.levels[gl.lvlIdx].key, 0, 0);
+      gl.points.position.set(gl.base.x + d[0], gl.base.y, gl.base.z + d[1]);
     });
   }
 
@@ -855,20 +1245,34 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
     maxN = Math.max(...data.layers.structure.columns.map((c) => (c.NG || 0) + (c.NQ || 0)), ...data.layers.structure.cores.map((c) => (c.NG || 0) + (c.NQ || 0)));
     (data.report.cores_sens || []).forEach((c) => (coreSens[c.core + "|" + c.level] = c));
     $("stamp").textContent = `Shiashie, East Legon, Accra \u00B7 analysed ${data.generated} \u00B7 ${fmt(data.summary.model.nodes)} nodes, ${fmt(data.summary.model.shells)} shells`;
+    skyTex = skyTexture();
+    resize();
     build();
+    scene.traverse((o) => {
+      if (!o.isMesh) return;
+      const seeThrough = [].concat(o.material).some((m) => m.transparent);
+      o.castShadow = !seeThrough || (o.userData.o && o.userData.o.kind === "slab");
+      o.receiveShadow = true;
+    });
     layersUI();
     loadsTab();
     checksTab();
     modesTab();
     homesTab();
-    resize();
-    themeColours();
-    applyVisibility();
+    applyLook();
     $("loading").hidden = true;
+    window.lexModel = { scene, camera, controls, glows, setView, setLook }; // for tests
     requestAnimationFrame(loop);
   }
 
-  $("colour").addEventListener("change", (e) => { state.colour = e.target.value; recolour(); });
+  $("colour").addEventListener("change", (e) => {
+    state.colour = e.target.value;
+    if (state.colour !== "type" && state.colour !== "homes" && state.look === "render") setLook("eng");
+    else recolour();
+  });
+  $("look-render").addEventListener("click", () => setLook("render"));
+  $("look-eng").addEventListener("click", () => setLook("eng"));
+  ["front", "corner", "east", "top"].forEach((v) => $("view-" + v).addEventListener("click", () => setView(v)));
   $("levels").addEventListener("input", (e) => { state.topLevel = +e.target.value; applyVisibility(); });
 
   const tryUrls = ["viewer-data.json", "../out/viewer-data.json"];

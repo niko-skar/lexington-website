@@ -128,7 +128,7 @@ def export_viewer(b, a, d, results, path):
             structure=dict(slabs=slabs, columns=columns, cores=cores, beams=beams, foundations=foundations, raft=raft),
             architecture=architecture,
             mep=dict(items=[], note="Services (water, drainage, electrical, lifts) go here."),
-            other=dict(items=[], note="Site, landscaping and anything else."),
+            other=dict(items=[], site=architecture.pop("site", None), note="Site, landscaping and anything else."),
         ),
         modes=modes,
         summary=dict(totals=results["totals"], seismic=results["seismic"], wind=results["wind"], model=results["model"], pool=results["pool"]),
@@ -146,81 +146,30 @@ def export_viewer(b, a, d, results, path):
 
 
 def architecture_layer(b):
-    """The building's shell from the as-built record, and the homes as the live website lists them.
+    """The building's skin and layouts, and the homes as the live website lists them (see facade.py for the rules).
 
-    - Facade walls on every slab edge that is not a balcony (225 mm block, slab to the slab above), and on grid 7
-      behind the balconies; glass-like balustrades on balcony edges; a parapet round the roof.
-    - On the 7th floor (penthouses and roof terraces) the walls follow the roof's outline (what the roof covers is
-      indoors); the rest of its slab edge gets a terrace balustrade.
-    - Stair shafts from the as-built openings.
-    The walls inside each home come in from the plans editor's layouts when they can be read."""
+    - Every floor: 225 mm block walls on the as-built slab edges (the 7th floor: under the roof), with the architect's
+      windows in them (model/arch_windows.json, read off the floor plans); walls set back where the plans put a window
+      behind a balcony; glass balustrades round balconies and terraces; a white band on every slab edge; downlights in
+      the soffits over balconies and the car park; the roof parapet.
+    - Where the plans editor has a layout with external walls (the 1st floor) its walls, windows and doors are used.
+    - The ground floor: the lift lobbies' fronts with their entrance doors.
+    - Stair shafts from the as-built openings; rooms and homes from the layouts."""
     import json as _json
     from pathlib import Path as _Path
-    from shapely.geometry import LineString
 
-    walls, stairs = [], []
-    lv_by_key = {lv.key: lv for lv in b.levels}
-    roof = b.levels[-1]
-    for i, lv in enumerate(b.levels[:-1]):
-        if lv.outline is None:
-            continue
-        nxt = b.levels[i + 1]
-        t_next = (max(z["t"] for z in (nxt.spec or {}).get("zones", [{"t": 200}])) if nxt.outline is not None else 0) / 1000
-        z0, z1 = lv.z / 1000, nxt.z / 1000 - t_next
-        y7 = b.grid_lookup(lv, "y").get("7")
-        enclosed = lv.outline
-        if nxt.key == roof.key and roof.outline is not None:
-            enclosed = roof.outline.intersection(lv.outline)
-        def edges(poly):
-            cs = list(poly.exterior.coords)
-            return list(zip(cs[:-1], cs[1:]))
-        balc = lambda y: y7 is not None and y > y7 + 150
-        if enclosed.geom_type == "Polygon" and not enclosed.is_empty:
-            for (xa, ya), (xb, yb) in edges(enclosed):
-                if math.dist((xa, ya), (xb, yb)) < 50:
-                    continue
-                if balc((ya + yb) / 2) and enclosed is lv.outline:
-                    walls.append(dict(level=lv.key, kind="balustrade", a=[r(xa / 1000), r(ya / 1000)], b=[r(xb / 1000), r(yb / 1000)], z0=r(z0), z1=r(z0 + 1.1), t=0.06))
-                else:
-                    walls.append(dict(level=lv.key, kind="facade", a=[r(xa / 1000), r(ya / 1000)], b=[r(xb / 1000), r(yb / 1000)], z0=r(z0), z1=r(z1), t=0.225))
-            if y7 is not None and enclosed is lv.outline:
-                # the facade behind the balconies: on grid 7 wherever the slab runs past it
-                minx, _, maxx, _ = lv.outline.bounds
-                line = LineString([(minx, y7), (maxx, y7)])
-                beyond = lv.outline.intersection(line)
-                for seg in getattr(beyond, "geoms", [beyond]):
-                    if seg.is_empty or seg.length < 300:
-                        continue
-                    (xa, ya), (xb, yb) = list(seg.coords)[0], list(seg.coords)[-1]
-                    mid = ((xa + xb) / 2, y7 + 400)
-                    from shapely.geometry import Point as _P
-                    if lv.outline.contains(_P(*mid)):
-                        walls.append(dict(level=lv.key, kind="facade", a=[r(xa / 1000), r(y7 / 1000)], b=[r(xb / 1000), r(y7 / 1000)], z0=r(z0), z1=r(z1), t=0.225, note="behind the balconies, on grid 7 (assumed)"))
-        if enclosed is not lv.outline:
-            # roof terraces round the penthouses: a balustrade on the slab edge outside the roof
-            for (xa, ya), (xb, yb) in edges(lv.outline):
-                seg = LineString([(xa, ya), (xb, yb)])
-                if seg.length < 50:
-                    continue
-                if roof.outline is not None and roof.outline.buffer(10).contains(seg):
-                    continue
-                walls.append(dict(level=lv.key, kind="balustrade", a=[r(xa / 1000), r(ya / 1000)], b=[r(xb / 1000), r(yb / 1000)], z0=r(z0), z1=r(z0 + 1.1), t=0.06))
-        for h in lv.holes:
-            if h["kind"] == "stair":
-                x0, y0, x1, y1 = h["box"]
-                stairs.append(dict(level=lv.key, name=h["name"], box=[r(x0 / 1000), r(y0 / 1000), r(x1 / 1000), r(y1 / 1000)], z0=r(z0), z1=r(nxt.z / 1000)))
-    if roof.outline is not None:
-        cs = list(roof.outline.exterior.coords)
-        for (xa, ya), (xb, yb) in zip(cs[:-1], cs[1:]):
-            walls.append(dict(level=roof.key, kind="parapet", a=[r(xa / 1000), r(ya / 1000)], b=[r(xb / 1000), r(yb / 1000)], z0=r(roof.z / 1000), z1=r(roof.z / 1000 + 0.6), t=0.15))
+    from shapely.geometry import LineString, Point, Polygon
+    from shapely.geometry import box as sbox
+    from shapely.ops import unary_union
 
-    # the plans editor's layouts (structure/model/plans.json, from tools/export-plans.ts): on a floor that has one,
-    # its walls, doors, windows and rooms replace the outline shell
+    from . import facade as F
     from .building import model_file
 
-    rooms, homes_geo, plan_walls, plan_floors = [], [], [], {}
-    pp = model_file("plans.json")
+    lv_by_key = {lv.key: lv for lv in b.levels}
+    roof = b.levels[-1]
     ac = _json.loads(model_file("architecture.json").read_text()) if model_file("architecture.json").exists() else {}
+    awp = _Path(__file__).resolve().parents[1] / "model" / "arch_windows.json"
+    aw = _json.loads(awp.read_text())["windows"] if awp.exists() else []
     pick = ac.get("layout_pick", {})
     words = {w.lower() for w in ac.get("room_words", [])}
 
@@ -231,70 +180,194 @@ def architecture_layer(b):
         toks = re.findall(r"[\w&'-]+", name.lower())
         return name if toks and all(t in words for t in toks) else (typ or "room").capitalize()
 
+    def tslab(lv):
+        return max(z["t"] for z in (lv.spec or {}).get("zones", [{"t": 200}])) if lv is not None and lv.outline is not None else 200
+
+    def m(p):
+        return [r(p[0] / 1000), r(p[1] / 1000)]
+
+    def out_wall(level, w, **extra):
+        d = dict(level=level, kind=w["kind"], a=m(w["a"]), b=m(w["b"]), z0=r(w["z0"] / 1000), z1=r(w["z1"] / 1000), t=r(w["t"] / 1000))
+        if w.get("note"):
+            d["note"] = w["note"]
+        d.update(extra)
+        return d
+
+    def out_window(level, w, src):
+        return dict(level=level, a=m(w["a"]), b=m(w["b"]), n=list(w["n"]), z0=r(w["z0"] / 1000), z1=r(w["z1"] / 1000), t=r(w["t"] / 1000),
+                    kind=w["kind"], panes=w["panes"], tag=w.get("tag"), sheet=w.get("sheet"), w_drawn=w.get("width_drawn"),
+                    narrowed=bool(w.get("narrowed")), src=src, inner=bool(w.get("inner")))
+
+    # the plans editor's layouts (model/plans.json from tools/export-plans.ts); a floor's first layout unless picked
+    plan_floors = {}
+    pp = model_file("plans.json")
     if pp.exists():
-        pl = _json.loads(pp.read_text())
-        for opt in pl.get("options", []):
+        for opt in _json.loads(pp.read_text()).get("options", []):
             fk = opt["floorKey"]
             want = pick.get(fk)
-            if want is not None and opt["option"] != want:
-                continue
-            if fk in plan_floors:  # otherwise the first layout of a floor is its current one
+            if (want is not None and opt["option"] != want) or fk in plan_floors:
                 continue
             plan_floors[fk] = opt
-        for key, opt in plan_floors.items():
-            lv = lv_by_key.get(key)
-            if lv is None:
-                continue
-            i = lv.idx
-            nxt = b.levels[i + 1] if i + 1 < len(b.levels) else None
-            t_next = (max(z["t"] for z in (nxt.spec or {}).get("zones", [{"t": 200}])) / 1000) if nxt is not None and nxt.outline is not None else 0.2
-            z0 = lv.z / 1000
-            z1 = (nxt.z / 1000 - t_next) if nxt is not None else z0 + 2.9
-            ops_by_wall = {}
-            for o in opt.get("openings", []):
-                ops_by_wall.setdefault(o["wall"], []).append(o)
-            for w in opt["walls"]:
-                glass_wall = w["kind"] in ("glazing", "balustrade")
-                top = z0 + 1.1 if w["kind"] == "balustrade" else z1
-                # pieces along the wall, cut round its doors and windows
-                cuts = sorted(ops_by_wall.get(w["key"], []), key=lambda o: o["at"])
-                pos = w["s0"]
-                pieces = []
-                for o in cuts:
-                    a, bb = max(w["s0"], o["at"] - o["w"] / 2), min(w["s1"], o["at"] + o["w"] / 2)
-                    if a > pos:
-                        pieces.append((pos, a, z0, top, "glass" if glass_wall else "solid"))
-                    if o["kind"] == "window":
-                        pieces.append((a, bb, z0, z0 + 0.9, "solid"))
-                        pieces.append((a, bb, z0 + 0.9, z0 + 2.4, "glass"))
-                        pieces.append((a, bb, z0 + 2.4, top, "solid"))
-                    else:  # door, double door, slider
-                        if o["kind"] == "slider":
-                            pieces.append((a, bb, z0, z0 + 2.4, "glass"))
-                        pieces.append((a, bb, z0 + 2.4, top, "solid" if not glass_wall else "glass"))
-                    pos = max(pos, bb)
-                if pos < w["s1"]:
-                    pieces.append((pos, w["s1"], z0, top, "glass" if glass_wall else "solid"))
-                for sa, sb, za, zb, kind in pieces:
-                    if sb - sa < 20 or zb - za < 0.02:
-                        continue
-                    if w["dir"] == "h":
-                        a_, b_ = [r(sa / 1000), r(w["c"] / 1000)], [r(sb / 1000), r(w["c"] / 1000)]
-                    else:
-                        a_, b_ = [r(w["c"] / 1000), r(sa / 1000)], [r(w["c"] / 1000), r(sb / 1000)]
-                    plan_walls.append(dict(level=key, kind="plan-" + w["kind"], glass=kind == "glass", a=a_, b=b_, z0=r(za), z1=r(zb), t=w["t"] / 1000))
-            for rm in opt.get("rooms", []):
-                if rm.get("name") is None and rm.get("type") is None:
+
+    walls, windows, lights, stairs, rooms, homes_geo = [], [], [], [], [], []
+    report = {}
+    enclosures = {}
+    for i, lv in enumerate(b.levels[:-1]):
+        nxt = b.levels[i + 1]
+        if lv.outline is not None:
+            opt = plan_floors.get(lv.key)
+            lay = None
+            ext = [w for w in (opt or {}).get("walls", []) if w["kind"] in ("external", "glazing", "balustrade")]
+            if ext:
+                segs = [LineString([(w["s0"], w["c"]), (w["s1"], w["c"])] if w["dir"] == "h" else [(w["c"], w["s0"]), (w["c"], w["s1"])]) for w in ext]
+                indoor = [Polygon(rm["loops"][0]) for rm in opt.get("rooms", []) if rm.get("loops") and rm.get("type") not in ("balcony", "terrace", None)]
+                lay = dict(cover=unary_union([s.buffer(F.COVER, cap_style=2) for s in segs]),
+                           indoor=unary_union([p.buffer(0) for p in indoor]) if indoor else None)
+            mine = [w for w in aw if lv.key in w["floors"]]
+            sk = F.floor_skin(b, lv, nxt, roof, mine, lay, ac)
+            enclosures[lv.key] = sk["enclosure"]
+            walls += [out_wall(lv.key, w) for w in sk["walls"]]
+            walls += [out_wall(lv.key, w) for w in sk["balustrades"]]
+            windows += [out_window(lv.key, w, "architect") for w in sk["windows"]]
+            report[lv.key] = dict(architect_windows=len(mine), placed=len(sk["windows"]), balconies=len(sk["zones"]), left_out=sk["dropped"],
+                                  narrowed=sum(1 for w in sk["windows"] if w["narrowed"]), layout=bool(lay))
+            for h in lv.holes:
+                if h["kind"] == "stair":
+                    x0, y0, x1, y1 = h["box"]
+                    stairs.append(dict(level=lv.key, name=h["name"], box=[r(x0 / 1000), r(y0 / 1000), r(x1 / 1000), r(y1 / 1000)], z0=r(lv.z / 1000), z1=r(nxt.z / 1000)))
+        # downlights under the slab above, wherever it is outside this floor's enclosure
+        if nxt.outline is not None:
+            zs = (nxt.z - tslab(nxt)) / 1000 - 0.01
+            # the car park's soffit lights sit further in, where they show from the street past the slab-edge band
+            for x, y, _ in F.downlights(nxt.outline, enclosures.get(lv.key), zs, inset=1200 if lv.idx == 0 else 350):
+                lights.append([r(x / 1000, 2), r(y / 1000, 2), r(zs, 2), lv.key])
+    for lv in b.levels:
+        if lv.outline is not None and lv.idx > 0:
+            walls += [out_wall(lv.key, w) for w in F.fascia(lv, tslab(lv))]
+    if roof.outline is not None:
+        cs = list(roof.outline.exterior.coords)
+        for (xa, ya), (xb, yb) in zip(cs[:-1], cs[1:]):
+            walls.append(dict(level=roof.key, kind="parapet", a=[r(xa / 1000), r(ya / 1000)], b=[r(xb / 1000), r(yb / 1000)], z0=r(roof.z / 1000), z1=r(roof.z / 1000 + 0.6), t=0.15))
+    # the ground floor's lift lobbies
+    lob_walls, lob_doors = F.ground_lobbies(b)
+    g = b.levels[0]
+    walls += [out_wall(g.key, w) for w in lob_walls]
+    windows += [out_window(g.key, w, "renders") for w in lob_doors]
+
+    # the layouts: walls cut round their openings; windows and doors in external walls drawn as windows
+    for key, opt in plan_floors.items():
+        lv = lv_by_key.get(key)
+        if lv is None:
+            continue
+        nxt = b.levels[lv.idx + 1] if lv.idx + 1 < len(b.levels) else None
+        z0 = lv.z
+        z1 = (nxt.z - tslab(nxt)) if nxt is not None else z0 + 2900
+        S = lv.outline
+        ops_by_wall = {}
+        for o in opt.get("openings", []):
+            ops_by_wall.setdefault(o["wall"], []).append(o)
+        # a layout's inside walls traced along the facade or a slab edge (the rough layouts trace the outside walls as
+        # partitions) give way to the facade there: only walls running the same way within 0.65 m of it are cut back
+        along = {"h": [], "v": []}
+        for e in F.edges(S) + F.edges(enclosures.get(key)):
+            if e["dir"] == "h":
+                along["h"].append(LineString([(e["s0"], e["c"]), (e["s1"], e["c"])]).buffer(650, cap_style=2))
+            elif e["dir"] == "v":
+                along["v"].append(LineString([(e["c"], e["s0"]), (e["c"], e["s1"])]).buffer(650, cap_style=2))
+        along = {k: unary_union(v) if v else None for k, v in along.items()}
+
+        def spans(w):
+            if w["kind"] in ("external", "glazing", "balustrade") or along.get(w["dir"]) is None:
+                return [(w["s0"], w["s1"])]
+            seg = LineString([(w["s0"], w["c"]), (w["s1"], w["c"])] if w["dir"] == "h" else [(w["c"], w["s0"]), (w["c"], w["s1"])])
+            rest = seg.difference(along[w["dir"]])
+            k = 0 if w["dir"] == "h" else 1
+            out = []
+            for g_ in getattr(rest, "geoms", [rest]):
+                if not g_.is_empty and g_.length > 300:
+                    cs = list(g_.coords)
+                    out.append((min(cs[0][k], cs[-1][k]), max(cs[0][k], cs[-1][k])))
+            return out
+
+        def layout_wall(w, s0_, s1_):
+            w = dict(w, s0=s0_, s1=s1_)
+            glass_wall = w["kind"] in ("glazing", "balustrade")
+            outer = w["kind"] in ("external", "glazing")
+            top = z0 + 1100 if w["kind"] == "balustrade" else z1
+            P = (lambda s, w=w: (s, w["c"])) if w["dir"] == "h" else (lambda s, w=w: (w["c"], s))
+            cuts = sorted([o for o in ops_by_wall.get(w["key"], []) if s0_ <= o["at"] <= s1_], key=lambda o: o["at"])
+            pos = w["s0"]
+            pieces = []
+            for o in cuts:
+                a, bb = max(w["s0"], o["at"] - o["w"] / 2), min(w["s1"], o["at"] + o["w"] / 2)
+                if a > pos:
+                    pieces.append((pos, a, z0, top, glass_wall))
+                kind = {"window": "sliding", "slider": "slider", "door": "door"}.get(o["kind"], "door")
+                sill, head = (900, 2100) if kind == "sliding" else (0, 2100)
+                if kind == "door" and not outer:
+                    head = 2100  # an inside door: just the opening
+                else:
+                    # which side is outside: the side away from the floor's slab, or away from its middle
+                    mx, my = P((a + bb) / 2)
+                    n = (0, 1) if w["dir"] == "h" else (1, 0)
+                    if S is not None:
+                        pa = Point(mx + n[0] * 1500, my + n[1] * 1500)
+                        pb = Point(mx - n[0] * 1500, my - n[1] * 1500)
+                        if S.contains(pa) and not S.contains(pb):
+                            n = (-n[0], -n[1])
+                        elif S.contains(pa) == S.contains(pb):
+                            cx, cy = S.centroid.x, S.centroid.y
+                            if (mx - cx) * n[0] + (my - cy) * n[1] < 0:
+                                n = (-n[0], -n[1])
+                    windows.append(out_window(key, dict(a=P(a), b=P(bb), n=n, z0=z0 + sill, z1=z0 + head, t=w["t"], kind=kind,
+                                                        panes=max(1, round((bb - a) / 1300)), tag="plans editor", width_drawn=o["w"],
+                                                        inner=not outer), "layout"))
+                if sill > 0:
+                    pieces.append((a, bb, z0, z0 + sill, False))
+                pieces.append((a, bb, z0 + head, top, glass_wall))
+                pos = max(pos, bb)
+            if pos < w["s1"]:
+                pieces.append((pos, w["s1"], z0, top, glass_wall))
+            for sa, sb, za, zb, glass in pieces:
+                if sb - sa < 20 or zb - za < 20:
                     continue
-                rooms.append(dict(level=key, name=clean(rm["name"], rm["type"]), type=rm["type"], unit=rm["unit"], area=rm["area"], z=r(z0),
-                                  loops=[[[r(x / 1000), r(y / 1000)] for x, y in l] for l in rm["loops"]]))
-            for h in opt.get("homes", []):
-                homes_geo.append(dict(level=key, unit=h["unit"], nia=h["nia"], outdoor=h["outdoor"], z=r(z0),
-                                      loops=[[[r(x / 1000), r(y / 1000)] for x, y in l] for l in h["loops"]]))
-        # the outline shell stays only where there is no layout yet
-        has_ext = {k for k, v in plan_floors.items() if any(w["kind"] == "external" for w in v["walls"])}
-        walls = [w for w in walls if w["level"] not in has_ext or w["kind"] == "parapet"]
-        walls += plan_walls
+                walls.append(dict(level=key, kind="plan-" + w["kind"], glass=glass, a=m(P(sa)), b=m(P(sb)), z0=r(za / 1000), z1=r(zb / 1000), t=w["t"] / 1000))
+
+        for w0 in opt["walls"]:
+            for s0_, s1_ in spans(w0):
+                layout_wall(w0, s0_, s1_)
+        for rm in opt.get("rooms", []):
+            if rm.get("name") is None and rm.get("type") is None:
+                continue
+            rooms.append(dict(level=key, name=clean(rm["name"], rm["type"]), type=rm["type"], unit=rm["unit"], area=rm["area"], z=r(z0 / 1000),
+                              loops=[[[r(x / 1000), r(y / 1000)] for x, y in l] for l in rm["loops"]]))
+        for h in opt.get("homes", []):
+            homes_geo.append(dict(level=key, unit=h["unit"], nia=h["nia"], outdoor=h["outdoor"], z=r(z0 / 1000),
+                                  loops=[[[r(x / 1000), r(y / 1000)] for x, y in l] for l in h["loops"]]))
+
+    # the site: cars in the car park, palms on the top floor's terraces
+    top = b.levels[-2]
+    terrace = top.outline.difference(enclosures[top.key]) if top.outline is not None and top.key in enclosures else None
+    if terrace is not None and roof.outline is not None:
+        terrace = terrace.difference(roof.outline)  # palms only where open to the sky
+    # parasols on the open decks (the pool deck)
+    paras = []
+    for oa in ac.get("open_areas", []):
+        lv = lv_by_key.get(oa.get("floor"))
+        if lv is None or lv.outline is None or lv.key not in enclosures:
+            continue
+        deck = lv.outline.difference(enclosures[lv.key])
+        for h in lv.holes:
+            deck = deck.difference(sbox(*h["box"]).buffer(300))
+        if roof.outline is not None and lv.idx + 1 == roof.idx:
+            continue  # the roof terrace gets palms instead
+        paras += F.umbrellas(deck, lv.z)
+    site = dict(
+        umbrellas=[[r(p["x"] / 1000, 2), r(p["y"] / 1000, 2), r(p["z"] / 1000, 2)] for p in paras],
+        cars=[[r(c["x"] / 1000, 2), r(c["y"] / 1000, 2), c["dir"], c["colour"]] for c in F.car_park(b, lob_walls)],
+        palms=[[r(p["x"] / 1000, 2), r(p["y"] / 1000, 2), r(p["z"] / 1000, 2), r(p["h"] / 1000, 2)] for p in (F.palms(b, terrace, top.z) if terrace is not None else [])],
+        ground=r(b.levels[0].z / 1000 - 0.02),
+        note="Cars and palms are set dressing, placed like the renders; the ground is the car park level.")
 
     homes, fetched = [], None
     wp = _Path(__file__).resolve().parents[1] / "model" / "website.json"
@@ -307,6 +380,9 @@ def architecture_layer(b):
             homes.append(dict(unit=u.get("unitNumber"), floor=f, level=keys[f] if isinstance(f, int) and 0 <= f < len(keys) else None,
                               type=u.get("bedroomType"), area=u.get("areaSqm"), balcony=u.get("balconySqm"), terrace=u.get("terraceSqm"),
                               price=u.get("priceUSD"), status=u.get("status")))
-    return dict(walls=walls, stairs=stairs, homes=homes, homes_fetched=fetched, rooms=rooms, home_outlines=homes_geo,
+    return dict(walls=walls, windows=windows, lights=lights, stairs=stairs, homes=homes, homes_fetched=fetched, rooms=rooms, home_outlines=homes_geo,
                 layouts={k: dict(option=v["option"], updatedAt=v.get("updatedAt"), walls=len(v["walls"]), problems=v.get("problems", [])) for k, v in plan_floors.items()},
-                note="Shell from the as-built slab edges; homes from the live website. Walls inside the homes come from the plans editor's layouts once they can be read.")
+                facade=report, site=site,
+                open_areas=[dict(floor=o["floor"], name=o["name"]) for o in ac.get("open_areas", [])],
+                note="Walls on the as-built slab edges with the architect's windows (floor plans A105-A110, schedule A119) placed on the "
+                     "as-built grid; balconies where the plans set the wall back; the plans editor's layout where it has external walls.")
