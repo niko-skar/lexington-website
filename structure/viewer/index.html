@@ -142,6 +142,7 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
           <button class="btn" id="view-corner">3D</button>
           <button class="btn" id="view-east">East</button>
           <button class="btn" id="view-top">From above</button>
+          <button class="btn" id="view-below">Below ground</button>
         </div>
         <p class="note keys-hint" style="margin-top:8px">Keys: <kbd>W</kbd> <kbd>S</kbd> forward and back, <kbd>A</kbd> <kbd>D</kbd> sideways, <kbd>Q</kbd> <kbd>E</kbd> down and up, arrows to look up, down, left and right. Hold <kbd>Shift</kbd> to go faster.</p>
       </div>
@@ -485,6 +486,73 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
     }
   }
 
+  // ---------------------------------------------------------------- below ground
+  function inPoly(x, y, poly) {
+    if (!poly || poly.length < 3) return false;
+    let inside = false;
+    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+      const [xi, yi] = poly[i], [xj, yj] = poly[j];
+      if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
+    }
+    return inside;
+  }
+  const belowLabels = [];
+  // the ground floor slab, the basement's retaining walls, stair and water tank, and the stub columns and lift pits
+  // from the raft up to the ground floor
+  function buildBelow(BG, lv) {
+    const g0 = lv[DATA.levels[0].key] ?? 0;
+    if (BG.ground_slab.length > 2) {
+      const shape = new THREE.Shape(BG.ground_slab.map(([x, y]) => new THREE.Vector2(x, y)));
+      const m = new THREE.Mesh(new THREE.ExtrudeGeometry(shape, { depth: BG.ground_slab_t, bevelEnabled: false }), mat(0xcccccc));
+      m.rotation.x = Math.PI / 2;
+      m.position.y = BG.ground;
+      groups.slabs.add(m);
+      const o = { mesh: m, kind: "gslab", data: BG, lvlIdx: g0, base: m.position.clone() };
+      m.userData.o = o;
+      objects.push(o);
+    }
+    BG.walls.forEach((w) => {
+      const [ax, ay] = w.a, [bx, by] = w.b, h = w.t / 2;
+      const alongX = Math.abs(by - ay) < Math.abs(bx - ax);
+      const x0 = alongX ? Math.min(ax, bx) - h : ax - h, x1 = alongX ? Math.max(ax, bx) + h : ax + h;
+      const y0 = alongX ? ay - h : Math.min(ay, by) - h, y1 = alongX ? ay + h : Math.max(ay, by) + h;
+      addBox(groups.foundations, "retaining", w, g0, x0, x1, y0, y1, w.z0, w.z1);
+    });
+    BG.stubs.forEach((s) => { const [x0, y0, x1, y1] = s.box; addBox(groups.foundations, "stub", s, g0, x0, x1, y0, y1, s.z0, s.z1 - 0.005); });
+    BG.pits.forEach((p) => {
+      const [x0, y0, x1, y1] = p.box, t = p.wall;
+      [[x0, x1, y0, y0 + t], [x0, x1, y1 - t, y1], [x0, x0 + t, y0 + t, y1 - t], [x1 - t, x1, y0 + t, y1 - t]].forEach(([a, b, c, d]) => addBox(groups.foundations, "pit", p, g0, a, b, c, d, p.z0, p.z1 - 0.005));
+    });
+    BG.spaces.forEach((s) => {
+      const [x0, y0, x1, y1] = s.box;
+      if (s.stair) {
+        const o = addBox(groups.foundations, "stair", Object.assign({ level: DATA.levels[0].key }, s), g0, x0, x1, y0, y1, s.z0, s.z1);
+        o.mesh.material.transparent = true;
+        o.mesh.material.opacity = 0.35;
+        o.mesh.material.depthWrite = false;
+      }
+      if (s.water) {
+        const wtr = new THREE.Mesh(new THREE.BoxGeometry(x1 - x0, s.water, y1 - y0), mat(0x3d9fbd, { transparent: true, opacity: 0.6, depthWrite: false }));
+        wtr.position.set((x0 + x1) / 2, s.z0 + s.water / 2, (y0 + y1) / 2);
+        groups.foundations.add(wtr);
+      }
+      const cv = document.createElement("canvas");
+      cv.width = 512; cv.height = 96;
+      const ctx = cv.getContext("2d");
+      ctx.fillStyle = "rgba(255,255,255,0.92)";
+      ctx.fillRect(4, 4, 504, 88);
+      ctx.strokeStyle = "#23708a"; ctx.lineWidth = 4; ctx.strokeRect(4, 4, 504, 88);
+      ctx.fillStyle = "#1b262d"; ctx.font = "600 40px IBM Plex Sans, sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText(s.name, 256, 50);
+      const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(cv), depthTest: false }));
+      sp.scale.set(4.4, 0.83, 1);
+      sp.position.set((x0 + x1) / 2, s.z0 + 1.4, (y0 + y1) / 2);
+      sp.visible = false;
+      groups.foundations.add(sp);
+      belowLabels.push(sp);
+    });
+  }
+
   function build() {
     const S = DATA.layers.structure;
     const lv = {};
@@ -579,7 +647,9 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
       o.mesh.material.opacity = 0.35;
       o.mesh.material.depthWrite = false;
     });
-    // the raft: one tile per mesh cell, coloured by what the raft is doing there
+    // the raft: one tile per mesh cell, coloured by what the raft is doing there; drawn at its as-built depth (the
+    // basement wing lower), though the analysis has it at the ground floor
+    const BG = S.below;
     if (S.raft) {
       const R = S.raft, n = R.tiles.length;
       const geo = new THREE.BoxGeometry(1, 1, 1);
@@ -588,16 +658,19 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
       R.tiles.forEach((t, i) => {
         const [x0, y0, x1, y1] = t;
         const tt = t[9] || R.t;
+        const top = BG ? (inPoly((x0 + x1) / 2, (y0 + y1) / 2, BG.deep) ? BG.basement_floor : BG.raft_top) : R.z;
         m4.makeScale(Math.max(0.02, x1 - x0 - 0.02), tt, Math.max(0.02, y1 - y0 - 0.02));
-        m4.setPosition((x0 + x1) / 2, R.z - tt / 2, (y0 + y1) / 2);
+        m4.setPosition((x0 + x1) / 2, top - tt / 2, (y0 + y1) / 2);
         im.setMatrixAt(i, m4);
         im.setColorAt(i, new THREE.Color(0x999999));
       });
+      R.tops = R.tiles.map((t) => (BG ? (inPoly((t[0] + t[2]) / 2, (t[1] + t[3]) / 2, BG.deep) ? BG.basement_floor : BG.raft_top) : R.z));
       groups.foundations.add(im);
       const o = { mesh: im, kind: "raft", data: R, lvlIdx: 0, base: im.position.clone() };
       im.userData.o = o;
       objects.push(o);
     }
+    if (BG) buildBelow(BG, lv);
     // foundations (pad size needed), 600 thick under the ground floor
     S.foundations.forEach((f) => {
       const h = (f.side_sls || f.side) / 2; // drawn at the service-load size; the quake size is in the details
@@ -660,8 +733,8 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
     if (t > 0.85) c.lerp(new THREE.Color(css("--bad")), (t - 0.85) / 0.15 * 0.6);
     return "#" + c.getHexString();
   }
-  const TYPE = { slab: "#c9d1d5", column: "#7e8c94", wall: "#5c6c76", core: "#4f6470", beam: "#a7b3b9", foundation: "#b59a6a", facade: "#d8cbb2", balustrade: "#8fc0d6", parapet: "#cbbda3", stair: "#c79a6e" };
-  const TYPE_DARK = { slab: "#3a4950", column: "#8c9aa2", wall: "#a2b0b8", core: "#7e939e", beam: "#5d6d75", foundation: "#8d7650", facade: "#8a7d66", balustrade: "#5d9ab4", parapet: "#7d715d", stair: "#9c7552" };
+  const TYPE = { slab: "#c9d1d5", column: "#7e8c94", wall: "#5c6c76", core: "#4f6470", beam: "#a7b3b9", foundation: "#b59a6a", facade: "#d8cbb2", balustrade: "#8fc0d6", parapet: "#cbbda3", stair: "#c79a6e", retaining: "#6f7d86", stub: "#7e8c94", pit: "#4f6470", gslab: "#c9d1d5" };
+  const TYPE_DARK = { slab: "#3a4950", column: "#8c9aa2", wall: "#a2b0b8", core: "#7e939e", beam: "#5d6d75", foundation: "#8d7650", facade: "#8a7d66", balustrade: "#5d9ab4", parapet: "#7d715d", stair: "#9c7552", retaining: "#93a1aa", stub: "#8c9aa2", pit: "#7e939e", gslab: "#3a4950" };
   const ARCH = { facade: 1, balustrade: 1, parapet: 1, stair: 1, room: 1 };
   const ROOM = { living: "#e8d3b0", bedroom: "#c9d8e6", kitchen: "#efc79a", bath: "#b9dfdc", wc: "#b9dfdc", hall: "#ddd6cb", store: "#d3cec6", laundry: "#cfe0d8", balcony: "#cfe3c4", terrace: "#c4dfb4", corridor: "#e2e2dc", lobby: "#e2e2dc", stair: "#d8cfc2", plant: "#c8c8c8", other: "#dcd8d0" };
   const PLANWALL = { external: "#d2c3a8", party: "#c4b59a", corridor: "#cdbfa6", partition: "#e3dccf", glazing: "#8fc0d6", balustrade: "#8fc0d6" };
@@ -669,7 +742,7 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
   function isDark() { return css("--bg").toLowerCase() === "#10161a"; }
 
   // the renders' palette: everything white, floors warm
-  const RENDER = { slab: "#f1f1ee", column: "#f3f3f0", wall: "#f3f3f0", core: "#efefec", beam: "#ededea", foundation: "#cdc6b9", stair: "#d9d2c7", room: "#d8c7ab" };
+  const RENDER = { slab: "#f1f1ee", column: "#f3f3f0", wall: "#f3f3f0", core: "#efefec", beam: "#ededea", foundation: "#cdc6b9", stair: "#d9d2c7", room: "#d8c7ab", retaining: "#c9c5bd", stub: "#e9e7e2", pit: "#e2e0db", gslab: "#d6d3cc" };
   function colourFor(o) {
     const d = o.data, mode = state.colour;
     const T = isDark() ? TYPE_DARK : TYPE;
@@ -751,13 +824,18 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
     L.innerHTML = h;
     const hud = $("hud");
     const label = { type: state.look === "render" ? "Like the renders: windows from the architect's plans on the as-built slab edges" : "Element type", gravity: "Gravity + wind, EN 1992 checks with the R10 bars", seis: `Earthquake at ${DATA.summary.seismic.agR_g} g (Ghana code level), q = ${DATA.summary.seismic.q}`, seis2: `Earthquake at ${DATA.report.sens_ag} g (upper end of hazard studies)`, axial: "Axial load in service, G + Q", homes: "Homes by availability on the website (needs the floor layouts)" }[state.colour];
-    hud.innerHTML = `<div class="chip">${label}</div>` + (state.mode >= 0 ? `<div class="chip">Mode ${state.mode + 1}, T = ${DATA.modes[state.mode].T} s (exaggerated)</div>` : "");
+    const BG = DATA.layers.structure.below;
+    hud.innerHTML = `<div class="chip">${label}</div>` + (state.mode >= 0 ? `<div class="chip">Mode ${state.mode + 1}, T = ${DATA.modes[state.mode].T} s (exaggerated)</div>` : "") +
+      (state.below && BG ? `<div class="chip">Below ground: raft top ${fmt(BG.raft_top, 2)} m (about 2 m down, on rock); basement floor ${fmt(BG.basement_floor, 2)} m (drawings)</div>` : "");
   }
 
   // ---------------------------------------------------------------- views and looks
   function setView(name) {
     const v = view0;
     if (!v) return;
+    // "Below ground" cuts the building away above the ground floor slab and shows what is under it
+    state.below = name === "below";
+    if (DATA) applyVisibility();
     const cx = (v.xmin + v.xmax) / 2, cz = (v.zmin + v.zmax) / 2, halfW = (v.xmax - v.xmin) / 2 + 2, H = v.top + 1;
     const vf = (camera.fov * Math.PI) / 180, hf = 2 * Math.atan(Math.tan(vf / 2) * camera.aspect);
     const fit = (w, h) => Math.max(w / Math.tan(hf / 2), h / Math.tan(vf / 2)) * 1.06;
@@ -769,6 +847,9 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
       const d = fit(halfW, H / 2 + 1);
       camera.position.set(cx, 3.2, v.zmin - d);
       controls.target.set(cx, H * 0.47, v.zmin);
+    } else if (name === "below") {
+      camera.position.set(v.xmin - 15, 19, v.zmax + 27);
+      controls.target.set(v.xmin + 15, -2, cz - 2);
     } else if (name === "top") {
       camera.position.set(cx, fit(halfW, (v.zmax - v.zmin) / 2 + 4) + H, cz + 0.01);
       controls.target.set(cx, 0, cz);
@@ -817,9 +898,12 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
     }
     fill.intensity = R ? 0.38 : 0;
     objects.forEach((o) => {
-      if (o.kind !== "slab") return;
+      if (o.kind !== "slab" && o.kind !== "gslab") return;
+      // in the engineering look the ground floor slab is nearly clear, so the raft's colours show through it
       o.mesh.material.transparent = !R;
-      o.mesh.material.opacity = R ? 1 : 0.92;
+      o.mesh.material.opacity = R ? 1 : o.kind === "gslab" ? 0.3 : 0.92;
+      o.mesh.material.depthWrite = R || o.kind !== "gslab";
+      o.mesh.material.needsUpdate = true;
     });
     // shadows only for the renders' look; every material recompiles when they switch
     if (renderer.shadowMap.enabled !== R) {
@@ -844,7 +928,8 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
 
   // ---------------------------------------------------------------- visibility
   function applyVisibility() {
-    Object.keys(groups).forEach((k) => (groups[k].visible = !!state.layers[k]));
+    Object.keys(groups).forEach((k) => (groups[k].visible = !!state.layers[k] && (!state.below || k === "foundations" || k === "grid")));
+    belowLabels.forEach((sp) => (sp.visible = !!state.below && !!state.layers.foundations));
     const R = state.look === "render";
     objects.forEach((o) => {
       let show = o.lvlIdx <= state.topLevel;
@@ -855,7 +940,8 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
     labelSprites.forEach((ls) => (ls.sprite.visible = ls.lvlIdx === state.topLevel));
     if (state.sel && state.sel.merged) hilite.visible = state.sel.lvlIdx <= state.topLevel && !!state.layers.architecture;
     const l = DATA.levels[state.topLevel];
-    $("levels-out").textContent = l ? l.name : "";
+    $("levels-out").textContent = state.below ? "Below ground" : l ? l.name : "";
+    legend();
   }
 
   // ---------------------------------------------------------------- picking
@@ -876,7 +962,7 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
     }
     select(hits.length ? hits[0].object.userData.o : null);
   });
-  function groupOf(k) { return { slab: "slabs", column: "columns", wall: "columns", core: "cores", beam: "beams", foundation: "foundations", raft: "foundations", facade: "architecture", balustrade: "architecture", parapet: "architecture", stair: "architecture", room: "architecture", "arch-merged": "architecture" }[k] || (String(k).startsWith("plan-") ? "architecture" : undefined); }
+  function groupOf(k) { return { slab: "slabs", column: "columns", wall: "columns", core: "cores", beam: "beams", foundation: "foundations", raft: "foundations", retaining: "foundations", stub: "foundations", pit: "foundations", gslab: "slabs", facade: "architecture", balustrade: "architecture", parapet: "architecture", stair: "architecture", room: "architecture", "arch-merged": "architecture" }[k] || (String(k).startsWith("plan-") ? "architecture" : undefined); }
   // a see-through box round a wall or window picked out of a merged mesh
   const hilite = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({ color: 0x23708a, transparent: true, opacity: 0.35, depthTest: false }));
   hilite.visible = false;
@@ -899,8 +985,11 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
     recolour();
     const [x0, y0, x1, y1, p, pmin, pmax, st, As, tt, use, useg] = R.tiles[i];
     const S = R.summary;
+    const BG = DATA.layers.structure.below;
+    const topAt = R.tops ? R.tops[i] : null;
     $("detail").innerHTML = `<h3>Raft at x ${fmt((x0 + x1) / 2, 1)} m, y ${fmt((y0 + y1) / 2, 1)} m</h3>` +
-      kv([["Thickness", fmt((tt || R.t) * 1000) + " mm"], ["Soil pressure, service G + Q", fmt(p) + " kPa"], ["Allowed (geotech)", fmt(R.qa) + " kPa"],
+      kv([["Thickness", fmt((tt || R.t) * 1000) + " mm"],
+          BG && topAt !== null ? ["Top of the raft", `${fmt(topAt, 2)} m${BG && topAt === BG.basement_floor ? " (basement floor)" : ""}`] : null, ["Soil pressure, service G + Q", fmt(p) + " kPa"], ["Allowed (geotech)", fmt(R.qa) + " kPa"],
           ["Code-level quake", pmin < 0 ? `lifts off (${fmt(pmin)} to ${fmt(pmax)} kPa)` : `${fmt(pmin)} to ${fmt(pmax)} kPa`],
           ["Settlement (service)", fmt(st, 1) + " mm"], ["Steel needed, worst face", fmt(As) + " mm\u00B2/m"],
           ["Steel needed / drawn, everyday", useg === null || useg === undefined ? "\u2013" : verdictPill(useg)],
@@ -999,6 +1088,23 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
       const what = { external: "External wall", party: "Wall between homes", corridor: "Wall to the corridor", partition: "Partition inside a home", glazing: "Glazing", balustrade: "Balcony edge" }[o.kind.slice(5)] || "Wall";
       D.innerHTML = `<h3>${what}${d.glass && o.kind !== "plan-glazing" ? " (window / glass door)" : ""} <span class="note">\u00B7 ${lvName(d.level)}</span></h3>` + kv([["Length", fmt(len, 2) + " m"], ["From / to", `${fmt(d.z0 - DATA.levels.find((l) => l.key === d.level).z, 2)} to ${fmt(d.z1 - DATA.levels.find((l) => l.key === d.level).z, 2)} m above the floor`], ["Thickness", fmt(d.t * 1000) + " mm"]]) +
         `<p class="note" style="margin-top:8px">From the plans editor's layout. Door heads and window sills are typical heights (2.4 m, 0.9 m).</p>`;
+    } else if (o.kind === "retaining" || o.kind === "stub" || o.kind === "pit" || o.kind === "gslab") {
+      const BG = DATA.layers.structure.below;
+      const lvl = (z) => (z >= 0 ? "+" : "") + fmt(z, 2) + " m";
+      if (o.kind === "retaining") {
+        const len = Math.hypot(d.b[0] - d.a[0], d.b[1] - d.a[1]);
+        D.innerHTML = `<h3>Retaining wall <span class="note">\u00B7 ${d.name}</span></h3>` + kv([["Length", fmt(len, 2) + " m"], ["Thickness", fmt(d.t * 1000) + " mm"], ["From / to", `${lvl(d.z0)} to ${lvl(d.z1)}`]]) +
+          `<p class="note" style="margin-top:8px">300 mm reinforced concrete round the basement, on its 450 mm raft (raft drawings, 18 Feb 2026). The basement floor has no as-built level yet: the drawings' 2.95 m below the ground floor is used.</p>`;
+      } else if (o.kind === "stub") {
+        D.innerHTML = `<h3>${d.name} at ${d.ref} <span class="note">\u00B7 below the ground floor</span></h3>` + kv([["Size (mm)", `${Math.round((d.box[2] - d.box[0]) * 1000)} \u00D7 ${Math.round((d.box[3] - d.box[1]) * 1000)}`], ["From / to", `${lvl(d.z0)} to ${lvl(d.z1)}`], ["Height", fmt(d.z1 - d.z0, 2) + " m"]]) +
+          `<p class="note" style="margin-top:8px">The column carried down to the raft${d.z0 === (BG || {}).basement_floor ? " through the basement" : " through the fill"}. Not in the analysis, which puts the raft right under the ground floor.</p>`;
+      } else if (o.kind === "pit") {
+        D.innerHTML = `<h3>${d.name} pit</h3>` + kv([["Depth below the ground floor", fmt(d.z1 - d.z0, 2) + " m"], ["Walls", fmt(d.wall * 1000) + " mm"]]) +
+          `<p class="note" style="margin-top:8px">The lift core's walls carried down to the raft; the lift pit is inside.</p>`;
+      } else {
+        D.innerHTML = `<h3>Ground floor slab</h3>` + kv([["Top", lvl(d.ground)], ["Thickness drawn", fmt(d.ground_slab_t * 1000) + " mm"], ["Raft top (as built)", lvl(d.raft_top)], ["Basement floor (drawings)", lvl(d.basement_floor)]]) +
+          `<p class="note" style="margin-top:8px">The car park floor: 150 mm on 300 mm hardcore over the fill (raft drawings, section 03-03), suspended over the basement. ${d.src && d.src.levels ? d.src.levels : ""}</p>`;
+      }
     } else if (o.kind === "stair") {
       D.innerHTML = `<h3>${d.name} <span class="note">\u00B7 ${lvName(d.level)} to the floor above</span></h3>` + kv([["Opening", `${fmt(d.box[2] - d.box[0], 2)} \u00D7 ${fmt(d.box[3] - d.box[1], 2)} m`]]);
     } else if (o.kind === "slab") {
@@ -1215,7 +1321,7 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
       return [(f.ux + f.th * (z - f.cz)) * state.amp * s, (f.uz - f.th * (x - f.cx)) * state.amp * s];
     };
     objects.forEach((o) => {
-      if (o.kind === "foundation" || o.kind === "raft") return;
+      if (o.kind === "foundation" || o.kind === "raft" || o.kind === "retaining" || o.kind === "stub" || o.kind === "pit" || o.kind === "gslab") return;
       const key = DATA.levels[o.lvlIdx].key;
       const above = DATA.levels[o.lvlIdx + 1] ? DATA.levels[o.lvlIdx + 1].key : key;
       const p = o.base;
@@ -1329,8 +1435,8 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
   });
   $("look-render").addEventListener("click", () => setLook("render"));
   $("look-eng").addEventListener("click", () => setLook("eng"));
-  ["front", "corner", "east", "top"].forEach((v) => $("view-" + v).addEventListener("click", () => setView(v)));
-  $("levels").addEventListener("input", (e) => { state.topLevel = +e.target.value; applyVisibility(); });
+  ["front", "corner", "east", "top", "below"].forEach((v) => $("view-" + v).addEventListener("click", () => setView(v)));
+  $("levels").addEventListener("input", (e) => { state.topLevel = +e.target.value; state.below = false; applyVisibility(); });
 
   const tryUrls = ["viewer-data.json", "../out/viewer-data.json"];
   (async function load() {

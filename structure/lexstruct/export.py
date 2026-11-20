@@ -125,7 +125,7 @@ def export_viewer(b, a, d, results, path):
         grid=dict(x=[dict(id=g["id"], p=r(g["pos"] / 1000)) for g in b.asbuilt["floors"][1]["grid"]["x"]],
                   y=[dict(id=g["id"], p=r(g["pos"] / 1000)) for g in b.asbuilt["floors"][1]["grid"]["y"]]),
         layers=dict(
-            structure=dict(slabs=slabs, columns=columns, cores=cores, beams=beams, foundations=foundations, raft=raft),
+            structure=dict(slabs=slabs, columns=columns, cores=cores, beams=beams, foundations=foundations, raft=raft, below=below_ground_layer(b)),
             architecture=architecture,
             mep=dict(items=[], note="Services (water, drainage, electrical, lifts) go here."),
             other=dict(items=[], site=architecture.pop("site", None), note="Site, landscaping and anything else."),
@@ -386,3 +386,60 @@ def architecture_layer(b):
                 open_areas=[dict(floor=o["floor"], name=o["name"]) for o in ac.get("open_areas", [])],
                 note="Walls on the as-built slab edges with the architect's windows (floor plans A105-A110, schedule A119) placed on the "
                      "as-built grid; balconies where the plans set the wall back; the plans editor's layout where it has external walls.")
+
+
+def below_ground_layer(b):
+    """What is under the ground floor, for the 3D view: the raft at its as-built depth, the basement's retaining walls,
+    stair and water tank, the stub columns and lift pits from the raft up to the ground floor, and the ground floor slab.
+    Only drawn: the analysis keeps the raft at the ground floor, with the fill and the basement as loads on it.
+    Levels from loads.json > foundation > raft > shown_at_mm; the basement from foundation > basement."""
+    from shapely.geometry import Point
+    from shapely.geometry import box as sbox
+    from shapely.ops import unary_union
+
+    fnd = b.cfg.get("foundation", {})
+    rc = fnd.get("raft") or {}
+    if b.raft is None:
+        return None
+    shown = rc.get("shown_at_mm", {})
+    bas = fnd.get("basement") or {}
+    g = b.levels[0]
+    top = float(shown.get("raft_top", g.z))
+    deep = float(shown.get("basement_floor", top))
+    tw = float(bas.get("wall_t_mm", 300))
+    gs = float(bas.get("ground_slab_mm", 200))
+    rooms = bas.get("rooms", [])
+    pit = unary_union([sbox(*rm["box_mm"]) for rm in rooms]).buffer(tw / 2 + 400, join_style=2) if rooms else None
+
+    def floor_at(x, y):
+        return deep if pit is not None and pit.contains(Point(x, y)) else top
+
+    m = lambda v: r(v / 1000)  # noqa: E731
+    walls = []
+    for wl in bas.get("walls_mm", []):
+        pts = wl["points"]
+        for (xa, ya), (xb, yb) in zip(pts[:-1], pts[1:]):
+            walls.append(dict(name=wl["name"], a=[m(xa), m(ya)], b=[m(xb), m(yb)], z0=m(deep), z1=m(g.z - gs), t=m(tw)))
+    stubs = []
+    for c in g.floor.get("columns", []):
+        if not c.get("box"):
+            continue
+        x0, y0, x1, y1 = c["box"]
+        z0 = floor_at((x0 + x1) / 2, (y0 + y1) / 2)
+        stubs.append(dict(name=c.get("name"), ref=c.get("key"), box=[m(x0), m(y0), m(x1), m(y1)], z0=m(z0), z1=m(g.z)))
+    pits = []
+    for c in g.floor.get("cores", []):
+        x0, y0, x1, y1 = c["box"]
+        pits.append(dict(name=c["name"], box=[m(x0), m(y0), m(x1), m(y1)], wall=m(c["wall"]), z0=m(floor_at((x0 + x1) / 2, (y0 + y1) / 2)), z1=m(g.z)))
+    spaces = []
+    for rm in rooms:
+        x0, y0, x1, y1 = rm["box_mm"]
+        spaces.append(dict(name=rm["name"], box=[m(x0 + tw / 2), m(y0 + tw / 2), m(x1 - tw / 2), m(y1 - tw / 2)], z0=m(deep), z1=m(g.z - gs),
+                           stair=bool(rm.get("stair")), water=m(rm["water_mm"]) if rm.get("water_mm") else None))
+    return dict(
+        raft_top=m(top), basement_floor=m(deep), ground=m(g.z), ground_slab_t=m(gs),
+        deep=[[m(x), m(y)] for x, y in pit.exterior.coords[:-1]] if pit is not None and pit.geom_type == "Polygon" else [],
+        ground_slab=[[m(x), m(y)] for x, y in b.raft.exterior.coords[:-1]],
+        walls=walls, stubs=stubs, pits=pits, spaces=spaces,
+        src=dict(levels=shown.get("src"), basement=bas.get("src")),
+    )

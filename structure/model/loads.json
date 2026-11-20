@@ -302,9 +302,106 @@
       "level_note": "As built (Niko, 19 Nov 2026): the raft is founded on bedrock about 2 m down on average, shallower than the drawing's 2.95 m to the raft top plus 1 m of stabilisation. Raft underside about -1.7 to -2.0, top about -1.2 to -1.5; the model puts the raft at the ground floor level, with the fill between as a load on it.",
       "src": "Updated raft details (18 Feb 2026): foundation layout, setting out, sections 01-01 and 03-03, raft details sheet 1 and rebar seats. 450 mm raft in the basement wing (B-E) inside 300 mm retaining walls, 500 mm raft F-N with 550x300 raft beams on every grid line, 700 mm bases under the lift cores and on lines C, G, L and M round the heavy columns. Zone edges read off the 1:100 plan and tied to the as-built grid (the plan's row spacings are the earlier ones).",
       "k_src": "Rock: modulus of subgrade reaction 150 MN/m3 for weathered rock (Bowles: k ~ 40 x q_ult; dense sands 64-128, rock above 200). Replace with the geotechnical report's figure; the check stays on the geotech's 400 kPa as a conservative bearing limit.",
-      "ground_src": "Over the 500 mm raft: about 1.35 m of earth (19 kN/m3) and 0.3 m hardcore (21) up to the 150 mm ground slab (3.75) plus finishes 1.5 = 37 kPa; parking 2.5 kPa"
+      "ground_src": "Over the 500 mm raft: about 1.35 m of earth (19 kN/m3) and 0.3 m hardcore (21) up to the 150 mm ground slab (3.75) plus finishes 1.5 = 37 kPa; parking 2.5 kPa",
+      "shown_at_mm": {
+        "raft_top": -1350,
+        "basement_floor": -2650,
+        "src": "For the 3D view only (the analysis keeps the raft at the ground floor). Raft top -1.35 (ground floor slab +0.300): as built on bedrock about 2 m down, underside about -1.7 to -2.0. The basement's floor has no as-built level yet: the raft drawings' 2.95 m below the ground floor slab is used (-2.65), so the basement wing steps down from the rest of the raft. Change these when the levels are taped."
+      }
     },
-    "src": "type 'raft' (full raft on soil springs) or 'pads' (columns fixed at +0.300, pad sizes worked out)"
+    "src": "type 'raft' (full raft on soil springs) or 'pads' (columns fixed at +0.300, pad sizes worked out)",
+    "basement": {
+      "walls_mm": [
+        {
+          "name": "Basement storage, B-C",
+          "points": [
+            [
+              58,
+              -5025
+            ],
+            [
+              3058,
+              -5025
+            ],
+            [
+              3058,
+              -199
+            ],
+            [
+              6208,
+              -199
+            ],
+            [
+              6208,
+              16350
+            ],
+            [
+              58,
+              16350
+            ],
+            [
+              58,
+              -5025
+            ]
+          ]
+        },
+        {
+          "name": "Water tank, C-D / 3-5",
+          "points": [
+            [
+              6208,
+              5551
+            ],
+            [
+              12358,
+              5551
+            ],
+            [
+              12358,
+              11253
+            ],
+            [
+              6208,
+              11253
+            ]
+          ]
+        }
+      ],
+      "wall_t_mm": 300,
+      "rooms": [
+        {
+          "name": "Basement storage",
+          "box_mm": [
+            58,
+            -199,
+            6208,
+            16350
+          ]
+        },
+        {
+          "name": "Basement stair",
+          "box_mm": [
+            58,
+            -5025,
+            3058,
+            -199
+          ],
+          "stair": true
+        },
+        {
+          "name": "Water tank",
+          "box_mm": [
+            6208,
+            5551,
+            12358,
+            11253
+          ],
+          "water_mm": 2500
+        }
+      ],
+      "ground_slab_mm": 200,
+      "src": "Updated raft details (18 Feb 2026) foundation plan: 450 mm raft inside 300 mm RC retaining walls on grids B and C from the stair north of row 2 to row 7, and round the water tank C-D / 3-5 (walls on centre lines of the as-built grid); the architect's basement plan (A103): storage, stair, water storage. Section 03-03: 150 mm ground slab on 300 mm hardcore over the fill elsewhere."
+    }
   },
   "flat_slab": {
     "level": "2",
