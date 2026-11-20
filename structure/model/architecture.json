@@ -1,0 +1,5 @@
+{
+  "_about": "Which layout of the plans editor the 3D model shows on each floor (the option key); floors not listed show their first layout ('a'). Room names are shown only when they are made of everyday room words; anything else is replaced by the room type, so no personal name reaches the model.",
+  "layout_pick": { "1": "c" },
+  "room_words": ["studio", "bedroom", "bed", "master", "guest", "en-suite", "ensuite", "bath", "bathroom", "shower", "wc", "toilet", "kitchen", "living", "dining", "lounge", "family", "room", "hall", "entrance", "foyer", "store", "storage", "laundry", "utility", "balcony", "terrace", "roof", "garden", "corridor", "lobby", "lift", "stair", "stairs", "plant", "duct", "riser", "office", "study", "gym", "cafe", "café", "sauna", "pool", "jacuzzi", "ice", "reception", "security", "bin", "bins", "dressing", "closet", "walk-in", "open", "plan", "and", "&", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f", "g", "h", "bar", "bbq", "pergola", "kids", "maid", "staff", "quarters", "service", "porch", "deck", "void", "spa", "steam", "changing", "male", "female", "men", "women"]
+}

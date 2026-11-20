@@ -45,8 +45,24 @@ CORE_SUBDIV = 3  # shell elements per storey up a core wall
 G_ACC = 9.81
 
 
+PRIVATE = ROOT / "private"
+
+
+def private_on() -> bool:
+    """LEX_PRIVATE=1: use the live data kept out of git in structure/private/ (the as-built tapes, the layouts)."""
+    import os
+
+    return os.environ.get("LEX_PRIVATE") == "1"
+
+
+def model_file(name: str) -> Path:
+    if private_on() and (PRIVATE / name).exists():
+        return PRIVATE / name
+    return MODEL / name
+
+
 def read(name: str):
-    return json.loads((MODEL / name).read_text())
+    return json.loads(model_file(name).read_text())
 
 
 def torsion_J(a: float, b: float) -> float:

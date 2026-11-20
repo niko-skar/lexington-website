@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import math
+import re
 
 import numpy as np
 
@@ -215,14 +216,31 @@ def architecture_layer(b):
 
     # the plans editor's layouts (structure/model/plans.json, from tools/export-plans.ts): on a floor that has one,
     # its walls, doors, windows and rooms replace the outline shell
+    from .building import model_file
+
     rooms, homes_geo, plan_walls, plan_floors = [], [], [], {}
-    pp = _Path(__file__).resolve().parents[1] / "model" / "plans.json"
+    pp = model_file("plans.json")
+    ac = _json.loads(model_file("architecture.json").read_text()) if model_file("architecture.json").exists() else {}
+    pick = ac.get("layout_pick", {})
+    words = {w.lower() for w in ac.get("room_words", [])}
+
+    def clean(name, typ):
+        # only everyday room words get through; anything else (a person's name) becomes the room type
+        if not name:
+            return None
+        toks = re.findall(r"[\w&'-]+", name.lower())
+        return name if toks and all(t in words for t in toks) else (typ or "room").capitalize()
+
     if pp.exists():
         pl = _json.loads(pp.read_text())
         for opt in pl.get("options", []):
-            if opt["floorKey"] in plan_floors:  # the first layout of a floor is its current one
+            fk = opt["floorKey"]
+            want = pick.get(fk)
+            if want is not None and opt["option"] != want:
                 continue
-            plan_floors[opt["floorKey"]] = opt
+            if fk in plan_floors:  # otherwise the first layout of a floor is its current one
+                continue
+            plan_floors[fk] = opt
         for key, opt in plan_floors.items():
             lv = lv_by_key.get(key)
             if lv is None:
@@ -268,13 +286,14 @@ def architecture_layer(b):
             for rm in opt.get("rooms", []):
                 if rm.get("name") is None and rm.get("type") is None:
                     continue
-                rooms.append(dict(level=key, name=rm["name"], type=rm["type"], unit=rm["unit"], area=rm["area"], z=r(z0),
+                rooms.append(dict(level=key, name=clean(rm["name"], rm["type"]), type=rm["type"], unit=rm["unit"], area=rm["area"], z=r(z0),
                                   loops=[[[r(x / 1000), r(y / 1000)] for x, y in l] for l in rm["loops"]]))
             for h in opt.get("homes", []):
                 homes_geo.append(dict(level=key, unit=h["unit"], nia=h["nia"], outdoor=h["outdoor"], z=r(z0),
                                       loops=[[[r(x / 1000), r(y / 1000)] for x, y in l] for l in h["loops"]]))
         # the outline shell stays only where there is no layout yet
-        walls = [w for w in walls if w["level"] not in plan_floors or w["kind"] == "parapet"]
+        has_ext = {k for k, v in plan_floors.items() if any(w["kind"] == "external" for w in v["walls"])}
+        walls = [w for w in walls if w["level"] not in has_ext or w["kind"] == "parapet"]
         walls += plan_walls
 
     homes, fetched = [], None
@@ -289,5 +308,5 @@ def architecture_layer(b):
                               type=u.get("bedroomType"), area=u.get("areaSqm"), balcony=u.get("balconySqm"), terrace=u.get("terraceSqm"),
                               price=u.get("priceUSD"), status=u.get("status")))
     return dict(walls=walls, stairs=stairs, homes=homes, homes_fetched=fetched, rooms=rooms, home_outlines=homes_geo,
-                layouts={k: dict(option=v["option"], name=v.get("name"), updatedAt=v.get("updatedAt"), problems=v.get("problems", [])) for k, v in plan_floors.items()},
+                layouts={k: dict(option=v["option"], updatedAt=v.get("updatedAt"), walls=len(v["walls"]), problems=v.get("problems", [])) for k, v in plan_floors.items()},
                 note="Shell from the as-built slab edges; homes from the live website. Walls inside the homes come from the plans editor's layouts once they can be read.")

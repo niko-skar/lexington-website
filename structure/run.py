@@ -20,11 +20,11 @@ import openseespy.opensees as ops
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from lexstruct.analysis import Analysis  # noqa: E402
-from lexstruct.building import ROOT, Building  # noqa: E402
+from lexstruct.building import PRIVATE, ROOT, Building, private_on  # noqa: E402
 from lexstruct.design import Design  # noqa: E402
 from lexstruct.export import export_viewer  # noqa: E402
 
-OUT = ROOT / "out"
+OUT = (PRIVATE / "out") if private_on() else (ROOT / "out")
 
 
 def log(msg, t0=[time.time()]):
