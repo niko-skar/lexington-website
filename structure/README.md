@@ -70,8 +70,8 @@ To use the site's tapes, download the full backup from the admin As-built page
 - Below ground (the *Below ground* view cuts the building away above the ground floor slab): the raft drawn at its
   as-built depth (top -1.35, on rock about 2 m down), the basement (storage on B-C with its stair, and the water tank
   C-D / 3-5) inside 300 mm retaining walls on its 450 mm raft, the stub columns and lift pits down to the raft, and the
-  ground floor slab. The basement floor has no as-built level yet, so the raft drawings' 2.95 m below the ground floor
-  is used (-2.65). Levels in `loads.json` > `foundation` > `raft` > `shown_at_mm`, the basement in `foundation` >
+  ground floor slab. As built the basement is about 2.3 m high inside, so its floor is at -2.20, 0.85 m below the rest
+  of the raft. Levels in `loads.json` > `foundation` > `raft` > `shown_at_mm`, the basement in `foundation` >
   `basement`; the analysis still has the raft right under the ground floor.
 - Getting round: drag to orbit, or fly with the keys: W/S forward and back along the view, A/D sideways, Q/E down and
   up, the arrows to look up, down, left and right, Shift to go faster.

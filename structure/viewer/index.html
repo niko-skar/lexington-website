@@ -826,7 +826,7 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
     const label = { type: state.look === "render" ? "Like the renders: windows from the architect's plans on the as-built slab edges" : "Element type", gravity: "Gravity + wind, EN 1992 checks with the R10 bars", seis: `Earthquake at ${DATA.summary.seismic.agR_g} g (Ghana code level), q = ${DATA.summary.seismic.q}`, seis2: `Earthquake at ${DATA.report.sens_ag} g (upper end of hazard studies)`, axial: "Axial load in service, G + Q", homes: "Homes by availability on the website (needs the floor layouts)" }[state.colour];
     const BG = DATA.layers.structure.below;
     hud.innerHTML = `<div class="chip">${label}</div>` + (state.mode >= 0 ? `<div class="chip">Mode ${state.mode + 1}, T = ${DATA.modes[state.mode].T} s (exaggerated)</div>` : "") +
-      (state.below && BG ? `<div class="chip">Below ground: raft top ${fmt(BG.raft_top, 2)} m (about 2 m down, on rock); basement floor ${fmt(BG.basement_floor, 2)} m (drawings)</div>` : "");
+      (state.below && BG ? `<div class="chip">Below ground: raft top ${fmt(BG.raft_top, 2)} m (about 2 m down, on rock); basement floor ${fmt(BG.basement_floor, 2)} m, ${fmt(BG.ground - BG.ground_slab_t - BG.basement_floor, 1)} m high inside</div>` : "");
   }
 
   // ---------------------------------------------------------------- views and looks
@@ -1094,7 +1094,7 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
       if (o.kind === "retaining") {
         const len = Math.hypot(d.b[0] - d.a[0], d.b[1] - d.a[1]);
         D.innerHTML = `<h3>Retaining wall <span class="note">\u00B7 ${d.name}</span></h3>` + kv([["Length", fmt(len, 2) + " m"], ["Thickness", fmt(d.t * 1000) + " mm"], ["From / to", `${lvl(d.z0)} to ${lvl(d.z1)}`]]) +
-          `<p class="note" style="margin-top:8px">300 mm reinforced concrete round the basement, on its 450 mm raft (raft drawings, 18 Feb 2026). The basement floor has no as-built level yet: the drawings' 2.95 m below the ground floor is used.</p>`;
+          `<p class="note" style="margin-top:8px">300 mm reinforced concrete round the basement, on its 450 mm raft (raft drawings, 18 Feb 2026). Basement ${fmt(d.z1 - d.z0, 2)} m high inside, as built.</p>`;
       } else if (o.kind === "stub") {
         D.innerHTML = `<h3>${d.name} at ${d.ref} <span class="note">\u00B7 below the ground floor</span></h3>` + kv([["Size (mm)", `${Math.round((d.box[2] - d.box[0]) * 1000)} \u00D7 ${Math.round((d.box[3] - d.box[1]) * 1000)}`], ["From / to", `${lvl(d.z0)} to ${lvl(d.z1)}`], ["Height", fmt(d.z1 - d.z0, 2) + " m"]]) +
           `<p class="note" style="margin-top:8px">The column carried down to the raft${d.z0 === (BG || {}).basement_floor ? " through the basement" : " through the fill"}. Not in the analysis, which puts the raft right under the ground floor.</p>`;
@@ -1102,7 +1102,7 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
         D.innerHTML = `<h3>${d.name} pit</h3>` + kv([["Depth below the ground floor", fmt(d.z1 - d.z0, 2) + " m"], ["Walls", fmt(d.wall * 1000) + " mm"]]) +
           `<p class="note" style="margin-top:8px">The lift core's walls carried down to the raft; the lift pit is inside.</p>`;
       } else {
-        D.innerHTML = `<h3>Ground floor slab</h3>` + kv([["Top", lvl(d.ground)], ["Thickness drawn", fmt(d.ground_slab_t * 1000) + " mm"], ["Raft top (as built)", lvl(d.raft_top)], ["Basement floor (drawings)", lvl(d.basement_floor)]]) +
+        D.innerHTML = `<h3>Ground floor slab</h3>` + kv([["Top", lvl(d.ground)], ["Thickness drawn", fmt(d.ground_slab_t * 1000) + " mm"], ["Raft top (as built)", lvl(d.raft_top)], ["Basement floor", lvl(d.basement_floor) + ` (${fmt(d.ground - d.ground_slab_t - d.basement_floor, 1)} m high inside)`]]) +
           `<p class="note" style="margin-top:8px">The car park floor: 150 mm on 300 mm hardcore over the fill (raft drawings, section 03-03), suspended over the basement. ${d.src && d.src.levels ? d.src.levels : ""}</p>`;
       }
     } else if (o.kind === "stair") {
