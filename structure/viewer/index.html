@@ -92,6 +92,8 @@ th.txt { text-align: left; }
 .seg .btn { border-radius: 0; padding: 7px 10px; }
 .seg .btn:first-child { border-radius: 6px 0 0 6px; }
 .seg .btn:last-child { border-radius: 0 6px 6px 0; border-left: 0; }
+kbd { font: 500 11.5px var(--font-num); padding: 0 5px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; background: var(--panel); color: var(--ink); }
+@media (hover: none) and (pointer: coarse) { .keys-hint { display: none; } }
 .modes { display: flex; flex-direction: column; gap: 6px; }
 .mode { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; }
 .bar { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; display: flex; }
@@ -141,6 +143,7 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
           <button class="btn" id="view-east">East</button>
           <button class="btn" id="view-top">From above</button>
         </div>
+        <p class="note keys-hint" style="margin-top:8px">Keys: <kbd>W</kbd> <kbd>S</kbd> forward and back, <kbd>A</kbd> <kbd>D</kbd> sideways, <kbd>Q</kbd> <kbd>E</kbd> down and up, arrows to look up, down, left and right. Hold <kbd>Shift</kbd> to go faster.</p>
       </div>
       <div>
         <h2>Layers</h2>
@@ -1232,8 +1235,62 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
     });
   }
 
+  // ---------------------------------------------------------------- keyboard: fly through the model
+  // W/S forward and back along the view, A/D sideways, Q/E straight down and up, arrows turn and look up and down,
+  // Shift faster. The orbit point moves with the camera, so the mouse carries on from wherever the keys leave it.
+  const keys = new Set();
+  let shift = false;
+  const KEYS = ["KeyW", "KeyA", "KeyS", "KeyD", "KeyQ", "KeyE", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"];
+  const typing = (el) => !!el && (el.isContentEditable || /^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName));
+  window.addEventListener("keydown", (e) => {
+    shift = e.shiftKey;
+    if (e.ctrlKey || e.metaKey || e.altKey || typing(e.target) || !KEYS.includes(e.code)) return;
+    keys.add(e.code);
+    e.preventDefault();
+  });
+  window.addEventListener("keyup", (e) => {
+    shift = e.shiftKey;
+    keys.delete(e.code);
+  });
+  window.addEventListener("blur", () => keys.clear());
+  // a click on the model takes the keys back from a slider or the colour list
+  canvas.addEventListener("pointerdown", () => {
+    const a = document.activeElement;
+    if (a && a !== document.body && typing(a)) a.blur();
+  });
+  const kDir = new THREE.Vector3(), kSide = new THREE.Vector3(), kMove = new THREE.Vector3(), UP = new THREE.Vector3(0, 1, 0);
+  function keyMove(dt) {
+    if (!keys.size || !dt) return;
+    const k = (c) => (keys.has(c) ? 1 : 0);
+    const speed = (shift ? 3 : 1) * 9; // m/s
+    const turn = (shift ? 2 : 1) * 1.2; // rad/s
+    kDir.subVectors(controls.target, camera.position);
+    let dist = kDir.length();
+    if (dist < 0.5) dist = 10;
+    kDir.normalize();
+    const yawIn = k("ArrowLeft") - k("ArrowRight"), pitchIn = k("ArrowUp") - k("ArrowDown");
+    if (yawIn || pitchIn) {
+      let yaw = Math.atan2(kDir.x, kDir.z);
+      let pitch = Math.asin(Math.max(-1, Math.min(1, kDir.y)));
+      yaw += yawIn * turn * dt;
+      pitch = Math.max(-1.45, Math.min(1.45, pitch + pitchIn * turn * 0.8 * dt));
+      kDir.set(Math.cos(pitch) * Math.sin(yaw), Math.sin(pitch), Math.cos(pitch) * Math.cos(yaw));
+    }
+    // sideways is level: the camera's own right-hand direction with the tilt taken out
+    kSide.setFromMatrixColumn(camera.matrixWorld, 0);
+    kSide.y = 0;
+    if (kSide.lengthSq() > 1e-8) kSide.normalize();
+    kMove.set(0, 0, 0).addScaledVector(kDir, k("KeyW") - k("KeyS")).addScaledVector(kSide, k("KeyD") - k("KeyA")).addScaledVector(UP, k("KeyE") - k("KeyQ"));
+    if (kMove.lengthSq() > 0) camera.position.addScaledVector(kMove.normalize(), speed * dt);
+    controls.target.copy(camera.position).addScaledVector(kDir, dist);
+  }
+
   // ---------------------------------------------------------------- go
+  let lastFrame = 0;
   function loop(now) {
+    const dt = lastFrame ? Math.min(0.1, (now - lastFrame) / 1000) : 0;
+    lastFrame = now;
+    keyMove(dt);
     controls.update();
     animateMode(now);
     renderer.render(scene, camera);

@@ -67,6 +67,8 @@ To use the site's tapes, download the full backup from the admin As-built page
   with their entrance doors, and set dressing (cars, palms on the roof terraces, parasols on the pool deck).
 - Two looks: *Like the renders* (white, frames matt black, glass lit warm, sky and shadows) and *Engineering* (see-through
   skin over the structure coloured by the checks).
+- Getting round: drag to orbit, or fly with the keys: W/S forward and back along the view, A/D sideways, Q/E down and
+  up, the arrows to look up, down, left and right, Shift to go faster.
 
 ## Analyses and checks
 
