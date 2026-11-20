@@ -230,6 +230,52 @@ export function templateReply(ctx: LeadContext, pack: FactPack, picks: UnitFact[
   };
 }
 
+// ---- automatic first replies (LEAD_AUTO_REPLY in Vercel) -----------------------
+
+/**
+ * Which enquiries get their first reply emailed by itself, without Niko pressing Send:
+ * "facebook" = a Facebook / Instagram lead form entry whose form didn't open a chat (the
+ * assistant answers the chats); his choice on 20 Nov 2026. "1" or "all" = every new
+ * enquiry, the website form too. Anything else (or nothing) = none: every reply waits for him.
+ */
+export type AutoReplyMode = "off" | "facebook" | "all";
+
+export function autoReplyModeOf(setting: string | undefined): AutoReplyMode {
+  const value = (setting ?? "").trim().toLowerCase();
+  if (value === "1" || value === "all") return "all";
+  if (value === "facebook") return "facebook";
+  return "off";
+}
+
+export interface AutoReplyLead {
+  email?: string | null;
+  stage?: string | null;
+  replyWanted?: boolean | null;
+  metaLeadId?: string | null;
+  metaInboxUrl?: string | null;
+  chatThread?: string | null;
+}
+
+/**
+ * Whether a written reply may go out by itself: Claude wrote it and the fact check found
+ * nothing, and the person left an email, is still a new enquiry, hasn't been answered
+ * meanwhile and isn't in a chat with the assistant. A lead form entry that looks like "probably
+ * not a buyer" still gets its reply (they asked to be contacted); a website one doesn't
+ * (that is where the spam comes from).
+ */
+export function mayAutoReply(
+  lead: AutoReplyLead,
+  draft: { writer?: string; temperature?: string; warnings?: string[] },
+  mode: AutoReplyMode
+): boolean {
+  if (mode === "off" || !lead.email?.includes("@")) return false;
+  if (draft.writer !== "claude" || (draft.warnings ?? []).length > 0) return false;
+  if (lead.replyWanted === false || (lead.stage ?? "new") !== "new") return false;
+  if (lead.chatThread || lead.metaInboxUrl) return false;
+  if (mode === "facebook") return Boolean(lead.metaLeadId);
+  return draft.temperature !== "cold";
+}
+
 // ---- what Claude is told -----------------------------------------------------
 
 export const LEAD_REPLY_SYSTEM = `You write the first reply to someone who has asked about buying a home at The Lexington, a residential building under construction in Shiashie, East Legon, Accra, Ghana. The owner reads your draft and sends it under the sales team's name.

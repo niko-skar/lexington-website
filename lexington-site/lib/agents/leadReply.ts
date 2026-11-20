@@ -17,10 +17,14 @@ import { factCheck } from "./factcheck";
 import {
   LEAD_REPLY_SCHEMA,
   LEAD_REPLY_SYSTEM,
+  autoReplyModeOf,
   detectWanted,
   leadPrompt,
+  mayAutoReply,
   pickUnits,
   templateReply,
+  type AutoReplyLead,
+  type AutoReplyMode,
   type LeadChannel,
   type LeadContext,
   type LeadReplyOut,
@@ -34,9 +38,11 @@ import {
  * presses Send email (or opens it in WhatsApp). Every suggested reply has been
  * through the fact check; what it found is shown as "check before sending".
  *
- * Sending by itself, without Niko, happens only when LEAD_AUTO_REPLY=1 is set,
- * and even then only for a reply the fact check passed, to someone with an email
- * address who doesn't look like spam.
+ * Sending by itself, without Niko, happens only when LEAD_AUTO_REPLY is set in
+ * Vercel: "facebook" (on since 20 Nov 2026) for a Facebook / Instagram lead form
+ * entry whose form didn't open a chat, "1" for every enquiry. Even then only for a
+ * reply the fact check passed, to a new enquiry with an email address who isn't in
+ * a chat with the assistant (mayAutoReply in leadReplyCore.ts).
  */
 
 const newKey = () => randomUUID().replace(/-/g, "").slice(0, 12);
@@ -234,24 +240,27 @@ export async function discardReply(leadId: string): Promise<void> {
 
 // ---- the automatic part ---------------------------------------------------------
 
-export function autoReplyOn(): boolean {
-  return process.env.LEAD_AUTO_REPLY === "1";
+export function autoReplyMode(): AutoReplyMode {
+  return autoReplyModeOf(process.env.LEAD_AUTO_REPLY);
 }
 
 /**
  * A new enquiry has just been saved: write the suggested reply, and send it by itself
- * only when automatic replies are switched on and nothing needs checking. Never throws.
+ * only when automatic replies are switched on for this kind of enquiry and nothing
+ * needs checking. Never throws.
  */
 export async function respondToNewLead(leadId: string, opts: { message?: string } = {}): Promise<ReplyDraft | null> {
   const draft = await draftReply(leadId, opts);
-  if (!draft || !autoReplyOn()) return draft;
-  if (draft.warnings.length || draft.temperature === "cold" || draft.writer !== "claude") return draft;
+  const mode = autoReplyMode();
+  if (!draft || mode === "off") return draft;
   try {
-    const lead = await getBuyersClient().fetch<Pick<Lead, "email" | "name"> | null>(`*[_type == "lead" && _id == $id][0]{ email, name }`, {
-      id: leadId,
-    });
-    if (!lead?.email) return draft;
-    const sent = await sendReplyEmail(lead, draft.subject, draft.body);
+    // Read again just before sending: a chat, or a reply of Niko's, may have come in while it was being written.
+    const lead = await getBuyersClient().fetch<(AutoReplyLead & { name: string }) | null>(
+      `*[_type == "lead" && _id == $id][0]{ email, name, stage, replyWanted, metaLeadId, metaInboxUrl, chatThread }`,
+      { id: leadId }
+    );
+    if (!lead?.email || !mayAutoReply(lead, draft, mode)) return draft;
+    const sent = await sendReplyEmail({ email: lead.email, name: lead.name }, draft.subject, draft.body);
     if (sent.ok) {
       await recordReplySent(leadId, { subject: draft.subject, body: draft.body, via: "auto-email" });
       return { ...draft, status: "sent", sentVia: "auto-email" };

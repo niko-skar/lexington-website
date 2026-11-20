@@ -12,7 +12,7 @@ import { claudeConfigured } from "@/lib/ai/claude";
 import { pilotSettings, readPilotRun } from "@/lib/agents/adsPilot";
 import { chatAgentOn, chatSummary, readChatSwitch } from "@/lib/agents/chat";
 import { usd } from "@/lib/agents/adsPilotCore";
-import { autoReplyOn } from "@/lib/agents/leadReply";
+import { autoReplyMode } from "@/lib/agents/leadReply";
 import { metaLeadsConfigured, readMetaLeadsState } from "@/lib/agents/metaLeads";
 import { GOOGLE_SCRIPT_VERSION, googleAdsScript } from "@/lib/ads/google";
 import { readGoogleReport } from "@/lib/ads/googleStore";
@@ -191,14 +191,17 @@ export default async function ConnectPage() {
 
       <Section title="Automatic replies">
         <p>
-          {autoReplyOn()
-            ? "ON: a suggested reply that passes the fact check is emailed to the person straight away, without waiting for you."
-            : "OFF: every suggested reply waits for you to read it and press Send."}
+          {autoReplyMode() === "facebook"
+            ? "ON for the Facebook / Instagram lead forms: when someone fills in the form and doesn't open a Messenger chat, their reply is emailed straight away if it passes the fact check. Website enquiries still wait for you."
+            : autoReplyMode() === "all"
+              ? "ON: a suggested reply that passes the fact check is emailed to the person straight away, without waiting for you."
+              : "OFF: every suggested reply waits for you to read it and press Send."}
         </p>
         <p style={{ marginTop: 8 }}>
-          To switch it on, add <Code>LEAD_AUTO_REPLY</Code> with the value <Code>1</Code> in Vercel; delete it to switch it off.
-          It never sends a reply the fact check flagged, a standard (non-Claude) reply, or one to someone who looks like spam.
-          Worth trying for a few weeks with it off first.
+          Set <Code>LEAD_AUTO_REPLY</Code> in Vercel: <Code>facebook</Code> for the lead forms only, <Code>1</Code> for every
+          enquiry (the website form too); delete it to switch it off. It never sends a reply the fact check flagged, a standard
+          (non-Claude) reply, a reply to someone already chatting with the assistant or past &ldquo;New enquiry&rdquo;, or a website
+          reply to someone who looks like spam.
         </p>
       </Section>
 

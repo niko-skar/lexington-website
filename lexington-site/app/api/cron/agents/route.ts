@@ -35,11 +35,15 @@ export async function GET(request: Request) {
         `*[_type == "lead" && _id in $ids]{ _id, name, replyDraft }`,
         { ids }
       );
+      // Emailed by itself (LEAD_AUTO_REPLY): the alert must say so, or Niko would send a second first reply.
+      const autoSent = (d?: ReplyDraft) => d?.status === "sent" && d.sentVia === "auto-email";
       const lines = drafts.map((lead) => {
         const d = lead.replyDraft;
         const how = d?.temperature ? ` (${TEMP_WORDS[d.temperature]}${d.temperatureReason ? `: ${d.temperatureReason}` : ""})` : "";
-        return `• ${lead.name}${how}${d ? ": suggested reply ready" : ""}`;
+        return `• ${lead.name}${how}${autoSent(d) ? ": first reply emailed automatically" : d ? ": suggested reply ready" : ""}`;
       });
+      const allSent = drafts.length > 0 && drafts.every((l) => autoSent(l.replyDraft));
+      const someSent = drafts.some((l) => autoSent(l.replyDraft));
       const hot = drafts.some((l) => l.replyDraft?.temperature === "hot");
       const subject =
         drafts.length === 1
@@ -53,7 +57,11 @@ export async function GET(request: Request) {
         lines: [
           drafts.length === 1 ? "A new lead came in through the Facebook / Instagram form:" : "New leads came in through the Facebook / Instagram form:",
           ...lines,
-          "Each one is in the CRM with a suggested first reply to read and send.",
+          allSent
+            ? "The first reply has gone by email already; the CRM shows what was sent."
+            : someSent
+              ? "The ones with a suggested reply ready are waiting for you to read and send it."
+              : "Each one is in the CRM with a suggested first reply to read and send.",
         ],
         links: drafts.map((lead) => ({ label: drafts.length === 1 ? "Open their record" : lead.name, url: `/admin/crm/${lead._id}` })),
       });
