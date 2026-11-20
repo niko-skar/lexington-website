@@ -95,6 +95,13 @@ export const lead = defineType({
     }),
     defineField({ name: "agreedPriceUSD", title: "Agreed price (USD)", type: "number" }),
     defineField({ name: "buyerAccountId", title: "Buyer login (id)", type: "string", readOnly: true }),
+    defineField({
+      name: "assignedTo",
+      title: "On the list of (app login id)",
+      description: "Set by Give to … / Take back in the CRM. Empty = the office's list.",
+      type: "string",
+      readOnly: true,
+    }),
     defineField({ name: "tasks", title: "Tasks", type: "array", of: [defineArrayMember(task)] }),
     defineField({ name: "notes", title: "Notes", type: "array", of: [defineArrayMember(note)] }),
     // ---- written by the lead responder (lib/agents/leadReply.ts); read-only here

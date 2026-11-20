@@ -20,6 +20,8 @@ export interface CrmHostApi {
   inApp: boolean;
   /** The office: makes buyer logins and deletes prospects (a login of the app with Customers doesn't). */
   office: boolean;
+  /** A login with Customers (Rahma's): its account id, whose list is its own (none for the office). */
+  me?: string;
   /** A prospect's address, for the link (a long-press, a new tab). */
   leadHref: (id: string) => string;
   /** The lists' address. */

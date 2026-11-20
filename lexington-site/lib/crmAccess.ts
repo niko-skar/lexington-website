@@ -12,13 +12,15 @@ export interface CrmActor {
   office: boolean;
   /** A login's name (Rahma), written on the notes it adds; none for the office. */
   by?: string;
+  /** That login's account id: a prospect it adds goes on its own list (20 Nov 2026). */
+  id?: string;
 }
 
 export async function crmActor(): Promise<CrmActor | null> {
   if (await getAdminSession()) return { office: true };
   const me = await currentTodoUser();
   if (!me || !me.sections.includes("prospects")) return null;
-  return me.kind === "admin" ? { office: true } : { office: false, by: me.name };
+  return me.kind === "admin" ? { office: true } : { office: false, by: me.name, id: me.id };
 }
 
 /** A change made from the app's Customers part: the app reads the CRM again itself, so the admin pages aren't redrawn. */

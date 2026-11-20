@@ -1,5 +1,5 @@
 import { ACTIVE_STAGES, STAGES, daysUntil, paymentLabel, type StageKey } from "@/lib/crm";
-import type { Lead, LeadTask } from "@/lib/sanity/crmTypes";
+import type { CrmTeamMember, Lead, LeadTask } from "@/lib/sanity/crmTypes";
 
 export interface TaskItem {
   lead: Lead;
@@ -22,6 +22,14 @@ export function aboutLine(lead: Pick<Lead, "unitNumber" | "interest" | "paymentP
   ]
     .filter(Boolean)
     .join(" · ");
+}
+
+/**
+ * Whose list a prospect is on: a team member's id, or "" for the office's (given to nobody, or to a login that no longer
+ * opens Customers: nothing gets lost).
+ */
+export function ownerOf(lead: Pick<Lead, "assignedTo">, team: CrmTeamMember[]): string {
+  return lead.assignedTo && team.some((m) => m.id === lead.assignedTo) ? lead.assignedTo : "";
 }
 
 export function openTasksOf(lead: Lead): LeadTask[] {

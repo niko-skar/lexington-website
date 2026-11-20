@@ -1,10 +1,12 @@
-import type { Lead } from "@/lib/sanity/crmTypes";
+import { firstName } from "@/lib/crm";
+import type { CrmTeamMember, Lead } from "@/lib/sanity/crmTypes";
 import styles from "./Crm.module.css";
-import { LeadLink } from "./CrmHost";
+import { LeadLink, useCrmHost } from "./CrmHost";
 import { AskNextStepButton } from "./FollowUp";
 import { PipelineBoard } from "./PipelineBoard";
 import { StageSelect } from "./StageSelect";
 import { TaskRow } from "./TaskRow";
+import { AssignButton, useAssign } from "./Team";
 import { buildCrmData, unitLine, type TaskItem } from "./data";
 
 function Section({
@@ -45,17 +47,54 @@ function taskRows(items: TaskItem[], today: string, mode: "me" | "them", leaveOn
   ));
 }
 
-// ---- Today: everything waiting on Niko --------------------------------
+// A prospect with nothing scheduled: open them and add what happens next.
+function NeedsStepRow({ lead }: { lead: Lead }) {
+  const assign = useAssign(lead);
+  if (assign.owner !== assign.saved) return null;
+  return (
+    <div className={styles.row}>
+      <div className={styles.rowMain}>
+        <div className={styles.rowTop}>
+          <LeadLink id={lead._id} className={styles.leadLink}>
+            {lead.name}
+          </LeadLink>
+          <StageSelect leadId={lead._id} stage={lead.stage} />
+        </div>
+        <div className={styles.rowMeta}>
+          <span>{unitLine(lead)}</span>
+          <span>Nothing scheduled</span>
+        </div>
+        {lead.context && <div className={styles.rowContext}>{lead.context}</div>}
+      </div>
+      <div className={styles.actions}>
+        <AskNextStepButton leadId={lead._id} name={lead.name} />
+        <AssignButton assign={assign} />
+      </div>
+    </div>
+  );
+}
 
-export function TodayView({ leads, today }: { leads: Lead[]; today: string }) {
-  const { meDue, meSoon, needsStep } = buildCrmData(leads, today);
+// ---- Today: everything waiting on the one whose list it is --------------
+// The viewer's own list (the office's, or Rahma's when she's signed in), or, for the office, a team member's (`owner`):
+// Rahma's list, with what she's waiting on too, since that has no tab of its own there.
+
+export function TodayView({ leads, today, owner }: { leads: Lead[]; today: string; owner?: CrmTeamMember }) {
+  const host = useCrmHost();
+  const { meDue, meSoon, needsStep, them } = buildCrmData(leads, today);
+  const who = owner ? firstName(owner.name) : null;
 
   return (
     <>
       <Section
-        title="Waiting on you"
+        title={who ? `Waiting on ${who}` : "Waiting on you"}
         hint="Overdue first"
-        empty="Nothing is waiting on you right now."
+        empty={
+          who
+            ? `Nothing is waiting on ${who} right now. “Give to ${who}” on one of your prospects puts it here.`
+            : host.office
+              ? "Nothing is waiting on you right now."
+              : "Nothing is on your list right now. The prospects you're given show up here."
+        }
         isEmpty={meDue.length === 0}
       >
         {taskRows(meDue, today, "me", true)}
@@ -69,24 +108,7 @@ export function TodayView({ leads, today }: { leads: Lead[]; today: string }) {
           isEmpty={false}
         >
           {needsStep.map((lead) => (
-            <div key={lead._id} className={styles.row}>
-              <div className={styles.rowMain}>
-                <div className={styles.rowTop}>
-                  <LeadLink id={lead._id} className={styles.leadLink}>
-                    {lead.name}
-                  </LeadLink>
-                  <StageSelect leadId={lead._id} stage={lead.stage} />
-                </div>
-                <div className={styles.rowMeta}>
-                  <span>{unitLine(lead)}</span>
-                  <span>Nothing scheduled</span>
-                </div>
-                {lead.context && <div className={styles.rowContext}>{lead.context}</div>}
-              </div>
-              <div className={styles.actions}>
-                <AskNextStepButton leadId={lead._id} name={lead.name} />
-              </div>
-            </div>
+            <NeedsStepRow key={lead._id} lead={lead} />
           ))}
         </Section>
       )}
@@ -94,6 +116,12 @@ export function TodayView({ leads, today }: { leads: Lead[]; today: string }) {
       {meSoon.length > 0 && (
         <Section title="Coming up this week" empty="" isEmpty={false}>
           {taskRows(meSoon, today, "me")}
+        </Section>
+      )}
+
+      {who && them.length > 0 && (
+        <Section title={`${who} is waiting on`} hint="Deposits, signed contracts, documents" empty="" isEmpty={false}>
+          {taskRows(them, today, "them")}
         </Section>
       )}
     </>

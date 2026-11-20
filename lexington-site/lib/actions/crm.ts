@@ -109,6 +109,8 @@ export async function addLeadAction(_prev: CrmFormState, formData: FormData): Pr
       stage: "new",
       ...(unitNumber && { unitNumber }),
       paymentPreference: "undecided",
+      // One Rahma adds is on her own list (the office's go on the office's).
+      ...(!actor.office && actor.id && { assignedTo: actor.id }),
       tasks: [{ _key: newKey(), text: nextText, due, waitingOn: "me", done: false, createdAt: now }],
       notes: [note("system", actor.by ? `Added by ${actor.by}.` : "Added manually.", actor.by)],
     });
@@ -315,6 +317,45 @@ export async function addNoteAction(_prev: CrmFormState, formData: FormData): Pr
     console.error("Failed to add note:", err);
     return fail("Something went wrong adding the note.");
   }
+}
+
+// ---- whose list ------------------------------------------------------
+
+// Niko (20 Nov 2026): "make me a button that will push one of these to rahma so she has her own list, that way i can
+// keep separate the ones I need to deal with and the ones that I want her to deal with". A prospect is given to a login
+// of the app with Customers (its id in assignedTo), or taken back to the office's list (none). The office only.
+export async function assignLeadAction(formData: FormData) {
+  const actor = await guard();
+  if (!actor.office) throw new Error("Only the office gives prospects to someone.");
+  const id = field(formData, "leadId", 80);
+  const to = field(formData, "to", 80);
+  if (!ID_RE.test(id) || (to !== "" && !ID_RE.test(to))) throw new Error("Bad request.");
+
+  const found = await getBuyersClient().fetch<{
+    lead: { assignedTo?: string } | null;
+    member: { name?: string } | null;
+    previous: { name?: string } | null;
+  }>(
+    `{
+      "lead": *[_type == "lead" && _id == $id][0]{ assignedTo },
+      "member": *[_type == "buyerAccount" && _id == $to && role == "site" && count(siteAccess[@ in ["prospects", "visits"]]) > 0][0]{ name },
+      "previous": *[_type == "buyerAccount" && _id == *[_type == "lead" && _id == $id][0].assignedTo][0]{ name }
+    }`,
+    { id, to }
+  );
+  if (!found.lead) throw new Error("That prospect is no longer in the CRM.");
+  if (to && !found.member) throw new Error("That login can't open Customers.");
+  if ((found.lead.assignedTo ?? "") === to) return;
+
+  const memberName = found.member?.name?.trim();
+  const previousName = found.previous?.name?.trim();
+  const text = to
+    ? `Given to ${memberName ? firstName(memberName) : "a login with Customers"}.`
+    : previousName
+      ? `Taken back from ${firstName(previousName)}.`
+      : "Back on the office's list.";
+  await patchLead(id, (p) => (to ? p.set({ assignedTo: to }) : p.unset(["assignedTo"])).append("notes", [note("system", text)]));
+  refresh(formData, id);
 }
 
 // ---- delete ----------------------------------------------------------

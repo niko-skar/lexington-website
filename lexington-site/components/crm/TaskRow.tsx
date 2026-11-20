@@ -17,6 +17,7 @@ import { LeadLink, runChange, useCrmHost } from "./CrmHost";
 import styles from "./Crm.module.css";
 import { useFollowUp } from "./FollowUp";
 import { StageSelect } from "./StageSelect";
+import { AssignButton, useAssign } from "./Team";
 import { useToast } from "./Toasts";
 import { aboutLine } from "./data";
 
@@ -38,7 +39,7 @@ interface Shown {
 
 const IDLE: Shown = { gone: false };
 
-type RowLead = Pick<Lead, "_id" | "name" | "phone" | "stage" | "interest" | "unitNumber" | "paymentPreference" | "context">;
+type RowLead = Pick<Lead, "_id" | "name" | "phone" | "stage" | "interest" | "unitNumber" | "paymentPreference" | "context" | "assignedTo">;
 
 // One open task. "me" rows are things Niko owes someone; "them" rows are
 // things Niko is waiting to receive (so there's a nudge on WhatsApp).
@@ -71,8 +72,10 @@ export function TaskRow({
   const toast = useToast();
   const followUp = useFollowUp();
   const host = useCrmHost();
+  const assign = useAssign(lead);
 
-  if (shown.gone) return null;
+  // Done, moved out of the list, or given to someone else's list (or taken back from it).
+  if (shown.gone || assign.owner !== assign.saved) return null;
 
   const due = shown.due ?? task.due;
   const state = dueState(due, today);
@@ -181,6 +184,7 @@ export function TaskRow({
             <CopyNumber phone={lead.phone} />
           </>
         )}
+        {showLead && <AssignButton assign={assign} />}
         {!showLead && (
           <button
             type="button"

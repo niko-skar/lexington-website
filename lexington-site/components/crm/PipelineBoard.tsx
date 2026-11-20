@@ -7,8 +7,9 @@ import type { Lead } from "@/lib/sanity/crmTypes";
 import styles from "./Crm.module.css";
 import { LeadLink, ListLink, useCrmHost } from "./CrmHost";
 import { saveStage } from "./StageSelect";
+import { OwnerTag, useTeam } from "./Team";
 import { useToast } from "./Toasts";
-import { aboutLine, nextTaskOf } from "./data";
+import { aboutLine, nextTaskOf, ownerOf } from "./data";
 
 const DUE_CLASS = {
   overdue: styles.dueOverdue,
@@ -32,6 +33,7 @@ export function PipelineBoard({ leads, today }: { leads: Lead[]; today: string }
   const [, startTransition] = useTransition();
   const toast = useToast();
   const host = useCrmHost();
+  const team = useTeam();
   const lostCount = shown.filter((l) => l.stage === "lost").length;
 
   function go(lead: Lead, stage: string) {
@@ -74,6 +76,7 @@ export function PipelineBoard({ leads, today }: { leads: Lead[]; today: string }
                       <LeadLink id={lead._id} className={styles.cardName}>
                         {lead.name}
                       </LeadLink>
+                      <OwnerTag owner={ownerOf(lead, team)} />
                       {about && <div className={styles.cardSub}>{about}</div>}
                       {task ? (
                         <div className={styles.cardTask}>

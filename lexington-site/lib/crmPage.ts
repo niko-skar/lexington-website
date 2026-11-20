@@ -6,7 +6,7 @@ import { chatLinkOf, originLabel, phoneTail, platformOf, type ChatLink, type Pla
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
 import { client } from "@/lib/sanity/client";
 import { leadsListQuery, prospectPageQuery } from "@/lib/sanity/crmQueries";
-import type { Lead, UnitOption } from "@/lib/sanity/crmTypes";
+import type { CrmTeamMember, Lead, UnitOption } from "@/lib/sanity/crmTypes";
 import { unitOptionsQuery } from "@/lib/sanity/queries";
 
 // What the CRM's two screens read: the prospects' lists and one prospect's page. The admin pages (/admin/crm) and the
@@ -16,6 +16,8 @@ export interface CrmListData {
   leads: Lead[];
   units: UnitOption[];
   today: string;
+  /** The logins with Customers, whose own lists the office gives prospects to (20 Nov 2026). */
+  team: CrmTeamMember[];
 }
 
 /** Another prospect with the same phone number (however it was typed): maybe the same person. */
@@ -41,6 +43,8 @@ export interface ProspectData {
   siteMismatch: string | null;
   /** The price the buyer-login form starts with. */
   defaultPrice?: number;
+  /** The logins with Customers (whose list the prospect is on, and who the office can give them to). */
+  team: CrmTeamMember[];
 }
 
 const SOLD_STAGES = ["reserved", "paying", "paid", "handed_over"];
@@ -50,8 +54,11 @@ const ID_RE = /^[A-Za-z0-9_.-]{1,80}$/;
 const unitOptions = () => client.fetch<UnitOption[]>(unitOptionsQuery, {}, { next: { revalidate: 300 } });
 
 export async function crmListData(): Promise<CrmListData> {
-  const [leads, units] = await Promise.all([getBuyersClient().fetch<Lead[]>(leadsListQuery), unitOptions()]);
-  return { leads, units, today: todayISO() };
+  const [{ leads, team }, units] = await Promise.all([
+    getBuyersClient().fetch<{ leads: Lead[]; team: CrmTeamMember[] }>(leadsListQuery),
+    unitOptions(),
+  ]);
+  return { leads, units, today: todayISO(), team };
 }
 
 type Other = Pick<Lead, "_id" | "name" | "phone" | "source" | "stage" | "metaPlatform" | "metaInboxUrl" | "adSource"> & { thread: ThreadRef | null };
@@ -60,7 +67,7 @@ type Other = Pick<Lead, "_id" | "name" | "phone" | "source" | "stage" | "metaPla
 export async function prospectData(id: string): Promise<ProspectData | null> {
   if (!ID_RE.test(id)) return null;
   const [found, units] = await Promise.all([
-    getBuyersClient().fetch<{ lead: Lead | null; thread: ThreadRef | null; others: Other[] }>(prospectPageQuery, { id }),
+    getBuyersClient().fetch<{ lead: Lead | null; thread: ThreadRef | null; others: Other[]; team: CrmTeamMember[] }>(prospectPageQuery, { id }),
     unitOptions(),
   ]);
   const lead = found.lead;
@@ -96,5 +103,6 @@ export async function prospectData(id: string): Promise<ProspectData | null> {
       : null,
     siteMismatch,
     defaultPrice: lead.agreedPriceUSD ?? unit?.priceUSD,
+    team: found.team ?? [],
   };
 }

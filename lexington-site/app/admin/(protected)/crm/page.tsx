@@ -15,7 +15,7 @@ export default async function CrmPage({ searchParams }: { searchParams: Promise<
   await requireAdminPage();
 
   const params = await searchParams;
-  const { leads, units, today } = await crmListData();
+  const { leads, units, today, team } = await crmListData();
 
   return (
     <main className={styles.crmPage}>
@@ -23,6 +23,7 @@ export default async function CrmPage({ searchParams }: { searchParams: Promise<
         leads={leads}
         units={units}
         today={today}
+        team={team}
         view={one(params.view)}
         q={one(params.q)}
         stage={one(params.stage)}

@@ -13,17 +13,28 @@ import { NotesPanel, StepsPanel } from "./LeadPanels";
 import { CreateBuyerFromLeadForm, LeadDetailsForm } from "./LeadForms";
 import { ReplyPanel } from "./ReplyPanel";
 import { LiveStageChip, LostControls, StagePills, StageProvider } from "./StagePanel";
+import { AssignButton, OwnerTag, TeamProvider, useAssign } from "./Team";
 
 // One prospect's page: who they are and how to reach them, the suggested reply, their stage, next steps and notes, their
 // details, and (the office only) their buyer login and Remove. The admin page (/admin/crm/<id>) and the app's Customers
-// part draw the same screen from lib/crmPage.ts prospectData.
+// part draw the same screen from lib/crmPage.ts prospectData. Whose list they're on is beside their stage, and the office
+// gives them to someone (Rahma) or takes them back next to the ways to reach them (20 Nov 2026).
 
 export function ProspectView({ data }: { data: ProspectData }) {
+  return (
+    <TeamProvider team={data.team ?? []}>
+      <ProspectScreen data={data} />
+    </TeamProvider>
+  );
+}
+
+function ProspectScreen({ data }: { data: ProspectData }) {
   const host = useCrmHost();
   const { lead, units, today, origin, chat, chatAs, twin, siteMismatch, defaultPrice } = data;
   const open = openTasksOf(lead).sort((a, b) => (a.due ?? today).localeCompare(b.due ?? today));
   const done = (lead.tasks ?? []).filter((t) => t.done);
   const notes = [...(lead.notes ?? [])].sort((a, b) => b.at.localeCompare(a.at));
+  const assign = useAssign(lead);
 
   // In the app the list comes back by itself once the prospect is gone (the admin page moves to the list).
   const removeInApp = async (form: FormData) => {
@@ -39,6 +50,7 @@ export function ProspectView({ data }: { data: ProspectData }) {
       <h1 className={styles.prospectTitle}>{lead.name}</h1>
       <div className={styles.rowTop}>
         <LiveStageChip />
+        <OwnerTag owner={assign.owner} />
         <span className={styles.sectionHint}>
           {lead.unitNumber ? `Unit ${lead.unitNumber}` : lead.interest || "No unit yet"} ·{" "}
           {paymentLabel(lead.paymentPreference)} · {origin}
@@ -71,6 +83,7 @@ export function ProspectView({ data }: { data: ProspectData }) {
         {!lead.phone && !lead.email && (
           <span className={styles.sectionHint}>No contact details yet. Add them under Details.</span>
         )}
+        <AssignButton assign={assign} />
       </div>
 
       {twin && (

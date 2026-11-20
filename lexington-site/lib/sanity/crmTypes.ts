@@ -83,6 +83,14 @@ export interface Lead {
   chatThread?: string;
   /** In lists only: that chat's channel. */
   chatChannel?: string;
+  /** The login (a buyerAccount id) whose list they're on, e.g. Rahma's (20 Nov 2026); none = the office's list. */
+  assignedTo?: string;
+}
+
+/** A login of the app with Customers: the office can give it prospects (components/crm/Team.tsx). */
+export interface CrmTeamMember {
+  id: string;
+  name: string;
 }
 
 export interface UnitOption {

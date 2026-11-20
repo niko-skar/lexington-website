@@ -1115,3 +1115,36 @@
   color: var(--clay);
   text-decoration: underline;
 }
+
+/* ---- whose list (20 Nov 2026) ------------------------------------------ */
+
+/* "Give to Rahma": a plain button with the accent's outline, so it reads as the one that moves the prospect. */
+.btnGive {
+  composes: btn;
+  border-color: var(--navy);
+  color: var(--navy);
+}
+
+.btnGive:hover {
+  background: var(--navy);
+  color: var(--paper);
+}
+
+/* "Rahma's list" beside a name. */
+.ownerTag {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 9px;
+  border: 1px solid var(--navy);
+  border-radius: 999px;
+  color: var(--navy);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.card .ownerTag {
+  display: flex;
+  width: fit-content;
+  margin-top: 4px;
+}

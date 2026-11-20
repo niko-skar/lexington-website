@@ -6,7 +6,7 @@ import { appListHref, CrmHostProvider, type CrmHostApi, type CrmView } from "@/c
 import { CrmLists } from "@/components/crm/CrmLists";
 import { ProspectView } from "@/components/crm/ProspectView";
 import { ToastProvider } from "@/components/crm/Toasts";
-import { buildCrmData } from "@/components/crm/data";
+import { buildCrmData, ownerOf } from "@/components/crm/data";
 import type { CrmListData, ProspectData } from "@/lib/crmPage";
 import { prospectHref, prospectOfPath, type TodoMe } from "@/lib/todo/shared";
 import { AccessSheet } from "./AccessSheet";
@@ -201,16 +201,21 @@ export function ProspectsApp({
     () => ({
       inApp: true,
       office: me.kind === "admin",
+      me: me.kind === "admin" ? undefined : me.id,
       leadHref: prospectHref,
       listHref: appListHref,
       go: (to) => show(to, true),
       refresh,
     }),
-    [me.kind, show, refresh]
+    [me.kind, me.id, show, refresh]
   );
 
   const page = shown.id ? pages[shown.id] : undefined;
-  const counts = list ? buildCrmData(list.leads, list.today) : null;
+  // The viewer's own list (Rahma's is what she was given; the office's the rest). A list kept from before the team came
+  // has none: everything is the office's then.
+  const team = list?.team ?? [];
+  const viewer = me.kind === "admin" ? "" : me.id;
+  const counts = list ? buildCrmData(list.leads.filter((l) => ownerOf(l, team) === viewer), list.today) : null;
   const waiting = counts ? counts.meDue.length + counts.needsStep.length : 0;
   const sub = !list ? "Loading…" : `${waiting ? `${waiting} waiting on you · ` : ""}${list.leads.length} prospects`;
 
@@ -237,7 +242,7 @@ export function ProspectsApp({
             <ToastProvider>
               <div hidden={Boolean(shown.id)}>
                 {list ? (
-                  <CrmLists key={shown.listKey} leads={list.leads} units={list.units} today={list.today} view={shown.view} stage={shown.stage} title={null} />
+                  <CrmLists key={shown.listKey} leads={list.leads} units={list.units} today={list.today} team={team} view={shown.view} stage={shown.stage} title={null} />
                 ) : (
                   !offline && <p className={styles.loading}>Loading the prospects…</p>
                 )}

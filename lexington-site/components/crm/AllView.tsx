@@ -10,7 +10,8 @@ import { CopyNumber } from "./CopyNumber";
 import styles from "./Crm.module.css";
 import { LeadLink } from "./CrmHost";
 import { StageSelect } from "./StageSelect";
-import { nextTaskOf, unitLine } from "./data";
+import { OwnerTag, useTeam } from "./Team";
+import { nextTaskOf, ownerOf, unitLine } from "./data";
 
 const DUE_CLASS = {
   overdue: styles.dueOverdue,
@@ -34,6 +35,7 @@ export function AllView({
   stage: string;
   source: string;
 }) {
+  const team = useTeam();
   const [q, setQ] = useState(q0);
   const [stage, setStage] = useState(stage0);
   const [source, setSource] = useState(source0);
@@ -116,6 +118,7 @@ export function AllView({
                       {lead.name}
                     </LeadLink>
                     <StageSelect leadId={lead._id} stage={lead.stage} />
+                    <OwnerTag owner={ownerOf(lead, team)} />
                   </div>
                   <div className={styles.rowMeta}>
                     <span>{unitLine(lead)}</span>
