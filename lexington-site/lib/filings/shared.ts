@@ -137,7 +137,7 @@ export interface Rule {
   by?: string;
 }
 
-const GRA = { label: "GRA's website", url: "https://gra.gov.gh/" };
+const GRA = { label: "GRA's e-Services portal", url: "https://etax.gra.gov.gh/login" };
 
 /** The one-off things to set the company up (in the order to do them). */
 export const SETUP: Rule[] = [
@@ -155,6 +155,23 @@ export const SETUP: Rule[] = [
     ],
     link: null,
     basis: null,
+    sure: true,
+    form: null,
+  },
+  {
+    id: "gra-etax",
+    name: "Activate the company's GRA e-Services account",
+    who: "GRA",
+    freq: "once",
+    starts: "now",
+    by: "2026-12-04",
+    why: "PAYE, withholding tax and VAT are all filed and paid there, from the company's own login.",
+    how: [
+      "Activate the account with the company's TIN on GRA's e-Services portal (GRA's guide for it is called Taxpayer Account Activation).",
+      "Then open the withholding tax and PAYE returns, choose CSV Upload, and download GRA's two Excel templates from there. Save them in Drive under 9. Official/GRA templates, so the app's files can be made to fit them exactly.",
+    ],
+    link: GRA,
+    basis: "GRA's ITAS e-Services portal (2026)",
     sure: true,
     form: null,
   },
@@ -477,9 +494,17 @@ export const WHT_WORDS: Record<WhtType, string> = { goods: "Goods 3%", works: "B
 /** WHT applies once a supplier's payments in the year pass this (GRA: "exceeding GH¢2,000 per annum"). */
 export const WHT_THRESHOLD = 2000;
 
+/** GRA's categories of staff on the PAYE return (daily-paid workers are "Casual Staff"). */
+export const STAFF_CATEGORIES = ["Juniors", "Seniors", "Management", "Part-time Employee", "Expatriate", "Others"] as const;
+export type StaffCategory = (typeof STAFF_CATEGORIES)[number];
+
 export interface Staff {
   id: string;
   name: string;
+  /** GRA's category of staff. */
+  category: StaffCategory;
+  /** Their Ghana Card number (a person's TIN since 2021), or null. */
+  card: string | null;
   /** Monthly gross salary, GH₵. */
   salary: number;
   /** On SSNIT (13% + 5.5%). */
@@ -507,8 +532,18 @@ export interface FilingSettings {
   rates: Record<string, number>;
   /** The one-off tasks done: by rule id. */
   setup: Record<string, { at: string; by: string; note: string | null }>;
+  /** Payday's workers (by roll call id): their Ghana Card number, which GRA's PAYE return needs for each one. */
+  workers: Record<string, { card: string }>;
 }
-export const EMPTY_SETTINGS: FilingSettings = { company: null, vatFrom: null, payFrom: null, dpcFrom: null, staff: [], suppliers: {}, vatBuyers: {}, rates: {}, setup: {} };
+export const EMPTY_SETTINGS: FilingSettings = { company: null, vatFrom: null, payFrom: null, dpcFrom: null, staff: [], suppliers: {}, vatBuyers: {}, rates: {}, setup: {}, workers: {} };
+
+/** "GHA-123456789-0" (a Ghana Card) or a GRA TIN ("C0012345678"), tidied; null when it's neither. */
+export function cleanCard(value: string): string | null {
+  const v = value.trim().toUpperCase().replace(/\s+/g, "");
+  const card = /^GHA-?(\d{9})-?(\d)$/.exec(v);
+  if (card) return `GHA-${card[1]}-${card[2]}`;
+  return /^[PCGEVQ]\d{9}[\dX]$/.test(v) ? v : null;
+}
 
 export interface FilingRecord {
   rule: string;
@@ -743,7 +778,7 @@ export interface FormInputs {
 export interface SheetRow {
   cells: string[];
   /** A button on the row: set this buyer's VAT, this payment's rate, this supplier's WHT kind. */
-  action?: { kind: "buyer" | "rate" | "supplier"; id: string; label: string };
+  action?: { kind: "buyer" | "rate" | "supplier" | "worker"; id: string; label: string };
   warn?: string;
   muted?: boolean;
 }
@@ -765,6 +800,8 @@ export interface Sheet {
   notes: string[];
   /** What to pay, and to whom (null: nothing). */
   pay: { amount: number; to: string } | null;
+  /** The rows in GRA's upload template's own columns (its DATA ENTRY sheet, from column A), to paste in; null for none. */
+  gra?: { columns: string[]; rows: string[][]; note: string } | null;
 }
 
 const money2 = (n: number) => n.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -927,7 +964,9 @@ export function payeSheet(month: string, inputs: FormInputs, s: FilingSettings):
       ? `Practice only: the company pays the site from ${monthName(s.payFrom)}.`
       : null;
   const byWorker = wagesIn(month, inputs);
-  const workers = [...byWorker.values()].sort((a, b) => a.name.localeCompare(b.name));
+  const workers = [...byWorker.entries()]
+    .map(([id, w]) => ({ id, ...w, card: id === "typed" ? null : (s.workers[id]?.card ?? null) }))
+    .sort((a, b) => a.name.localeCompare(b.name));
   const named = byWorker.size - (byWorker.has("typed") ? 1 : 0);
   const who = [named ? `${named} ${named === 1 ? "worker" : "workers"}` : "", byWorker.has("typed") ? "wages typed without names" : ""].filter(Boolean).join(" + ") || "none";
   const casualPay = round2(workers.reduce((n, w) => n + w.pay, 0));
@@ -952,8 +991,25 @@ export function payeSheet(month: string, inputs: FormInputs, s: FilingSettings):
       { label: "To pay", amount: total, strong: true },
     ],
     tables: [
-      { title: "Casual workers", columns: ["Worker", "Payments", "Pay", "Tax 5%", "Paid out"], rows: workers.map((w) => ({ cells: [w.name, String(w.payments), money2(w.pay), money2(round2((w.pay * CASUAL_RATE) / 100)), money2(round2(w.pay - (w.pay * CASUAL_RATE) / 100))] })), empty: "No wages paid in Payday this month." },
-      { title: "Staff on salaries", columns: ["Name", "Salary", "SSNIT 5.5%", "Taxable", "PAYE", "Take-home"], rows: staff.map((x) => ({ cells: [x.name, money2(x.salary), money2(x.ssnitEmployee), money2(x.chargeable), money2(x.paye), money2(round2(x.salary - x.ssnitEmployee - x.paye))] })), empty: "No staff on salaries. Add them under Company details." },
+      {
+        title: "Casual workers",
+        columns: ["Worker", "Ghana Card", "Payments", "Pay", "Tax 5%", "Paid out"],
+        rows: workers.map((w) => ({
+          cells: [w.name, w.card ?? "", String(w.payments), money2(w.pay), money2(round2((w.pay * CASUAL_RATE) / 100)), money2(round2(w.pay - (w.pay * CASUAL_RATE) / 100))],
+          ...(w.id === "typed" ? {} : { action: { kind: "worker" as const, id: w.id, label: w.card ? "Change" : "Card no." } }),
+          warn: w.id === "typed" ? "No names: GRA wants each worker by name and Ghana Card" : w.card ? undefined : "Type their Ghana Card number: GRA needs it",
+        })),
+        empty: "No wages paid in Payday this month.",
+      },
+      {
+        title: "Staff on salaries",
+        columns: ["Name", "Ghana Card", "Salary", "SSNIT 5.5%", "Taxable", "PAYE", "Take-home"],
+        rows: staff.map((x) => ({
+          cells: [x.name, x.card ?? "", money2(x.salary), money2(x.ssnitEmployee), money2(x.chargeable), money2(x.paye), money2(round2(x.salary - x.ssnitEmployee - x.paye))],
+          warn: x.card ? undefined : "Add their Ghana Card number under Staff on salaries",
+        })),
+        empty: "No staff on salaries. Add them under Company details.",
+      },
     ],
     notes: [
       "A casual worker is paid by the day for seasonal or on-and-off work, not more than 6 months in a row (Labour Act 2003). Anyone employed longer counts as an employee: ask the accountant which workers that is.",
@@ -961,6 +1017,16 @@ export function payeSheet(month: string, inputs: FormInputs, s: FilingSettings):
       "Salaries use the PAYE bands in force from 1 Sep 2026.",
     ],
     pay: total > 0 ? { amount: total, to: "GRA" } : null,
+    gra: {
+      // GRA's PAYE template (PAYE_SCHEDULE_2026_PILOT, ITAS manual Apr 2026), columns A to H: the rest work themselves out
+      // there (SSNIT 5.5%, the tax) or stay empty (allowances, bonus, overtime).
+      columns: ["Ser. No", "TIN / Ghana Card Number", "Name of Employee", "Category of Staff", "Non-Resident", "Basic Salary", "Secondary Employment", "Paid SSNIT"],
+      rows: [
+        ...workers.filter((w) => w.id !== "typed").map((w) => [w.card ?? "", w.name, "Casual Staff", "No", w.pay.toFixed(2), "No", "No"]),
+        ...staff.map((x) => [x.card ?? "", x.name, x.category, "No", x.salary.toFixed(2), "No", x.ssnit ? "Yes" : "No"]),
+      ].map((r, i) => [String(i + 1), ...r]),
+      note: "For GRA's PAYE template: paste these rows into its DATA ENTRY sheet at the first row under the headings (column A), press Generate Upload File, then upload that file on the PAYE return.",
+    },
   };
 }
 
@@ -1014,6 +1080,7 @@ export function whtSheet(month: string, inputs: FormInputs, s: FilingSettings): 
     bySupplier.set(key, e);
   }
   const rows: SheetRow[] = [];
+  const graRows: string[][] = [];
   let total = 0;
   let gross = 0;
   for (const [key, e] of [...bySupplier.entries()].sort((a, b) => a[1].name.localeCompare(b[1].name))) {
@@ -1031,8 +1098,9 @@ export function whtSheet(month: string, inputs: FormInputs, s: FilingSettings): 
       cells: [e.name, set.tin ?? "", String(e.lines.length), money2(month$), money2(yearToDate), WHT_WORDS[type], money2(tax)],
       action: { kind: "supplier", id: key, label: "Change" },
       muted: tax === 0,
-      warn: tax > 0 && !set.tin ? "Type their TIN (it's on their invoice)" : undefined,
+      warn: tax > 0 && !set.tin ? "Type their TIN, or a person's Ghana Card number" : undefined,
     });
+    if (tax > 0 && type !== "none") graRows.push([String(graRows.length + 1), "Resident", set.tin ?? "", e.name, "GHANA", GRA_WHT_TYPE[type], yearToDate.toFixed(2), month$.toFixed(2)]);
   }
   return {
     form: "wht",
@@ -1049,16 +1117,33 @@ export function whtSheet(month: string, inputs: FormInputs, s: FilingSettings): 
       "Wages aren't here (they're in PAYE), and nor are House or Niko entries.",
       "Payments to companies abroad (Google, Meta, software) aren't on this return: ask the accountant about tax on services bought from abroad.",
       "Log each expense at the full price. If the full price was paid without keeping the tax back, the company still owes the tax.",
+      "A person with no TIN: their Ghana Card number is their TIN.",
     ],
     pay: total > 0 ? { amount: total, to: "GRA" } : null,
+    gra: {
+      // GRA's withholding tax template (WHT_SCHEDULE_2026_PILOT, ITAS manual Apr 2026), columns A to H: the rate and the
+      // tax work themselves out there. The contract amount is the year so far (GRA: the payment can't be more).
+      columns: ["Ser. No", "Resident Status", "TIN / Ghana Card", "Taxpayer Name", "Country of Residence", "WHT Type", "Contract Amount", "Gross Amount of Payment"],
+      rows: graRows,
+      note: "For GRA's withholding tax template: paste these rows into its DATA ENTRY sheet at the first row under the headings (column A), check each WHT Type against GRA's list, press Generate Upload File, then upload that file on the return.",
+    },
   };
 }
+/** The WHT kinds as GRA's list words them (check them against the template's list). */
+const GRA_WHT_TYPE: Record<Exclude<WhtType, "none">, string> = { goods: "Supply of goods", works: "Supply of works", services: "Supply of services" };
 
 export function sheetFor(form: FormKind, period: string, inputs: FormInputs, s: FilingSettings): Sheet {
   if (form === "vat") return vatSheet(period, inputs, s);
   if (form === "paye") return payeSheet(period, inputs, s);
   if (form === "ssnit") return ssnitSheet(period, inputs, s);
   return whtSheet(period, inputs, s);
+}
+
+/** The rows for GRA's upload template as CSV (headings first), or null when the return has none. */
+export function graCsv(sheet: Sheet): string | null {
+  if (!sheet.gra || !sheet.gra.rows.length) return null;
+  const q = (v: string) => (/[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
+  return `\uFEFF${[sheet.gra.columns.map(q).join(","), ...sheet.gra.rows.map((r) => r.map(q).join(","))].join("\r\n")}\r\n`;
 }
 
 /** A sheet as CSV for Excel: the boxes, then each table. */

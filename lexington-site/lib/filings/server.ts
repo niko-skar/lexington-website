@@ -35,6 +35,9 @@ import {
   type Sheet,
   type Staff,
   type WhtType,
+  cleanCard,
+  STAFF_CATEGORIES,
+  type StaffCategory,
 } from "./shared";
 
 // Tax & filings (lib/filings/shared.ts says what and why). The settings are one document holding JSON
@@ -61,7 +64,16 @@ export function settingsFrom(raw: unknown): FilingSettings {
   const staff = Array.isArray(r.staff)
     ? (r.staff as Data[])
         .filter((x) => x && typeof x.id === "string" && typeof x.name === "string" && Number(x.salary) > 0 && typeof x.from === "string" && MONTH_RE.test(x.from))
-        .map((x) => ({ id: String(x.id), name: String(x.name), salary: Number(x.salary), ssnit: x.ssnit === true, from: String(x.from), until: typeof x.until === "string" && MONTH_RE.test(x.until) ? x.until : null }))
+        .map((x) => ({
+          id: String(x.id),
+          name: String(x.name),
+          category: (STAFF_CATEGORIES as readonly string[]).includes(String(x.category)) ? (x.category as StaffCategory) : "Juniors",
+          card: typeof x.card === "string" && x.card ? x.card : null,
+          salary: Number(x.salary),
+          ssnit: x.ssnit === true,
+          from: String(x.from),
+          until: typeof x.until === "string" && MONTH_RE.test(x.until) ? x.until : null,
+        }))
     : [];
   const c = obj(r.company);
   return {
@@ -78,6 +90,12 @@ export function settingsFrom(raw: unknown): FilingSettings {
     ),
     vatBuyers: Object.fromEntries(Object.entries(obj(r.vatBuyers)).filter(([, v]) => typeof v === "boolean")) as Record<string, boolean>,
     rates: Object.fromEntries(Object.entries(obj(r.rates)).filter(([, v]) => typeof v === "number" && v > 0)) as Record<string, number>,
+    workers: Object.fromEntries(
+      Object.entries(obj(r.workers))
+        .map(([k, v]) => [k, obj(v)] as const)
+        .filter(([, v]) => typeof v.card === "string" && v.card)
+        .map(([k, v]) => [k, { card: String(v.card) }])
+    ),
     setup: Object.fromEntries(
       Object.entries(obj(r.setup))
         .map(([k, v]) => [k, obj(v)] as const)
@@ -234,6 +252,7 @@ function cleanAmount(value: unknown, message: string, max = 100_000_000): number
  *   { action: "supplier", key, type, tin }                     a supplier's WHT kind (null: the guess) and TIN
  *   { action: "buyer", id, vat }                               this buyer's payments carry the company's VAT (null: the default)
  *   { action: "rate", key, rate }                              GH₵ for one US$ on a dollar payment's day
+ *   { action: "worker", id, card }                             a Payday worker's Ghana Card number (null: take it off)
  */
 export async function changeFilings(me: TodoMe, body: Data): Promise<void> {
   const by = me.name;
@@ -314,8 +333,27 @@ export async function changeFilings(me: TodoMe, body: Data): Promise<void> {
     const until = cleanMonth(body.until, "Pick the last month, or leave it empty.");
     if (until && until < from) throw new TodoError(400, "The last month can't be before the first.");
     const id = typeof body.id === "string" && /^[a-f0-9]{8}$/.test(body.id) ? body.id : randomBytes(4).toString("hex");
-    const person: Staff = { id, name, salary, ssnit: body.ssnit !== false, from, until };
+    const category: StaffCategory = (STAFF_CATEGORIES as readonly string[]).includes(String(body.category)) ? (body.category as StaffCategory) : "Juniors";
+    const typed = cleanText(body.card, 20, "Ghana Card number");
+    const card = typed ? cleanCard(typed) : null;
+    if (typed && !card) throw new TodoError(400, "A Ghana Card number looks like GHA-123456789-0.");
+    const person: Staff = { id, name, category, card, salary, ssnit: body.ssnit !== false, from, until };
     await changeSettings((s) => ({ ...s, staff: [...s.staff.filter((x) => x.id !== id), person].sort((a, b) => a.name.localeCompare(b.name)) }), by);
+    return;
+  }
+  if (body.action === "worker") {
+    // A Payday worker's Ghana Card number (GRA's PAYE return lists every worker by it).
+    if (typeof body.id !== "string" || !/^[A-Za-z0-9_-]{1,60}$/.test(body.id) || body.id === "typed") throw new TodoError(404, "That worker isn't known.");
+    const id = body.id;
+    const typed = cleanText(body.card, 20, "Ghana Card number");
+    const card = typed ? cleanCard(typed) : null;
+    if (typed && !card) throw new TodoError(400, "A Ghana Card number looks like GHA-123456789-0.");
+    await changeSettings((s) => {
+      const workers = { ...s.workers };
+      if (card) workers[id] = { card };
+      else delete workers[id];
+      return { ...s, workers };
+    }, by);
     return;
   }
   if (body.action === "staffdelete") {

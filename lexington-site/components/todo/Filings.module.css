@@ -357,3 +357,16 @@
   color: var(--x-muted);
   font-size: 13px;
 }
+
+/* The rows for GRA's upload template, under the figures. */
+.graBox {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px dashed var(--x-line);
+  border-radius: 10px;
+  font-size: 13px;
+  color: var(--x-muted);
+}
+.graBox p {
+  margin: 0 0 6px;
+}

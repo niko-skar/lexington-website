@@ -4,7 +4,27 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { money } from "@/lib/expenses/shared";
 import type { FilingsPage } from "@/lib/filings/server";
-import { daysBetween, MONTH_RE, monthName, nextMonth, prevMonth, ruleById, SETUP, sheetCsv, WHT_WORDS, type Company, type DueItem, type FormKind, type Rule, type Sheet, type Staff, type WhtType } from "@/lib/filings/shared";
+import {
+  daysBetween,
+  graCsv,
+  MONTH_RE,
+  monthName,
+  nextMonth,
+  prevMonth,
+  ruleById,
+  SETUP,
+  sheetCsv,
+  STAFF_CATEGORIES,
+  WHT_WORDS,
+  type Company,
+  type DueItem,
+  type FormKind,
+  type Rule,
+  type Sheet,
+  type Staff,
+  type StaffCategory,
+  type WhtType,
+} from "@/lib/filings/shared";
 import type { TodoMe } from "@/lib/todo/shared";
 import { AccessSheet } from "./AccessSheet";
 import { errorText, send, startPolling } from "./api";
@@ -590,7 +610,7 @@ function SetupSheet({ rule, done, today, onClose, onSave }: { rule: Rule; done: 
   );
 }
 
-type Editor = { kind: "buyer"; id: string } | { kind: "rate"; key: string } | { kind: "supplier"; key: string; name: string };
+type Editor = { kind: "buyer"; id: string } | { kind: "rate"; key: string } | { kind: "supplier"; key: string; name: string } | { kind: "worker"; id: string; name: string };
 
 function FormSheet({ form, initialPeriod, today, data, onClose, onSave }: { form: FormKind; initialPeriod: string; today: string; data: FilingsPage; onClose: () => void; onSave: Save }) {
   const [period, setPeriod] = useState(initialPeriod);
@@ -618,13 +638,15 @@ function FormSheet({ form, initialPeriod, today, data, onClose, onSave }: { form
     };
   }, [form, period, version]);
 
-  const download = () => {
+  const download = (forGra = false) => {
     if (!shown) return;
-    const blob = new Blob([sheetCsv(shown.sheet, shown.company)], { type: "text/csv;charset=utf-8" });
+    const csv = forGra ? graCsv(shown.sheet) : sheetCsv(shown.sheet, shown.company);
+    if (!csv) return;
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${FORM_NAMES[form].replace(/\s+/g, "-")}-${period}.csv`;
+    a.download = `${FORM_NAMES[form].replace(/\s+/g, "-")}-${period}${forGra ? "-for-GRA-template" : ""}.csv`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -706,7 +728,17 @@ function FormSheet({ form, initialPeriod, today, data, onClose, onSave }: { form
                                 <button
                                   type="button"
                                   className={fs.rowButton}
-                                  onClick={() => setEditor(r.action!.kind === "supplier" ? { kind: "supplier", key: r.action!.id, name: r.cells[0] } : r.action!.kind === "rate" ? { kind: "rate", key: r.action!.id } : { kind: "buyer", id: r.action!.id })}
+                                  onClick={() =>
+                                    setEditor(
+                                      r.action!.kind === "supplier"
+                                        ? { kind: "supplier", key: r.action!.id, name: r.cells[0] }
+                                        : r.action!.kind === "worker"
+                                          ? { kind: "worker", id: r.action!.id, name: r.cells[0] }
+                                          : r.action!.kind === "rate"
+                                            ? { kind: "rate", key: r.action!.id }
+                                            : { kind: "buyer", id: r.action!.id }
+                                    )
+                                  }
                                 >
                                   {r.action.label}
                                 </button>
@@ -725,13 +757,21 @@ function FormSheet({ form, initialPeriod, today, data, onClose, onSave }: { form
                 <li key={n}>{n}</li>
               ))}
             </ul>
+            {sheet.gra && sheet.gra.rows.length > 0 && (
+              <div className={fs.graBox}>
+                <p>{sheet.gra.note}</p>
+                <button type="button" className={styles.linkButton} onClick={() => download(true)}>
+                  Download the rows for GRA&rsquo;s template ({sheet.gra.rows.length})
+                </button>
+              </div>
+            )}
           </>
         )}
         <div className={styles.sheetButtons}>
           <button type="button" className={styles.sheetCancel} onClick={onClose}>
             Close
           </button>
-          <button type="button" className={styles.sheetSave} onClick={download} disabled={!sheet}>
+          <button type="button" className={styles.sheetSave} onClick={() => download()} disabled={!sheet}>
             Download for Excel
           </button>
         </div>
@@ -739,6 +779,7 @@ function FormSheet({ form, initialPeriod, today, data, onClose, onSave }: { form
       {editor?.kind === "buyer" && <BuyerVatSheet buyer={data.buyers.find((b) => b.id === editor.id) ?? null} id={editor.id} onClose={() => setEditor(null)} onSave={saved} />}
       {editor?.kind === "rate" && <RateSheet payment={editor.key} rate={data.settings.rates[editor.key] ?? null} last={data.lastRate} onClose={() => setEditor(null)} onSave={saved} />}
       {editor?.kind === "supplier" && <SupplierSheet keyName={editor.key} name={editor.name} set={data.settings.suppliers[editor.key] ?? {}} onClose={() => setEditor(null)} onSave={saved} />}
+      {editor?.kind === "worker" && <WorkerCardSheet id={editor.id} name={editor.name} card={data.settings.workers?.[editor.id]?.card ?? null} onClose={() => setEditor(null)} onSave={saved} />}
     </div>
   );
 }
@@ -831,6 +872,45 @@ function RateSheet({ payment, rate, last, onClose, onSave }: { payment: string; 
         </button>
       )}
       <SheetButtons saving={saving} onClose={onClose} label="Use this rate" onSave={() => void go(false)} />
+    </Over>
+  );
+}
+
+/** A Payday worker's Ghana Card number: GRA's PAYE return lists every worker by it. */
+function WorkerCardSheet({ id, name, card, onClose, onSave }: { id: string; name: string; card: string | null; onClose: () => void; onSave: Save }) {
+  const [value, setValue] = useState(card ?? "");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const go = async (clear: boolean) => {
+    if (!clear && !value.trim()) return setError("Type the number on their Ghana Card, e.g. GHA-123456789-0.");
+    setSaving(true);
+    setError("");
+    try {
+      await onSave({ action: "worker", id, card: clear ? null : value }, clear ? `${name}: card number taken off` : `Saved: ${name}'s Ghana Card`);
+    } catch (e) {
+      setError(errorText(e));
+      setSaving(false);
+    }
+  };
+  return (
+    <Over label={`${name}: Ghana Card`}>
+      <h2 className={styles.sheetTitle}>{name}</h2>
+      <p className={styles.sheetNote}>GRA&rsquo;s PAYE return lists every worker by their Ghana Card number (a person&rsquo;s TIN since 2021). Typed once, it&rsquo;s kept for every month.</p>
+      <label className={styles.label} htmlFor="wk-card">
+        Ghana Card number
+      </label>
+      <input id="wk-card" className={styles.input} value={value} onChange={(e) => setValue(e.target.value.toUpperCase())} maxLength={20} placeholder="GHA-123456789-0" autoComplete="off" disabled={saving} />
+      {error && (
+        <p className={styles.sheetError} role="alert">
+          {error}
+        </p>
+      )}
+      {card && (
+        <button type="button" className={styles.linkButton} onClick={() => void go(true)} disabled={saving}>
+          Take the number off
+        </button>
+      )}
+      <SheetButtons saving={saving} onClose={onClose} label="Save" onSave={() => void go(false)} />
     </Over>
   );
 }
@@ -972,7 +1052,7 @@ function CompanySheet({ company, onClose, onSave }: { company: Company | null; o
 }
 
 function StaffSheet({ staff, today, onClose, onSave }: { staff: Staff[]; today: string; onClose: () => void; onSave: Save }) {
-  const blank = { id: "", name: "", salary: "", ssnit: true, from: today.slice(0, 7), until: "" };
+  const blank = { id: "", name: "", category: "Juniors" as StaffCategory, card: "", salary: "", ssnit: true, from: today.slice(0, 7), until: "" };
   const [edit, setEdit] = useState<typeof blank | null>(staff.length ? null : blank);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -1000,11 +1080,11 @@ function StaffSheet({ staff, today, onClose, onSave }: { staff: Staff[]; today: 
                 <div>
                   <b>{x.name}</b>
                   <small>
-                    {money(x.salary)} a month · {x.ssnit ? "on SSNIT" : "no SSNIT"} · from {monthName(x.from)}
+                    {money(x.salary)} a month · {x.category} · {x.ssnit ? "on SSNIT" : "no SSNIT"} · {x.card ? "card typed" : "no Ghana Card number yet"} · from {monthName(x.from)}
                     {x.until ? ` to ${monthName(x.until)}` : ""}
                   </small>
                 </div>
-                <button type="button" className={fs.rowButton} onClick={() => setEdit({ id: x.id, name: x.name, salary: String(x.salary), ssnit: x.ssnit, from: x.from, until: x.until ?? "" })}>
+                <button type="button" className={fs.rowButton} onClick={() => setEdit({ id: x.id, name: x.name, category: x.category, card: x.card ?? "", salary: String(x.salary), ssnit: x.ssnit, from: x.from, until: x.until ?? "" })}>
                   Change
                 </button>
               </div>
@@ -1024,6 +1104,20 @@ function StaffSheet({ staff, today, onClose, onSave }: { staff: Staff[]; today: 
               Monthly salary, GH₵ (before tax)
             </label>
             <input id="sf-salary" className={styles.input} inputMode="decimal" value={edit.salary} onChange={(e) => setEdit({ ...edit, salary: e.target.value })} placeholder="e.g. 3500" disabled={saving} />
+            <label className={styles.label} htmlFor="sf-category">
+              Category (as GRA lists staff)
+            </label>
+            <select id="sf-category" className={styles.input} value={edit.category} onChange={(e) => setEdit({ ...edit, category: e.target.value as StaffCategory })} disabled={saving}>
+              {STAFF_CATEGORIES.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+            <label className={styles.label} htmlFor="sf-card">
+              Ghana Card number
+            </label>
+            <input id="sf-card" className={styles.input} value={edit.card} onChange={(e) => setEdit({ ...edit, card: e.target.value.toUpperCase() })} maxLength={20} placeholder="GHA-123456789-0" autoComplete="off" disabled={saving} />
             <label className={fs.option}>
               <input type="checkbox" checked={edit.ssnit} onChange={(e) => setEdit({ ...edit, ssnit: e.target.checked })} disabled={saving} />
               <span>On SSNIT</span>
@@ -1063,7 +1157,7 @@ function StaffSheet({ staff, today, onClose, onSave }: { staff: Staff[]; today: 
               const salary = toNumber(edit.salary);
               if (!edit.name.trim()) return setError("Type their name.");
               if (!salary || salary <= 0) return setError("Type the monthly salary, e.g. 3500.");
-              void go({ action: "staff", id: edit.id || undefined, name: edit.name, salary, ssnit: edit.ssnit, from: edit.from, until: edit.until || null }, `Saved: ${edit.name}`);
+              void go({ action: "staff", id: edit.id || undefined, name: edit.name, category: edit.category, card: edit.card || null, salary, ssnit: edit.ssnit, from: edit.from, until: edit.until || null }, `Saved: ${edit.name}`);
             }}
           />
         ) : (
