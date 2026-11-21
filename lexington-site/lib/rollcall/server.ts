@@ -5,6 +5,7 @@ import { getBuyersClient } from "@/lib/sanity/buyersClient";
 import { ROLLCALL_PREFIX } from "@/lib/site/ids";
 import { getTodoUser, TodoError } from "@/lib/todo/server";
 import type { TodoMe } from "@/lib/todo/shared";
+import { compareMomo, localMomo } from "./momoName";
 import { opensRollcall, ROLLCALL_COLLECTIONS, rollcallAccess, type RollcallAccess, type RollcallCollection, type RollcallDoc } from "./shared";
 import { syncWages } from "./wages";
 
@@ -68,7 +69,8 @@ function viewOf(can: RollcallAccess, col: RollcallCollection, data: Data): Data 
     case "workers": {
       const out = { ...data };
       if (!can.payday) delete out.rate;
-      if (!can.payday && !can.workers) for (const k of ["phone", "momo", "momoName", "idPhoto"]) delete out[k];
+      if (!can.payday && !can.workers) for (const k of ["phone", "momo", "momoName", "idPhoto", "momoCheck"]) delete out[k];
+      else if (out.momo) out.momoCheckMatch = momoCheckMatch(out);
       return out;
     }
     case "config": {
@@ -79,6 +81,17 @@ function viewOf(can: RollcallAccess, col: RollcallCollection, data: Data): Data 
       return out;
     }
   }
+}
+
+/**
+ * What the last MoMo name check says about a worker's MoMo now (21 Nov 2026, lib/rollcall/momoName.ts): their own
+ * name, the name typed for the MoMo (someone else's account, as noted), close to one of them, neither, or not checked
+ * (never, or before the number changed). Worked out each time it's read, so an edited name is judged again.
+ */
+function momoCheckMatch(worker: Data): "name" | "momoName" | "close" | "none" | "unchecked" {
+  const check = isObj(worker.momoCheck) ? worker.momoCheck : null;
+  if (!check || typeof check.name !== "string" || check.number !== localMomo(String(worker.momo ?? ""))) return "unchecked";
+  return compareMomo(check.name, String(worker.name ?? ""), typeof worker.momoName === "string" ? worker.momoName : undefined).match;
 }
 
 const WRITE_KEYS: Record<RollcallCollection, readonly string[]> = {
@@ -197,6 +210,20 @@ export async function writeRollcall(me: TodoMe, path: unknown, op: "set" | "upda
   const doc = row && toDoc(can, row);
   if (!doc) throw new TodoError(502, "It was saved but couldn't be read back. Close the app and open it again.");
   return doc;
+}
+
+/**
+ * The website's own record of a MoMo name check on a worker (the name Paystack gave, for that number, when and by whom).
+ * Only the check itself writes it: a phone can't (it isn't one of the page's own fields), so it can be trusted.
+ */
+export async function recordMomoCheck(me: TodoMe, workerId: string, check: { number: string; name: string; network: string }): Promise<RollcallDoc | null> {
+  if (!KEY_RE.test(workerId)) throw new TodoError(400, "That worker doesn't exist.");
+  const id = docId("workers", workerId);
+  const exists = await getBuyersClient().fetch<string | null>(`*[_id == $id][0]._id`, { id });
+  if (!exists) return null;
+  await mergeRecord(me.name, "workers", workerId, "update", { momoCheck: { ...check, at: new Date().toISOString(), by: me.name } });
+  const row = await getBuyersClient().fetch<Row | null>(`*[_id == $id][0]{ col, key, json, "rev": _rev, "at": _updatedAt }`, { id });
+  return row ? toDoc(rollcallAccess(me.sections), row) : null;
 }
 
 /* ---------- the website's own side (2 Nov 2026: pours booked on the concrete page, lib/concrete/pours.ts) ---------- */

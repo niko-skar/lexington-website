@@ -52,6 +52,7 @@ header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background
 .seg button.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 .seg button.on span{color:inherit;opacity:.75}
 .note{font-size:13px;color:var(--muted);margin:8px 0 0}
+.momochk{margin:2px 0 6px}.momochk p{margin:4px 0}.momoweek{margin:8px 0 0}.momoweek .btn,.payform p .btn{margin-left:6px}
 .banner{margin-top:12px;background:var(--accent);color:var(--accent-ink);border-radius:12px;padding:12px 14px;display:flex;gap:10px;align-items:center;justify-content:space-between;border:0;width:100%;text-align:left}
 .banner b{font:700 19px/1.1 var(--display);text-transform:uppercase;letter-spacing:.03em}
 
@@ -315,7 +316,7 @@ const esc = s => String(s??"").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;"
 /* ---------- state ---------- */
 const S = { db:null, status:"loading", settings:DEF, workers:{}, days:{}, pays:{}, pours:{}, checklists:{}, can:{rollcall:true, payday:true, workers:true}, inApp:false,
   tab:"today", date:todayStr(), slot:null, week:weekStart(todayStr()),
-  newTrade:"mason", payForm:null, editId:null, draft:{}, seen:{}, showAway:false };
+  newTrade:"mason", payForm:null, editId:null, draft:{}, seen:{}, showAway:false, momoChk:{}, momoAll:null };
 
 function autoSlot(){
   const now = new Date(), m = now.getHours()*60+now.getMinutes();
@@ -854,6 +855,7 @@ function newWorkerHtml(){
       <label for="nw-phone" class="calc">Phone number<input class="field num" id="nw-phone" type="tel" inputmode="tel" autocomplete="off" value="${d("phone")}"></label>
       <label for="nw-momo" class="calc">MoMo number<input class="field num" id="nw-momo" type="tel" inputmode="tel" autocomplete="off" value="${d("momo")}"></label></div>
     <label for="nw-momoname" class="calc">MoMo name (as registered)<input class="field" id="nw-momoname" autocomplete="off" value="${d("momoname")}"></label>
+    ${momoCheckHtml("nw")}
     <div class="idbox"><span class="calc">ID card photo</span>
       ${n.idPhoto ? `<button class="thumb" data-act="viewphoto" data-v="${esc(n.idPhoto)}" aria-label="View ID photo"><img src="${photoSrc(n.idPhoto)}" alt="ID card"></button>` : ""}
       ${S.uploading === "new" ? `<span class="calc">Uploading photo…</span>` : S.assets ? `<label class="btn filebtn" for="nw-idphoto">${n.idPhoto ? "Replace photo" : "Add ID photo"}<input type="file" id="nw-idphoto" accept="image/*" hidden></label>` : ""}
@@ -906,6 +908,7 @@ function viewWeek(){
     <p class="bymethod">${Object.keys(W.byMethod).length ? "Paid so far: "+Object.entries(W.byMethod).map(([k,v]) => METHODS[k]+" "+ghs(v)).join(" · ") : "Nothing paid yet this week."}
       ${isCur ? " Figures update as you mark attendance." : ""} Tap a day under a name to pay it as a half or full day.</p>
     ${locationsHtml(ws)}
+    ${momoWeekHtml(W)}
     <div class="actions"><button class="btn" data-act="copy">Copy report for WhatsApp</button>
       ${S.downloads ? `<button class="btn" data-act="exportmenu" aria-expanded="${!!S.exportOpen}">Export to Excel</button>` : ""}</div>
     ${S.downloads && S.exportOpen ? `<div class="exportbox"><span class="calc">${S.exporting ? "Building the spreadsheet…" : "Save a backup of attendance, overtime, deductions, steel machines, curing, pour checks, payments and workers:"}</span>
@@ -983,6 +986,7 @@ function payControls(id, paid, amount, ws, steel){
     return `<div class="payform">
       <div class="row"><label for="pf-amount">Amount (GH₵)<input class="field num" id="pf-amount" inputmode="decimal" value="${esc(S.draft["pf-amount"] ?? amount)}"></label>
       ${steel ? `<label for="pf-to">Paid to<input class="field" id="pf-to" value="${esc(S.draft["pf-to"] ?? "")}" placeholder="Name"></label>` : ""}</div>
+      ${pf.method === "momo" ? momoPayHtml(id) : ""}
       ${pf.method === "momo" && S.workers[id]?.momoName ? `<p class="calc">Send to ${esc(S.workers[id].momoName)}${S.workers[id].momo ? ", "+esc(S.workers[id].momo) : ""}</p>` : ""}
       ${pf.method === "momo" && S.workers[id]?.momo ? `<div class="row copyrow"><button class="btn" data-act="copymomo" data-v="${esc(momoDigits(S.workers[id].momo))}">📋 Copy MoMo number</button><button class="btn" data-act="copyamount">📋 Copy amount</button></div>` : ""}
       ${pf.method !== "cash" ? `<div class="row"><label for="pf-ref">${pf.method==="momo"?"MoMo number or transaction ID":"Bank reference"} (optional)<input class="field" id="pf-ref" value="${esc(S.draft["pf-ref"] ?? "")}"></label></div>` : ""}
@@ -991,6 +995,66 @@ function payControls(id, paid, amount, ws, steel){
   }
   if (!(amount > 0)) return "";
   return `<div class="paybar">${Object.entries(METHODS).map(([k,v]) => `<button data-act="pay" data-w="${id}" data-v="${k}">Pay ${v}</button>`).join("")}</div>`;
+}
+
+/* ---------- the MoMo name check (21 Nov 2026) ---------- */
+// Niko: "pulls the workers name from their momo number ... I want to have it double confirmed before I send any money
+// to an account, also helps to always have their full name on record". The website asks Paystack whose name the number
+// is registered in (/api/rollcall/momo-name) and keeps the answer on the worker; how it compares with their name is
+// worked out by the website each time it's read (momoCheckMatch).
+const canCheckMomo = () => S.inApp && (S.can.workers || S.can.payday);
+const titleCase = s => String(s ?? "").toLowerCase().replace(/(^|[\s'-])\p{L}/gu, m => m.toUpperCase());
+const MOMO_WHAT = {name:"the worker's own name", momoName:"the MoMo name you typed (someone else's account)", close:"close to the worker's name: make sure it's them", none:"not the worker's name"};
+const MOMO_CLS = {name:"ok", momoName:"late", close:"late", none:"bad"};
+async function checkMomo(key, body){
+  S.momoChk[key] = {busy:true}; render();
+  try {
+    const r = await fetch("/api/rollcall/momo-name", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)});
+    const res = await r.json().catch(() => ({}));
+    S.momoChk[key] = r.ok ? {res} : {error:res.error || "Couldn't check that number."};
+    if (r.ok && res.doc) window.__rcTake?.(res.doc);
+  } catch(e){ S.momoChk[key] = {error:"No signal. Try again."}; }
+  render();
+  return S.momoChk[key];
+}
+/** The button and its answer, in the add and edit forms (key: "nw", or the worker's id). */
+function momoCheckHtml(key){
+  if (!canCheckMomo()) return "";
+  const st = S.momoChk[key] || {}, r = st.res;
+  const btn = `<button class="btn" data-act="checkmomo" data-v="${esc(key)}" ${st.busy ? "disabled" : ""}>${st.busy ? "Checking…" : r ? "Check again" : "Check MoMo name"}</button>`;
+  return `<div class="momochk">
+    ${r ? `<p class="calc"><span class="pill ${MOMO_CLS[r.match]}">${esc(r.network)}</span> Registered to <b>${esc(r.name)}</b>: ${MOMO_WHAT[r.match]}.</p>` : ""}
+    ${st.error ? `<p class="calc"><span class="pill bad">Not checked</span> ${esc(st.error)}</p>` : ""}
+    <div class="row">${btn}${r ? `<button class="btn" data-act="usemomoname" data-v="${esc(key)}">Use this name</button>` : ""}</div></div>`;
+}
+/** A worker's MoMo as last checked: a pill for the Workers list. */
+function momoPill(w){
+  if (!w.momo || !canCheckMomo()) return "";
+  const m = w.momoCheckMatch;
+  return m === "name" ? ' <span class="pill ok">MoMo name ✓</span>'
+    : m === "momoName" ? ' <span class="pill late">MoMo in another name ✓</span>'
+    : m === "close" ? ' <span class="pill late">MoMo name close</span>'
+    : m === "none" ? ' <span class="pill bad">MoMo name doesn&#39;t match</span>'
+    : ' <span class="pill">MoMo name not checked</span>';
+}
+/** Before a MoMo payment: whose name the number was found in, or a button to check it now. */
+function momoPayHtml(id){
+  const w = S.workers[id]; if (!w?.momo || !canCheckMomo()) return "";
+  const m = w.momoCheckMatch, c = w.momoCheck, st = S.momoChk["pay-"+id] || {};
+  if (m && m !== "unchecked" && c?.name){
+    const say = m === "name" ? "their own name" : m === "momoName" ? "someone else's account, as typed" : m === "close" ? "close to "+esc(w.name)+": make sure it's them" : "NOT "+esc(w.name)+". Check before sending";
+    return `<p class="calc"><span class="pill ${MOMO_CLS[m]}">${m === "none" ? "Stop" : "Checked"}</span> MoMo registered to <b>${esc(titleCase(c.name))}</b>: ${say}.</p>`;
+  }
+  return `<p class="calc"><span class="pill">Not checked</span> ${st.error ? esc(st.error)+" " : ""}<button class="btn" data-act="paycheckmomo" data-w="${id}" ${st.busy ? "disabled" : ""}>${st.busy ? "Checking…" : "Check MoMo name"}</button></p>`;
+}
+/** Payday: the MoMo names still to check this week (workers left to pay who have a MoMo number), and any that don't match. */
+function momoWeekHtml(W){
+  if (!canCheckMomo()) return "";
+  const due = W.rows.filter(r => !r.paid && r.net > 0 && r.w.momo);
+  const todo = due.filter(r => !r.w.momoCheckMatch || r.w.momoCheckMatch === "unchecked"), bad = due.filter(r => r.w.momoCheckMatch === "none");
+  if (!todo.length && !bad.length) return due.length ? `<p class="calc momoweek"><span class="pill ok">MoMo names checked</span> Every MoMo number left to pay this week has been checked.</p>` : "";
+  return `<p class="calc momoweek">${bad.length ? `<span class="pill bad">${bad.length === 1 ? "1 MoMo name doesn't match" : bad.length+" MoMo names don't match"}</span> ${bad.map(r => esc(r.w.name)).join(", ")}. ` : ""}
+    ${todo.length ? `<button class="btn" data-act="checkallmomo" ${S.momoAll ? "disabled" : ""}>${S.momoAll ? "Checking "+S.momoAll+"…" : "Check "+todo.length+" MoMo name"+(todo.length === 1 ? "" : "s")}</button>` : ""}</p>`;
 }
 
 function viewWorkers(){
@@ -1011,6 +1075,7 @@ function viewWorkers(){
           <label for="ed-phone">Phone number<input class="field num" id="ed-phone" type="tel" inputmode="tel" autocomplete="off" value="${esc(S.draft["ed-phone"] ?? w.phone ?? "")}"></label>
           <label for="ed-momo">MoMo number<input class="field num" id="ed-momo" type="tel" inputmode="tel" autocomplete="off" value="${esc(S.draft["ed-momo"] ?? w.momo ?? "")}"></label></div>
         <label for="ed-momoname">MoMo name (as registered)<input class="field" id="ed-momoname" autocomplete="off" value="${esc(S.draft["ed-momoname"] ?? w.momoName ?? "")}"></label>
+        ${momoCheckHtml(w.id)}
         <div class="idbox"><span class="calc">ID card photo</span>
           ${w.idPhoto ? `<button class="thumb" data-act="viewphoto" data-v="${esc(w.idPhoto)}" aria-label="View ID photo"><img src="${photoSrc(w.idPhoto)}" alt="ID card of ${esc(w.name)}"></button>` : ""}
           ${S.uploading === w.id ? `<span class="calc">Uploading photo…</span>` : S.assets ? `<div class="row">
@@ -1022,7 +1087,7 @@ function viewWorkers(){
         <button class="btn" data-act="toggleactive" data-w="${w.id}">${w.active===false?"Bring back":"Stopped working"}</button>
         <button class="btn" data-act="canceledit">Cancel</button></div></div></div>`;
       const contact = [w.phone ? "☎ "+esc(w.phone) : "", w.momo ? "MoMo "+esc(w.momo)+(w.momoName ? " ("+esc(w.momoName)+")" : "") : ""].filter(Boolean).join(" · ");
-      return `<div class="wrow"><div class="wname"><b>${nameHtml(w)}</b><span class="meta">${TRADES[w.trade].label}${w.trade!=="steel" && money()?" · "+ghs(rate(w)).replace(".00","")+"/day":""}${special(w) && money()?' <span class="pill late">Special rate</span>':""}${w.active===false?' <span class="pill">Not on site</span>':""}${w.idPhoto?' <span class="pill ok">ID</span>':""}</span>
+      return `<div class="wrow"><div class="wname"><b>${nameHtml(w)}</b><span class="meta">${TRADES[w.trade].label}${w.trade!=="steel" && money()?" · "+ghs(rate(w)).replace(".00","")+"/day":""}${special(w) && money()?' <span class="pill late">Special rate</span>':""}${w.active===false?' <span class="pill">Not on site</span>':""}${w.idPhoto?' <span class="pill ok">ID</span>':""}${momoPill(w)}</span>
         ${contact ? `<span class="meta contact num">${contact}</span>` : ""}
         ${w.momo ? `<button class="btn copybtn" data-act="copymomo" data-v="${esc(momoDigits(w.momo))}">📋 Copy MoMo</button>` : ""}</div>
         <button class="btn" data-act="edit" data-w="${w.id}">Edit</button></div>`;
@@ -1210,7 +1275,31 @@ document.addEventListener("click", async e => {
     case "copy": return copyReport();
     case "exportmenu": S.exportOpen = !S.exportOpen; break;
     case "export": return exportXlsx(v);
-    case "newworker": S.newWorker = {trade:"mason"}; S.editId = null; clearDrafts("nw-"); break;
+    case "checkmomo": {
+      const nw = v === "nw", w = nw ? null : S.workers[v], pre = nw ? "nw-" : "ed-";
+      const val = (k, fb) => String(S.draft[pre+k] ?? fb ?? "").trim();
+      const number = val("momo", w?.momo);
+      if (!number) return toast("Type the MoMo number first.");
+      return checkMomo(v, {number, worker:nw ? "" : v, name:val("name", w?.name), momoName:val("momoname", w?.momoName)});
+    }
+    case "usemomoname": { const r = S.momoChk[v]?.res; if (!r) break;
+      S.draft[(v === "nw" ? "nw-" : "ed-")+"momoname"] = r.name; toast("MoMo name filled in. Tap Save to keep it."); break; }
+    case "paycheckmomo": { const w = S.workers[wid]; if (!w?.momo) break;
+      return checkMomo("pay-"+wid, {number:w.momo, worker:wid, name:w.name, momoName:w.momoName}); }
+    case "checkallmomo": {
+      if (S.momoAll) break;
+      const todo = weekData(S.week).rows.filter(r => !r.paid && r.net > 0 && r.w.momo && (!r.w.momoCheckMatch || r.w.momoCheckMatch === "unchecked"));
+      let n = 0, off = false;
+      for (const r of todo){
+        S.momoAll = (n + 1)+" of "+todo.length;
+        const st = await checkMomo("pay-"+r.w.id, {number:r.w.momo, worker:r.w.id, name:r.w.name, momoName:r.w.momoName});
+        n++;
+        if (/switched on/.test(st?.error || "")){ off = true; break; }
+      }
+      S.momoAll = null; render();
+      return toast(off ? "The MoMo name check isn't switched on yet." : "Checked "+n+" MoMo name"+(n === 1 ? "" : "s")+".");
+    }
+    case "newworker": S.newWorker = {trade:"mason"}; S.editId = null; clearDrafts("nw-"); delete S.momoChk.nw; break;
     case "nwtrade": if (S.newWorker) S.newWorker.trade = v; break;
     case "cancelnewworker": { const ph = S.newWorker?.idPhoto; S.newWorker = null; clearDrafts("nw-"); if (ph) S.assets?.delete(ph).catch(() => {}); break; }
     case "savenewworker": {
@@ -1222,10 +1311,13 @@ document.addEventListener("click", async e => {
       const data = {name, trade:n.trade, active:true, created:new Date().toISOString(), nick:g("nick"), phone:g("phone"), momo:g("momo"), momoName:g("momoname"),
         ...(rs && money() ? {rate:r2(rn)} : {}), ...(n.idPhoto ? {idPhoto:n.idPhoto} : {})};
       const id = S.db.collection("workers").doc().id;
-      S.workers[id] = {id, ...data}; writeDoc("workers/"+id, data, data);
+      S.workers[id] = {id, ...data};
+      const checked = S.momoChk.nw?.res; delete S.momoChk.nw;
+      // A number checked in the form: the check is kept on the new worker too, once they're saved.
+      writeDoc("workers/"+id, data, data).then(() => { if (checked && data.momo && canCheckMomo()) checkMomo("pay-"+id, {number:data.momo, worker:id, name, momoName:data.momoName}); });
       S.newWorker = null; clearDrafts("nw-");
       toast("Added "+name); break; }
-    case "edit": S.editId = wid; S.confirmDel = null; ["ed-name","ed-nick","ed-rate","ed-phone","ed-momo","ed-momoname","edTrade"].forEach(k => delete S.draft[k]); break;
+    case "edit": S.editId = wid; S.confirmDel = null; delete S.momoChk[wid]; ["ed-name","ed-nick","ed-rate","ed-phone","ed-momo","ed-momoname","edTrade"].forEach(k => delete S.draft[k]); break;
     case "viewphoto": S.viewPhoto = v; break;
     case "closephoto": S.viewPhoto = null; break;
     case "delphoto": {

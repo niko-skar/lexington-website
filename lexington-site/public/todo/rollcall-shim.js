@@ -175,6 +175,15 @@
     clearTimeout(timer);
     poll();
   };
+  // A record the website changed itself (a MoMo name check, 21 Nov 2026): shown at once, not at the next poll.
+  window.__rcTake = (doc) => {
+    if (!doc) return;
+    const cols = apply([doc]);
+    if (cols.size) {
+      notify(cols);
+      saveCopy();
+    }
+  };
   document.addEventListener("pointerdown", () => (lastUse = Date.now()), { capture: true, passive: true });
   document.addEventListener("visibilitychange", wake);
   window.addEventListener("online", wake);
