@@ -46,7 +46,7 @@ export interface TodoTask {
  * messages). To-do, Store, Expenses and Alerts are drawn in the one page; the roll call's three parts
  * (Today, Payday, Workers) are its own page, /todo/rollcall (lib/rollcall).
  */
-export const SECTIONS = ["todo", "store", "expenses", "alerts", "rollcall", "payday", "workers", "concrete", "buyers", "steel", "suppliers", "spending", "orders", "cashflow", "analysis", "asbuilt", "visits", "updates", "prospects"] as const;
+export const SECTIONS = ["todo", "store", "expenses", "alerts", "rollcall", "payday", "workers", "concrete", "buyers", "steel", "suppliers", "spending", "orders", "cashflow", "analysis", "filings", "asbuilt", "visits", "updates", "prospects"] as const;
 export type Section = (typeof SECTIONS)[number];
 /**
  * Concrete (the trucks on pour days, lib/concrete, 30 Oct 2026), Buyers (their payments and receipts,
@@ -66,21 +66,21 @@ export type Section = (typeof SECTIONS)[number];
  * where Visits was (Niko: "add the CRM into the ERP app, change visits to customers and put the crm inside of that along
  * with the existing site visit stuff"), and a login can open Customers alone (Rahma's).
  */
-export const PAGE_SECTIONS = ["todo", "store", "prospects", "visits", "expenses", "alerts", "concrete", "buyers", "steel", "asbuilt", "updates", "suppliers", "spending", "orders", "cashflow", "analysis"] as const;
+export const PAGE_SECTIONS = ["todo", "store", "prospects", "visits", "expenses", "alerts", "concrete", "buyers", "steel", "asbuilt", "updates", "suppliers", "spending", "orders", "cashflow", "analysis", "filings"] as const;
 export type PageSection = (typeof PAGE_SECTIONS)[number];
 export const isPageSection = (section: string): section is PageSection => (PAGE_SECTIONS as readonly string[]).includes(section);
 /**
  * Finance (Niko, 5 Nov 2026: "turn expenses into finance and house everything finance related in there"): one place
  * on the bar for the money parts, each a tab of it, in this order.
  */
-export const FINANCE_SECTIONS = ["expenses", "orders", "suppliers", "cashflow", "spending", "analysis", "buyers"] as const;
+export const FINANCE_SECTIONS = ["expenses", "orders", "suppliers", "cashflow", "spending", "analysis", "buyers", "filings"] as const;
 export type FinanceSection = (typeof FINANCE_SECTIONS)[number];
 export const isFinance = (section: string): section is FinanceSection => (FINANCE_SECTIONS as readonly string[]).includes(section);
 /** Customers (19 Nov 2026): the prospects and the site visits, one place on the bar with a tab for each. */
 export const CUSTOMER_SECTIONS = ["prospects", "visits"] as const;
 export type CustomerSection = (typeof CUSTOMER_SECTIONS)[number];
 export const isCustomers = (section: string): section is CustomerSection => (CUSTOMER_SECTIONS as readonly string[]).includes(section);
-export type SiteSection = Exclude<Section, "expenses" | "alerts" | "buyers" | "steel" | "suppliers" | "spending" | "orders" | "cashflow" | "analysis" | "asbuilt" | "updates">;
+export type SiteSection = Exclude<Section, "expenses" | "alerts" | "buyers" | "steel" | "suppliers" | "spending" | "orders" | "cashflow" | "analysis" | "filings" | "asbuilt" | "updates">;
 /**
  * What the office can tick for a login (the foreman, a storekeeper, the roll call clerk, someone in sales). Customers is
  * one tick that opens both of its parts (the prospects and the site visits): a login has both or neither.
@@ -108,6 +108,7 @@ const HREF: Record<Section, string> = {
   orders: "/todo/orders",
   cashflow: "/todo/cashflow",
   analysis: "/todo/analysis",
+  filings: "/todo/filings",
   asbuilt: "/todo/asbuilt",
   visits: "/todo/visits",
   updates: "/todo/updates",
@@ -135,6 +136,7 @@ const SECTION_NAMES: Record<Section, string> = {
   orders: "Orders",
   cashflow: "Cash flow",
   analysis: "Analysis",
+  filings: "Tax & filings",
   asbuilt: "As-built",
   visits: "Site visits",
   updates: "Site updates",
@@ -157,6 +159,7 @@ export const APP_PAGES: readonly string[] = [
   "/todo/orders",
   "/todo/cashflow",
   "/todo/analysis",
+  "/todo/filings",
   "/todo/asbuilt",
   "/todo/updates",
   "/todo/visits",

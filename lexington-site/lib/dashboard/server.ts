@@ -4,6 +4,7 @@ import { unreadCount } from "@/lib/alerts/notify";
 import { floorId, SEED_FLOORS } from "@/lib/asbuilt/store";
 import { listBuyers } from "@/lib/buyers/payments";
 import { cashflowNow } from "@/lib/cashflow/server";
+import { filingsTile } from "@/lib/filings/server";
 import { nextBooked } from "@/lib/concrete/pours";
 import { listConcrete } from "@/lib/concrete/server";
 import { daySummary, truckFlags, trucksOn } from "@/lib/concrete/shared";
@@ -71,6 +72,8 @@ export interface DashboardData {
   cashflow?: { now: number | null; lowest: { amount: number; date: string } | null; short: { date: string; amount: number } | null; weekly: number | null };
   /** Purchase orders still to buy (lib/orders): to order, ordered, their money left, how many late, the next one needed. */
   orders?: { toOrder: number; ordered: number; left: number; late: number; next: { number: string; neededBy: string } | null };
+  /** Tax & filings (lib/filings, 21 Nov 2026): the next return, how many are late, the company's set-up still to do. */
+  filings?: { next: { title: string; by: string; days: number } | null; late: number; setupLeft: number; setupSoon: number };
 }
 
 type Obj = Record<string, unknown>;
@@ -268,7 +271,7 @@ async function ordersPart(): Promise<NonNullable<DashboardData["orders"]>> {
 export async function getDashboard(me: TodoMe): Promise<DashboardData> {
   const today = ghanaDay();
   const has = (s: string) => me.sections.includes(s as never);
-  const [todo, store, expenses, unread, rollcall, concrete, buyers, suppliers, steel, spending, cashflow, orders, asbuilt, updates] = await Promise.all([
+  const [todo, store, expenses, unread, rollcall, concrete, buyers, suppliers, steel, spending, cashflow, orders, asbuilt, updates, filings] = await Promise.all([
     has("todo") ? settle(todoPart(me, today)) : undefined,
     has("store") ? settle(storePart(me, today)) : undefined,
     has("expenses") ? settle(expensesPart(today)) : undefined,
@@ -283,6 +286,7 @@ export async function getDashboard(me: TodoMe): Promise<DashboardData> {
     has("orders") ? settle(ordersPart()) : undefined,
     has("asbuilt") ? settle(asbuiltPart()) : undefined,
     has("updates") ? settle(updatesPart()) : undefined,
+    has("filings") ? settle(filingsTile()) : undefined,
   ]);
   return {
     today,
@@ -300,6 +304,7 @@ export async function getDashboard(me: TodoMe): Promise<DashboardData> {
     ...(spending ? { spending } : {}),
     ...(cashflow ? { cashflow } : {}),
     ...(orders ? { orders } : {}),
+    ...(filings ? { filings } : {}),
   };
 }
 

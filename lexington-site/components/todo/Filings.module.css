@@ -1,0 +1,359 @@
+/* Tax & filings (FilingsApp.tsx): the company's set-up, the returns due, the figures. Built on Todo + Finance styles. */
+
+.pill {
+  flex: none;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  background: var(--x-bg);
+  color: var(--x-muted);
+}
+.pillLate {
+  composes: pill;
+  background: var(--x-warn-soft);
+  color: var(--x-warn);
+}
+.pillSoon {
+  composes: pill;
+  background: var(--x-accent-soft);
+  color: var(--x-accent);
+}
+.pillDone {
+  composes: pill;
+  background: var(--x-ok-soft);
+  color: var(--x-ok);
+}
+.amount {
+  flex: none;
+  font-family: var(--x-num);
+  font-size: 15px;
+  white-space: nowrap;
+}
+
+/* A one-off task: a round tick, then its words (a button of its own). */
+.setupRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 6px 14px;
+  border-top: 1px solid var(--x-line);
+}
+.setupRow:first-of-type {
+  border-top: 0;
+}
+.tick,
+.tickOn {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2px solid var(--x-line);
+  background: transparent;
+  color: transparent;
+  font-size: 16px;
+  line-height: 1;
+}
+.tickOn {
+  border-color: var(--x-ok);
+  background: var(--x-ok);
+  color: var(--x-on-color);
+}
+.setupText {
+  display: grid;
+  gap: 1px;
+  flex: 1;
+  min-width: 0;
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  color: var(--x-ink);
+  text-align: left;
+}
+.setupText b {
+  font-size: 15px;
+  font-weight: 600;
+}
+.setupText small {
+  font-size: 13px;
+  color: var(--x-muted);
+}
+.setupDone b {
+  color: var(--x-muted);
+  text-decoration: line-through;
+}
+
+/* Company details: a label and its value per line. */
+.facts {
+  display: grid;
+  margin: 0;
+}
+.fact {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 48px;
+  padding: 8px 14px;
+  border-top: 1px solid var(--x-line);
+}
+.fact:first-of-type {
+  border-top: 0;
+}
+.fact dt {
+  font-size: 13px;
+  color: var(--x-muted);
+}
+.fact dd {
+  margin: 2px 0 0;
+  font-size: 15px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.fact button {
+  flex: none;
+  border: 0;
+  background: transparent;
+  color: var(--x-accent);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.forms {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+  margin: 0 0 16px;
+}
+.forms button {
+  min-height: 48px;
+  padding: 8px 12px;
+  border: 1px solid var(--x-line);
+  border-radius: 10px;
+  background: var(--x-surface);
+  color: var(--x-ink);
+  font-size: 15px;
+  font-weight: 600;
+  text-align: left;
+}
+
+/* An item's sheet. */
+.when {
+  margin: 0 0 10px;
+  font-size: 15px;
+  font-weight: 600;
+}
+.steps {
+  margin: 4px 0 12px;
+  padding-left: 20px;
+  display: grid;
+  gap: 6px;
+  font-size: 15px;
+  line-height: 1.4;
+}
+.check {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--x-accent-soft);
+  color: var(--x-accent);
+  font-size: 14px;
+}
+.basis {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: var(--x-muted);
+}
+.outLink {
+  display: inline-block;
+  margin: 0 0 12px;
+  color: var(--x-accent);
+  font-weight: 600;
+}
+.filed {
+  margin: 0 0 12px;
+  padding: 12px;
+  border-radius: 10px;
+  background: var(--x-ok-soft);
+  color: var(--x-ok);
+  font-weight: 600;
+}
+.twoCols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+/* The figures. */
+/* The figures' sheet: wider on a laptop; on a phone its tables scroll sideways inside it, never the sheet itself. */
+.wide {
+  max-width: 980px;
+  grid-template-columns: minmax(0, 1fr);
+}
+.wide > * {
+  min-width: 0;
+}
+.practice {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--x-accent-soft);
+  color: var(--x-accent);
+  font-size: 14px;
+  font-weight: 600;
+}
+.monthNav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 0 12px;
+}
+.monthNav button {
+  min-width: 44px;
+  min-height: 40px;
+  border: 1px solid var(--x-line);
+  border-radius: 10px;
+  background: var(--x-surface);
+  color: var(--x-ink);
+  font-size: 18px;
+}
+.monthNav button:disabled {
+  opacity: 0.35;
+}
+.monthNav b {
+  font-size: 16px;
+}
+.boxes {
+  display: grid;
+  margin: 0 0 14px;
+  border: 1px solid var(--x-line);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.box {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 12px;
+  border-top: 1px solid var(--x-line);
+  font-size: 14px;
+}
+.box:first-child {
+  border-top: 0;
+}
+.box span:last-child {
+  flex: none;
+  font-family: var(--x-num);
+}
+.boxStrong {
+  composes: box;
+  background: var(--x-bg);
+  font-weight: 700;
+  font-size: 15px;
+}
+.tableTitle {
+  margin: 14px 0 6px;
+  font-size: 14px;
+  font-weight: 700;
+}
+.tableWrap {
+  min-width: 0;
+  overflow-x: auto;
+  border: 1px solid var(--x-line);
+  border-radius: 10px;
+}
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.table th,
+.table td {
+  padding: 7px 9px;
+  border-top: 1px solid var(--x-line);
+  text-align: left;
+  white-space: nowrap;
+  vertical-align: top;
+}
+.table th {
+  border-top: 0;
+  background: var(--x-bg);
+  color: var(--x-muted);
+  font-weight: 600;
+}
+.table td.num,
+.table th.num {
+  text-align: right;
+  font-family: var(--x-num);
+}
+.rowMuted td {
+  color: var(--x-muted);
+}
+.rowWarn {
+  display: block;
+  margin-top: 2px;
+  color: var(--x-warn);
+  font-size: 12px;
+  white-space: normal;
+}
+.rowButton {
+  border: 0;
+  background: transparent;
+  color: var(--x-accent);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 0;
+}
+.empty {
+  margin: 0;
+  padding: 10px 12px;
+  color: var(--x-muted);
+  font-size: 14px;
+}
+.sheetNotes {
+  margin: 12px 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--x-muted);
+  line-height: 1.4;
+}
+.options {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 12px;
+}
+.option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--x-line);
+  border-radius: 10px;
+  font-size: 15px;
+}
+.option input {
+  margin-top: 3px;
+}
+.staffRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 0;
+  border-top: 1px solid var(--x-line);
+}
+.staffRow:first-of-type {
+  border-top: 0;
+}
+.staffRow small {
+  display: block;
+  color: var(--x-muted);
+  font-size: 13px;
+}

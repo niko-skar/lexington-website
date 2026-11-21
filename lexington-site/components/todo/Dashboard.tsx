@@ -166,6 +166,25 @@ function tiles(d: DashboardData, unread: number): Tile[] {
             }
     );
   }
+  // Tax & filings (21 Nov 2026): what's late, else the next return, else the company's set-up still to do.
+  if (d.filings) {
+    const x = d.filings;
+    const name = (title: string) => title.split(" · ")[0];
+    const setup = x.setupLeft ? `${x.setupLeft} set-up ${x.setupLeft === 1 ? "task" : "tasks"} left` : "";
+    out.push(
+      x.late
+        ? { section: "filings", name: "Tax & filings", big: `${x.late} late`, small: [x.next ? `next: ${name(x.next.title)}` : "", setup].filter(Boolean).join(" · "), tone: "warn" }
+        : x.next
+          ? {
+              section: "filings",
+              name: "Tax & filings",
+              big: x.next.days <= 0 ? `${name(x.next.title)} today` : `${name(x.next.title)} in ${x.next.days} ${x.next.days === 1 ? "day" : "days"}`,
+              small: [`by ${shortDay(x.next.by)}`, setup].filter(Boolean).join(" · "),
+              tone: x.next.days <= 7 || x.setupSoon ? "warn" : "ok",
+            }
+          : { section: "filings", name: "Tax & filings", big: setup || "Nothing due", tone: x.setupSoon ? "warn" : "ok" }
+    );
+  }
   // Purchase orders: a tile only while something is on order.
   if (d.orders && (d.orders.toOrder || d.orders.ordered)) {
     const x = d.orders;

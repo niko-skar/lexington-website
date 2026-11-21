@@ -154,6 +154,13 @@ const ICONS: Record<NavItem, React.ReactNode> = {
       <path d="M15.5 15.5L20.5 20.5M8 12.5v-2M10.5 12.5v-4M13 12.5v-3" />
     </svg>
   ),
+  filings: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M7 3h8l4 4v14H7z" />
+      <path d="M15 3v4h4M10 12h6M10 16h3" />
+      <path d="M3.5 9.5v9.5H7" />
+    </svg>
+  ),
   rollcall: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M8 4h8v3H8z" />

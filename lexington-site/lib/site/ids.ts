@@ -63,6 +63,9 @@ export const ORDER_PREFIX = `po-${TAG}-`;
 export const ORDER_COUNTER_ID = `pocounter-${TAG}`;
 /** The cash flow (lib/cashflow, 5 Nov 2026): the money as last typed and the weekly wages figure, and each plan typed. */
 export const CASHFLOW_ID = `cashflow-${TAG}`;
+/** Tax & filings (lib/filings, 21 Nov 2026): the settings (company, dates, staff, suppliers' WHT, the one-off tasks done), and each return filed ("filing-live-vat-2026-12"). */
+export const FILINGS_ID = `filings-${TAG}`;
+export const FILING_PREFIX = `filing-${TAG}-`;
 export const CASH_PLAN_PREFIX = `cashplan-${TAG}-`;
 
 export const newId = (prefix: string) => prefix + randomBytes(6).toString("hex");

@@ -7,6 +7,7 @@ import type { AlertsData } from "@/lib/alerts/shared";
 import type { AnalysisData } from "@/lib/analysis/shared";
 import type { BuyersData } from "@/lib/buyers/shared";
 import type { CashflowPage } from "@/lib/cashflow/server";
+import type { FilingsPage } from "@/lib/filings/server";
 import type { ConcreteData } from "@/lib/concrete/shared";
 import type { BankDebit, Expense } from "@/lib/expenses/shared";
 import type { SteelData } from "@/lib/expenses/steel";
@@ -59,6 +60,7 @@ const BuyersApp = dynamic(() => import("./BuyersApp").then((m) => m.BuyersApp), 
 const CashflowApp = dynamic(() => import("./CashflowApp").then((m) => m.CashflowApp), { loading: () => <Opening /> });
 const ConcreteApp = dynamic(() => import("./ConcreteApp").then((m) => m.ConcreteApp), { loading: () => <Opening /> });
 const ExpensesApp = dynamic(() => import("./ExpensesApp").then((m) => m.ExpensesApp), { loading: () => <Opening /> });
+const FilingsApp = dynamic(() => import("./FilingsApp").then((m) => m.FilingsApp), { loading: () => <Opening /> });
 const OrdersApp = dynamic(() => import("./OrdersApp").then((m) => m.OrdersApp), { loading: () => <Opening /> });
 const ProspectsApp = dynamic(() => import("./ProspectsApp").then((m) => m.ProspectsApp), { loading: () => <Opening /> });
 const RollcallPart = dynamic(() => import("./RollcallPart").then((m) => m.RollcallPart), { loading: () => <Opening /> });
@@ -92,6 +94,7 @@ const PART_CODE: Partial<Record<View, () => Promise<unknown>>> = {
   orders: () => import("./OrdersApp"),
   cashflow: () => import("./CashflowApp"),
   analysis: () => import("./AnalysisApp"),
+  filings: () => import("./FilingsApp"),
   visits: () => import("./VisitsApp"),
   prospects: () => import("./ProspectsApp"),
   rollcall: () => import("./RollcallPart"),
@@ -119,6 +122,7 @@ export type SiteData = {
   orders?: OrdersPage;
   cashflow?: CashflowPage;
   analysis?: AnalysisData;
+  filings?: FilingsPage;
   asbuilt?: AsBuiltData;
   visits?: VisitsData;
   updates?: UpdatesData;
@@ -153,6 +157,8 @@ const sectionFrom = (path: string): View | null =>
             ? "cashflow"
           : path.startsWith("/todo/analysis")
             ? "analysis"
+          : path.startsWith("/todo/filings")
+            ? "filings"
           : path.startsWith("/todo/asbuilt")
             ? "asbuilt"
           : path.startsWith("/todo/visits")
@@ -183,6 +189,7 @@ async function load(section: PageSection): Promise<SiteData> {
   if (section === "orders") return { orders: await get("/api/orders") };
   if (section === "cashflow") return { cashflow: await get("/api/cashflow") };
   if (section === "analysis") return { analysis: await get("/api/analysis") };
+  if (section === "filings") return { filings: await get("/api/filings") };
   if (section === "asbuilt") return { asbuilt: await get("/api/asbuilt") };
   if (section === "visits") return { visits: await get("/api/site-visits") };
   if (section === "updates") return { updates: await get("/api/updates") };
@@ -290,6 +297,7 @@ export function SiteApp({
   openEntry,
   openTruck,
   openDebit,
+  openFiling,
   seenAlert,
   startedOffline,
   firstHome,
@@ -310,6 +318,8 @@ export function SiteApp({
   openTruck?: string;
   /** Opened from a bank debit's phone alert: the debit to complete. */
   openDebit?: string;
+  /** Opened from a Tax & filings phone alert: the return or set-up task to show. */
+  openFiling?: string;
   /** ...and (the office) the alert it came with, which has now been seen. */
   seenAlert?: string;
   startedOffline: boolean;
@@ -706,6 +716,19 @@ export function SiteApp({
             startedOffline={startedOffline && first === "analysis"}
             fresh={first === "analysis"}
             tabs={tabs("analysis")}
+          />
+        </div>
+      )}
+      {show("filings") && (
+        <div hidden={section !== "filings"}>
+          <FilingsApp
+            me={me}
+            active={section === "filings"}
+            initial={data.filings ?? null}
+            startedOffline={startedOffline && first === "filings"}
+            fresh={first === "filings"}
+            tabs={tabs("filings")}
+            open={openFiling}
           />
         </div>
       )}
