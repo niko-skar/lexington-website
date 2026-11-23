@@ -3,7 +3,7 @@
 import { Suspense, use, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
 import type { DashboardData, SlotCount } from "@/lib/dashboard/server";
-import { isPageSection, sectionHref, type Section, type TodoMe } from "@/lib/todo/shared";
+import { isPageSection, sectionHref, type Section, type TodoList, type TodoMe } from "@/lib/todo/shared";
 import { AccessSheet } from "./AccessSheet";
 import type { RollcallTab } from "./rollcallTab";
 import { startPolling } from "./api";
@@ -15,8 +15,11 @@ import styles from "./Todo.module.css";
 // click into what information I want to put in"): one tile per part this login opens, saying how it stands
 // today. A tap opens the part; the roll call's tiles open its own page on the right tab.
 
-// key: when a part has two tiles (the store and its shopping list); tab: the part's tab the tile opens.
-type Tile = { section: Section; key?: string; tab?: "buy"; name: string; big: string; small?: string; tone?: "warn" | "ok" };
+// key: when a part has two tiles (the store and its shopping list, the to-do and Niko's own list); tab: the part's tab
+// (or list) the tile opens.
+type Tile = { section: Section; key?: string; tab?: "buy" | "mine"; name: string; big: string; small?: string; tone?: "warn" | "ok" };
+/** Where a tile goes when opened on its own (a long press, a new tab): Niko's own list is the jobs page's ?list=mine. */
+const tileHref = (t: Tile) => (t.tab === "mine" ? `${sectionHref(t.section)}?list=mine` : `${sectionHref(t.section)}${t.tab ? `#${t.tab}` : ""}`);
 
 const money = (n: number) => `GH₵ ${Math.round(n).toLocaleString("en-GH")}`;
 const clock = (iso: string) => new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
@@ -64,6 +67,21 @@ function tiles(d: DashboardData, unread: number): Tile[] {
       small: [`${t.urgent} urgent · ${t.doneToday} done today`, t.house ? `${t.house} on the house list` : ""].filter(Boolean).join(" · "),
       tone: t.urgent ? "warn" : undefined,
     });
+    // Niko's own list (23 Nov 2026), only him: its own tile, straight onto it, with what's left under each tag.
+    const m = t.mine;
+    if (m) {
+      out.push({
+        key: "mine",
+        section: "todo",
+        tab: "mine",
+        name: "My to-do",
+        big: m.open ? `${m.open} to do` : "Nothing to do",
+        small: m.open
+          ? [m.urgent ? `${m.urgent} urgent` : "", ...m.tags.map(([tag, n]) => `${tag} ${n}`)].filter(Boolean).join(" · ") || "only you see this list"
+          : "only you see it: tag jobs when out, computer work, calls",
+        tone: m.urgent ? "warn" : undefined,
+      });
+    }
   }
   if (d.store) {
     const s = d.store;
@@ -292,6 +310,7 @@ export function Dashboard({
   onGo,
   onRollcall,
   onStoreTab,
+  onTodoList,
   unread,
   firstHome,
   onReady,
@@ -307,6 +326,8 @@ export function Dashboard({
   onRollcall: (tab: RollcallTab) => void;
   /** The shopping list's tile opens the store on its list. */
   onStoreTab: (tab: "buy") => void;
+  /** The to-do's tiles open it on their list (the site's, or Niko's own). */
+  onTodoList: (list: TodoList) => void;
   unread: number;
 }) {
   const [data, setData] = useState<DashboardData | null>(null);
@@ -363,7 +384,7 @@ export function Dashboard({
       {tiles(d, d.alerts ? unread : 0).map((t) => (
               <a
                 key={t.key ?? t.section}
-                href={`${sectionHref(t.section)}${t.tab ? `#${t.tab}` : ""}`}
+                href={tileHref(t)}
                 className={`${home.tile} ${t.tone === "warn" ? home.warn : t.tone === "ok" ? home.ok : ""}`}
                 onClick={(e) => {
                   if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
@@ -375,7 +396,9 @@ export function Dashboard({
                   }
                   if (!isPageSection(t.section)) return;
                   e.preventDefault();
-                  if (t.tab) onStoreTab(t.tab);
+                  if (t.tab === "buy") onStoreTab(t.tab);
+                  // The To-do tile counts the site list, My to-do Niko's own: each opens its list.
+                  if (t.section === "todo") onTodoList(t.tab === "mine" ? "mine" : "site");
                   onGo(t.section);
                 }}
               >

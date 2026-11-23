@@ -20,8 +20,8 @@ export default async function JobsPage({ searchParams }: { searchParams: Promise
   if (!me) return <TodoSignIn next="/todo/jobs" />;
   if (!me.sections.includes("todo")) redirect("/todo");
   const params = await searchParams;
-  // /todo/jobs?list=house opens the office's private house list straight away (a site login never can).
-  const initialList: TodoList = me.kind === "admin" && params.list === "house" ? "house" : "site";
+  // /todo/jobs?list=house (or ?list=mine, Niko's own) opens that private list straight away (a site login never can).
+  const initialList: TodoList = me.kind === "admin" && (params.list === "house" || params.list === "mine") ? params.list : "site";
   // A tap on a phone alert about a job: ?open=<job>, and for the office &alert=<its alert>.
   const openJob = typeof params.open === "string" && /^sitetask-(live|dev)-[a-f0-9]{12}$/.test(params.open) ? params.open : undefined;
   const seenAlert = me.kind === "admin" && typeof params.alert === "string" && /^alert-(live|dev)-[a-f0-9]{12}$/.test(params.alert) ? params.alert : undefined;

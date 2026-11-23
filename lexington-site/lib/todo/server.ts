@@ -11,10 +11,14 @@ import {
   areaLabel,
   AREAS,
   MAX_NOTE,
+  MAX_TAG,
   MAX_TEXT,
   photoAt,
+  sameTag,
   SECTIONS,
   SITE_SECTIONS,
+  STARTER_TAGS,
+  tidyTag,
   type Section,
   type SiteAccount,
   type SiteSection,
@@ -133,6 +137,7 @@ const FIELDS = `{
   "list": coalesce(list, "site"),
   "text": coalesce(text, ""),
   "area": area,
+  "tag": tag,
   "urgent": coalesce(urgent, false),
   "status": coalesce(status, "open"),
   createdAt,
@@ -146,7 +151,7 @@ const FIELDS = `{
   "updatedAt": _updatedAt
 }`;
 
-/** The office gets both lists; a site login (the foreman) only ever gets the site list. */
+/** The office gets every list; a site login (the foreman) only ever gets the site list. */
 export async function listTasks(me: TodoMe): Promise<TodoTask[]> {
   return getBuyersClient().fetch<TodoTask[]>(
     `*[_type == "siteTask" && string::startsWith(_id, $prefix) && ($all || coalesce(list, "site") == "site")] | order(createdAt desc)[0...800] ${FIELDS}`,
@@ -185,6 +190,15 @@ function cleanArea(value: unknown) {
   if (typeof value !== "string" || !(AREAS as readonly string[]).includes(value)) throw new TodoError(400, "Pick a floor from the list.");
   return value;
 }
+/** A tag on his own list: one of the starter ones (as they're spelt), or his own, one short line. */
+function cleanTag(value: unknown): string | null {
+  if (value === null || value === undefined) return null;
+  if (typeof value !== "string") throw new TodoError(400, "Pick a tag from the list.");
+  const tag = tidyTag(value);
+  if (!tag) return null;
+  if (tag.length > MAX_TAG) throw new TodoError(400, `That tag is too long (${MAX_TAG} letters at most).`);
+  return STARTER_TAGS.find((s) => sameTag(s, tag)) ?? tag;
+}
 function cleanPhotoId(value: unknown) {
   if (value === null || value === undefined || value === "") return null;
   if (typeof value !== "string" || !PHOTO_ID_RE.test(value)) throw new TodoError(400, "That photo didn't upload properly. Take it again.");
@@ -198,14 +212,17 @@ export async function createTask(me: TodoMe, body: Record<string, unknown>): Pro
   const text = cleanText(body.text, MAX_TEXT, "note");
   const photoId = cleanPhotoId(body.photoId);
   if (!text && !photoId) throw new TodoError(400, "Add a photo or write what needs doing.");
+  // A site login (the foreman) adds to the site list only; the house list and Niko's own are the office's.
+  const list = me.kind === "admin" && (body.list === "house" || body.list === "mine") ? body.list : "site";
+  const tag = list === "mine" ? cleanTag(body.tag) : null;
   const id = PREFIX + randomBytes(6).toString("hex");
   await getBuyersClient().create({
     _id: id,
     _type: "siteTask",
-    // A site login (the foreman) adds to the site list only; the house list is the office's.
-    list: me.kind === "admin" && body.list === "house" ? "house" : "site",
+    list,
     text,
     area: cleanArea(body.area),
+    ...(tag ? { tag } : {}),
     urgent: body.urgent === true,
     status: "open",
     createdAt: new Date().toISOString(),
@@ -303,7 +320,7 @@ export async function changeTask(me: TodoMe, id: string, body: Record<string, un
     `*[_id == $id && _type == "siteTask"][0]{ status, "fix": donePhoto.asset._ref, "list": coalesce(list, "site"), createdById }`,
     { id }
   );
-  // A house job does not exist as far as a site login is concerned.
+  // A house job (or one on Niko's own list) does not exist as far as a site login is concerned.
   if (!before || (before.list !== "site" && me.kind !== "admin")) throw new TodoError(404, "That item isn't on the list any more.");
   const now = new Date().toISOString();
 
@@ -335,7 +352,12 @@ export async function changeTask(me: TodoMe, id: string, body: Record<string, un
     if ("text" in body) set.text = cleanText(body.text, MAX_TEXT, "note");
     if ("area" in body) set.area = cleanArea(body.area);
     if ("urgent" in body) set.urgent = body.urgent === true;
-    await client.patch(id).set(set).commit();
+    // A tag: jobs on his own list only. None takes it off.
+    const tag = "tag" in body ? cleanTag(body.tag) : undefined;
+    if (tag && before.list !== "mine") throw new TodoError(400, "Only jobs on your own list have tags.");
+    if (tag) set.tag = tag;
+    const patch = client.patch(id).set(set);
+    await (tag === null ? patch.unset(["tag"]) : patch).commit();
   } else {
     throw new TodoError(400, "Unknown change.");
   }

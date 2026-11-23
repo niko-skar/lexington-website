@@ -19,7 +19,7 @@ import { ghanaDay, stillOut } from "@/lib/store/shared";
 import { lineName, toBuyLines } from "@/lib/store/shopping";
 import { suppliersOwed } from "@/lib/suppliers/server";
 import { listTasks } from "@/lib/todo/server";
-import type { TodoMe } from "@/lib/todo/shared";
+import { countTags, type TodoMe } from "@/lib/todo/shared";
 
 // The site app's home page (30 Oct 2026): how each part this login opens stands today, in a line or two.
 // Each part answers on its own, so one that can't be read leaves the others showing.
@@ -32,8 +32,11 @@ export interface SlotCount {
 export interface DashboardData {
   /** Today in Ghana, YYYY-MM-DD. */
   today: string;
-  /** The site list's jobs (the to-do opens on it); the office's house list counted apart. */
-  todo?: { open: number; urgent: number; doneToday: number; house: number };
+  /**
+   * The site list's jobs (the to-do opens on it); the office's house list counted apart; and (the office) Niko's own
+   * list, its own tile: what's left on it, how many urgent, and how many under each tag.
+   */
+  todo?: { open: number; urgent: number; doneToday: number; house: number; mine?: { open: number; urgent: number; tags: [string, number][] } };
   /** The store room; and its shopping list (its own tile): how many lines to buy, how many needed today, the first few. */
   store?: { toolsOut: number; opened: string | null; closed: string | null; toCheck?: number; toFix: number; atRepairer: number; toBuy: number; buyToday: number; buyNames: string[]; deliveries?: number };
   /** Spent on site this month, and the bank's debits waiting to be completed. */
@@ -99,7 +102,13 @@ async function todoPart(me: TodoMe, today: string) {
     urgent: open.filter((t) => t.urgent).length,
     doneToday: site.filter((t) => t.doneAt && ghanaDay(t.doneAt) === today).length,
     house: tasks.filter((t) => t.list === "house" && t.status !== "done").length,
+    ...(me.kind === "admin" ? { mine: minePart(tasks) } : {}),
   };
+}
+
+function minePart(tasks: Awaited<ReturnType<typeof listTasks>>) {
+  const open = tasks.filter((t) => t.list === "mine" && t.status !== "done");
+  return { open: open.length, urgent: open.filter((t) => t.urgent).length, tags: countTags(open) };
 }
 
 async function storePart(me: TodoMe, today: string) {

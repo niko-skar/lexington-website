@@ -10,13 +10,42 @@ export type Area = (typeof AREAS)[number];
 export const areaLabel = (area: string | null | undefined) =>
   !area ? "No floor given" : area === "Ground" ? "Ground floor" : area === "Roof" || area === "Outside" ? area : `${area} floor`;
 
-/** Two lists: the site (shared with the foreman) and the house (the office only, never shown to a site login). */
-export const LISTS = ["site", "house"] as const;
+/**
+ * The lists: the site (shared with the foreman), the house, and Niko's own (23 Nov 2026: "make me a separate to do list
+ * only for me for things to do when out, or give me the options to put tags on it, so to do when out, computer work.
+ * etc."). The house and his own are the office's only, never shown to a site login.
+ */
+export const LISTS = ["site", "house", "mine"] as const;
 export type TodoList = (typeof LISTS)[number];
-export const listLabel = (list: TodoList) => (list === "house" ? "House to-do" : "Site to-do");
+const LIST_LABELS: Record<TodoList, string> = { site: "Site to-do", house: "House to-do", mine: "My to-do" };
+export const listLabel = (list: TodoList) => LIST_LABELS[list] ?? LIST_LABELS.site;
 
 export const MAX_TEXT = 600;
 export const MAX_NOTE = 300;
+
+/**
+ * Tags on his own list (one per job): these to start with, and any he makes himself. The list shows a group for each,
+ * and a row of them on top to show one only (what's left to do when out, say).
+ */
+export const STARTER_TAGS = ["When out", "Computer work", "Calls"] as const;
+export const MAX_TAG = 30;
+/** A tag as kept: one line, single spaces. */
+export const tidyTag = (value: string) => value.replace(/\s+/g, " ").trim();
+export const sameTag = (a: string | null | undefined, b: string | null | undefined) => !!a && !!b && a.toLowerCase() === b.toLowerCase();
+/** The tags to offer on his own list: the starter ones, then the others its jobs carry (A to Z). */
+export function tagsOn(tasks: TodoTask[]): string[] {
+  const out: string[] = [...STARTER_TAGS];
+  const own = tasks
+    .filter((t) => t.list === "mine" && t.tag)
+    .map((t) => t.tag as string)
+    .sort((a, b) => a.localeCompare(b));
+  for (const tag of own) if (!out.some((t) => sameTag(t, tag))) out.push(tag);
+  return out;
+}
+/** How many of these jobs carry each tag, in the order tagsOn gives (tags no job carries left out). */
+export function countTags(tasks: TodoTask[], tags = tagsOn(tasks)): [string, number][] {
+  return tags.map((tag): [string, number] => [tag, tasks.filter((t) => sameTag(t.tag, tag)).length]).filter(([, n]) => n > 0);
+}
 
 export interface TodoTask {
   id: string;
@@ -24,6 +53,8 @@ export interface TodoTask {
   list: TodoList;
   text: string;
   area: string | null;
+  /** On his own list: the job's tag ("When out", "Computer work", one of his own), or none. */
+  tag: string | null;
   urgent: boolean;
   status: "open" | "done";
   createdAt: string;

@@ -730,6 +730,58 @@ select.input {
   background: var(--x-accent);
   color: var(--x-accent-ink);
 }
+/* Niko's own list (23 Nov 2026): "+ New tag", and the tag being written. */
+.chipNew {
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 8px;
+  border: 1.5px dashed var(--x-line);
+  background: transparent;
+  color: var(--x-muted);
+  font-weight: 600;
+  font-size: 15px;
+}
+.newTag {
+  display: flex;
+  flex: 1 1 240px;
+  gap: 8px;
+  min-width: 0;
+}
+.newTag .input {
+  flex: 1;
+  min-height: 44px;
+  padding: 8px 12px;
+}
+/* ...and the row of its tags above the list, to show one only (what's left to do when out, say). */
+.tagRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 6px 0 4px;
+}
+.tag,
+.tagOn {
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--x-line);
+  background: var(--x-surface);
+  color: var(--x-ink);
+  font-weight: 600;
+  font-size: 15px;
+}
+.tagOn {
+  border-color: var(--x-accent);
+  background: var(--x-accent);
+  color: var(--x-accent-ink);
+}
+.tag span,
+.tagOn span {
+  margin-left: 4px;
+  font-family: var(--x-num);
+  font-weight: 500;
+  opacity: 0.75;
+}
 .urgentOff,
 .urgentOn {
   justify-self: start;

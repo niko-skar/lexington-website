@@ -2,7 +2,22 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { AREAS, areaLabel, listLabel, MAX_NOTE, MAX_TEXT, photoAt, type TodoList, type TodoMe, type TodoTask } from "@/lib/todo/shared";
+import {
+  AREAS,
+  areaLabel,
+  countTags,
+  listLabel,
+  MAX_NOTE,
+  MAX_TAG,
+  MAX_TEXT,
+  photoAt,
+  sameTag,
+  tagsOn,
+  tidyTag,
+  type TodoList,
+  type TodoMe,
+  type TodoTask,
+} from "@/lib/todo/shared";
 import { AccessSheet } from "./AccessSheet";
 import { dayName, errorText, send, startPolling, when } from "./api";
 import { JobAlertsCard, JobAlertsMenu, type PhoneAlerts } from "./PhoneAlerts";
@@ -39,6 +54,7 @@ export function TodoApp({
   active,
   initialTasks,
   initialList = "site",
+  listAsk,
   openJob,
   phone,
   startedOffline,
@@ -50,6 +66,8 @@ export function TodoApp({
   /** Null when the app opened on another part and the list hasn't arrived yet. */
   initialTasks: TodoTask[] | null;
   initialList?: TodoList;
+  /** A list asked for from outside: the home page's To-do tile (the site list) and My to-do tile (Niko's own). */
+  listAsk?: { list: TodoList; at: number } | null;
   /** Opened from a phone alert about a new job: that job is shown, lit up for a moment. */
   openJob?: string;
   /** This phone's alerts: a site login turns its buzz for new jobs on here. */
@@ -65,8 +83,10 @@ export function TodoApp({
   const [openTask] = useState(() => (openJob ? (initialTasks ?? []).find((t) => t.id === openJob) : undefined));
   const [tasks, setTasks] = useState<TodoTask[]>(initialTasks ?? []);
   const [loaded, setLoaded] = useState(initialTasks !== null);
-  // Which list is on screen: the site (shared with the foreman) or the house (the office only).
-  const [list, setList] = useState<TodoList>(isAdmin ? (openTask?.list ?? initialList) : "site");
+  // Which list is on screen: the site (shared with the foreman), or the house or Niko's own (the office only).
+  const [list, setList] = useState<TodoList>(isAdmin ? (openTask?.list ?? listAsk?.list ?? initialList) : "site");
+  // On his own list: the one tag shown (the row of tags on top), or every job.
+  const [tagFilter, setTagFilter] = useState<string | null>(null);
   const tasksRef = useRef<TodoTask[]>(initialTasks ?? []);
   const [tab, setTab] = useState<Tab>(openTask?.status === "done" ? "done" : "open");
   const [lit, setLit] = useState(openTask?.id ?? "");
@@ -186,6 +206,21 @@ export function TodoApp({
     return () => clearTimeout(timer);
   }, [openJob, openTask, startedOffline, showToast]);
 
+  // Another list on screen (☰ Lists, or a tile on the home page), from its To do tab with every job showing.
+  const showList = useCallback((which: TodoList) => {
+    setList(which);
+    setTab("open");
+    setTagFilter(null);
+    setItemMenu(null);
+    setArmed(null);
+  }, []);
+  // The home page's tiles: the list each one counts (the office; a site login only ever has the site list).
+  useEffect(() => {
+    if (!listAsk || !isAdmin) return;
+    const timer = setTimeout(() => showList(listAsk.list), 0);
+    return () => clearTimeout(timer);
+  }, [listAsk, isAdmin, showList]);
+
   /* ---------- changes ---------- */
 
   const mutate = useCallback(
@@ -279,21 +314,43 @@ export function TodoApp({
   );
   const openOn = (which: TodoList) => tasks.filter((t) => (t.list ?? "site") === which && t.status !== "done").length;
   const house = list === "house";
+  const own = list === "mine";
+  // The house list and Niko's own: only the office sees them.
+  const onlyYou = list !== "site";
   const doneToday = done.filter((t) => t.doneAt && new Date(t.doneAt).toDateString() === new Date().toDateString()).length;
+  // His own list's tags (the starter ones, then his own), how many open jobs carry each (the row on top; the one
+  // showing stays in it at 0 once its last job is ticked), and the jobs the one showing leaves on screen.
+  const tags = useMemo(() => tagsOn(tasks), [tasks]);
+  const tagRow = useMemo(() => {
+    if (!own) return [];
+    const row = countTags(open, tags);
+    return tagFilter && !row.some(([tag]) => sameTag(tag, tagFilter)) ? [...row, [tagFilter, 0] as [string, number]] : row;
+  }, [own, open, tags, tagFilter]);
+  const shown = useMemo(() => (own && tagFilter ? open.filter((t) => sameTag(t.tag, tagFilter)) : open), [own, tagFilter, open]);
 
-  // Site: floor by floor (walk the building). House: one list. Urgent first, then the longest waiting.
+  // Site: floor by floor (walk the building). House: one list. His own: a group for each tag. Urgent first, then the
+  // longest waiting.
   const openGroups = useMemo(() => {
     const order = (a: TodoTask, b: TodoTask) => Number(b.urgent) - Number(a.urgent) || a.createdAt.localeCompare(b.createdAt);
-    if (house) return open.length ? [{ key: "house", title: "Jobs", items: [...open].sort(order) }] : [];
+    if (house) return shown.length ? [{ key: "house", title: "Jobs", items: [...shown].sort(order) }] : [];
+    if (own) {
+      return ([...tags, null] as (string | null)[])
+        .map((tag) => ({
+          key: tag ?? "none",
+          title: tag ?? "No tag",
+          items: shown.filter((t) => (tag === null ? !t.tag : sameTag(t.tag, tag))).sort(order),
+        }))
+        .filter((g) => g.items.length > 0);
+    }
     const known = AREAS as readonly string[];
     return ([...AREAS, null] as (string | null)[])
       .map((area) => ({
         key: area ?? "none",
         title: areaLabel(area),
-        items: open.filter((t) => (area === null ? !known.includes(t.area ?? "") : t.area === area)).sort(order),
+        items: shown.filter((t) => (area === null ? !known.includes(t.area ?? "") : t.area === area)).sort(order),
       }))
       .filter((g) => g.items.length > 0);
-  }, [open, house]);
+  }, [shown, house, own, tags]);
 
   const doneGroups = useMemo(() => {
     const groups: { day: string; items: TodoTask[] }[] = [];
@@ -320,7 +377,7 @@ export function TodoApp({
         title={
           <>
             {listLabel(list)}
-            {house && <span className={styles.onlyYou}>Only you</span>}
+            {onlyYou && <span className={styles.onlyYou}>Only you</span>}
           </>
         }
         sub={`${open.length} to do · ${doneToday} done today`}
@@ -362,13 +419,37 @@ export function TodoApp({
           </div>
         )}
 
+        {/* His own list: its tags, to show one only (what's left to do when out, say). */}
+        {loaded && tab === "open" && tagRow.length > 0 && (
+          <div className={styles.tagRow} role="group" aria-label="Show">
+            <button type="button" className={tagFilter ? styles.tag : styles.tagOn} aria-pressed={!tagFilter} onClick={() => setTagFilter(null)}>
+              All <span>{open.length}</span>
+            </button>
+            {tagRow.map(([tag, n]) => (
+              <button
+                key={tag}
+                type="button"
+                className={sameTag(tagFilter, tag) ? styles.tagOn : styles.tag}
+                aria-pressed={sameTag(tagFilter, tag)}
+                onClick={() => setTagFilter(sameTag(tagFilter, tag) ? null : tag)}
+              >
+                {tag} <span>{n}</span>
+              </button>
+            ))}
+          </div>
+        )}
+
         {loaded &&
           tab === "open" &&
           (openGroups.length === 0 ? (
             <p className={styles.empty}>
-              {house
-                ? "Nothing to do at the house. Take a photo or write a job: only you can see this list."
-                : "Nothing to do. Take a photo of something on site and say what needs doing, and it appears here."}
+              {own && tagFilter
+                ? `Nothing left to do under ${tagFilter}.`
+                : own
+                  ? "Nothing on your list. Write a job or take a photo, and tag it: when out, computer work, calls, or a tag of your own. Only you can see this list."
+                  : house
+                    ? "Nothing to do at the house. Take a photo or write a job: only you can see this list."
+                    : "Nothing to do. Take a photo of something on site and say what needs doing, and it appears here."}
             </p>
           ) : (
             openGroups.map((group) => (
@@ -390,7 +471,7 @@ export function TodoApp({
                       {/* "just now" on the server can be "1 min ago" a second later on the phone: no hydration error over that. */}
                       <p className={styles.meta} suppressHydrationWarning>
                         Added {ago(task.createdAt)}
-                        {task.createdBy ? ` by ${task.createdBy}` : ""}
+                        {task.createdBy && !own ? ` by ${task.createdBy}` : ""}
                       </p>
                     </div>
                     <div className={styles.cardActions}>
@@ -465,9 +546,9 @@ export function TodoApp({
                       <div className={styles.doneText}>
                         <p className={styles.text}>{task.text || "No note"}</p>
                         <p className={styles.doneMeta} suppressHydrationWarning>
-                          ✓ Done{task.doneBy ? ` by ${task.doneBy}` : ""}
+                          ✓ Done{task.doneBy && !own ? ` by ${task.doneBy}` : ""}
                           {task.doneAt ? ` · ${when(task.doneAt)}` : ""}
-                          {house ? "" : ` · ${areaLabel(task.area)}`}
+                          {list === "site" ? ` · ${areaLabel(task.area)}` : task.tag ? ` · ${task.tag}` : ""}
                         </p>
                         {task.doneNote && <p className={styles.doneNote}>&ldquo;{task.doneNote}&rdquo;</p>}
                       </div>
@@ -547,6 +628,8 @@ export function TodoApp({
           key={composer.mode === "edit" ? composer.task.id : "new"}
           initial={composer}
           list={composer.mode === "edit" ? composer.task.list ?? "site" : list}
+          tags={tags}
+          startTag={own ? tagFilter : null}
           onClose={() => setComposer(null)}
           onAdded={(task) => {
             setComposer(null);
@@ -581,23 +664,20 @@ export function TodoApp({
             <>
               <p className={styles.label}>Lists</p>
               <div className={styles.menuList}>
-                {(["site", "house"] as const).map((which) => (
+                {(["site", "house", "mine"] as const).map((which) => (
                   <button
                     key={which}
                     type="button"
                     aria-current={list === which}
                     className={list === which ? styles.menuCurrent : undefined}
                     onClick={() => {
-                      setList(which);
-                      setTab("open");
-                      setItemMenu(null);
-                      setArmed(null);
+                      showList(which);
                       setMenuOpen(false);
                     }}
                   >
                     <span className={styles.menuGrow}>
                       {listLabel(which)}
-                      <small>{which === "house" ? "Only you" : "Shared with your foreman"}</small>
+                      <small>{which === "site" ? "Shared with your foreman" : which === "mine" ? "Only you · tags: when out, computer work…" : "Only you"}</small>
                     </span>
                     <span className={styles.menuCount}>{openOn(which)} to do</span>
                   </button>
@@ -665,20 +745,40 @@ export function TodoApp({
 function Composer({
   initial,
   list,
+  tags,
+  startTag,
   onClose,
   onAdded,
   onEdit,
 }: {
   initial: { mode: "new"; file?: File } | { mode: "edit"; task: TodoTask };
   list: TodoList;
+  /** His own list's tags to pick from; and the one showing on the list when a new job was started (it starts picked). */
+  tags: string[];
+  startTag: string | null;
   onClose: () => void;
   onAdded: (task: TodoTask) => void;
-  onEdit: (task: TodoTask, change: { text: string; area: string | null; urgent: boolean }) => void;
+  onEdit: (task: TodoTask, change: { text: string; area: string | null; urgent: boolean; tag?: string | null }) => void;
 }) {
   const editing = initial.mode === "edit" ? initial.task : null;
   const [text, setText] = useState(editing?.text ?? "");
   const [area, setArea] = useState<string | null>(editing?.area ?? null);
   const [urgent, setUrgent] = useState(editing?.urgent ?? false);
+  const [tag, setTag] = useState<string | null>(editing ? editing.tag : startTag);
+  // "+ New tag": the one being written (null when not), and the new ones made here, offered with the rest.
+  const [newTag, setNewTag] = useState<string | null>(null);
+  const [made, setMade] = useState<string[]>([]);
+  const offered = [...tags, ...made.filter((m) => !tags.some((t) => sameTag(t, m)))];
+  // The tag written so far becomes the job's (one already there, spelt as it is, if it's the same word).
+  const takeNewTag = () => {
+    const typed = tidyTag(newTag ?? "").slice(0, MAX_TAG);
+    setNewTag(null);
+    if (!typed) return tag;
+    const known = offered.find((t) => sameTag(t, typed));
+    if (!known) setMade((m) => [...m, typed]);
+    setTag(known ?? typed);
+    return known ?? typed;
+  };
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const { slot, start, clear, settled } = useUploadSlot();
@@ -695,8 +795,10 @@ function Composer({
 
   const save = async () => {
     setError("");
+    // A tag written but not added yet counts too.
+    const chosen = list !== "mine" ? null : newTag !== null ? takeNewTag() : tag;
     if (editing) {
-      onEdit(editing, { text: text.trim(), area, urgent });
+      onEdit(editing, { text: text.trim(), area, urgent, ...(list === "mine" ? { tag: chosen } : {}) });
       return;
     }
     if (!text.trim() && !slot) {
@@ -710,9 +812,14 @@ function Composer({
         setError("The photo didn't upload. Try it again, or remove it and save the note on its own.");
         return;
       }
-      const { task } = (await send("/api/todo", "POST", { list, text: text.trim(), area: list === "house" ? null : area, urgent, photoId: photo?.id ?? null })) as {
-        task: TodoTask;
-      };
+      const { task } = (await send("/api/todo", "POST", {
+        list,
+        text: text.trim(),
+        area: list === "site" ? area : null,
+        ...(list === "mine" ? { tag: chosen } : {}),
+        urgent,
+        photoId: photo?.id ?? null,
+      })) as { task: TodoTask };
       clear(true);
       onAdded(task);
     } catch (e) {
@@ -731,7 +838,7 @@ function Composer({
     <div className={styles.sheetBackdrop}>
       <div className={styles.sheet} role="dialog" aria-label={editing ? "Change this job" : "New job"}>
         <h2 className={styles.sheetTitle}>
-          {editing ? "Change this job" : list === "house" ? "New house job" : "New job"}
+          {editing ? "Change this job" : list === "house" ? "New house job" : list === "mine" ? "New job on your list" : "New job"}
         </h2>
 
         {editing ? (
@@ -787,7 +894,7 @@ function Composer({
           onChange={(e) => setText(e.target.value)}
           maxLength={MAX_TEXT}
           rows={3}
-          placeholder="e.g. Fill the gap under the window frame before plastering"
+          placeholder={list === "mine" ? "e.g. Call the bank about the transfer" : "e.g. Fill the gap under the window frame before plastering"}
         />
 
         {list === "site" && (
@@ -799,6 +906,48 @@ function Composer({
                   {a}
                 </button>
               ))}
+            </div>
+          </>
+        )}
+
+        {list === "mine" && (
+          <>
+            <span className={styles.label}>Tag</span>
+            <div className={styles.chips}>
+              {offered.map((t) => (
+                <button key={t} type="button" className={sameTag(tag, t) ? styles.chipOn : styles.chip} aria-pressed={sameTag(tag, t)} onClick={() => setTag(sameTag(tag, t) ? null : t)}>
+                  {t}
+                </button>
+              ))}
+              {newTag === null ? (
+                <button type="button" className={styles.chipNew} onClick={() => setNewTag("")}>
+                  + New tag
+                </button>
+              ) : (
+                <span className={styles.newTag}>
+                  <input
+                    id="todo-new-tag"
+                    className={styles.input}
+                    value={newTag}
+                    onChange={(e) => setNewTag(e.target.value)}
+                    maxLength={MAX_TAG}
+                    placeholder="e.g. Bank"
+                    aria-label="New tag"
+                    // Tapped "+ New tag": straight to typing it.
+                    autoFocus
+                    enterKeyHint="done"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        takeNewTag();
+                      }
+                    }}
+                  />
+                  <button type="button" className={styles.chip} onClick={() => takeNewTag()}>
+                    Add
+                  </button>
+                </span>
+              )}
             </div>
           </>
         )}
@@ -870,7 +1019,7 @@ function ProofSheet({
     <div className={styles.sheetBackdrop}>
       <div className={styles.sheet} role="dialog" aria-label="The finished job">
         <h2 className={styles.sheetTitle}>{noteOnly ? "Note on the finished job" : "Photo of the fix"}</h2>
-        <p className={styles.sheetNote}>{task.text || (task.list === "house" ? "House job" : areaLabel(task.area))}</p>
+        <p className={styles.sheetNote}>{task.text || (task.list === "site" ? areaLabel(task.area) : (task.tag ?? (task.list === "house" ? "House job" : "Your job")))}</p>
 
         {!noteOnly &&
           (slot ? (

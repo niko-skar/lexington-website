@@ -329,6 +329,8 @@ export function SiteApp({
   const [data, setData] = useState<SiteData>(initial);
   // The store's tab asked for (the home page's To buy tile, the back button to #buy; it reads #buy itself on opening).
   const [storeAsk, setStoreAsk] = useState<{ tab: "buy"; at: number } | null>(null);
+  // The to-do's list asked for (the home page's To-do and My to-do tiles).
+  const [listAsk, setListAsk] = useState<{ list: TodoList; at: number } | null>(null);
   const [unread, setUnread] = useState(() => initial.alerts?.unread ?? 0);
   const current = useRef(first);
   const scrollAt = useRef<Partial<Record<View, number>>>({});
@@ -518,6 +520,7 @@ export function SiteApp({
               go("rollcall");
             }}
             onStoreTab={(tab) => setStoreAsk({ tab, at: Date.now() })}
+            onTodoList={(list) => setListAsk({ list, at: Date.now() })}
             unread={unread}
           />
         </div>
@@ -529,6 +532,7 @@ export function SiteApp({
             active={section === "todo"}
             initialTasks={data.todo ?? null}
             initialList={initialList}
+            listAsk={listAsk}
             openJob={openJob}
             phone={phone}
             startedOffline={startedOffline && first === "todo"}
