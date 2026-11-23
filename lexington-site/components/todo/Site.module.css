@@ -516,8 +516,67 @@
   font-size: 17px;
 }
 
+/* ---------- expenses: the search over the page (23 Nov 2026) ---------- */
+.search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.searchIcon {
+  position: absolute;
+  left: 14px;
+  width: 20px;
+  height: 20px;
+  color: var(--x-muted);
+  pointer-events: none;
+}
+.search .searchInput {
+  width: 100%;
+  min-width: 0;
+  min-height: 52px;
+  padding: 0 48px 0 44px;
+  border: 1px solid var(--x-line);
+  border-radius: 10px;
+  background: var(--x-surface);
+  color: var(--x-ink);
+  font-size: 17px;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.searchInput::-webkit-search-cancel-button,
+.searchInput::-webkit-search-decoration {
+  display: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.search .searchClear {
+  position: absolute;
+  right: 6px;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--x-muted);
+  font-size: 26px;
+  line-height: 1;
+}
+.foundLine {
+  margin: 0;
+  font-size: 14px;
+  color: var(--x-muted);
+}
+/* During a search on a phone (or a small laptop): what it found right under the box; the form only for an entry tapped. */
+.searching .deskSide {
+  display: none;
+}
+
 /* ---------- a laptop (2 Nov 2026): the expense form beside the book, the stock list in two columns ---------- */
 @media (min-width: 1280px) {
+  .searching .deskSide {
+    display: block;
+  }
   .deskSplit {
     display: grid;
     grid-template-columns: minmax(400px, 460px) minmax(0, 1fr);

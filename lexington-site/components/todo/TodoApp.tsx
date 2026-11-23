@@ -7,6 +7,7 @@ import {
   areaLabel,
   countTags,
   listLabel,
+  LISTS,
   MAX_NOTE,
   MAX_TAG,
   MAX_TEXT,
@@ -34,6 +35,8 @@ type ToastData = { text: string; tone?: "error"; jobId?: string };
 const NEW_CAMERA = "todo-new-camera";
 const NEW_GALLERY = "todo-new-gallery";
 const FIX_CAMERA = "todo-fix-camera";
+/** The switch's short names (the title under it gives the whole name). */
+const SWITCH_LABELS: Record<TodoList, string> = { site: "Site", house: "House", mine: "My to-do" };
 
 /* ---------- small helpers ---------- */
 
@@ -206,7 +209,7 @@ export function TodoApp({
     return () => clearTimeout(timer);
   }, [openJob, openTask, startedOffline, showToast]);
 
-  // Another list on screen (☰ Lists, or a tile on the home page), from its To do tab with every job showing.
+  // Another list on screen (the switch under the title, or a tile on the home page), from its To do tab with every job showing.
   const showList = useCallback((which: TodoList) => {
     setList(which);
     setTab("open");
@@ -383,6 +386,23 @@ export function TodoApp({
         sub={`${open.length} to do · ${doneToday} done today`}
         onMenu={() => setMenuOpen(true)}
       >
+        {/* The office's three lists side by side under the title, each with what's left on it (Niko, 23 Nov 2026: "at
+            the top here, not behind the burger menu"). A site login only has the site list, so no switch. */}
+        {isAdmin && (
+          <div className={styles.listSwitch} role="group" aria-label="Lists">
+            {LISTS.map((which) => (
+              <button
+                key={which}
+                type="button"
+                aria-pressed={list === which}
+                className={list === which ? styles.listPickOn : styles.listPick}
+                onClick={() => showList(which)}
+              >
+                {SWITCH_LABELS[which]} <span className={styles.tabCount}>{openOn(which)}</span>
+              </button>
+            ))}
+          </div>
+        )}
         <div className={styles.tabs} role="tablist">
           <button type="button" role="tab" aria-selected={tab === "open"} className={tab === "open" ? styles.tabOn : styles.tab} onClick={() => setTab("open")}>
             To do <span className={styles.tabCount}>{open.length}</span>
@@ -660,31 +680,6 @@ export function TodoApp({
 
       {menuOpen && (
         <SiteMenu me={me} onClose={() => setMenuOpen(false)} onRefresh={() => void refresh()} onLogins={() => setAccessOpen(true)}>
-          {isAdmin && (
-            <>
-              <p className={styles.label}>Lists</p>
-              <div className={styles.menuList}>
-                {(["site", "house", "mine"] as const).map((which) => (
-                  <button
-                    key={which}
-                    type="button"
-                    aria-current={list === which}
-                    className={list === which ? styles.menuCurrent : undefined}
-                    onClick={() => {
-                      showList(which);
-                      setMenuOpen(false);
-                    }}
-                  >
-                    <span className={styles.menuGrow}>
-                      {listLabel(which)}
-                      <small>{which === "site" ? "Shared with your foreman" : which === "mine" ? "Only you · tags: when out, computer work…" : "Only you"}</small>
-                    </span>
-                    <span className={styles.menuCount}>{openOn(which)} to do</span>
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
           {!isAdmin && phone && <JobAlertsMenu phone={phone} toast={showToast} onDone={() => setMenuOpen(false)} />}
         </SiteMenu>
       )}

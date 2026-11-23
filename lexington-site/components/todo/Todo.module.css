@@ -269,6 +269,54 @@
   }
 }
 
+/* The to-do lists (23 Nov 2026): Site, House and My to-do side by side under the title, like Finance's tabs, the
+   one showing filled in. ".listSwitch" in front: stronger than the app's "buttons use the page's font" rule. */
+.listSwitch {
+  display: flex;
+  gap: 6px;
+  max-width: var(--x-page);
+  margin: 10px auto 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.listSwitch::-webkit-scrollbar {
+  display: none;
+}
+.listSwitch .listPick,
+.listSwitch .listPickOn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--x-line);
+  border-radius: 99px;
+  background: var(--x-surface);
+  color: var(--x-muted);
+  font-family: var(--x-display);
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.listSwitch .listPickOn {
+  border-color: var(--x-accent);
+  background: var(--x-accent);
+  color: var(--x-accent-ink);
+}
+.listPickOn .tabCount {
+  background: rgba(255, 255, 255, 0.22);
+  color: inherit;
+}
+@media (hover: hover) {
+  .listSwitch .listPick:hover {
+    border-color: var(--x-muted);
+    color: var(--x-ink);
+  }
+}
+
 /* ---------- notes under the header ---------- */
 .banner,
 .hint {
@@ -855,10 +903,6 @@ select.input {
 .menuList form {
   margin: 0;
 }
-.menuList .menuCurrent {
-  border-color: var(--x-accent);
-  box-shadow: inset 0 0 0 1px var(--x-accent);
-}
 .menuGrow {
   flex: 1;
   display: grid;
@@ -867,12 +911,6 @@ select.input {
 .menuGrow small {
   font-size: 13px;
   font-weight: 500;
-  color: var(--x-muted);
-}
-.menuCount {
-  margin-left: 10px;
-  font-family: var(--x-num);
-  font-size: 13px;
   color: var(--x-muted);
 }
 .result {

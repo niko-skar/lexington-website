@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 
 import { debitGuess, debitWords, isInflow, money, shopOf, todayISO, type BankDebit, type Expense } from "@/lib/expenses/shared";
 import type { BookLists } from "@/lib/quickbooks/books";
@@ -11,7 +11,7 @@ import type { OpenBill } from "@/lib/suppliers/shared";
 import { AccessSheet } from "./AccessSheet";
 import { send, startPolling, when } from "./api";
 import { BankDebits } from "./BankDebits";
-import { ExpenseBook, receiptDownload } from "./ExpenseBook";
+import { ExpenseBook, receiptDownload, searchWords } from "./ExpenseBook";
 import { ExpenseForm, niceDate, type ExpensePrefill } from "./ExpenseForm";
 import site from "./Site.module.css";
 import { SiteHeader, SiteMenu } from "./SiteChrome";
@@ -267,6 +267,11 @@ export function ExpensesApp({
   const [menuOpen, setMenuOpen] = useState(false);
   const [accessOpen, setAccessOpen] = useState(false);
   const [editing, setEditing] = useState<Expense | null>(null);
+  // The search box over the page: what it finds shows instead of the totals, from every month. The list follows a
+  // moment behind the typing, so the box stays quick on a phone.
+  const [query, setQuery] = useState("");
+  const search = useDeferredValue(query);
+  const searching = searchWords(search).length > 0;
   const [formKey, setFormKey] = useState(0);
   const [justSaved, setJustSaved] = useState(false);
   const saving = useRef(false);
@@ -340,7 +345,8 @@ export function ExpensesApp({
     setEditing(x);
     setJustSaved(false);
     setFormKey((k) => k + 1);
-    showForm();
+    // After the redraw: during a search on a phone the form only comes back for the entry tapped.
+    setTimeout(showForm, 50);
   }, []);
 
   const onCancel = useCallback(() => {
@@ -560,7 +566,37 @@ export function ExpensesApp({
           <p className={styles.loading}>Loading the expenses…</p>
         ) : (
           <>
-            <div className={site.deskSplit}>
+            {/* Niko, 23 Nov 2026: "i need to be able to search through them so i can find things i've already paid quickly". */}
+            <div className={site.search} role="search">
+              <svg className={site.searchIcon} viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" strokeWidth="2.2" />
+                <path d="M15.5 15.5 21 21" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+              </svg>
+              <input
+                type="search"
+                className={site.searchInput}
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") setQuery("");
+                  // A phone's Search key: the keyboard goes, the entries found stay.
+                  else if (e.key === "Enter") e.currentTarget.blur();
+                }}
+                placeholder="Search: who you paid, what for, amount, EXP-…"
+                aria-label="Search the expenses"
+                enterKeyHint="search"
+                autoComplete="off"
+                spellCheck={false}
+              />
+              {query && (
+                <button type="button" className={site.searchClear} onClick={() => setQuery("")} aria-label="Clear the search">
+                  ×
+                </button>
+              )}
+            </div>
+            {/* During a search a phone shows what it found straight under the box: the form only for an entry tapped (or one
+                being started from a bank text or a bill). A laptop keeps the form beside the list. */}
+            <div className={`${site.deskSplit} ${searching && !editing && !prefill ? site.searching : ""}`}>
             <div id="exp-side" className={site.deskSide}>
             <BankDebits pending={pending} completing={prefill?.debitId ?? null} onComplete={onComplete} onDismiss={(d) => void onDismiss(d)} />
             <ExpenseForm
@@ -582,8 +618,8 @@ export function ExpensesApp({
             />
             </div>
             <div>
-            <SteelCard expenses={expenses} items={items} onOpen={onSteel} />
-            <ExpenseBook expenses={expenses} editingId={editing?.id ?? null} onEdit={onEdit} onOpenReceipt={onOpenReceipt} />
+            {!searching && <SteelCard expenses={expenses} items={items} onOpen={onSteel} />}
+            <ExpenseBook expenses={expenses} editingId={editing?.id ?? null} onEdit={onEdit} onOpenReceipt={onOpenReceipt} query={search} />
             </div>
             </div>
           </>
