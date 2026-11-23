@@ -20,7 +20,9 @@ function Change({ c, mode }: { c: PilotRunChange; mode: PilotRun["mode"] }) {
       ? { label: "Done", className: styles.levelOk }
       : c.done === "queued"
         ? { label: "To Google", className: styles.levelOk }
-        : mode === "on"
+        : c.done === "midnight"
+          ? { label: "After midnight", className: styles.levelWatch }
+          : mode === "on"
           ? { label: "Not done", className: styles.levelAct }
           : { label: "Would do", className: styles.levelWatch };
   return (
@@ -29,6 +31,7 @@ function Change({ c, mode }: { c: PilotRunChange; mode: PilotRun["mode"] }) {
       <span>{describe(c)}</span>
       <span className={styles.watchDetail}>
         {c.reason}
+        {c.madeAt ? ` Made ${formatWhen(c.madeAt)} GMT.` : ""}
         {c.error ? ` ${c.error}` : ""}
       </span>
     </li>

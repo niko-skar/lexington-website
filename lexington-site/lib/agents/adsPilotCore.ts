@@ -19,6 +19,9 @@
  *   channel is bringing them, and never again within 14 days of Niko switching it back on.
  * - A budget only changes when it moves by at least 10% (and 50 cents), and only goes up
  *   three days after its last change: steady budgets let Meta and Google learn.
+ * - Meta won't take a daily budget below what it has already spent that day. A cut it can't
+ *   take at the 6:00 run (the US and Canada adverts spend most of their day in the American
+ *   evening, before 6:00 GMT) is made just after midnight instead, when the day starts afresh.
  * - When the month's money is used up, everything is paused until the 1st, and the same
  *   campaigns are switched back on then.
  */
@@ -42,6 +45,12 @@ export interface Holder {
    * opened the chat straight away). Otherwise the lead forms. Either way the results are form entries that aren't cold.
    */
   group?: "whatsapp" | "form";
+  /**
+   * Meta, daily budgets only: what it has spent so far in the ad account's day. Meta won't take a daily budget below
+   * that (see `lowestToday`), and the US and Canada adverts spend most of their day before the 6:00 GMT run (the
+   * American evening).
+   */
+  spentToday?: number;
 }
 
 /**
@@ -114,6 +123,11 @@ export interface PilotPlan {
   /** What each channel may spend today. */
   allowance: { meta: number; google: number };
   changes: PilotChange[];
+  /**
+   * Budget cuts Meta won't take today, because the budget has already spent more than the new figure today: they are
+   * made just after midnight, at the start of the ad account's next day (the 00:10 GMT run, `runPilotMidnightCuts`).
+   */
+  afterMidnight: PilotChange[];
   /** Holders paused because the month's money ran out. */
   pausedForCap: string[];
   notes: string[];
@@ -185,6 +199,67 @@ export function monthCapFor(today: string, startDate: string, monthlyCap: number
   return cents((monthlyCap * covered) / total);
 }
 
+/**
+ * The lowest daily budget Meta takes today for a budget that has already spent `spentToday` in the ad account's day.
+ * Meta refuses less than what was spent today plus what it may spend while the change goes through. On 23 Nov 2026 the
+ * US and Canada campaign had spent $1.85 by the 6:00 run and Meta answered: "Your budget must be at least $2.00. This
+ * minimum amount is required to account for any spending that occurs while your budget is updated, which may take up to
+ * 15 minutes." Its exact margin isn't published, so with room to spare: 10% and 10 cents more, up to the next 10 cents,
+ * and never under the $1 minimum.
+ */
+export function lowestToday(spentToday: number | undefined): number {
+  const spent = Math.max(0, spentToday ?? 0);
+  return Math.max(MIN_DAILY, Math.ceil((spent * 1.1 + 0.1) * 10 - 1e-9) / 10);
+}
+
+/** Meta's lowest budget in dollars, read from its refusal ("Your budget must be at least $2.00. ..."); null for any other refusal. */
+export function metaMinimumFrom(message: string): number | null {
+  const m = /must be at least (?:US)?\$\s?(\d[\d,]*(?:\.\d{1,2})?)/i.exec(message);
+  if (!m) return null;
+  const n = Number(m[1].replace(/,/g, ""));
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+/**
+ * The Connect page's "Connected": the autopilot is on and its last run read the accounts and made a plan. A single
+ * change Meta refused is told on the dashboard and in the daily check, not as a lost connection (it said "Not connected
+ * yet" for that until 23 Nov 2026); a key without the right to change adverts (`blocked`) is.
+ */
+export function pilotConnected(mode: PilotMode, run: { plan: unknown; blocked?: boolean } | null): boolean {
+  return mode === "on" && Boolean(run?.plan) && run?.blocked !== true;
+}
+
+/** A cut waiting for midnight, and the budget as Meta has it now (cents; nothing when it's gone). */
+export interface MidnightCut {
+  key: string;
+  id: string;
+  /** The day the cut was planned (the ad account's day). */
+  day: string;
+  fromBudget: number | null;
+  toBudget: number | null;
+}
+
+/**
+ * Just after midnight: which waiting cuts to make now, and why any other is left alone. Only a cut planned on an earlier
+ * day; only for a budget that is still switched on and still the figure the cut started from (Niko, or a later run, may
+ * have changed it since).
+ */
+export function midnightDecisions(
+  waiting: ReadonlyArray<MidnightCut>,
+  today: string,
+  current: ReadonlyMap<string, { status?: string; cents: number }>
+): Array<{ key: string; id: string; make: number } | { key: string; id: string; leave: string }> {
+  return waiting
+    .filter((c) => c.day < today && c.toBudget !== null)
+    .map((c) => {
+      const now = current.get(c.id);
+      if (!now) return { key: c.key, id: c.id, leave: "It no longer exists at Meta." };
+      if (now.status !== "ACTIVE") return { key: c.key, id: c.id, leave: "It was switched off before midnight, so the cut wasn't needed." };
+      if (Math.round((c.fromBudget ?? 0) * 100) !== now.cents) return { key: c.key, id: c.id, leave: "Its budget was changed after the morning run, so the cut was left alone." };
+      return { key: c.key, id: c.id, make: Math.max(MIN_DAILY, c.toBudget ?? MIN_DAILY) };
+    });
+}
+
 /** Leads per dollar, smoothed so one lucky lead doesn't decide everything. */
 const yieldOf = (spend: number, leads: number) => (leads + 0.5) / (spend + 5);
 
@@ -228,6 +303,7 @@ export function chooseSplit(input: PilotInput, notes: string[]): { meta: number;
 export function planPilot(input: PilotInput): PilotPlan {
   const notes: string[] = [];
   const changes: PilotChange[] = [];
+  const afterMidnight: PilotChange[] = [];
   const monthCap = monthCapFor(input.today, input.startDate, input.monthlyCap);
   const spentMtd = cents(input.spentMtd.meta + input.spentMtd.google);
   const remaining = Math.max(0, cents(monthCap - spentMtd));
@@ -262,6 +338,7 @@ export function planPilot(input: PilotInput): PilotPlan {
       splitDate: input.lastSplit?.date ?? input.today,
       allowance: { meta: 0, google: 0 },
       changes,
+      afterMidnight: [],
       pausedForCap: [...new Set([...input.pausedForCap, ...pausing.map((h) => h.id)])],
       notes,
     };
@@ -383,7 +460,7 @@ export function planPilot(input: PilotInput): PilotPlan {
       const move = Math.abs(target - from);
       if (move < 0.5 || move < from * 0.1) return;
       if (target > from && !mayRaise(h.id) && !reopened.has(h.id)) return;
-      changes.push({
+      const change: PilotChange = {
         channel,
         id: h.id,
         level: h.level,
@@ -393,7 +470,17 @@ export function planPilot(input: PilotInput): PilotPlan {
         toBudget: target,
         cause: "pace",
         reason: `Keeps the month within ${usd(monthCap)}: ${usd(remaining)} left for ${daysLeft} day${daysLeft === 1 ? "" : "s"}, ${usd(channelDaily)} a day for ${label}.`,
-      });
+      };
+      // Meta won't take a cut below what this budget has already spent today: the whole cut is made just after
+      // midnight instead, when its day starts afresh (one change, not two, so Meta's learning isn't disturbed twice).
+      if (channel === "meta" && target < from && lowestToday(h.spentToday) > target) {
+        afterMidnight.push({
+          ...change,
+          reason: `${change.reason} It has already spent ${usd(h.spentToday ?? 0)} of today's, and Meta won't take a budget below that, so the cut is made just after midnight.`,
+        });
+        return;
+      }
+      changes.push(change);
     });
   }
 
@@ -404,6 +491,7 @@ export function planPilot(input: PilotInput): PilotPlan {
     splitDate: split.date,
     allowance,
     changes,
+    afterMidnight,
     pausedForCap: input.pausedForCap.filter((id) => !reopened.has(id)),
     notes,
   };

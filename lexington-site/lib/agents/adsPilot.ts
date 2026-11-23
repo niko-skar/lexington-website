@@ -11,7 +11,21 @@ import { buildStories, shiftDay } from "@/lib/visits/report";
 import { readVisitLogs } from "@/lib/visits/store";
 
 import { checkGoogleHealth, type GoogleFix, type GoogleHealth, type HealthProblem } from "./adsHealthCore";
-import { MIN_DAILY, WHATSAPP_TEST, dayIn, monthStart, pilotSettings, planPilot, usd, whatsappCampaignIds, type Holder, type PilotChange, type PilotPlan } from "./adsPilotCore";
+import {
+  MIN_DAILY,
+  WHATSAPP_TEST,
+  dayIn,
+  metaMinimumFrom,
+  midnightDecisions,
+  monthStart,
+  pilotSettings,
+  planPilot,
+  usd,
+  whatsappCampaignIds,
+  type Holder,
+  type PilotChange,
+  type PilotPlan,
+} from "./adsPilotCore";
 import { loadFactPack } from "./facts";
 import { allowedAmounts, longDate, soldOutWords } from "./factsCore";
 
@@ -71,9 +85,14 @@ interface DayMark {
 export interface PilotRunChange extends PilotChange {
   _key: string;
   day: string;
-  /** Made on Meta, handed to the Google script, or not made (a trial run, paused, or refused). */
-  done: "made" | "queued" | "not";
+  /**
+   * Made on Meta, handed to the Google script, waiting for midnight (a cut Meta won't take until the ad account's next
+   * day: `runPilotMidnightCuts` makes it at 00:10 GMT), or not made (a trial run, paused, or refused).
+   */
+  done: "made" | "queued" | "midnight" | "not";
   error?: string;
+  /** For a cut made just after midnight: when. */
+  madeAt?: string;
 }
 
 export interface GooglePlan {
@@ -99,7 +118,7 @@ export interface HealthRecord {
   hold: { since: string; reason: string } | null;
 }
 
-export type StoredPlan = Omit<PilotPlan, "changes" | "pausedForCap" | "notes">;
+export type StoredPlan = Omit<PilotPlan, "changes" | "afterMidnight" | "pausedForCap" | "notes">;
 
 export interface PilotRun {
   _id: string;
@@ -114,6 +133,10 @@ export interface PilotRun {
   notes: string[];
   /** Meta's account spending limit, as last set. */
   limit?: { month: string; value: number; setAt: string } | null;
+  /** Meta refused the key the right to change adverts on this run (the Connect page then says "Not connected yet"). */
+  blocked?: boolean;
+  /** The last run just after midnight (`runPilotMidnightCuts`): the morning run reports it, then the next night's replaces it. */
+  midnight?: { ranAt: string; made: number; left: number; errors: string[] } | null;
   // ---- remembered from run to run
   startedOn?: string;
   lastSplit?: { meta: number; google: number; date: string } | null;
@@ -225,8 +248,17 @@ async function gatherMeta(config: MetaConfig, nowMs: number, startFor: (today: s
   const since14 = shiftDay(today, -14);
   const fromDay = monthStart(today, startFor(today));
   const range = (since: string) => JSON.stringify({ since, until: yesterday });
+  // What each campaign and ad set has spent so far today: Meta won't take a daily budget below it. Without it a cut is
+  // still tried, and a refusal sends it to midnight (runAdsPilot), so a failed read doesn't stop the run.
+  const spentSoFar = (level: "campaign" | "adset") =>
+    metaGraph<{ data?: InsightRow[] }>(config, "GET", `${act}/insights`, {
+      level,
+      time_range: JSON.stringify({ since: today, until: today }),
+      fields: level === "campaign" ? "campaign_id,spend" : "adset_id,spend",
+      limit: "500",
+    }).catch(() => ({ data: [] as InsightRow[] }));
 
-  const [campaigns, adsets, byCampaign, byAdset, mtd] = await Promise.all([
+  const [campaigns, adsets, byCampaign, byAdset, mtd, todayByCampaign, todayByAdset] = await Promise.all([
     metaGraph<{ data?: CampaignRow[] }>(config, "GET", `${act}/campaigns`, {
       fields: "id,name,status,effective_status,daily_budget,lifetime_budget,budget_remaining,stop_time",
       limit: "500",
@@ -240,7 +272,12 @@ async function gatherMeta(config: MetaConfig, nowMs: number, startFor: (today: s
     fromDay <= yesterday
       ? metaGraph<{ data?: InsightRow[] }>(config, "GET", `${act}/insights`, { level: "account", time_range: range(fromDay), fields: "spend" })
       : Promise.resolve({ data: [] as InsightRow[] }),
+    spentSoFar("campaign"),
+    spentSoFar("adset"),
   ]);
+  const spentToday = new Map<string, number>();
+  for (const row of todayByCampaign.data ?? []) if (row.campaign_id) spentToday.set(row.campaign_id, num(row.spend));
+  for (const row of todayByAdset.data ?? []) if (row.adset_id) spentToday.set(row.adset_id, num(row.spend));
 
   // The WhatsApp campaigns (12 Nov 2026), and every ad set in them, make up the WhatsApp side of the test. Since 13 Nov
   // their ads open the buyers' form first, which ends with a WhatsApp button (Niko: "we're getting too many leads that are
@@ -270,7 +307,19 @@ async function gatherMeta(config: MetaConfig, nowMs: number, startFor: (today: s
     if (budget === null) return;
     const s = stats.get(row.id) ?? { spend: 0, leads: 0 };
     const group = waSets.has(row.id) || waCampaigns.has(row.id) ? "whatsapp" : "form";
-    holders.push({ channel: "meta", id: row.id, level, name, status, dailyBudget: budget, last14: { spend: Math.round(s.spend * 100) / 100, leads: s.leads }, group });
+    // Only a daily budget has today's spend as its floor (a lifetime budget is written as a new total).
+    const today$ = num(row.daily_budget) > 0 ? Math.round((spentToday.get(row.id) ?? 0) * 100) / 100 : undefined;
+    holders.push({
+      channel: "meta",
+      id: row.id,
+      level,
+      name,
+      status,
+      dailyBudget: budget,
+      last14: { spend: Math.round(s.spend * 100) / 100, leads: s.leads },
+      group,
+      ...(today$ !== undefined && { spentToday: today$ }),
+    });
   };
 
   const liveSets = (adsets.data ?? []).filter((a) => !GONE.has(a.effective_status ?? a.status ?? ""));
@@ -502,8 +551,9 @@ function fixId(fix: GoogleFix): string {
 
 function carried(previous: PilotRun | null): Partial<PilotRun> {
   if (!previous) return {};
-  const { startedOn, lastSplit, pausedForCap, lastChanged, pausedForResults, noPauseUntil, googlePlan, recent, history, limit, health, googleHold, pausedForHealth } = previous;
-  return { startedOn, lastSplit, pausedForCap, lastChanged, pausedForResults, noPauseUntil, googlePlan, recent, history, limit, health, googleHold, pausedForHealth };
+  const { startedOn, lastSplit, pausedForCap, lastChanged, pausedForResults, noPauseUntil, googlePlan, recent, history, limit, health, googleHold, pausedForHealth, midnight } =
+    previous;
+  return { startedOn, lastSplit, pausedForCap, lastChanged, pausedForResults, noPauseUntil, googlePlan, recent, history, limit, health, googleHold, pausedForHealth, midnight };
 }
 
 /**
@@ -598,6 +648,13 @@ export async function runAdsPilot(opts: { nowMs?: number } = {}): Promise<PilotR
     });
     notes.push(...plan.notes);
 
+    // What the run just after midnight did since the last run (its own record stays until the next night's).
+    const night = previous?.midnight;
+    if (night && (!previous?.ranAt || night.ranAt > previous.ranAt)) {
+      if (night.made) notes.push(`Just after midnight, ${night.made === 1 ? "1 budget cut" : `${night.made} budget cuts`} from the day before ${night.made === 1 ? "was" : "were"} made.`);
+      for (const e of night.errors) errors.push(`Just after midnight: ${e}`);
+    }
+
     // The hold pauses Google's campaigns (not just holds them at the minimum) and switches them back on once cleared.
     const pausedForHealthBefore = previous?.pausedForHealth ?? [];
     if (googleHold) {
@@ -646,9 +703,24 @@ export async function runAdsPilot(opts: { nowMs?: number } = {}): Promise<PilotR
           if (error instanceof MetaError && error.permission) {
             metaBlocked = `Meta doesn't allow the website's key to change adverts (${message}). The key needs the ads_management permission.`;
           }
+          // A cut below what the budget has already spent today ("Your budget must be at least $2.00 ..."): the whole
+          // cut waits for the ad account's next day, like the ones planned that way. Not an error.
+          // (Daily budgets only: the midnight run writes a daily budget.)
+          const cut = change.kind === "budget" && (change.toBudget ?? 0) < (change.fromBudget ?? 0) && !meta.lifetimes.has(change.id);
+          const lowest = !metaBlocked && cut ? metaMinimumFrom(message) : null;
+          if (lowest !== null) {
+            changes.push({
+              ...entry,
+              done: "midnight",
+              reason: `${change.reason} Meta takes no less than ${usd(lowest)} before midnight (it has already spent most of today's), so the cut is made just after.`,
+            });
+            continue;
+          }
           changes.push({ ...entry, done: "not", error: metaBlocked ?? message });
         }
       }
+      // The cuts Meta won't take today: made just after midnight (runPilotMidnightCuts, the 00:10 GMT cron).
+      for (const change of plan.afterMidnight) changes.push({ ...change, _key: newKey(), day: today, done: metaBlocked ? "not" : "midnight", ...(metaBlocked && { error: metaBlocked }) });
       for (const c of changes) if (c.done === "not" && c.error && c.channel === "meta" && c.error !== metaBlocked) errors.push(`${c.name}: ${c.error}`);
 
       // The Google script collects its share within the hour, and the health check's fixes with it.
@@ -673,18 +745,18 @@ export async function runAdsPilot(opts: { nowMs?: number } = {}): Promise<PilotR
             }
           : null;
 
-      // Remember what was done.
+      // Remember what was done (a cut waiting for midnight is remembered when it is made).
       for (const c of changes) {
-        if (c.done === "not") continue;
+        if (c.done === "not" || c.done === "midnight") continue;
         if (c.kind === "budget") lastChanged[c.id] = today;
         if (c.kind === "pause" && c.cause === "results") pausedForResults[c.id] = today;
       }
     } else {
-      for (const change of plan.changes) changes.push({ ...change, _key: newKey(), day: today, done: "not" });
+      for (const change of [...plan.changes, ...plan.afterMidnight]) changes.push({ ...change, _key: newKey(), day: today, done: "not" });
     }
     if (metaBlocked && !errors.includes(metaBlocked)) errors.unshift(metaBlocked);
 
-    const done = changes.filter((c) => c.done !== "not");
+    const done = changes.filter((c) => c.done === "made" || c.done === "queued");
     const pausedForCap =
       mode === "on"
         ? [
@@ -761,6 +833,8 @@ export async function runAdsPilot(opts: { nowMs?: number } = {}): Promise<PilotR
       errors,
       notes,
       limit,
+      blocked: Boolean(metaBlocked),
+      midnight: previous?.midnight ?? null,
       startedOn: previous?.startedOn ?? (mode === "on" ? startDate : undefined),
       lastSplit: mode === "on" ? { ...plan.split, date: plan.splitDate } : (previous?.lastSplit ?? null),
       pausedForCap,
@@ -783,6 +857,81 @@ export async function runAdsPilot(opts: { nowMs?: number } = {}): Promise<PilotR
   } catch (error) {
     console.error("[ads autopilot] failed:", error);
     return { error: error instanceof Error ? error.message : "The ads autopilot could not run." };
+  }
+}
+
+/**
+ * JUST AFTER MIDNIGHT (the 00:10 GMT ads-guard cron, the start of the ad account's day): the budget cuts the morning
+ * run couldn't make, because the campaign had already spent more than the new budget that day. The US and Canada
+ * adverts spend most of their day in the American evening, before the 6:00 GMT run, so their cuts can only be made
+ * once their day starts afresh (23 Nov 2026: $1.85 spent by 6:00, a cut to $1 refused). Only while the autopilot is on
+ * and not paused; each cut only if its budget is still switched on and still the figure it started from (see
+ * `midnightDecisions`). The outcome goes on the run's record, and the next morning run reports it. Never throws.
+ */
+export async function runPilotMidnightCuts(opts: { nowMs?: number } = {}): Promise<{ made: number; left: number; errors: string[] } | { error: string }> {
+  const nowMs = opts.nowMs ?? Date.now();
+  try {
+    if (pilotSettings().mode !== "on") return { made: 0, left: 0, errors: [] };
+    const [run, toggle] = await Promise.all([readPilotRun(), readPilotSwitch()]);
+    const waiting = (run?.changes ?? []).filter((c) => c.done === "midnight" && c.channel === "meta" && c.kind === "budget");
+    if (!run || !waiting.length || toggle.paused) return { made: 0, left: 0, errors: [] };
+    const config = metaConfig();
+    if (!config) return { error: "Meta's ad numbers aren't connected (META_ADS_ACCESS_TOKEN)." };
+
+    const act = `act_${config.accountId}`;
+    const [account, campaigns, adsets] = await Promise.all([
+      metaGraph<AccountRow>(config, "GET", act, { fields: "timezone_name" }),
+      metaGraph<{ data?: CampaignRow[] }>(config, "GET", `${act}/campaigns`, { fields: "id,status,daily_budget", limit: "500" }),
+      metaGraph<{ data?: AdsetRow[] }>(config, "GET", `${act}/adsets`, { fields: "id,status,daily_budget", limit: "500" }),
+    ]);
+    const today = dayIn(account.timezone_name, nowMs);
+    const current = new Map([...(campaigns.data ?? []), ...(adsets.data ?? [])].map((row) => [row.id, { status: row.status, cents: num(row.daily_budget) }]));
+    const decisions = midnightDecisions(
+      waiting.map((c) => ({ key: c._key, id: c.id, day: c.day, fromBudget: c.fromBudget, toBudget: c.toBudget })),
+      today,
+      current
+    );
+    if (!decisions.length) return { made: 0, left: 0, errors: [] };
+
+    const outcome = new Map<string, Partial<PilotRunChange>>();
+    const errors: string[] = [];
+    for (const d of decisions) {
+      const change = waiting.find((c) => c._key === d.key)!;
+      if ("leave" in d) {
+        outcome.set(d.key, { done: "not", error: d.leave });
+        continue;
+      }
+      try {
+        await metaGraph(config, "POST", d.id, { daily_budget: String(Math.round(d.make * 100)) });
+        outcome.set(d.key, { done: "made", madeAt: new Date(nowMs).toISOString() });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Meta refused the change.";
+        errors.push(`${change.name}: ${message}`);
+        outcome.set(d.key, { done: "not", error: message });
+      }
+    }
+
+    const changes = run.changes.map((c) => (outcome.has(c._key) ? { ...c, ...outcome.get(c._key) } : c));
+    const madeNow = changes.filter((c) => outcome.get(c._key)?.done === "made");
+    const lastChanged = marksToMap(run.lastChanged);
+    for (const c of madeNow) lastChanged[c.id] = today;
+    const made = madeNow.length;
+    const left = decisions.length - made - errors.length;
+    // Only if the record is still the one read (a "Run now" in between would have planned afresh).
+    await getBuyersClient()
+      .patch(RUN_ID)
+      .ifRevisionId((run as PilotRun & { _rev: string })._rev)
+      .set({
+        changes,
+        lastChanged: mapToMarks(lastChanged),
+        recent: [...madeNow, ...(run.recent ?? [])].slice(0, 40),
+        midnight: { ranAt: new Date(nowMs).toISOString(), made, left, errors },
+      })
+      .commit();
+    return { made, left, errors };
+  } catch (error) {
+    console.error("[ads autopilot] midnight cuts failed:", error);
+    return { error: error instanceof Error ? error.message : "The midnight budget cuts could not run." };
   }
 }
 

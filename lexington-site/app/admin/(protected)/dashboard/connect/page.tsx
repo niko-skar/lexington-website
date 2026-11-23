@@ -11,7 +11,7 @@ import { setChatPausedAction } from "@/lib/actions/chat";
 import { claudeConfigured } from "@/lib/ai/claude";
 import { pilotSettings, readPilotRun } from "@/lib/agents/adsPilot";
 import { chatAgentOn, chatSummary, readChatSwitch } from "@/lib/agents/chat";
-import { usd } from "@/lib/agents/adsPilotCore";
+import { pilotConnected, usd } from "@/lib/agents/adsPilotCore";
 import { autoReplyMode } from "@/lib/agents/leadReply";
 import { metaLeadsConfigured, readMetaLeadsState } from "@/lib/agents/metaLeads";
 import { GOOGLE_SCRIPT_VERSION, googleAdsScript } from "@/lib/ads/google";
@@ -86,7 +86,8 @@ export default async function ConnectPage() {
   const leadsDone = Boolean(process.env.META_LEADS_TOKEN && leadsState?.lastOkAt && !leadsState.lastError);
   const pilot = pilotSettings();
   const pilotRun = await readPilotRun();
-  const pilotDone = pilot.mode === "on" && Boolean(pilotRun?.plan) && !pilotRun?.errors.length;
+  // Connected = its last run read the accounts and made a plan; a change Meta refused is shown below, not as a lost link.
+  const pilotDone = pilotConnected(pilot.mode, pilotRun);
   const [chats, chatSwitch] = await Promise.all([chatSummary().catch(() => null), readChatSwitch()]);
   const chatReady = Boolean(process.env.META_APP_SECRET && process.env.META_WEBHOOK_VERIFY_TOKEN);
   // Shown even once it is set: the same value goes into Facebook's webhook settings afterwards.

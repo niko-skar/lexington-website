@@ -16,7 +16,8 @@ export async function GET(request: Request) {
     ranAt: result.ranAt,
     mode: result.mode,
     changes: result.changes.length,
-    made: result.changes.filter((c) => c.done !== "not").length,
+    made: result.changes.filter((c) => c.done === "made" || c.done === "queued").length,
+    afterMidnight: result.changes.filter((c) => c.done === "midnight").length,
     errors: result.errors.length,
   });
 }

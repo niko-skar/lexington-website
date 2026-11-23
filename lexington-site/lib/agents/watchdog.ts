@@ -235,7 +235,11 @@ async function gatherPilot(): Promise<PilotWatch> {
   if (settings.mode === "off") return { mode: "off", ranAt: null, errors: [], monthCap: null, spentMtd: null, dailyTarget: null, changes: [] };
   const [run, toggle, manager] = await Promise.all([readPilotRun(), readPilotSwitch(), readManagerRun()]);
   const describe = (c: NonNullable<typeof run>["changes"][number]) =>
-    c.kind === "pause" ? `${c.name} paused` : c.kind === "enable" ? `${c.name} switched back on` : `${c.name} ${usd(c.fromBudget ?? 0)} to ${usd(c.toBudget ?? 0)} a day`;
+    c.kind === "pause"
+      ? `${c.name} paused`
+      : c.kind === "enable"
+        ? `${c.name} switched back on`
+        : `${c.name} ${usd(c.fromBudget ?? 0)} to ${usd(c.toBudget ?? 0)} a day${c.done === "midnight" ? " from midnight" : ""}`;
   // The ads manager's morning run: what it made and switched off, and anything it couldn't do.
   const fresh = manager && Date.now() - Date.parse(manager.ranAt) < 30 * 3_600_000;
   const adWords = (c: NonNullable<typeof manager>["changes"][number]) =>
