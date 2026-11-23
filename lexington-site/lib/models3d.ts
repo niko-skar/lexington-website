@@ -10,7 +10,7 @@ export type PlanLevel = "lower" | "upper" | "main";
 // browsers fetch the new one. Kept here, beside the list of what is in it, because two places load it: the Residences
 // page (components/Penthouse3D.tsx) and a buyer's homes to pick from (components/PlanPicker.tsx).
 // v14 (16 Nov 2026): PH2b, 405B, 204B, the 3rd floor's studios 304B and 305B, and the 1st floor's homes 101A-109B.
-export const SITE_VIEWER_SRC = "/3d/ph2b.iife.js?v=18"; // v18 (19 Nov 2026): 306B as a three-bedroom home (the rest unchanged). (v17, 18 Nov 2026): PH2b's new layout (curved stair, glass wall to the terrace, BBQ bar under a pergola, a light over the stair, lit steps). (v16, 17 Nov 2026: 405B as the two-bedroom its buyer chose, the 5th floor's studios 504B and 505B. (v15, 17 Nov 2026: new layouts of 103B, 105B, 106B, 108B; the cooker hood's chimney)
+export const SITE_VIEWER_SRC = "/3d/ph2b.iife.js?v=19"; // v19 (23 Nov 2026): PH1a in its new layout (the rest unchanged). (v18, 19 Nov 2026: 306B as a three-bedroom home.) (v17, 18 Nov 2026): PH2b's new layout (curved stair, glass wall to the terrace, BBQ bar under a pergola, a light over the stair, lit steps). (v16, 17 Nov 2026: 405B as the two-bedroom its buyer chose, the 5th floor's studios 504B and 505B. (v15, 17 Nov 2026: new layouts of 103B, 105B, 106B, 108B; the cooker hood's chimney)
 
 export interface Model3D {
   viewerId: string;
@@ -27,6 +27,17 @@ export const MODELS: Record<string, Model3D> = {
     posters: {
       lower: { wide: "/3d/ph2b-plan-lower.jpg?v=2", phone: "/3d/ph2b-plan-lower-m.jpg?v=2" }, // v2 (18 Nov 2026): the new layout
       upper: { wide: "/3d/ph2b-plan-upper.jpg?v=2", phone: "/3d/ph2b-plan-upper-m.jpg?v=2" },
+    },
+  },
+  // PH1a (23 Nov 2026): the 3-bedroom duplex penthouse in its new layout (penthouse-3d ph1a): bedrooms on the 6th floor, living,
+  // kitchen, piano lounge and roof terrace on the 7th
+  PH1a: {
+    viewerId: "ph1a",
+    name: "penthouse PH1a",
+    levels: ["lower", "upper"],
+    posters: {
+      lower: { wide: "/3d/ph1a-plan-lower.jpg?v=1", phone: "/3d/ph1a-plan-lower-m.jpg?v=1" },
+      upper: { wide: "/3d/ph1a-plan-upper.jpg?v=1", phone: "/3d/ph1a-plan-upper-m.jpg?v=1" },
     },
   },
   // 405B (17 Nov 2026): the two-bedroom home its buyer chose (penthouse-3d u4t), in place of the old three-bedroom concept.
