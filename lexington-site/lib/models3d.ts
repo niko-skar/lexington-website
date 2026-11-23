@@ -10,7 +10,7 @@ export type PlanLevel = "lower" | "upper" | "main";
 // browsers fetch the new one. Kept here, beside the list of what is in it, because two places load it: the Residences
 // page (components/Penthouse3D.tsx) and a buyer's homes to pick from (components/PlanPicker.tsx).
 // v14 (16 Nov 2026): PH2b, 405B, 204B, the 3rd floor's studios 304B and 305B, and the 1st floor's homes 101A-109B.
-export const SITE_VIEWER_SRC = "/3d/ph2b.iife.js?v=19"; // v19 (23 Nov 2026): PH1a in its new layout (the rest unchanged). (v18, 19 Nov 2026: 306B as a three-bedroom home.) (v17, 18 Nov 2026): PH2b's new layout (curved stair, glass wall to the terrace, BBQ bar under a pergola, a light over the stair, lit steps). (v16, 17 Nov 2026: 405B as the two-bedroom its buyer chose, the 5th floor's studios 504B and 505B. (v15, 17 Nov 2026: new layouts of 103B, 105B, 106B, 108B; the cooker hood's chimney)
+export const SITE_VIEWER_SRC = "/3d/ph2b.iife.js?v=20"; // v20 (23 Nov 2026): every other home of floors 2-6 and Studio 1 (20 homes). (v19, 23 Nov 2026: PH1a in its new layout.) (v18, 19 Nov 2026: 306B as a three-bedroom home.) (v17, 18 Nov 2026): PH2b's new layout (curved stair, glass wall to the terrace, BBQ bar under a pergola, a light over the stair, lit steps). (v16, 17 Nov 2026: 405B as the two-bedroom its buyer chose, the 5th floor's studios 504B and 505B. (v15, 17 Nov 2026: new layouts of 103B, 105B, 106B, 108B; the cooker hood's chimney)
 
 export interface Model3D {
   viewerId: string;
@@ -140,6 +140,127 @@ export const MODELS: Record<string, Model3D> = {
     name: "apartment 306B",
     levels: ["main"],
     posters: { main: { wide: "/3d/u306b-plan.jpg?v=1", phone: "/3d/u306b-plan-m.jpg?v=1" } },
+  },
+  // 23 Nov 2026: every other home of floors 2 to 6 and Studio 1, as laid out on Niko's floor outlines (penthouse-3d u201a ...)
+  "201A": {
+    viewerId: "u201a",
+    name: "apartment 201A",
+    levels: ["main"],
+    posters: { main: { wide: "/3d/u201a-plan.jpg?v=1", phone: "/3d/u201a-plan-m.jpg?v=1" } },
+  },
+  "202A": {
+    viewerId: "u202a",
+    name: "apartment 202A",
+    levels: ["main"],
+    posters: { main: { wide: "/3d/u202a-plan.jpg?v=1", phone: "/3d/u202a-plan-m.jpg?v=1" } },
+  },
+  "203B": {
+    viewerId: "u203b",
+    name: "apartment 203B",
+    levels: ["main"],
+    posters: { main: { wide: "/3d/u203b-plan.jpg?v=1", phone: "/3d/u203b-plan-m.jpg?v=1" } },
+  },
+  "205B": {
+    viewerId: "u205b",
+    name: "apartment 205B",
+    levels: ["main"],
+    posters: { main: { wide: "/3d/u205b-plan.jpg?v=1", phone: "/3d/u205b-plan-m.jpg?v=1" } },
+  },
+  "206B": {
+    viewerId: "u206b",
+    name: "apartment 206B",
+    levels: ["main"],
+    posters: { main: { wide: "/3d/u206b-plan.jpg?v=1", phone: "/3d/u206b-plan-m.jpg?v=1" } },
+  },
+  "207B": {
+    viewerId: "u207b",
+    name: "apartment 207B",
+    levels: ["main"],
+    posters: { main: { wide: "/3d/u207b-plan.jpg?v=1", phone: "/3d/u207b-plan-m.jpg?v=1" } },
+  },
+  "301A": {
+    viewerId: "u301a",
+    name: "apartment 301A",
+    levels: ["main"],
+    posters: { main: { wide: "/3d/u301a-plan.jpg?v=1", phone: "/3d/u301a-plan-m.jpg?v=1" } },
+  },
+  "302A": {
+    viewerId: "u302a",
+    name: "apartment 302A",
+    levels: ["main"],
+    posters: { main: { wide: "/3d/u302a-plan.jpg?v=1", phone: "/3d/u302a-plan-m.jpg?v=1" } },
+  },
+  "303B": {
+    viewerId: "u303b",
+    name: "apartment 303B",
+    levels: ["main"],
+    posters: { main: { wide: "/3d/u303b-plan.jpg?v=1", phone: "/3d/u303b-plan-m.jpg?v=1" } },
+  },
+  "401A": {
+    viewerId: "u401a",
+    name: "apartment 401A",
+    levels: ["main"],
+    posters: { main: { wide: "/3d/u401a-plan.jpg?v=1", phone: "/3d/u401a-plan-m.jpg?v=1" } },
+  },
+  "402A": {
+    viewerId: "u402a",
+    name: "apartment 402A",
+    levels: ["main"],
+    posters: { main: { wide: "/3d/u402a-plan.jpg?v=1", phone: "/3d/u402a-plan-m.jpg?v=1" } },
+  },
+  "403B": {
+    viewerId: "u403b",
+    name: "apartment 403B",
+    levels: ["main"],
+    posters: { main: { wide: "/3d/u403b-plan.jpg?v=1", phone: "/3d/u403b-plan-m.jpg?v=1" } },
+  },
+  "404B": {
+    viewerId: "u404b",
+    name: "apartment 404B",
+    levels: ["main"],
+    posters: { main: { wide: "/3d/u404b-plan.jpg?v=1", phone: "/3d/u404b-plan-m.jpg?v=1" } },
+  },
+  "501A": {
+    viewerId: "u501a",
+    name: "apartment 501A",
+    levels: ["main"],
+    posters: { main: { wide: "/3d/u501a-plan.jpg?v=1", phone: "/3d/u501a-plan-m.jpg?v=1" } },
+  },
+  "502A": {
+    viewerId: "u502a",
+    name: "apartment 502A",
+    levels: ["main"],
+    posters: { main: { wide: "/3d/u502a-plan.jpg?v=1", phone: "/3d/u502a-plan-m.jpg?v=1" } },
+  },
+  "503B": {
+    viewerId: "u503b",
+    name: "apartment 503B",
+    levels: ["main"],
+    posters: { main: { wide: "/3d/u503b-plan.jpg?v=1", phone: "/3d/u503b-plan-m.jpg?v=1" } },
+  },
+  "506B": {
+    viewerId: "u506b",
+    name: "apartment 506B",
+    levels: ["main"],
+    posters: { main: { wide: "/3d/u506b-plan.jpg?v=1", phone: "/3d/u506b-plan-m.jpg?v=1" } },
+  },
+  "Studio 1": {
+    viewerId: "ustudio1",
+    name: "Studio 1",
+    levels: ["main"],
+    posters: { main: { wide: "/3d/ustudio1-plan.jpg?v=1", phone: "/3d/ustudio1-plan-m.jpg?v=1" } },
+  },
+  "601A": {
+    viewerId: "u601a",
+    name: "apartment 601A",
+    levels: ["main"],
+    posters: { main: { wide: "/3d/u601a-plan.jpg?v=1", phone: "/3d/u601a-plan-m.jpg?v=1" } },
+  },
+  "602B": {
+    viewerId: "u602b",
+    name: "apartment 602B",
+    levels: ["main"],
+    posters: { main: { wide: "/3d/u602b-plan.jpg?v=1", phone: "/3d/u602b-plan-m.jpg?v=1" } },
   },
 };
 
