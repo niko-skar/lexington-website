@@ -9,6 +9,7 @@ import { AmenityCardGrid } from "@/components/AmenityCard";
 import { FeatureGrid } from "@/components/FeatureGrid";
 import { SplitSection } from "@/components/SplitSection";
 import { Reveal } from "@/components/Reveal";
+import { Amenities3DSection } from "@/components/Amenities3D";
 
 export const revalidate = 600;
 
@@ -62,6 +63,9 @@ export default async function AmenitiesPage() {
         </section>
       )}
 
+      {/* (24 Nov 2026) the amenity floor in 3D: click an amenity for more about it */}
+      <Amenities3DSection />
+
       {poolImage && (
         <SplitSection
           imageUrl={urlFor(poolImage.image).width(800).height(1000).url()}
@@ -70,7 +74,7 @@ export default async function AmenitiesPage() {
           title="Pool, gym, and everything after."
         >
           <p>
-            A full lap pool, a fitted gym, sauna, jacuzzi and ice bath —
+            An indoor pool, a fitted gym, sauna, jacuzzi and ice bath —
             everything residents need for a full day, without leaving the
             building.
           </p>

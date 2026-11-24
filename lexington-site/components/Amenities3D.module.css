@@ -1,0 +1,8 @@
+/* The amenities' 3D pop-up: the whole screen, as the penthouse's (Penthouse3D.module.css .overlay), with its own picture
+   behind it while the 3D view downloads and starts. */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  background: linear-gradient(rgba(16, 19, 28, 0.55), rgba(16, 19, 28, 0.55)), #10131c url("/3d/amenities-poster-v1.jpg") center / cover no-repeat;
+}
