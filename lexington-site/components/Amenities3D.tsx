@@ -16,8 +16,8 @@ import own from "./Amenities3D.module.css";
 // One self-contained script in /public/3d (built from the penthouse-3d project: src/amenities.js, build-site-amenities.mjs),
 // only downloaded when someone opens it. Its global is window.LEXAMEN, so it never replaces the homes' script (window.PH2B)
 // when a visitor opens both. Bump ?v= after the script is rebuilt, so browsers fetch the new one.
-const VIEWER_SRC = "/3d/amenities.iife.js?v=1";
-const POSTER_SRC = "/3d/amenities-poster-v1.jpg"; // (a new name for a new picture, not ?v=: next/image refuses query strings on local pictures)
+const VIEWER_SRC = "/3d/amenities.iife.js?v=2"; // v2 (24 Nov 2026): three small tables with chairs at the open end of the pool instead of three sun beds in a row; no ceiling over the half of the pool open to the sky; the pool's line from the website
+const POSTER_SRC = "/3d/amenities-poster-v2.jpg"; // (a new name for a new picture, not ?v=: next/image refuses query strings on local pictures)
 
 interface Viewer {
   dispose: () => void;

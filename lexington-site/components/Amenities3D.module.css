@@ -4,5 +4,5 @@
   position: fixed;
   inset: 0;
   z-index: 300;
-  background: linear-gradient(rgba(16, 19, 28, 0.55), rgba(16, 19, 28, 0.55)), #10131c url("/3d/amenities-poster-v1.jpg") center / cover no-repeat;
+  background: linear-gradient(rgba(16, 19, 28, 0.55), rgba(16, 19, 28, 0.55)), #10131c url("/3d/amenities-poster-v2.jpg") center / cover no-repeat;
 }
