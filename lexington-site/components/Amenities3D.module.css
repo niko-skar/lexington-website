@@ -1,8 +1,258 @@
-/* The amenities' 3D pop-up: the whole screen, as the penthouse's (Penthouse3D.module.css .overlay), with its own picture
-   behind it while the 3D view downloads and starts. */
-.overlay {
-  position: fixed;
+/* The Amenities page, built round the amenity floor in 3D (25 Nov 2026): the page's title and the live model share one navy
+   band at the top (the band of every page's intro, so it reads as this page's opening), then the rooftop garden and the
+   building features, small, on paper. */
+
+/* ---- the opening band: title, line, the model ---------------------------------------------------------------------- */
+:global(.sectionDark).hero {
+  background-color: var(--navy-deep);
+  background-image: var(--navy-texture-image);
+  background-size: var(--navy-texture-size);
+  background-repeat: var(--navy-texture-repeat);
+}
+
+.hero {
+  padding-top: clamp(28px, 3.5vw, 52px);
+  padding-bottom: clamp(32px, 4vw, 56px);
+}
+
+/* title on the left, the line on the right on a wide screen (it keeps the model high on the page) */
+.head {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: var(--space-4) var(--space-8);
+  align-items: end;
+}
+
+.title {
+  font-size: var(--fs-600); /* (one size down from the other pages' openings: the model is the point of this page) */
+  color: var(--paper);
+  margin-top: 14px;
+  text-wrap: balance;
+}
+
+.lede {
+  color: var(--stone);
+  max-width: 52ch;
+  font-size: 16.5px;
+}
+
+.block {
+  margin-top: clamp(20px, 2.4vw, 32px);
+}
+
+/* the model's box: tall, the whole width of the page's column */
+.stage {
+  position: relative;
+  width: 100%;
+  height: clamp(480px, calc(100vh - 300px), 860px);
+  height: clamp(480px, calc(100svh - 300px), 860px);
+  overflow: hidden;
+  border-radius: var(--radius);
+  background: #10131c;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.32);
+}
+
+/* the picture of the same model, seen as the live view first shows it: on screen at once, under the live view */
+.poster {
+  object-fit: cover;
+}
+
+.live {
+  position: absolute;
   inset: 0;
-  z-index: 300;
-  background: linear-gradient(rgba(16, 19, 28, 0.55), rgba(16, 19, 28, 0.55)), #10131c url("/3d/amenities-poster-v2.jpg") center / cover no-repeat;
+  opacity: 0;
+  transition: opacity 0.6s var(--ease);
+}
+
+.ready .live {
+  opacity: 1;
+}
+
+.host {
+  position: absolute;
+  inset: 0;
+}
+
+/* a phone or tablet: the picture is a button that starts the model */
+.start {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 9%;
+  background: transparent;
+  cursor: pointer;
+}
+
+.play {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 26px;
+  border-radius: 999px;
+  background: var(--brass);
+  color: var(--ink);
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.35);
+  transition: background 0.22s var(--ease), transform 0.22s var(--ease);
+}
+
+.start:hover .play,
+.start:focus-visible .play {
+  background: var(--brass-lt);
+  transform: translateY(-2px);
+}
+
+.badge {
+  position: absolute;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 16px;
+  border-radius: 999px;
+  background: rgba(16, 19, 28, 0.78);
+  color: var(--paper);
+  font-size: 13px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.spin {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid rgba(247, 244, 236, 0.25);
+  border-top-color: var(--brass-lt);
+  animation: amenSpin 0.9s linear infinite;
+}
+
+@keyframes amenSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* phones and tablets: after "Done" the model is behind this, so a finger on it scrolls the page again; a tap goes back in */
+.gate {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(16, 19, 28, 0.25);
+  cursor: pointer;
+  touch-action: pan-y;
+}
+
+.gate span {
+  padding: 12px 22px;
+  border-radius: 999px;
+  background: var(--brass);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.35);
+}
+
+.done {
+  position: absolute;
+  left: 10px;
+  top: 10px;
+  z-index: 6;
+  padding: 9px 16px;
+  border-radius: 999px;
+  background: rgba(16, 19, 28, 0.72);
+  border: 1px solid rgba(247, 244, 236, 0.25);
+  color: var(--paper);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.foot {
+  margin-top: var(--space-4);
+  color: var(--stone);
+  font-size: var(--fs-200);
+  max-width: 80ch;
+}
+
+/* the amenities as text, for search engines and screen readers (the model's own list is what people see) */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---- the rooftop garden: one line and its photo ---------------------------------------------------------------- */
+.roof {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-8);
+  align-items: center;
+}
+
+.roofMedia {
+  overflow: hidden;
+  border-radius: var(--radius);
+  aspect-ratio: 16 / 10;
+}
+
+.roofMedia img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.roofTitle {
+  font-size: var(--fs-600);
+  margin-top: 14px;
+}
+
+.roofText {
+  margin-top: var(--space-4);
+  max-width: 46ch;
+  font-size: 16.5px;
+}
+
+@media (max-width: 880px) {
+  .head {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .stage {
+    height: min(76vh, 640px);
+    height: min(76svh, 640px);
+  }
+
+  .roof {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-6);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .live,
+  .play {
+    transition: none;
+  }
+
+  .spin {
+    animation: none;
+  }
 }

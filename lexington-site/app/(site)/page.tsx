@@ -204,8 +204,9 @@ export default async function HomePage() {
               ))}
             </ul>
             <div style={{ marginTop: 44 }}>
+              {/* (25 Nov 2026) the Amenities page is the amenity floor in 3D now */}
               <Button href="/amenities" variant="outline-dark">
-                See All Amenities
+                Explore the Amenities in 3D
               </Button>
             </div>
           </Reveal>

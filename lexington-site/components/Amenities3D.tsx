@@ -1,27 +1,32 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
+import { AMENITY_SPOTS } from "@/lib/amenities3d";
 import { pushEvent } from "@/lib/analytics";
 import { attachViewerKeys } from "@/lib/viewerKeys";
-import { Reveal } from "./Reveal";
-import { useDialog } from "./useDialog";
-import styles from "./Penthouse3D.module.css";
-import own from "./Amenities3D.module.css";
+import styles from "./Amenities3D.module.css";
 
-// The amenity side of the 1st floor in 3D (24 Nov 2026): the pool hall and café, the gym, the spa (sauna, jacuzzi, ice bath),
-// the changing rooms and the lift lobby, as the 1st-floor plan has them. Each amenity can be clicked: the camera turns to it
-// and a card gives the website's own line about it and what the plan shows (its size, what is in it, the way in).
+// The Amenities page is built round the amenity floor in 3D (Niko, 24 Nov 2026: "make a plan to change the amenities page and
+// focus primarily on this model only", then "3d starts by itself on computers is good"): the pool and café, the gym, the spa
+// (sauna, jacuzzi, ice bath), the changing rooms and the lift lobby, from the 1st-floor plan. Each amenity can be clicked: the
+// camera turns to it and its card shows its photo, the website's own line about it and what the plan shows.
+//   - On a computer the model starts by itself once the page has loaded; on a phone or tablet it waits for a tap, and "Done"
+//     hands the fingers back to the page (the picture underneath is the same model, so nothing jumps).
+//   - A plain scroll over the model scrolls the page; Ctrl / ⌘ + scroll or a pinch zooms it (the script does that: `inline`).
+//   - /amenities#pool (or #cafe, #gym, #sauna, #jacuzzi, #icebath, #changing, #lobby) opens on that amenity's card.
 // One self-contained script in /public/3d (built from the penthouse-3d project: src/amenities.js, build-site-amenities.mjs),
-// only downloaded when someone opens it. Its global is window.LEXAMEN, so it never replaces the homes' script (window.PH2B)
-// when a visitor opens both. Bump ?v= after the script is rebuilt, so browsers fetch the new one.
-const VIEWER_SRC = "/3d/amenities.iife.js?v=2"; // v2 (24 Nov 2026): three small tables with chairs at the open end of the pool instead of three sun beds in a row; no ceiling over the half of the pool open to the sky; the pool's line from the website
+// with its own global, window.LEXAMEN, so it never replaces the homes' script (window.PH2B). Bump ?v= after a rebuild.
+const VIEWER_SRC = "/3d/amenities.iife.js?v=3"; // v3 (25 Nov 2026): photos in the cards, the website's lines as they are now, scrolling the page over the model
 const POSTER_SRC = "/3d/amenities-poster-v2.jpg"; // (a new name for a new picture, not ?v=: next/image refuses query strings on local pictures)
+
+const SPOT_IDS: readonly string[] = AMENITY_SPOTS.map((s) => s.id);
 
 interface Viewer {
   dispose: () => void;
   toggleFullscreen?: () => void;
+  select?: (id: string) => void;
 }
 interface ViewerApi {
   mountAmenities: (host: HTMLElement, options: Record<string, unknown>) => Promise<Viewer>;
@@ -53,35 +58,89 @@ function track(action: string) {
   pushEvent({ event: "model_3d", model: "amenities", action });
 }
 
-// Start fetching the script as soon as someone shows interest, so the click feels instant.
 function warm() {
   loadViewer().catch(() => {});
 }
 
-// ---------------------------------------------------------------------------------------------------------------------
-// The full-screen 3D view.
-function Amenities3DModal({ onClose }: { onClose: () => void }) {
-  const dialogRef = useDialog<HTMLDivElement>(onClose);
-  const stageRef = useRef<HTMLDivElement>(null);
-  const [failed, setFailed] = useState(false);
+// A computer (a mouse or touchpad on a wide screen) starts the model by itself; a phone or tablet waits for a tap.
+const AUTO_QUERY = "(pointer: fine) and (min-width: 900px)";
+function useAutoStart() {
+  return useSyncExternalStore(
+    (notify) => {
+      const query = window.matchMedia(AUTO_QUERY);
+      query.addEventListener("change", notify);
+      return () => query.removeEventListener("change", notify);
+    },
+    () => window.matchMedia(AUTO_QUERY).matches,
+    () => false
+  );
+}
+
+const spotOfHash = () => {
+  const h = decodeURIComponent(window.location.hash.replace(/^#/, ""));
+  return SPOT_IDS.includes(h) ? h : null;
+};
+
+export function Amenities3DStage({
+  photos,
+  captions,
+}: {
+  photos: Record<string, string>;
+  captions: Record<string, string>;
+}) {
+  const liveRef = useRef<HTMLDivElement>(null);
+  const viewerRef = useRef<Viewer | null>(null);
+  const auto = useAutoStart();
+  const [started, setStarted] = useState(false);
+  const [phase, setPhase] = useState<"idle" | "loading" | "ready" | "failed">("idle");
+  const [locked, setLocked] = useState(false); // (phones and tablets: "Done" gives the fingers back to the page)
+
+  // A computer starts it by itself, once the page itself has finished loading.
+  useEffect(() => {
+    if (!auto || started) return;
+    let cancelled = false;
+    const go = () => {
+      if (cancelled) return;
+      setStarted(true);
+      track("autostart");
+    };
+    const idle = () => {
+      if (typeof window.requestIdleCallback === "function") window.requestIdleCallback(go, { timeout: 1500 });
+      else setTimeout(go, 300);
+    };
+    if (document.readyState === "complete") idle();
+    else window.addEventListener("load", idle, { once: true });
+    return () => {
+      cancelled = true;
+      window.removeEventListener("load", idle);
+    };
+  }, [auto, started]);
 
   useEffect(() => {
-    const stage = stageRef.current;
-    if (!stage) return;
+    if (!started) return;
+    const live = liveRef.current;
+    if (!live) return;
     // A fresh element for every start, so React's double-run of effects in development can't leave two viewers in one box.
     const host = document.createElement("div");
     host.className = styles.host;
-    stage.appendChild(host);
-    let viewer: Viewer | null = null;
-    let detachKeys: (() => void) | null = null;
+    live.appendChild(host);
     let cancelled = false;
+    let detachKeys: (() => void) | null = null;
+    const onHash = () => {
+      const id = spotOfHash();
+      if (id) viewerRef.current?.select?.(id);
+    };
+    setPhase("loading");
 
     loadViewer()
       .then((api) =>
         api.mountAmenities(host, {
-          onClose,
+          inline: true,
+          hideTitle: true, // (the page's own title is right above)
+          initialTime: "evening", // (as the picture underneath; the sun button switches to daytime)
           poster: POSTER_SRC,
-          initialTime: "evening", // (as the picture on the page; the sun button switches to daytime)
+          photos,
+          captions,
           cta: { label: "Enquire", href: "/contact" },
           onEvent: (name: string, data?: ViewerEvent) => {
             if (name === "amenity" && data?.id) track(`amenity_${data.id}`);
@@ -93,71 +152,56 @@ function Amenities3DModal({ onClose }: { onClose: () => void }) {
         })
       )
       .then((v) => {
-        if (cancelled) v.dispose();
-        else {
-          viewer = v;
-          detachKeys = attachViewerKeys(host, v, { always: true }); // full screen: the keys always move it
+        if (cancelled) {
+          v.dispose();
+          return;
         }
+        viewerRef.current = v;
+        detachKeys = attachViewerKeys(host, v);
+        setPhase("ready");
+        onHash(); // (a link to one amenity opens on its card)
+        window.addEventListener("hashchange", onHash);
       })
       .catch(() => {
-        if (!cancelled) setFailed(true);
+        if (!cancelled) setPhase("failed");
       });
 
     return () => {
       cancelled = true;
+      window.removeEventListener("hashchange", onHash);
       detachKeys?.();
-      viewer?.dispose();
+      viewerRef.current?.dispose();
+      viewerRef.current = null;
       host.remove();
     };
-    // onClose is stable enough for the lifetime of the pop-up; the viewer is started once.
+    // photos and captions come from the server once; the viewer is started once.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [started]);
 
   return (
-    <div ref={dialogRef} tabIndex={-1} className={own.overlay} role="dialog" aria-modal="true" aria-label="The amenities in 3D">
-      <div ref={stageRef} className={styles.stage}>
-        {failed && (
-          <div className={styles.failed}>
-            <p>Sorry, the 3D view could not start on this device.</p>
-            <button type="button" onClick={onClose}>
-              Close
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------------------------------------------------
-// The section on the Amenities page: the picture opens the 3D view.
-export function Amenities3DSection() {
-  const [open, setOpen] = useState(false);
-
-  function openViewer() {
-    track("open");
-    setOpen(true);
-  }
-
-  return (
-    <section id="amenities-3d" className="section sectionDark">
-      <div className={`wrap ${styles.split}`}>
-        <Reveal>
+    <div className={styles.block}>
+      <div className={`${styles.stage} ${phase === "ready" ? styles.ready : ""}`} data-amenities-stage={phase}>
+        <Image
+          className={styles.poster}
+          src={POSTER_SRC}
+          alt="3D model of the amenity floor in the evening: the pool and café, the gym, the spa and the changing rooms"
+          fill
+          priority
+          sizes="(max-width: 1440px) 100vw, 1360px"
+        />
+        <div ref={liveRef} className={styles.live} />
+        {!started && (
           <button
             type="button"
-            className={styles.poster}
-            onClick={openViewer}
+            className={styles.start}
+            onClick={() => {
+              setStarted(true);
+              track("open");
+            }}
             onPointerEnter={warm}
             onFocus={warm}
-            aria-label="Open the amenities in 3D"
+            aria-label="Explore the amenity floor in 3D"
           >
-            <Image
-              src={POSTER_SRC}
-              alt="3D model of the amenity floor in the evening: the pool and café, the gym, the spa and the changing rooms"
-              width={1600}
-              height={1000}
-              sizes="(max-width: 880px) 100vw, 55vw"
-            />
             <span className={styles.play}>
               <svg viewBox="0 0 24 24" aria-hidden="true" width="16" height="16">
                 <path d="M7 4.5v15l12-7.5z" fill="currentColor" />
@@ -165,31 +209,36 @@ export function Amenities3DSection() {
               Explore in 3D
             </span>
           </button>
-        </Reveal>
-
-        <Reveal delay={120}>
-          <div className="eyebrow" style={{ color: "var(--paper)" }}>
-            In 3D
+        )}
+        {phase === "loading" && (
+          <div className={styles.badge} role="status">
+            <span className={styles.spin} aria-hidden="true" />
+            Loading the 3D model…
           </div>
-          <h2 className={styles.title}>Walk the amenity floor.</h2>
-          <div className={styles.body}>
-            <p>
-              The pool, café, gym, sauna, jacuzzi, ice bath and changing rooms, together on the 1st floor. Click any of them
-              to see where it is and read more about it, or walk through the floor yourself.
-            </p>
-            <p className={styles.note}>
-              An illustrative model drawn from the 1st-floor plan. Furniture, equipment and finishes are indicative.
-            </p>
-          </div>
-          <div className={styles.actions}>
-            <button type="button" className={styles.cta} onClick={openViewer} onPointerEnter={warm}>
-              Explore in 3D
-            </button>
-          </div>
-        </Reveal>
+        )}
+        {phase === "failed" && <div className={styles.badge}>The 3D model can&rsquo;t start on this device.</div>}
+        {!auto && phase === "ready" && locked && (
+          <button
+            type="button"
+            className={styles.gate}
+            onClick={() => {
+              setLocked(false);
+              track("unlock");
+            }}
+          >
+            <span>Tap to explore in 3D</span>
+          </button>
+        )}
+        {!auto && phase === "ready" && !locked && (
+          <button type="button" className={styles.done} onClick={() => setLocked(true)}>
+            Done
+          </button>
+        )}
       </div>
-
-      {open && <Amenities3DModal onClose={() => setOpen(false)} />}
-    </section>
+      <p className={styles.foot}>
+        Click an amenity, or a pin on the model, to see where it is and read about it. An illustrative model drawn from the
+        1st-floor plan: furniture, equipment and finishes are indicative.
+      </p>
+    </div>
   );
 }
