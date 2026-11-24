@@ -5,11 +5,18 @@ import type { ConcreteData } from "@/lib/concrete/shared";
 import { send } from "./api";
 import { forgetPhoto, PhotoError, sendPhoto, shrinkSized } from "./photo";
 import { photoTakenAt } from "./photoTime";
+import { keepAwake } from "./wakeLock";
 
 // Pre-pour photos on their way (lib/concrete/pourExtras.ts says what and why). Each one: a copy to look at goes to the
 // image store, the original at full size straight to the private photo store (no website upload limit there), then the
-// pour gets it. One at a time, kept here rather than in a card, so they carry on while the page changes (a pour poured
-// meanwhile moves to another list); a failed one waits for "Try again", or for the signal to come back.
+// pour gets it. Kept here rather than in a card, so they carry on while the page changes (a pour poured meanwhile moves
+// to another list); a failed one waits for "Try again", or for the signal to come back.
+// Three go up at a time (Niko, 24 Nov 2026: 23 photos one after another took him three minutes on site), but each is
+// opened by itself (a big photo is a lot for a phone) and the pour gets them one by one, so the page never shows an
+// older list over a newer one. The screen stays on while they go.
+
+/** How many go up at once. */
+const AT_ONCE = 3;
 
 export interface PourUpload {
   key: number;
@@ -28,15 +35,32 @@ export interface PourUpload {
   previewId?: string;
   size?: { width: number; height: number };
   original?: { url: string; pathname: string };
+  /** One from the app's camera: its small copy, made there and then (with the original's size). */
+  small?: { blob: Blob; width: number; height: number };
 }
 
 let jobs: PourUpload[] = [];
 let counter = 0;
-let running = false;
+let going = 0;
 let sink: ((data: ConcreteData) => void) | null = null;
 const listeners = new Set<() => void>();
 
-const changed = () => listeners.forEach((fn) => fn());
+/** Each task waits for the one before it (whatever else runs meanwhile). */
+function oneAtATime() {
+  let last: Promise<unknown> = Promise.resolve();
+  return <T>(task: () => Promise<T>): Promise<T> => {
+    const next = last.then(task, task);
+    last = next.catch(() => undefined);
+    return next;
+  };
+}
+const openInTurn = oneAtATime();
+const saveInTurn = oneAtATime();
+
+const changed = () => {
+  keepAwake("pour photos", jobs.some((j) => j.state !== "error"));
+  listeners.forEach((fn) => fn());
+};
 const update = (key: number, change: Partial<PourUpload>) => {
   jobs = jobs.map((j) => (j.key === key ? { ...j, ...change } : j));
   changed();
@@ -59,13 +83,22 @@ export function addPourPhotos(pourId: string, kind: PourPhotoKind, files: File[]
   jobs = [...jobs, ...files.map((file) => ({ key: ++counter, pourId, kind, file, preview: null, state: "waiting" as const, percent: 0 }))];
   changed();
   watchLeaving();
-  void run();
+  run();
+}
+
+/** A photo from the app's camera (its small copy already made): it shows at once and goes with the rest. */
+export function addPourShot(pourId: string, kind: PourPhotoKind, file: File, small: { blob: Blob; width: number; height: number }) {
+  const job: PourUpload = { key: ++counter, pourId, kind, file, preview: URL.createObjectURL(small.blob), small, state: "waiting", percent: 0, takenAt: new Date(file.lastModified).toISOString() };
+  jobs = [...jobs, job];
+  changed();
+  watchLeaving();
+  run();
 }
 
 export function retryPourUpload(key: number) {
   if (jobOf(key)?.state !== "error") return;
   update(key, { state: "waiting", error: undefined, retry: false });
-  void run();
+  run();
 }
 
 /** Taken off before it was in: its copy is tidied away (an original already up stays unseen in the photo store). */
@@ -78,27 +111,30 @@ export function dropPourUpload(key: number) {
   changed();
 }
 
-async function run() {
-  if (running) return;
-  running = true;
+/** Starts the next waiting ones, up to AT_ONCE going; each that ends starts the next. */
+function run() {
+  while (going < AT_ONCE) {
+    const job = jobs.find((j) => j.state === "waiting");
+    if (!job) return;
+    going += 1;
+    update(job.key, { state: "sending" });
+    void goUp(job.key).finally(() => {
+      going -= 1;
+      run();
+    });
+  }
+}
+
+async function goUp(key: number) {
   try {
-    for (;;) {
-      const job = jobs.find((j) => j.state === "waiting");
-      if (!job) break;
-      update(job.key, { state: "sending" });
-      try {
-        await sendOne(job.key);
-        const done = jobOf(job.key);
-        if (done?.preview) URL.revokeObjectURL(done.preview);
-        jobs = jobs.filter((j) => j.key !== job.key);
-        changed();
-      } catch (e) {
-        const offline = (e instanceof PhotoError && e.status === 0) || (e as { status?: number })?.status === 0 || e instanceof TypeError;
-        update(job.key, { state: "error", error: e instanceof Error ? e.message : "The photo didn't upload. Try again.", retry: offline });
-      }
-    }
-  } finally {
-    running = false;
+    await sendOne(key);
+    const done = jobOf(key);
+    if (done?.preview) URL.revokeObjectURL(done.preview);
+    jobs = jobs.filter((j) => j.key !== key);
+    changed();
+  } catch (e) {
+    const offline = (e instanceof PhotoError && e.status === 0) || (e as { status?: number })?.status === 0 || e instanceof TypeError;
+    update(key, { state: "error", error: e instanceof Error ? e.message : "The photo didn't upload. Try again.", retry: offline });
   }
 }
 
@@ -122,15 +158,18 @@ async function sendOne(key: number) {
     job = jobOf(key)!;
   }
   if (!job.previewId) {
-    let made: { blob: Blob; width: number; height: number };
-    try {
-      made = await shrinkSized(job.file, 1280, 0.74);
-    } catch {
-      throw new PhotoError("This phone can't open that photo: take it again as a normal photo.", 415);
+    let made = job.small;
+    if (!made) {
+      const file = job.file;
+      try {
+        made = await openInTurn(() => shrinkSized(file, 1280, 0.74));
+      } catch {
+        throw new PhotoError("This phone can't open that photo: take it again as a normal photo.", 415);
+      }
     }
     if (!job.preview) update(key, { preview: URL.createObjectURL(made.blob) });
     const { id } = await sendPhoto(made.blob, "/api/concrete/photo");
-    update(key, { previewId: id, size: { width: made.width, height: made.height } });
+    update(key, { previewId: id, size: { width: made.width, height: made.height }, small: undefined });
     job = jobOf(key)!;
   }
   if (!job.original) {
@@ -155,14 +194,15 @@ async function sendOne(key: number) {
     }
     job = jobOf(key)!;
   }
-  const data = await send<ConcreteData>("/api/concrete/pours", "POST", {
+  const body = {
     action: "photo",
     pourId: job.pourId,
     kind: job.kind,
     previewId: job.previewId,
     original: { ...job.original, bytes: job.file.size, width: job.size?.width, height: job.size?.height },
     takenAt: job.takenAt,
-  });
+  };
+  const data = await saveInTurn(() => send<ConcreteData>("/api/concrete/pours", "POST", body));
   sink?.(data);
 }
 

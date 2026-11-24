@@ -6,13 +6,15 @@ import { PHOTO_KIND_NAMES, PHOTO_KINDS, type PourPhoto, type PourPhotoKind } fro
 import type { ConcreteData } from "@/lib/concrete/shared";
 import { photoAt, type TodoMe } from "@/lib/todo/shared";
 import { errorText, send, when } from "./api";
-import { addPourPhotos, dropPourUpload, onPourUploads, pourUploads, retryPourUpload, type PourUpload } from "./pourPhotoQueue";
+import { askHowHeld, PourCamera } from "./PourCamera";
+import { addPourPhotos, addPourShot, dropPourUpload, onPourUploads, pourUploads, retryPourUpload, type PourUpload } from "./pourPhotoQueue";
 import ps from "./Pours.module.css";
 import styles from "./Todo.module.css";
 
 // A pour's pre-pour photos (lib/concrete/pourExtras.ts says what and why): the steel, the pipes and sleeves, anything
-// else, each kept at full size. Picked many at a time from the phone's photos (or taken here); each shows as soon as
-// its small copy is made, and they go up in turn (pourPhotoQueue.ts).
+// else. Taken here one after another in the app's own camera (PourCamera.tsx), or picked many at a time from the
+// phone's photos, each kept at full size; each shows as soon as its small copy is made, and they go up three at a time
+// (pourPhotoQueue.ts).
 
 const NONE: PourUpload[] = [];
 
@@ -38,6 +40,8 @@ export function PourPhotos({
   const id = useId();
   const [kind, setKind] = useState<PourPhotoKind>("steel");
   const [open, setOpen] = useState<string | null>(null);
+  const [camera, setCamera] = useState(false);
+  const phoneCamera = useRef<HTMLInputElement>(null);
   const uploads = usePourUploads(pourId);
   // In the order they show: steel first, then pipes, then the rest; each by the time it was taken.
   const mine = PHOTO_KINDS.flatMap((k) => photos.filter((p) => p.pourId === pourId && p.kind === k));
@@ -50,6 +54,14 @@ export function PourPhotos({
     const files = [...(e.target.files ?? [])];
     e.target.value = "";
     addPourPhotos(pourId, kind, files);
+    // A photo from the phone's own camera (when the app's couldn't open): back to the pour.
+    setCamera(false);
+  };
+  // The app's camera; a phone that has none for a web page goes straight to its own (one photo at a time).
+  const takePhotos = () => {
+    if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) return phoneCamera.current?.click();
+    askHowHeld();
+    setCamera(true);
   };
 
   return (
@@ -63,16 +75,27 @@ export function PourPhotos({
         ))}
       </div>
       <div className={ps.photoButtons}>
-        <label htmlFor={`${id}-cam`} className={ps.photoAdd} role="button" tabIndex={0}>
-          <span aria-hidden="true">📷</span> Take
-        </label>
+        <button type="button" className={ps.photoAdd} onClick={takePhotos}>
+          <span aria-hidden="true">📷</span> Take photos
+        </button>
         <label htmlFor={`${id}-pick`} className={ps.photoPick} role="button" tabIndex={0}>
           Add from photos
         </label>
       </div>
-      {/* "capture" opens the camera; the other picks many at once from the phone's photos. */}
-      <input id={`${id}-cam`} className={styles.hiddenInput} type="file" accept="image/*" capture="environment" onChange={pick} />
+      {/* "capture" is the phone's own camera (one photo, when the app's can't open); the other picks many at once. */}
+      <input ref={phoneCamera} id={`${id}-cam`} className={styles.hiddenInput} type="file" accept="image/*" capture="environment" onChange={pick} />
       <input id={`${id}-pick`} className={styles.hiddenInput} type="file" accept="image/*" multiple onChange={pick} />
+      {camera && (
+        <PourCamera
+          kind={kind}
+          onKind={setKind}
+          onShot={(shot, k) => addPourShot(pourId, k, shot.file, shot.small)}
+          going={going}
+          failed={failed.length}
+          phoneCamera={`${id}-cam`}
+          onClose={() => setCamera(false)}
+        />
+      )}
       {going > 0 && (
         <p className={ps.photoNote} role="status">
           {going === 1 ? "1 photo" : `${going} photos`} going up at full size: keep the app open until they&rsquo;re in.
@@ -121,7 +144,10 @@ export function PourPhotos({
         </p>
       )}
       {!mine.length && !uploads.length && (
-        <p className={ps.hint}>Before the pour: the steel all over, then the pipes and sleeves. Pick many at once from your photos; each is kept at full size.</p>
+        <p className={ps.hint}>
+          Before the pour: the steel all over, then the pipes and sleeves. Take photos: tap for each one and they go up as you go. Or pick them all at
+          once from your photos (kept at full size).
+        </p>
       )}
       {index >= 0 && (
         <PhotoViewer

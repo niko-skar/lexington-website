@@ -52,6 +52,9 @@ export async function shrinkSized(file: Blob, side: number, quality: number): Pr
   const blob = await new Promise<Blob>((resolve, reject) =>
     canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("The photo could not be read."))), "image/jpeg", quality)
   );
+  // An iPhone frees a canvas's memory only when told: twenty photos in a row would run out of it.
+  canvas.width = 0;
+  canvas.height = 0;
   return { blob, width, height };
 }
 
