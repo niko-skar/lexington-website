@@ -165,7 +165,7 @@ export default async function HomePage() {
               World-class amenities, every day.
             </h2>
             <p style={{ marginTop: 16, color: "#555", maxWidth: 560 }}>
-              A private rooftop garden, an indoor pool, gym, sauna and more —
+              A private rooftop garden, a swimming pool, gym, sauna and more —
               built for a full day, not a quick visit.
             </p>
           </Reveal>

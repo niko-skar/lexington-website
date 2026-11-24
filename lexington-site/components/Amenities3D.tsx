@@ -153,7 +153,7 @@ export function Amenities3DSection() {
           >
             <Image
               src={POSTER_SRC}
-              alt="3D model of the amenity floor in the evening: the pool hall with the café, the gym, the spa and the changing rooms"
+              alt="3D model of the amenity floor in the evening: the pool and café, the gym, the spa and the changing rooms"
               width={1600}
               height={1000}
               sizes="(max-width: 880px) 100vw, 55vw"

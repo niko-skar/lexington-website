@@ -74,7 +74,7 @@ export default async function AmenitiesPage() {
           title="Pool, gym, and everything after."
         >
           <p>
-            An indoor pool, a fitted gym, sauna, jacuzzi and ice bath —
+            A swimming pool, a fitted gym, sauna, jacuzzi and ice bath —
             everything residents need for a full day, without leaving the
             building.
           </p>
