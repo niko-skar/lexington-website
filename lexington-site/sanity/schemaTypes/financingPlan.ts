@@ -85,6 +85,12 @@ export const financingPlan = defineType({
       type: "object",
       fields: [
         defineField({
+          name: "studioRange",
+          title: "Studio rental range",
+          description: "A month, e.g. \"$850–$1,250/mo\" (shown above the one-bedroom range; leave empty to hide it).",
+          type: "string",
+        }),
+        defineField({
           name: "oneBedroomRange",
           title: "One bedroom rental range",
           type: "string",
@@ -115,6 +121,12 @@ export const financingPlan = defineType({
           of: [defineArrayMember({ type: "string" })],
         }),
         defineField({ name: "note", title: "Note", type: "text" }),
+        defineField({
+          name: "guide",
+          title: "Guide figure",
+          description: "A small line under the note, e.g. \"As a guide: about US$1–2 per m² a month.\" Leave empty to hide it.",
+          type: "string",
+        }),
       ],
     }),
   ],

@@ -1,7 +1,67 @@
+/* The finish packages, under the list. */
 .packages {
-  padding-bottom: var(--space-7);
-  border-bottom: 1px solid rgba(21, 24, 26, 0.14);
-  margin-bottom: var(--space-7);
+  margin-top: var(--space-8);
+  padding-top: var(--space-7);
+  border-top: 1px solid rgba(21, 24, 26, 0.14);
+}
+
+/* The kinds of home, first thing on the page: each a card that filters the list. */
+.kinds {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 12px;
+  margin-bottom: var(--space-6);
+}
+
+.kind {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  min-height: 92px;
+  padding: 14px 16px;
+  text-align: left;
+  background: var(--paper);
+  border: 1px solid rgba(21, 24, 26, 0.16);
+  border-radius: var(--radius);
+  color: var(--ink);
+  transition: border-color 0.2s var(--ease), box-shadow 0.2s var(--ease);
+}
+
+.kind:hover {
+  border-color: var(--brass);
+}
+
+.kind:focus-visible {
+  outline: 2px solid var(--brass);
+  outline-offset: 2px;
+}
+
+.kind[aria-pressed="true"] {
+  border-color: var(--brass);
+  box-shadow: inset 0 0 0 1px var(--brass);
+  background: #fbf8f1;
+}
+
+.kindName {
+  font-family: var(--font-serif);
+  font-size: 18px;
+  line-height: 1.2;
+}
+
+.kindFrom {
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.kindLeft {
+  margin-top: auto;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--brass-text);
 }
 
 .filters {
@@ -11,6 +71,16 @@
   padding-bottom: var(--space-6);
   border-bottom: 1px solid rgba(21, 24, 26, 0.14);
   margin-bottom: var(--space-5);
+}
+
+.countFinish {
+  color: #6b6355;
+}
+
+.countFinish a {
+  color: var(--brass-text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .filterGroup {
@@ -317,6 +387,40 @@
 }
 
 @media (max-width: 640px) {
+  /* Two kinds a row and tighter filters, so the first homes show on the first screens of a phone. */
+  .kinds {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: var(--space-5);
+  }
+
+  .kind {
+    min-height: 78px;
+    padding: 10px 12px;
+  }
+
+  .kindName {
+    font-size: 16px;
+  }
+
+  .kindFrom {
+    font-size: 13px;
+  }
+
+  .filters {
+    gap: var(--space-4);
+    padding-bottom: var(--space-5);
+  }
+
+  .pills {
+    gap: 8px;
+  }
+
+  .pill,
+  .pillActive {
+    padding: 7px 13px;
+  }
+
   .compareBar {
     left: 16px;
     right: 16px;

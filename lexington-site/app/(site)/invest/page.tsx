@@ -6,13 +6,14 @@ import { urlFor } from "@/lib/sanity/image";
 import { financingPlanQuery, galleryImagesQuery, siteSettingsQuery } from "@/lib/sanity/queries";
 import type { FinancingPlan, GalleryImage, SiteSettings } from "@/lib/sanity/types";
 import { feeVatSuffix, vatFrom } from "@/lib/vat";
+import { formatUSD } from "@/lib/format";
+import { RESERVATION_FEE_USD } from "@/lib/reservation/config";
 
 import { PageIntro } from "@/components/PageIntro";
 import { OfferBand } from "@/components/OfferBand";
 import { SplitSection } from "@/components/SplitSection";
 import { Button } from "@/components/Button";
 import { Reveal } from "@/components/Reveal";
-import { VatIncluded } from "@/components/Vat";
 import planTableStyles from "@/components/PlanTable.module.css";
 
 export const revalidate = 600;
@@ -26,8 +27,8 @@ export async function generateMetadata() {
   });
 }
 
-// The reservation row's dollar amounts in the payment tables: the fee has VAT in it (lib/vat.ts).
-const isFeeCell = (milestone: string, value?: string) => /reserv/i.test(milestone) && /\$\s?\d/.test(value ?? "");
+// A rent range as Studio holds it ("$1,300–$2,100/mo") in words: "$1,300–$2,100 a month".
+const monthly = (range: string) => `${range.replace(/\s*\/\s*mo(nth)?\.?\s*$/i, "").trim()} a month`;
 
 export default async function InvestPage() {
   const [financingPlan, images, siteSettings] = await Promise.all([
@@ -44,6 +45,9 @@ export default async function InvestPage() {
   // 30 November, then "10% full payment, 5% payment plan from 1 Dec").
   const schedule = offerSchedule(siteSettings.promoBanner, new Date().toISOString().slice(0, 10));
   const offer = schedule.now && !schedule.now.ended ? schedule.now : null;
+  // How long a payment plan can run (the offer says it: 12 months since 17 Nov 2026).
+  const planMonths = schedule.now?.planMonths ?? schedule.next?.planMonths ?? null;
+  const fee = formatUSD(RESERVATION_FEE_USD);
   const next = offer ? schedule.next : null;
   // The Discounts table: one column for the offer, and one for the smaller discounts that follow it.
   const columns = offer ? [offer, ...(next ? [next] : [])] : [];
@@ -68,73 +72,23 @@ export default async function InvestPage() {
           <Reveal>
             <div className="eyebrow">Financing Options</div>
             <h2 style={{ fontSize: "var(--fs-600)", marginTop: 14 }}>
-              Self-finance payment plans.
+              Payment plans.
             </h2>
+            {/* Niko, 24 Nov 2026: "$10k reservation should be the standard deposit, remove anything that mentions 20% or
+                other". The instalment tables (20% at 30 days, 4, 8 and 12 months, and the mortgage's 30% / 70%) are no
+                longer shown; their rows stay in Studio. */}
             <p style={{ marginTop: 16, color: "#555", maxWidth: 640 }}>
-              All financing options are flexible with the exception of a
-              minimum $10,000 reservation{feeVatSuffix(vat)} — contact us for a
-              custom package.
+              The {fee} reservation{feeVatSuffix(vat)} is the standard deposit. Pay the rest in full, or on a payment plan
+              {planMonths ? ` of up to ${planMonths} months` : ""} — contact us for a custom package.
             </p>
           </Reveal>
-
-          <div className={planTableStyles.tableScroll} style={{ marginTop: 40 }}>
-            <table className={planTableStyles.table}>
-              <thead>
-                <tr>
-                  <th>Milestone</th>
-                  <th>Timeframe</th>
-                  <th>Option 1</th>
-                  <th>Option 2</th>
-                </tr>
-              </thead>
-              <tbody>
-                {financingPlan.selfFinanceRows.map((row) => (
-                  <tr key={row.milestone}>
-                    <td>{row.milestone}</td>
-                    <td>{row.timeframe}</td>
-                    <td>
-                      {row.option1}
-                      {isFeeCell(row.milestone, row.option1) && <VatIncluded vat={vat} />}
-                    </td>
-                    <td>
-                      {row.option2 || "—"}
-                      {isFeeCell(row.milestone, row.option2) && <VatIncluded vat={vat} />}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
 
           <div className="eyebrow" style={{ marginTop: 56 }}>
             Mortgage Financing
           </div>
           <p style={{ marginTop: 12, color: "#555", maxWidth: 620, fontSize: 15 }}>
-            {financingPlan.mortgageNote}
+            {financingPlan.mortgageNote} The deposit is the same {fee} reservation{feeVatSuffix(vat)}.
           </p>
-          <div className={planTableStyles.tableScroll} style={{ marginTop: 20 }}>
-            <table className={planTableStyles.table}>
-              <thead>
-                <tr>
-                  <th>Milestone</th>
-                  <th>Timeframe</th>
-                  <th>Option 1</th>
-                </tr>
-              </thead>
-              <tbody>
-                {financingPlan.mortgageRows.map((row) => (
-                  <tr key={row.milestone}>
-                    <td>{row.milestone}</td>
-                    <td>{row.timeframe}</td>
-                    <td>
-                      {row.option1}
-                      {isFeeCell(row.milestone, row.option1) && <VatIncluded vat={vat} />}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
 
           {/* The discounts come from the offer in Site settings, the same words the replies, the chat and the ads
               use (the old upfront-payment tiers, 12.5% down to 5%, contradicted the offer and are no longer shown). */}
@@ -238,6 +192,12 @@ export default async function InvestPage() {
           >
             {financingPlan.serviceCharge.note}
           </p>
+          {/* A guide figure, kept small (Niko, 24 Nov 2026: "bury the monthly management fee somewhere ... just so it's there"). */}
+          {financingPlan.serviceCharge.guide && (
+            <p className="disclaimer" style={{ marginTop: 10, maxWidth: 620 }}>
+              {financingPlan.serviceCharge.guide}
+            </p>
+          )}
         </div>
       </section>
 
@@ -263,11 +223,16 @@ export default async function InvestPage() {
               padding: 0,
             }}
           >
+            {financingPlan.buyToRent.studioRange && (
+              <li style={{ fontFamily: "var(--font-serif)", fontSize: 19 }}>
+                {monthly(financingPlan.buyToRent.studioRange)} — Studio rental*
+              </li>
+            )}
             <li style={{ fontFamily: "var(--font-serif)", fontSize: 19 }}>
-              {financingPlan.buyToRent.oneBedroomRange.replace("/mo", "")} — 1 Bedroom rental*
+              {monthly(financingPlan.buyToRent.oneBedroomRange)} — 1 Bedroom rental*
             </li>
             <li style={{ fontFamily: "var(--font-serif)", fontSize: 19 }}>
-              {financingPlan.buyToRent.twoBedroomRange.replace("/mo", "")} — 2 Bedroom rental*
+              {monthly(financingPlan.buyToRent.twoBedroomRange)} — 2 Bedroom rental*
             </li>
             <li style={{ fontFamily: "var(--font-serif)", fontSize: 19, color: "var(--clay)" }}>
               {financingPlan.buyToRent.projectedYieldPct}% projected rental yield

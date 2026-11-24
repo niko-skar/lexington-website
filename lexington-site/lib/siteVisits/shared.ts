@@ -47,6 +47,30 @@ export const VISIT_PLACE = "18 Duala Close, opposite Oak Plaza Hotel, East Legon
 /** What they would like to see (the booking page's choices; "" when they don't say). */
 export const VISIT_INTERESTS = ["Studio", "One bedroom", "Two bedrooms", "Three bedrooms", "Penthouse", "Not sure yet"] as const;
 
+/**
+ * How they see The Lexington: at the site, or on a WhatsApp video call for someone who can't come (Niko, 24 Nov 2026:
+ * "i give video tours, same times and days as the site visits"). The same hours, so a video tour takes its hour like a
+ * visit does. A visit with no kind on record is a site visit.
+ */
+export type VisitKind = "site" | "video";
+export const isVideoKind = (kind: string | null | undefined): boolean => kind === "video";
+/** "site visit" or "video tour", for sentences. */
+export const visitWord = (kind: string | null | undefined): string => (isVideoKind(kind) ? "video tour" : "site visit");
+
+/** A time zone the browser said it is in ("Europe/London"), or null when it isn't one this server knows. */
+export function cleanTimeZone(value: unknown): string | null {
+  if (typeof value !== "string" || value.length > 60 || !/^[A-Za-z_]+(\/[A-Za-z0-9_+-]+){0,2}$/.test(value)) return null;
+  try {
+    new Intl.DateTimeFormat("en-GB", { timeZone: value });
+    return value;
+  } catch {
+    return null;
+  }
+}
+
+/** A place's name from its time zone: "Europe/London" → "London", "America/New_York" → "New York". */
+const placeOf = (tz: string) => (tz.split("/").pop() ?? tz).replace(/_/g, " ");
+
 const pad = (n: number) => String(n).padStart(2, "0");
 
 /** The slot an instant falls in (its hour, Accra time). */
@@ -134,6 +158,26 @@ export const rangeLabel = (key: SlotKey) => `${timeLabel(key)} to ${pad(slotHour
 /** "Thursday 13 November at 10:00" */
 export const slotLabel = (key: SlotKey, short = false) => `${dayLabel(slotDay(key), short)} at ${timeLabel(key)}`;
 
+/**
+ * The slot's hour where someone abroad is: "05:00 in New York", "02:00 on Thursday in Tokyo". "" when their clock reads
+ * Accra's (GMT) at that hour, or their time zone isn't known.
+ */
+export function localTimeLabel(key: SlotKey, tz: string | null | undefined): string {
+  const zone = cleanTimeZone(tz);
+  const ms = slotStartMs(key);
+  if (!zone || ms === null) return "";
+  try {
+    const parts = new Intl.DateTimeFormat("en-GB", { timeZone: zone, hour: "2-digit", minute: "2-digit", weekday: "long", day: "numeric", hourCycle: "h23" }).formatToParts(new Date(ms));
+    const part = (type: string) => parts.find((p) => p.type === type)?.value ?? "";
+    const hhmm = `${part("hour")}:${part("minute")}`;
+    const sameDay = Number(part("day")) === new Date(ms).getUTCDate();
+    if (hhmm === timeLabel(key) && sameDay) return "";
+    return `${hhmm}${sameDay ? "" : ` on ${part("weekday")}`} in ${placeOf(zone)}`;
+  } catch {
+    return "";
+  }
+}
+
 /** "today", "tomorrow" or "" for a day, seen from `nowMs`. */
 export function dayWord(day: string, nowMs: number): string {
   const today = slotKey(nowMs).slice(0, 10);
@@ -190,6 +234,10 @@ export function twoFreeTimes(free: readonly SlotKey[], nowMs: number): SlotKey[]
 export interface VisitRow {
   id: string;
   slot: SlotKey;
+  /** At the site, or a video tour on WhatsApp. */
+  kind: VisitKind;
+  /** The visitor's own time zone when the booking page could tell (for their local time in emails). */
+  tz: string | null;
   name: string;
   phone: string;
   email: string;

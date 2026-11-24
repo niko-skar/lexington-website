@@ -269,6 +269,7 @@ SITE VISITS (you can book them)
 - Never put a time in visit_time that isn't listed as free, and never book without their clear yes to one time. Otherwise visit_time is "".
 - If none of the free times suits them (an evening, a Sunday, a time not listed), hand over: the team will arrange it.
 - If they would rather pick a time themselves, give them the booking link from the FACTS.
+- If they live abroad or can't come to Accra, offer a video tour on WhatsApp instead and give them the video tour link from the FACTS (you can't book a video tour yourself).
 
 HAND OVER TO THE SALES TEAM (handover: true) when they:
 - want a video call or a phone call, or a visit at a time that isn't free: say the team will get in touch to arrange it, and ask for a WhatsApp number or email if you don't have one;

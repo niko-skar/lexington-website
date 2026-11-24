@@ -30,7 +30,7 @@ export async function generateMetadata() {
   return pageMetadata({
     path: "/residences",
     title: "Residences & Floor Plans | The Lexington",
-    description: `Studio, one, two and three-bedroom residences and a penthouse duplex in Shiashie, East Legon. Live floor plans, availability and pricing from ${formatUSD(withVat(fromUSD, vat))}${inclVatSuffix(vat)}.`,
+    description: `Studio, one, two and three-bedroom residences and two duplex penthouses in Shiashie, East Legon. Live floor plans, availability and pricing from ${formatUSD(withVat(fromUSD, vat))}${inclVatSuffix(vat)}.`,
   });
 }
 
@@ -56,7 +56,7 @@ export default async function ResidencesPage() {
 
       <section className="section sectionStone" style={{ paddingTop: "clamp(32px, 4vw, 56px)" }}>
         <div className="wrap">
-          <UnitFinder units={units} tiers={tiers} vat={vatFrom(siteSettings)} />
+          <UnitFinder units={units} tiers={tiers} vat={vatFrom(siteSettings)} contactPhone={siteSettings.contactPhone} />
         </div>
       </section>
 

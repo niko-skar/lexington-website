@@ -1,4 +1,4 @@
-import { splitUnits, unitsText } from "@/lib/format";
+import { splitUnits, unitsText, whatsappUrl } from "@/lib/format";
 import { OLYMPIAN_URL } from "@/lib/olympian";
 import type { SiteSettings } from "@/lib/sanity/types";
 
@@ -590,6 +590,9 @@ export function visitEmail({
   when,
   whenShort,
   people,
+  video = false,
+  phone = "",
+  localTime = "",
   mapUrl,
   manageUrl,
   bookUrl,
@@ -602,6 +605,12 @@ export function visitEmail({
   /** "Thursday 13 November at 10:00" (subjects) */
   whenShort: string;
   people: number | null;
+  /** A video tour on WhatsApp (Niko, 24 Nov 2026), not a visit to the site. */
+  video?: boolean;
+  /** The number we video call (a video tour). */
+  phone?: string;
+  /** The same hour where they are ("05:00 in New York"), "" when it is Accra's or unknown. */
+  localTime?: string;
   mapUrl: string;
   /** The visitor's own page to change or cancel it. */
   manageUrl: string;
@@ -611,6 +620,7 @@ export function visitEmail({
 }) {
   const first = escapeHtml(name.trim().split(/\s+/)[0] || name);
   const on = kind === "booked" || kind === "moved" || kind === "reminder";
+  if (video) return videoTourEmail({ kind, first, name, when, whenShort, phone, localTime, manageUrl, bookUrl, siteSettings });
   const heading: Record<VisitEmailKind, string> = {
     booked: `Your site visit is booked, ${first}.`,
     moved: `Your site visit has a new time, ${first}.`,
@@ -680,6 +690,114 @@ export function visitEmail({
       <td style="padding:0 40px 32px;">
         <p style="font-family:${FONT_SANS}; font-size:13px; line-height:1.6; color:#6b6b66; margin:0;">
           Need to change the time or cancel? <a href="${escapeHtml(manageUrl)}" style="color:#8b4a34;">Change or cancel your visit</a>, or reply to this email.
+        </p>
+      </td>
+    </tr>`
+        : ""
+    }`;
+
+  return { subject: subject[kind], html: shell(siteSettings, body) };
+}
+
+/**
+ * The same emails for a video tour on WhatsApp: when (Accra time, and theirs when they are abroad), how (we video call
+ * them on WhatsApp), and a way to reach us. No map and no building-site advice.
+ */
+function videoTourEmail({
+  kind,
+  first,
+  name,
+  when,
+  whenShort,
+  phone,
+  localTime,
+  manageUrl,
+  bookUrl,
+  siteSettings,
+}: {
+  kind: VisitEmailKind;
+  first: string;
+  name: string;
+  when: string;
+  whenShort: string;
+  phone: string;
+  localTime: string;
+  manageUrl: string;
+  bookUrl: string;
+  siteSettings: SiteSettings;
+}) {
+  const on = kind === "booked" || kind === "moved" || kind === "reminder";
+  const heading: Record<VisitEmailKind, string> = {
+    booked: `Your video tour is booked, ${first}.`,
+    moved: `Your video tour has a new time, ${first}.`,
+    reminder: `Speak tomorrow, ${first}.`,
+    missed: `Sorry we missed you, ${first}.`,
+    cancelled: `Your video tour is cancelled, ${first}.`,
+    cancelledByUs: `We need to change your video tour, ${first}.`,
+  };
+  const intro: Record<VisitEmailKind, string> = {
+    booked: "Thank you for booking a video tour of The Lexington. At the time below we will video call you on WhatsApp and show you the building and the homes, wherever you are.",
+    moved: "Your video tour has moved to the time below. We will video call you on WhatsApp then.",
+    reminder: "This is a reminder of your video tour of The Lexington tomorrow. We will video call you on WhatsApp.",
+    missed: "We couldn't reach you on WhatsApp for your video tour. If something came up, you are welcome to pick another time.",
+    cancelled: "As you asked, your video tour is cancelled. You are welcome to book another time whenever it suits you.",
+    cancelledByUs: "We are sorry: we can no longer give you the video tour at the time you booked. Please pick another time that suits you.",
+  };
+  const time = whenShort.replace(/^.* at /, "");
+  const subject: Record<VisitEmailKind, string> = {
+    booked: `Your video tour: ${whenShort} (Accra time) — The Lexington`,
+    moved: `New time for your video tour: ${whenShort} (Accra time) — The Lexington`,
+    reminder: `Tomorrow: your video tour of The Lexington (${time} Accra time)`,
+    missed: "Sorry we missed you — pick another time for your video tour of The Lexington",
+    cancelled: "Your video tour is cancelled — The Lexington",
+    cancelledByUs: "We need to change your video tour — The Lexington",
+  };
+  const rows: Array<[string, string]> = on
+    ? [
+        ["When", `${when} (Accra time)`],
+        ...(localTime ? ([["Your time", localTime]] as Array<[string, string]>) : []),
+        ["How", phone ? `A WhatsApp video call to ${phone}` : "A WhatsApp video call"],
+      ]
+    : [[kind === "missed" ? "Your video tour was" : "Cancelled", `${when} (Accra time)`]];
+  const notes = on
+    ? [
+        "Keep WhatsApp open on your phone at that time: we will call you.",
+        "A good Wi-Fi or data connection makes the tour clearer.",
+        `If anything changes, WhatsApp us on ${siteSettings.contactPhone}.`,
+      ]
+    : [];
+  const whatsapp = whatsappUrl(siteSettings.contactPhone, `Hi, this is ${name.trim()} about my video tour of The Lexington (${whenShort}).`);
+
+  const body = `
+    <tr>
+      <td style="padding:44px 40px 8px;">
+        <div style="font-family:${FONT_SERIF}; font-size:24px; color:#15181a; line-height:1.3; margin-bottom:18px;">
+          ${heading[kind]}
+        </div>
+        <p style="font-family:${FONT_SANS}; font-size:15px; line-height:1.7; color:#3a3a36; margin:0 0 24px;">
+          ${escapeHtml(intro[kind])}
+        </p>
+      </td>
+    </tr>
+    ${factsBox(rows)}
+    ${
+      notes.length
+        ? `
+    <tr>
+      <td style="padding:0 40px 16px;">
+        ${notes.map((n) => `<p style="font-family:${FONT_SANS}; font-size:14.5px; line-height:1.6; color:#3a3a36; margin:0 0 8px;">${escapeHtml(n)}</p>`).join("")}
+      </td>
+    </tr>`
+        : ""
+    }
+    ${on ? ctaButton(escapeHtml(whatsapp), "WhatsApp us") : ctaButton(escapeHtml(bookUrl), "Pick another time")}
+    ${
+      on
+        ? `
+    <tr>
+      <td style="padding:0 40px 32px;">
+        <p style="font-family:${FONT_SANS}; font-size:13px; line-height:1.6; color:#6b6b66; margin:0;">
+          Need to change the time or cancel? <a href="${escapeHtml(manageUrl)}" style="color:#8b4a34;">Change or cancel your video tour</a>, or reply to this email.
         </p>
       </td>
     </tr>`

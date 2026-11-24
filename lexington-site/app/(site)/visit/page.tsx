@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
 export const metadata = pageMetadata({
   path: "/visit",
   title: "Book a Site Visit | The Lexington",
-  description: "Pick a day and a time to see The Lexington in Shiashie, East Legon: Monday to Saturday, 8am to 6pm. Our team will show you the building and the homes.",
+  description: "Pick a day and a time to see The Lexington in Shiashie, East Legon, at the site or on a WhatsApp video tour: Monday to Saturday, 8am to 6pm. Our team will show you the building and the homes.",
 });
 
 /** The page's data, and the clock it was read at (for "today" and "tomorrow"). */
@@ -40,7 +40,7 @@ export default async function VisitPage() {
       <PageIntro
         eyebrow="Visit"
         title="Come and see The Lexington."
-        lede="Pick a day and a time, and a member of our team will show you the building and the homes. Monday to Saturday, 8am to 6pm."
+        lede="Pick a day and a time, and a member of our team will show you the building and the homes: at the site, or on a WhatsApp video call if you can't come. Monday to Saturday, 8am to 6pm."
       />
 
       <section className="section sectionStone" style={{ paddingTop: "clamp(32px, 4vw, 56px)" }}>
@@ -50,12 +50,15 @@ export default async function VisitPage() {
 
             <aside className={styles.aside} aria-label="About your visit">
               <div className={styles.panel}>
-                <div className="eyebrow">Your visit</div>
+                <div className="eyebrow">How it works</div>
                 <ol className={styles.steps}>
                   <li>Pick a time that suits you. All times are Accra time (GMT).</li>
-                  <li>A member of our team meets you at the site and shows you the building and the homes.</li>
-                  <li>A visit takes about an hour. It&rsquo;s a building site, so closed shoes are best.</li>
+                  <li>At the site, a member of our team meets you and shows you the building and the homes. A visit takes about an hour; it&rsquo;s a building site, so closed shoes are best.</li>
+                  <li>On a video tour, we video call you on WhatsApp at that time and show you round, wherever you are.</li>
                 </ol>
+                <p className={styles.talk}>
+                  <a href="/buying-from-abroad">Buying from abroad? See how it works</a>
+                </p>
               </div>
               <div className={styles.panel}>
                 <div className="eyebrow">Where</div>

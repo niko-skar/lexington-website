@@ -113,7 +113,7 @@ export default async function HomePage() {
           imageUrl={urlFor(residencesImage.image).width(800).height(1000).url()}
           imageAlt={residencesImage.alt}
           eyebrow="Residences"
-          title="One, two and three-bedroom duplex penthouses."
+          title="From studios to duplex penthouses."
           style={{ paddingTop: "clamp(48px, 6vw, 80px)" }}
         >
           <p>

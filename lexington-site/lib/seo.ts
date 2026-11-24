@@ -21,7 +21,7 @@ export const SITE_TITLE =
  * while VAT is on. `fromUSD`: the cheapest home still for sale, before VAT (lib/fromPrice.ts reads it from the units).
  */
 export function siteDescription(vat: Vat = NO_VAT, fromUSD: number = PRICE_FROM_USD): string {
-  return `The Lexington: eight storeys of studio to three-bedroom residences and a penthouse duplex in Shiashie, East Legon, Accra. From ${formatUSD(withVat(fromUSD, vat))}${inclVatSuffix(vat)}. An Olympian Development.`;
+  return `The Lexington: eight storeys of studio to three-bedroom residences and two duplex penthouses in Shiashie, East Legon, Accra. From ${formatUSD(withVat(fromUSD, vat))}${inclVatSuffix(vat)}. An Olympian Development.`;
 }
 
 /**

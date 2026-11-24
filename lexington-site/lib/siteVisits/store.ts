@@ -22,6 +22,9 @@ import {
   BOOKED_VIA,
   VISIT_PLACE,
   bookable,
+  isVideoKind,
+  localTimeLabel,
+  visitWord,
   byDay,
   dayLabel,
   freeSlots,
@@ -32,6 +35,7 @@ import {
   slotLabel,
   slotStartMs,
   type SlotKey,
+  type VisitKind,
   type VisitRow,
   type VisitSource,
   type VisitStatus,
@@ -60,6 +64,10 @@ interface VisitDoc {
   _id: string;
   _rev: string;
   slot: string;
+  /** "video": a video tour on WhatsApp (none: a site visit). */
+  kind?: VisitKind;
+  /** The visitor's time zone, when the booking page could tell. */
+  tz?: string;
   name: string;
   phone?: string;
   email?: string;
@@ -88,12 +96,14 @@ interface SlotDoc {
   blocked?: boolean;
 }
 
-const VISIT_FIELDS = `_id, _rev, slot, name, phone, email, people, interest, note, source, leadId, threadId, taskKey, status, createdAt, remindedAt, remindedBy, outcomeAt, rebookSentAt, moves, rebookOf`;
+const VISIT_FIELDS = `_id, _rev, slot, kind, tz, name, phone, email, people, interest, note, source, leadId, threadId, taskKey, status, createdAt, remindedAt, remindedBy, outcomeAt, rebookSentAt, moves, rebookOf`;
 
 export function rowOf(d: VisitDoc): VisitRow {
   return {
     id: d._id,
     slot: d.slot,
+    kind: isVideoKind(d.kind) ? "video" : "site",
+    tz: d.tz ?? null,
     name: d.name,
     phone: d.phone ?? "",
     email: d.email ?? "",
@@ -212,6 +222,9 @@ async function sendVisitEmail(kind: VisitEmailKind, v: VisitDoc): Promise<boolea
       when,
       whenShort: slotLabel(v.slot),
       people: v.people ?? null,
+      video: isVideoKind(v.kind),
+      phone: v.phone ?? "",
+      localTime: localTimeLabel(v.slot, v.tz),
       mapUrl: googleMapsUrl(),
       manageUrl: manageUrl(v._id),
       bookUrl: manageUrl(v._id),
@@ -222,8 +235,11 @@ async function sendVisitEmail(kind: VisitEmailKind, v: VisitDoc): Promise<boolea
       ? visitIcs({
           id: v._id,
           slot: v.slot,
-          location: settings.officeAddress,
-          description: `Your visit to The Lexington. Map: ${googleMapsUrl()}. To change or cancel: ${manageUrl(v._id)}`,
+          location: isVideoKind(v.kind) ? "WhatsApp video call" : settings.officeAddress,
+          description: isVideoKind(v.kind)
+            ? `Your video tour of The Lexington: we video call you on WhatsApp${v.phone ? ` (${v.phone})` : ""}. To change or cancel: ${manageUrl(v._id)}`
+            : `Your visit to The Lexington. Map: ${googleMapsUrl()}. To change or cancel: ${manageUrl(v._id)}`,
+          title: isVideoKind(v.kind) ? "Video tour: The Lexington" : undefined,
           url: manageUrl(v._id),
         })
       : null;
@@ -233,7 +249,7 @@ async function sendVisitEmail(kind: VisitEmailKind, v: VisitDoc): Promise<boolea
       replyTo: settings.contactEmail,
       subject: mail.subject,
       html: mail.html,
-      ...(ics ? { attachments: [{ filename: "Site-visit-The-Lexington.ics", content: Buffer.from(ics).toString("base64") }] } : {}),
+      ...(ics ? { attachments: [{ filename: isVideoKind(v.kind) ? "Video-tour-The-Lexington.ics" : "Site-visit-The-Lexington.ics", content: Buffer.from(ics).toString("base64") }] } : {}),
     });
     if (result.error) {
       console.error("[visits] Resend refused the email:", result.error);
@@ -281,26 +297,29 @@ async function setVisitTask(leadId: string | undefined, taskKey: string | undefi
     .catch((e: Error) => console.error("[visits] their step wasn't updated:", e.message));
 }
 
-const visitTaskText = (name: string, slot: string) => `Site visit: show ${firstName(name)} the site, ${slotLabel(slot)}`;
+const visitTaskText = (name: string, slot: string, kind?: VisitKind) =>
+  isVideoKind(kind)
+    ? `Video tour: video call ${firstName(name)} on WhatsApp, ${slotLabel(slot)}`
+    : `Site visit: show ${firstName(name)} the site, ${slotLabel(slot)}`;
 
 /**
  * Finds (or makes) their record in Prospects and puts the visit on it: a line in the timeline, the visit as a step on
  * its day, and a new enquiry moves on to "Contacted". Answers the record's id and the step's key.
  */
-async function putOnRecord(v: { name: string; email: string; phone: string; slot: string; source: VisitSource; interest: string; people: number | null; note: string; leadId?: string | null; leadSource?: string; adSource?: string }): Promise<{ leadId: string | null; taskKey: string }> {
+async function putOnRecord(v: { name: string; email: string; phone: string; slot: string; kind?: VisitKind; source: VisitSource; interest: string; people: number | null; note: string; leadId?: string | null; leadSource?: string; adSource?: string }): Promise<{ leadId: string | null; taskKey: string }> {
   const taskKey = newKey();
   // A preview build (the test version Niko tries before it goes live) never writes to Prospects.
   if (process.env.VERCEL_ENV === "preview") return { leadId: null, taskKey };
   const now = new Date().toISOString();
   const what = [
-    `Booked a site visit ${BOOKED_VIA[v.source]}: ${slotLabel(v.slot)}.`,
+    `Booked a ${visitWord(v.kind)}${isVideoKind(v.kind) ? " on WhatsApp" : ""} ${BOOKED_VIA[v.source]}: ${slotLabel(v.slot)}.`,
     v.people ? `${v.people} ${v.people === 1 ? "person" : "people"}.` : "",
     v.interest ? `Would like to see: ${v.interest}.` : "",
     v.note ? `Their note: ${v.note}` : "",
   ]
     .filter(Boolean)
     .join(" ");
-  const task = { _key: taskKey, text: visitTaskText(v.name, v.slot), due: slotDay(v.slot), waitingOn: "me", done: false, createdAt: now };
+  const task = { _key: taskKey, text: visitTaskText(v.name, v.slot, v.kind), due: slotDay(v.slot), waitingOn: "me", done: false, createdAt: now };
   try {
     const client = buyers();
     const leadId = v.leadId || (await samePerson(v.email, v.phone));
@@ -348,11 +367,16 @@ async function putOnRecord(v: { name: string; email: string; phone: string; slot
 }
 
 /** The WhatsApp message Niko can send in one tap when there is no email to confirm or remind by. */
-export function whatsappNote(v: { name: string; phone: string; slot: string }, kind: "booked" | "reminder" | "missed"): string {
+export function whatsappNote(v: { name: string; phone: string; slot: string; kind?: VisitKind }, kind: "booked" | "reminder" | "missed"): string {
   if (!v.phone) return "";
   const first = firstName(v.name);
-  const text =
-    kind === "booked"
+  const text = isVideoKind(v.kind)
+    ? kind === "booked"
+      ? `Hi ${first}, this is The Lexington. Your video tour is booked for ${slotLabel(v.slot)} (Accra time). We'll video call you on WhatsApp at this number then. Speak soon!`
+      : kind === "reminder"
+        ? `Hi ${first}, this is The Lexington: a reminder of your video tour tomorrow at ${slotLabel(v.slot).replace(/^.* at /, "")} (Accra time). We'll video call you on WhatsApp at this number. Speak then!`
+        : `Hi ${first}, this is The Lexington. We couldn't reach you for your video tour on ${slotLabel(v.slot)}. Would you like to pick another time?`
+    : kind === "booked"
       ? `Hi ${first}, this is The Lexington. Your site visit is booked for ${slotLabel(v.slot)}. We are at ${VISIT_PLACE}: ${googleMapsUrl()}. See you then!`
       : kind === "reminder"
         ? `Hi ${first}, this is The Lexington: a reminder of your site visit tomorrow at ${slotLabel(v.slot).replace(/^.* at /, "")}. We are at ${VISIT_PLACE}: ${googleMapsUrl()}. See you then!`
@@ -364,6 +388,10 @@ export function whatsappNote(v: { name: string; phone: string; slot: string }, k
 
 export interface NewVisit {
   slot: string;
+  /** A video tour on WhatsApp instead of coming to the site. */
+  kind?: VisitKind;
+  /** The visitor's time zone (the booking page tells), for their own time in the emails. */
+  tz?: string | null;
   name: string;
   phone: string;
   email: string;
@@ -395,6 +423,8 @@ export async function bookVisit(input: NewVisit, nowMs = Date.now()): Promise<Bo
     _id: id,
     _type: "siteVisit",
     slot: input.slot,
+    ...(isVideoKind(input.kind) && { kind: "video" as VisitKind }),
+    ...(input.tz && { tz: input.tz.slice(0, 60) }),
     name: input.name.trim().slice(0, 120),
     ...(input.phone && { phone: input.phone.trim().slice(0, 40) }),
     ...(input.email && { email: input.email.trim().toLowerCase().slice(0, 160) }),
@@ -427,6 +457,7 @@ export async function bookVisit(input: NewVisit, nowMs = Date.now()): Promise<Bo
     email: doc.email ?? "",
     phone: doc.phone ?? "",
     slot: doc.slot,
+    kind: doc.kind,
     source: doc.source,
     interest: doc.interest ?? "",
     people: doc.people ?? null,
@@ -443,15 +474,18 @@ export async function bookVisit(input: NewVisit, nowMs = Date.now()): Promise<Bo
   const visit: VisitDoc = { ...doc, _rev: "", leadId: leadId ?? undefined, taskKey };
   const emailed = await sendVisitEmail("booked", visit);
 
-  const wa = whatsappNote({ name: visit.name, phone: visit.phone ?? "", slot: visit.slot }, "booked");
+  const wa = whatsappNote({ name: visit.name, phone: visit.phone ?? "", slot: visit.slot, kind: visit.kind }, "booked");
+  const video = isVideoKind(visit.kind);
+  const theirTime = localTimeLabel(visit.slot, visit.tz);
   // One the office booked itself needs no alert.
   if (visit.source !== "office") await notifyOwner({
     kind: "visit",
     urgent: true,
-    title: `Site visit booked: ${visit.name}, ${slotLabel(visit.slot, true)}`,
+    title: `${video ? "Video tour" : "Site visit"} booked: ${visit.name}, ${slotLabel(visit.slot, true)}`,
     lines: [
       `${dayLabel(slotDay(visit.slot))}, ${rangeLabel(visit.slot)}. Booked ${BOOKED_VIA[visit.source]}.`,
-      visit.phone ? `Phone: ${visit.phone}` : "",
+      video ? `A video tour on WhatsApp: you video call them at that time${theirTime ? ` (${theirTime} for them)` : ""}.` : "",
+      visit.phone ? `${video ? "WhatsApp" : "Phone"}: ${visit.phone}` : "",
       visit.email ? `Email: ${visit.email}` : "",
       visit.people ? `People: ${visit.people}` : "",
       visit.interest ? `Would like to see: ${visit.interest}` : "",
@@ -466,6 +500,7 @@ export async function bookVisit(input: NewVisit, nowMs = Date.now()): Promise<Bo
       { label: "Site visits", url: "/todo/visits" },
       ...(leadId ? [{ label: "Their record", url: `/admin/crm/${leadId}` }] : []),
       ...(wa && !emailed && !visit.threadId ? [{ label: "WhatsApp the confirmation", url: wa }] : []),
+      ...(video && visit.phone && (emailed || visit.threadId) ? [{ label: "Their WhatsApp", url: whatsappUrl(visit.phone) }] : []),
     ],
     open: "/todo/visits",
   });
@@ -501,7 +536,7 @@ export async function changeVisit(id: string, slot: string, by: "visitor" | "off
   if (!bookable(slot, nowMs, by === "office" ? 0 : MIN_NOTICE_MS)) return { ok: false, reason: "closed", alternatives: await alternatives(slot, nowMs).catch(() => []) };
   if (v.status !== "booked") {
     const again = await bookVisit(
-      { slot, name: v.name, phone: v.phone ?? "", email: v.email ?? "", people: v.people ?? null, interest: v.interest ?? "", note: v.note ?? "", source: by === "office" ? "office" : "website", leadId: v.leadId, rebookOf: v._id },
+      { slot, kind: v.kind, tz: v.tz, name: v.name, phone: v.phone ?? "", email: v.email ?? "", people: v.people ?? null, interest: v.interest ?? "", note: v.note ?? "", source: by === "office" ? "office" : "website", leadId: v.leadId, rebookOf: v._id },
       nowMs
     );
     return again.ok ? { ok: true, visit: again.visit } : { ok: false, reason: again.reason, alternatives: again.alternatives };
@@ -524,14 +559,14 @@ export async function changeVisit(id: string, slot: string, by: "visitor" | "off
   }
   forgetTaken();
   const moved: VisitDoc = { ...v, slot, moves: (v.moves ?? 0) + 1, remindedAt: undefined, remindedBy: undefined };
-  await setVisitTask(v.leadId, v.taskKey, { text: visitTaskText(v.name, slot), due: slotDay(slot) });
-  await onLead(v.leadId, `Site visit moved ${by === "visitor" ? "by them" : "by you"}: from ${slotLabel(v.slot)} to ${slotLabel(slot)}.`);
+  await setVisitTask(v.leadId, v.taskKey, { text: visitTaskText(v.name, slot, v.kind), due: slotDay(slot) });
+  await onLead(v.leadId, `${isVideoKind(v.kind) ? "Video tour" : "Site visit"} moved ${by === "visitor" ? "by them" : "by you"}: from ${slotLabel(v.slot)} to ${slotLabel(slot)}.`);
   const emailed = await sendVisitEmail("moved", moved);
   if (by === "visitor") {
     await notifyOwner({
       kind: "visit",
       urgent: true,
-      title: `Site visit moved: ${v.name}, now ${slotLabel(slot, true)}`,
+      title: `${isVideoKind(v.kind) ? "Video tour" : "Site visit"} moved: ${v.name}, now ${slotLabel(slot, true)}`,
       lines: [`It was ${slotLabel(v.slot)}. They changed it themselves.`, v.phone ? `Phone: ${v.phone}` : "", emailed ? `The new time went to ${v.email}.` : ""],
       links: [{ label: "Site visits", url: "/todo/visits" }, ...(v.leadId ? [{ label: "Their record", url: `/admin/crm/${v.leadId}` }] : [])],
       open: "/todo/visits",
@@ -554,20 +589,20 @@ export async function cancelVisit(id: string, by: "visitor" | "office", nowMs = 
   }
   await releaseSlot(v.slot, v._id).catch(() => undefined);
   await setVisitTask(v.leadId, v.taskKey, { done: true });
-  await onLead(v.leadId, `Site visit on ${slotLabel(v.slot)} cancelled ${by === "visitor" ? "by them" : "by you"}.`);
+  await onLead(v.leadId, `${isVideoKind(v.kind) ? "Video tour" : "Site visit"} on ${slotLabel(v.slot)} cancelled ${by === "visitor" ? "by them" : "by you"}.`);
   const emailed = await sendVisitEmail(by === "visitor" ? "cancelled" : "cancelledByUs", v);
   const done: VisitDoc = { ...v, status: "cancelled", outcomeAt: now };
   if (by === "visitor") {
     await notifyOwner({
       kind: "visit",
       urgent: true,
-      title: `Site visit cancelled: ${v.name}, ${slotLabel(v.slot, true)}`,
+      title: `${isVideoKind(v.kind) ? "Video tour" : "Site visit"} cancelled: ${v.name}, ${slotLabel(v.slot, true)}`,
       lines: ["They cancelled it themselves; the hour is free again.", v.phone ? `Phone: ${v.phone}` : ""],
       links: [{ label: "Site visits", url: "/todo/visits" }, ...(v.leadId ? [{ label: "Their record", url: `/admin/crm/${v.leadId}` }] : [])],
       open: "/todo/visits",
     });
   }
-  const whatsapp = !emailed && v.phone ? whatsappUrl(v.phone, `Hi ${firstName(v.name)}, this is The Lexington. We are sorry, we can't show you the site on ${slotLabel(v.slot)} after all. Could we find another time? You can pick one here: ${manageUrl(v._id)}`) : undefined;
+  const whatsapp = !emailed && v.phone ? whatsappUrl(v.phone, `Hi ${firstName(v.name)}, this is The Lexington. We are sorry, we can't ${isVideoKind(v.kind) ? "do your video tour" : "show you the site"} on ${slotLabel(v.slot)} after all. Could we find another time? You can pick one here: ${manageUrl(v._id)}`) : undefined;
   return { ok: true, visit: rowOf(done), whatsapp };
 }
 
@@ -594,18 +629,22 @@ export async function markVisit(id: string, outcome: "came" | "missed", nowMs = 
   let whatsapp: string | undefined;
   let rebookSentAt: string | undefined;
   if (outcome === "came") {
-    await onLead(v.leadId, `Came to see the site on ${slotLabel(v.slot)}.`, { text: `Follow up with ${firstName(v.name)} after their site visit`, due: tomorrow });
+    await onLead(
+      v.leadId,
+      isVideoKind(v.kind) ? `Had the video tour on WhatsApp on ${slotLabel(v.slot)}.` : `Came to see the site on ${slotLabel(v.slot)}.`,
+      { text: `Follow up with ${firstName(v.name)} after their ${visitWord(v.kind)}`, due: tomorrow }
+    );
   } else {
     const emailed = v.rebookSentAt ? true : await sendVisitEmail("missed", v);
     if (emailed && !v.rebookSentAt) {
       rebookSentAt = now;
       await buyers().patch(v._id).set({ rebookSentAt }).commit().catch(() => undefined);
     }
-    whatsapp = whatsappNote({ name: v.name, phone: v.phone ?? "", slot: v.slot }, "missed") || undefined;
+    whatsapp = whatsappNote({ name: v.name, phone: v.phone ?? "", slot: v.slot, kind: v.kind }, "missed") || undefined;
     await onLead(
       v.leadId,
-      `Didn't come to the site visit on ${slotLabel(v.slot)}.${emailed ? ` An email asked them to pick another time.` : ""}`,
-      { text: `Call ${firstName(v.name)}: missed the site visit, offer another time`, due: today }
+      `${isVideoKind(v.kind) ? "Missed the video tour" : "Didn't come to the site visit"} on ${slotLabel(v.slot)}.${emailed ? ` An email asked them to pick another time.` : ""}`,
+      { text: `Call ${firstName(v.name)}: missed the ${visitWord(v.kind)}, offer another time`, due: today }
     );
   }
   return { ok: true, visit: rowOf({ ...v, status: outcome, outcomeAt: now, ...(rebookSentAt && { rebookSentAt }) }), whatsapp };

@@ -6,15 +6,17 @@ import { useEffect } from "react";
 import type { GalleryImage, PackageTier, PackageTierKey, Unit, UnitLocationPlan } from "@/lib/sanity/types";
 import { trackAction } from "@/lib/visits/client";
 import { urlFor } from "@/lib/sanity/image";
-import { formatFloor, formatUSD } from "@/lib/format";
+import { formatFloor, formatUSD, whatsappUrl } from "@/lib/format";
 import { VatTag } from "./Vat";
 import { balconyOf, formatArea, splitArea, terraceOf } from "@/lib/area";
 import { useAreaUnit } from "./useAreaUnit";
 import { floorTierName, isTierClamped, priceAtTier, tierAddon } from "@/lib/pricing";
-import { withVat, type Vat } from "@/lib/vat";
+import { inclVatSuffix, withVat, type Vat } from "@/lib/vat";
 import { Unit3DPlan, has3DModel, levelOfPlan } from "./Penthouse3D";
 import { StatusBadge } from "./StatusBadge";
 import { useDialog } from "./useDialog";
+import { WhatsAppIcon } from "./WhatsAppIcon";
+import { unitWhatsAppText } from "@/lib/unitMessage";
 import styles from "./UnitDetailModal.module.css";
 
 interface UnitDetailModalProps {
@@ -24,6 +26,8 @@ interface UnitDetailModalProps {
   tiers: PackageTier[];
   selectedTier: PackageTierKey;
   vat: Vat;
+  /** The sales number (Site settings), for the pop-up's WhatsApp button. */
+  contactPhone: string;
   onClose: () => void;
 }
 
@@ -43,6 +47,7 @@ export function UnitDetailModal({
   tiers,
   selectedTier,
   vat,
+  contactPhone,
   onClose,
 }: UnitDetailModalProps) {
   const dialogRef = useDialog<HTMLDivElement>(onClose);
@@ -64,6 +69,22 @@ export function UnitDetailModal({
   // As people see them: with the VAT in it while VAT is on.
   const shown = withVat(priceAtTier(unit, selectedTier, tiers), vat);
   const base = withVat(unit.priceUSD, vat);
+  const available = unit.status === "available";
+  // The finish named in the message only when it isn't the one every home comes with (or the one a penthouse includes).
+  const chosenTier = tiers.find((t) => t.key === selectedTier);
+  const finish = !clamped && chosenTier && chosenTier.ratePerSqm > 0 ? chosenTier.name : null;
+  const whatsappHref = whatsappUrl(
+    contactPhone,
+    unitWhatsAppText({
+      unitNumber: unit.unitNumber,
+      bedroomType: unit.bedroomType,
+      status: unit.status,
+      area: formatArea(unit.areaSqm, areaUnit),
+      price: `${formatUSD(shown)}${inclVatSuffix(vat)}`,
+      finish,
+    })
+  );
+  const unitQuery = encodeURIComponent(unit.unitNumber);
 
   return (
     <div
@@ -175,6 +196,34 @@ export function UnitDetailModal({
             </div>
           </>
         )}
+
+        {/* The next step, always in reach at the foot of the pop-up while the plans scroll under it. */}
+        <div className={styles.actions} role="group" aria-label={`Next steps for ${unit.unitNumber}`}>
+          <a className={`${styles.action} ${styles.whatsapp}`} href={whatsappHref} target="_blank" rel="noopener noreferrer">
+            <WhatsAppIcon size={18} />
+            {/* One piece of text, so the button's gap sits only between the icon and the words. */}
+            <span>
+              {available ? (
+                <>
+                  Ask about {unit.unitNumber}
+                  <span className={styles.wide}> on WhatsApp</span>
+                </>
+              ) : (
+                "Ask about similar homes"
+              )}
+            </span>
+          </a>
+          <a className={styles.action} href={`/visit?home=${unitQuery}`}>
+            Book a visit
+          </a>
+          {available && (
+            <a className={`${styles.action} ${styles.reserve}`} href={`/reserve?unit=${unitQuery}`}>
+              <span>
+                Reserve<span className={styles.wide}> {unit.unitNumber}</span>
+              </span>
+            </a>
+          )}
+        </div>
       </div>
     </div>
   );

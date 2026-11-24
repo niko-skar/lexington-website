@@ -144,6 +144,18 @@ export interface Step {
 }
 
 /**
+ * When the tap check was mended. Before it, taps that worked were also listed as "did nothing" (a gallery's Next photo, the
+ * buttons of a 3D model, a finish package already chosen, a link to a page that took a moment to come), and the link
+ * checkers that open the links in emails came in as "Rejection" errors (Niko, 24 Nov 2026). Those older reports are left out,
+ * so the list only shows what is worth a look; they leave the 30-day record by themselves.
+ */
+export const TAP_CHECK_MENDED_AT = "2026-11-25T00:00:00.000Z";
+
+function oldFalseAlarm(event: StoredEvent): boolean {
+  return event.at < TAP_CHECK_MENDED_AT && (event.k === "dead" || (event.k === "error" && event.l === "Rejection"));
+}
+
+/**
  * The steps of a visit from its events, oldest first. A page seen starts a step;
  * its time and scroll come from the leaves that follow (a visitor who hides the
  * tab and returns leaves twice, so the times add); trouble and actions belong to
@@ -181,7 +193,7 @@ export function buildSteps(events: readonly StoredEvent[]): Step[] {
       if (typeof event.s === "number") step.scroll = Math.max(step.scroll ?? 0, event.s);
     } else if (event.k === "act") {
       if (isAction(event.l)) step.done.push({ action: event.l, detail: event.x ?? null });
-    } else if (isTroubleKind(event.k)) {
+    } else if (isTroubleKind(event.k) && !oldFalseAlarm(event)) {
       step.trouble.push({ kind: event.k, label: event.l ?? null, amount: event.k === "rage" ? (event.m ?? null) : null });
     }
   }

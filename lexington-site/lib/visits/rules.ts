@@ -514,6 +514,10 @@ const PAGE_NAMES: readonly [pattern: RegExp, name: string][] = [
   [/^\/contact$/, "Contact"],
   [/^\/about$/, "About"],
   [/^\/privacy$/, "Privacy"],
+  [/^\/visit$/, "Book a visit"],
+  [/^\/reserve$/, "Reserve"],
+  [/^\/buying-from-abroad$/, "Buying from abroad"],
+  [/^\/terms$/, "Terms"],
 ];
 
 /** A page in the words a person would use, or the path itself when none fits. */

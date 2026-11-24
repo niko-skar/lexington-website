@@ -25,6 +25,7 @@ export function visitIcs({
   location,
   description,
   url,
+  title,
   nowMs = Date.now(),
 }: {
   id: string;
@@ -32,8 +33,11 @@ export function visitIcs({
   location: string;
   description: string;
   url: string;
+  /** The event name (a video tour says so); "Site visit: The Lexington" when none. */
+  title?: string;
   nowMs?: number;
 }): string {
+  const summary = title || "Site visit: The Lexington";
   const start = slotStartMs(slot);
   if (start === null) throw new Error(`Not a visit time: ${slot}`);
   return [
@@ -47,13 +51,13 @@ export function visitIcs({
     `DTSTAMP:${stamp(nowMs)}`,
     `DTSTART:${stamp(start)}`,
     `DTEND:${stamp(start + 3_600_000)}`,
-    "SUMMARY:Site visit: The Lexington",
+    `SUMMARY:${escape(summary)}`,
     `LOCATION:${escape(location)}`,
     `DESCRIPTION:${escape(description)}`,
     `URL:${url}`,
     "BEGIN:VALARM",
     "ACTION:DISPLAY",
-    "DESCRIPTION:Site visit: The Lexington",
+    `DESCRIPTION:${escape(summary)}`,
     "TRIGGER:-PT2H",
     "END:VALARM",
     "END:VEVENT",

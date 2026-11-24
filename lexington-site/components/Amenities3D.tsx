@@ -180,7 +180,7 @@ export function Amenities3DStage({
 
   return (
     <div className={styles.block}>
-      <div className={`${styles.stage} ${phase === "ready" ? styles.ready : ""}`} data-amenities-stage={phase}>
+      <div className={`${styles.stage} ${phase === "ready" ? styles.ready : ""}`} data-amenities-stage={phase} data-visit-canvas>
         <Image
           className={styles.poster}
           src={POSTER_SRC}

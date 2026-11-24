@@ -71,6 +71,8 @@ export function ManageVisit({
       }
     });
 
+  // A video tour on WhatsApp (Niko, 24 Nov 2026) says so, and has no address.
+  const video = visit.kind === "video";
   const heading = newBooking
     ? `You're booked again, ${first}.`
     : visit.status === "cancelled"
@@ -80,12 +82,12 @@ export function ManageVisit({
         : visit.status === "came"
           ? `Thank you for visiting, ${first}.`
           : upcoming
-            ? `Your site visit, ${first}.`
+            ? `Your ${video ? "video tour" : "site visit"}, ${first}.`
             : `Your visit has passed, ${first}.`;
 
   return (
     <div className={f.done}>
-      <div className="eyebrow">Site visit</div>
+      <div className="eyebrow">{video ? "Video tour" : "Site visit"}</div>
       <h2 className={f.doneTitle}>{heading}</h2>
       {message && (
         <p className={message.tone === "error" ? f.formError : s.okMessage} role={message.tone === "error" ? "alert" : "status"}>
@@ -97,19 +99,25 @@ export function ManageVisit({
         <dd>
           {dayLabel(slotDay(visit.slot))}, {rangeLabel(visit.slot)} <span className={s.muted}>(Accra time)</span>
         </dd>
-        {(upcoming || newBooking) && (
-          <>
-            <dt>Where</dt>
-            <dd>
-              {address}.{" "}
-              <a href={mapUrl} target="_blank" rel="noopener noreferrer">
-                Open the map
-              </a>
-            </dd>
-          </>
-        )}
+        {(upcoming || newBooking) &&
+          (video ? (
+            <>
+              <dt>How</dt>
+              <dd>We video call you on WhatsApp{visit.phone ? ` at ${visit.phone}` : ""}.</dd>
+            </>
+          ) : (
+            <>
+              <dt>Where</dt>
+              <dd>
+                {address}.{" "}
+                <a href={mapUrl} target="_blank" rel="noopener noreferrer">
+                  Open the map
+                </a>
+              </dd>
+            </>
+          ))}
       </dl>
-      {newBooking && <p className={f.doneLede}>We&rsquo;ve emailed you the details of your new visit, with its own link to change it.</p>}
+      {newBooking && <p className={f.doneLede}>We&rsquo;ve emailed you the details of your new {video ? "video tour" : "visit"}, with its own link to change it.</p>}
 
       {!newBooking && mode === "view" && (
         <div className={f.doneActions}>

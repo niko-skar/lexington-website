@@ -5,7 +5,7 @@ import { useFormStatus } from "react-dom";
 
 import { submitVisit, type VisitFormState } from "@/lib/actions/visit";
 import { trackLead } from "@/lib/analytics";
-import { VISIT_INTERESTS, dayLabel, rangeLabel, slotDay, slotLabel, type SlotKey } from "@/lib/siteVisits/shared";
+import { VISIT_INTERESTS, cleanTimeZone, dayLabel, localTimeLabel, rangeLabel, slotDay, slotLabel, type SlotKey, type VisitKind } from "@/lib/siteVisits/shared";
 import { trackAction } from "@/lib/visits/client";
 import buttonStyles from "../Button.module.css";
 import f from "../ReserveForm.module.css";
@@ -14,11 +14,17 @@ import s from "./Visit.module.css";
 
 const initialState: VisitFormState = { status: "idle", message: "" };
 
-function SubmitButton({ ready }: { ready: boolean }) {
+/** The two ways to see The Lexington (Niko, 24 Nov 2026: video tours on WhatsApp, the same days and hours as visits). */
+const KINDS: Array<{ key: VisitKind; title: string; text: string }> = [
+  { key: "site", title: "At the site", text: "Our team shows you the building and the homes. A visit takes about an hour." },
+  { key: "video", title: "Video tour on WhatsApp", text: "Live abroad or can't come? We video call you and show you round, wherever you are." },
+];
+
+function SubmitButton({ ready, video }: { ready: boolean; video: boolean }) {
   const { pending } = useFormStatus();
   return (
     <button type="submit" disabled={pending} aria-disabled={!ready} className={`${buttonStyles.btn} ${buttonStyles.clay} ${f.primary}`}>
-      {pending ? "Booking…" : "Book my visit"}
+      {pending ? "Booking…" : video ? "Book my video tour" : "Book my visit"}
     </button>
   );
 }
@@ -50,17 +56,32 @@ export function VisitBooker({
   const [free, setFree] = useState<SlotKey[]>(initialFree);
   const [slot, setSlot] = useState("");
   const [interest, setInterest] = useState("");
+  const [kind, setKind] = useState<VisitKind>("site");
+  const [note, setNote] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [seen, setSeen] = useState<VisitFormState>(state);
-  const [meta, setMeta] = useState({ started: "", utm_source: "" });
+  const [meta, setMeta] = useState({ started: "", utm_source: "", tz: "" });
   const doneRef = useRef<HTMLDivElement>(null);
   const topRef = useRef<HTMLDivElement>(null);
+  const video = kind === "video";
 
-  // When the page was opened (the server tells a person from a script by it) and the advert that brought them.
+  // When the page was opened (the server tells a person from a script by it), the advert that brought them and the
+  // visitor's time zone (their own time beside Accra's). A link can pick a video tour (?kind=video, the "Buying from
+  // abroad" page) or name a home (?home=203B, a home's pop-up on Residences).
   useEffect(() => {
     const q = new URLSearchParams(window.location.search);
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- the clock and the address bar can only be read in the browser
-    setMeta({ started: String(Date.now()), utm_source: (q.get("utm_source") ?? "").slice(0, 80) });
+    let tz = "";
+    try {
+      tz = cleanTimeZone(Intl.DateTimeFormat().resolvedOptions().timeZone) ?? "";
+    } catch {
+      tz = "";
+    }
+    /* eslint-disable react-hooks/set-state-in-effect -- the clock and the address bar can only be read in the browser */
+    setMeta({ started: String(Date.now()), utm_source: (q.get("utm_source") ?? "").slice(0, 80), tz });
+    if (q.get("kind") === "video") setKind("video");
+    const home = (q.get("home") ?? "").trim().slice(0, 12);
+    if (/^[A-Za-z0-9 ]+$/.test(home)) setNote(`I'd like to see ${home}.`);
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, []);
 
   // A server answer: its messages under the fields, and a time that has just gone off the list.
@@ -77,7 +98,7 @@ export function VisitBooker({
 
   useEffect(() => {
     if (state.status === "success") {
-      trackLead({ form: "site_visit" });
+      trackLead({ form: state.booked?.kind === "video" ? "video_tour" : "site_visit" });
       trackAction("enquiry");
       doneRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
       doneRef.current?.querySelector("h2")?.focus({ preventScroll: true });
@@ -88,26 +109,36 @@ export function VisitBooker({
 
   if (state.status === "success") {
     const b = state.booked;
+    const tour = b?.kind === "video";
     return (
       <div className={f.done} role="status" ref={doneRef}>
         <div className="eyebrow">Booked</div>
         <h2 className={f.doneTitle} tabIndex={-1}>
-          {b ? `See you on ${dayLabel(slotDay(b.slot)).split(" ")[0]}, ${b.firstName}.` : "Thank you."}
+          {b ? `${tour ? "Speak" : "See you"} on ${dayLabel(slotDay(b.slot)).split(" ")[0]}, ${b.firstName}.` : "Thank you."}
         </h2>
         {b && (
           <>
             <dl className={s.facts}>
               <dt>When</dt>
               <dd>
-                {dayLabel(slotDay(b.slot))}, {rangeLabel(b.slot)} <span className={s.muted}>(Accra time)</span>
+                {dayLabel(slotDay(b.slot))}, {rangeLabel(b.slot)} <span className={s.muted}>(Accra time{b.localTime ? `; ${b.localTime}` : ""})</span>
               </dd>
-              <dt>Where</dt>
-              <dd>
-                {address}.{" "}
-                <a href={mapUrl} target="_blank" rel="noopener noreferrer">
-                  Open the map
-                </a>
-              </dd>
+              {tour ? (
+                <>
+                  <dt>How</dt>
+                  <dd>We&rsquo;ll video call you on WhatsApp at {b.phone}.</dd>
+                </>
+              ) : (
+                <>
+                  <dt>Where</dt>
+                  <dd>
+                    {address}.{" "}
+                    <a href={mapUrl} target="_blank" rel="noopener noreferrer">
+                      Open the map
+                    </a>
+                  </dd>
+                </>
+              )}
             </dl>
             <p className={f.doneLede}>
               {b.emailed ? (
@@ -115,9 +146,11 @@ export function VisitBooker({
                   We&rsquo;ve emailed the details to <strong>{b.email}</strong>, and we&rsquo;ll send you a reminder the day before.
                 </>
               ) : (
-                <>Our team will be in touch on WhatsApp before your visit.</>
+                <>Our team will be in touch on WhatsApp before your {tour ? "video tour" : "visit"}.</>
               )}{" "}
-              A visit takes about an hour. It&rsquo;s a building site, so closed shoes are best.
+              {tour
+                ? "Keep WhatsApp open on your phone at that time: we’ll call you."
+                : "A visit takes about an hour. It’s a building site, so closed shoes are best."}
             </p>
             <div className={f.doneActions}>
               <a href={b.icsUrl} className={`${buttonStyles.btn} ${buttonStyles.brass}`}>
@@ -157,6 +190,16 @@ export function VisitBooker({
           </div>
         )}
 
+        <div className={s.kinds} role="radiogroup" aria-label="How would you like to see it?">
+          {KINDS.map((k) => (
+            <label key={k.key} className={`${s.kind} ${kind === k.key ? s.kindOn : ""}`}>
+              <input type="radio" name="kind" value={k.key} checked={kind === k.key} onChange={() => setKind(k.key)} />
+              <span className={s.kindTitle}>{k.title}</span>
+              <span className={s.kindText}>{k.text}</span>
+            </label>
+          ))}
+        </div>
+
         <h2 className={f.stepTitle}>1. Pick a day and a time</h2>
         <SlotPicker
           free={free}
@@ -169,8 +212,14 @@ export function VisitBooker({
           error={err("slot")}
         />
         <input type="hidden" name="slot" value={slot} />
+        {/* Someone abroad sees the hour in their own time too. */}
+        {slot && localTimeLabel(slot, meta.tz) && (
+          <p className={s.localTime} aria-live="polite">
+            That&rsquo;s {localTimeLabel(slot, meta.tz)}.
+          </p>
+        )}
 
-        <h2 className={`${f.stepTitle} ${s.second}`}>2. Who is coming</h2>
+        <h2 className={`${f.stepTitle} ${s.second}`}>{video ? "2. Who we call" : "2. Who is coming"}</h2>
         <div className={f.twoCol}>
           <div className={f.field}>
             <label htmlFor="v-name">Your name</label>
@@ -178,8 +227,17 @@ export function VisitBooker({
             <ErrorText id="v-name" message={err("name")} />
           </div>
           <div className={f.field}>
-            <label htmlFor="v-phone">Phone or WhatsApp</label>
-            <input id="v-phone" name="phone" type="tel" autoComplete="tel" placeholder="+233 24 123 4567" required aria-invalid={Boolean(err("phone"))} onChange={() => clear("phone")} />
+            <label htmlFor="v-phone">{video ? "Your WhatsApp number" : "Phone or WhatsApp"}</label>
+            <input
+              id="v-phone"
+              name="phone"
+              type="tel"
+              autoComplete="tel"
+              placeholder={video ? "+44 7700 900123" : "+233 24 123 4567"}
+              required
+              aria-invalid={Boolean(err("phone"))}
+              onChange={() => clear("phone")}
+            />
             <ErrorText id="v-phone" message={err("phone")} />
           </div>
         </div>
@@ -191,18 +249,20 @@ export function VisitBooker({
             <input id="v-email" name="email" type="email" autoComplete="email" aria-invalid={Boolean(err("email"))} onChange={() => clear("email")} />
             <ErrorText id="v-email" message={err("email")} />
           </div>
-          <div className={f.field}>
-            <label htmlFor="v-people">How many of you</label>
-            <select id="v-people" name="people" defaultValue="" aria-invalid={Boolean(err("people"))} onChange={() => clear("people")}>
-              <option value="">Choose…</option>
-              {[1, 2, 3, 4, 5, 6].map((n) => (
-                <option key={n} value={n}>
-                  {n === 1 ? "Just me" : `${n} people`}
-                </option>
-              ))}
-            </select>
-            <ErrorText id="v-people" message={err("people")} />
-          </div>
+          {!video && (
+            <div className={f.field}>
+              <label htmlFor="v-people">How many of you</label>
+              <select id="v-people" name="people" defaultValue="" aria-invalid={Boolean(err("people"))} onChange={() => clear("people")}>
+                <option value="">Choose…</option>
+                {[1, 2, 3, 4, 5, 6].map((n) => (
+                  <option key={n} value={n}>
+                    {n === 1 ? "Just me" : `${n} people`}
+                  </option>
+                ))}
+              </select>
+              <ErrorText id="v-people" message={err("people")} />
+            </div>
+          )}
         </div>
         <div className={f.field}>
           <span className={f.groupLabel}>
@@ -222,11 +282,12 @@ export function VisitBooker({
           <label htmlFor="v-note">
             Anything we should know? <span className={s.optional}>(optional)</span>
           </label>
-          <textarea id="v-note" name="note" maxLength={1000} rows={3} />
+          <textarea id="v-note" name="note" maxLength={1000} rows={3} value={note} onChange={(e) => setNote(e.target.value)} />
         </div>
 
         <input type="hidden" name="started" value={meta.started} />
         <input type="hidden" name="utm_source" value={meta.utm_source} />
+        <input type="hidden" name="tz" value={meta.tz} />
         <div className={f.srOnly} aria-hidden="true">
           <label htmlFor="website_url">Leave this empty</label>
           <input type="text" id="website_url" name="website_url" tabIndex={-1} autoComplete="off" />
@@ -234,9 +295,9 @@ export function VisitBooker({
 
         <div className={f.actions}>
           <span className={s.small}>
-            We use your details only to arrange your visit. <a href="/privacy">Privacy</a>
+            We use your details only to arrange your {video ? "video tour" : "visit"}. <a href="/privacy">Privacy</a>
           </span>
-          <SubmitButton ready={Boolean(slot)} />
+          <SubmitButton ready={Boolean(slot)} video={video} />
         </div>
         <p className={f.note}>
           Can&rsquo;t find a time that suits you?{" "}

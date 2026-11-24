@@ -14,7 +14,9 @@ const FACTS_QUERY = `{
   },
   "settings": *[_type == "siteSettings"][0]{ promoBanner, contactPhone, contactEmail, officeAddress, vat },
   "tiers": *[_type == "packageTiers"][0].tiers[]{ key, name, ratePerSqm, badge },
-  "finance": *[_type == "financingPlan"][0]{ mortgageNote, mortgageRows[]{ milestone, timeframe, option1 }, serviceCharge },
+  // No payment percentages (Niko, 24 Nov 2026: "$10k reservation should be the standard deposit, remove anything that
+  // mentions 20% or other"): the mortgage's note only, not its 30% / 70% steps.
+  "finance": *[_type == "financingPlan"][0]{ mortgageNote, serviceCharge },
   "amenities": *[_type == "amenity"] | order(order asc) { name, category },
   "latest": *[_type == "progressReport"] | order(date desc, _createdAt desc)[0]{ date, title, text }
 }`;
@@ -31,7 +33,6 @@ interface FactsResult {
   tiers: RawFacts["tiers"] | null;
   finance: {
     mortgageNote?: string;
-    mortgageRows?: Array<{ milestone: string; timeframe: string; option1: string }>;
     serviceCharge?: RawFacts["serviceCharge"];
   } | null;
   amenities: RawFacts["amenities"] | null;
@@ -50,7 +51,7 @@ export async function loadFactPack(): Promise<FactPack> {
         office: r.settings?.officeAddress ?? "",
       },
       tiers: r.tiers ?? [],
-      mortgage: r.finance ? { note: r.finance.mortgageNote, rows: r.finance.mortgageRows } : null,
+      mortgage: r.finance ? { note: r.finance.mortgageNote } : null,
       serviceCharge: r.finance?.serviceCharge ?? null,
       amenities: r.amenities ?? [],
       latestUpdate: r.latest ?? null,

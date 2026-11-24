@@ -155,7 +155,7 @@ export function Penthouse3DModal({ onClose }: { onClose: () => void }) {
       aria-modal="true"
       aria-label="PH2b penthouse, 3D walk-through"
     >
-      <div ref={stageRef} className={styles.stage}>
+      <div ref={stageRef} className={styles.stage} data-visit-canvas>
         {failed && (
           <div className={styles.failed}>
             <p>Sorry, the 3D view could not start on this device.</p>
@@ -242,7 +242,7 @@ export function Unit3DPlan({ unitNumber, startLevel }: { unitNumber: string; sta
   const gated = coarse && locked && phase === "ready";
 
   return (
-    <div className={styles.plan}>
+    <div className={styles.plan} data-visit-canvas>
       <div
         className={`${styles.planStage} ${phase === "ready" ? styles.planReady : ""}`}
         role="region"

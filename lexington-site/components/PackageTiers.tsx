@@ -37,8 +37,8 @@ export function PackageTiers({ tiers, selected, onSelect, vat }: PackageTiersPro
       <h2 className={styles.heading}>Choose your finish package.</h2>
       <p className={styles.lede}>
         Every residence ships with our Standard finish. Upgrade to Premium or Premium Plus for
-        finer materials, smart-home control, and enhanced sound and security — prices below
-        update to match.
+        finer materials, smart-home control, and enhanced sound and security — the prices in the
+        list above update to match.
       </p>
 
       <div className={styles.tiers} role="group" aria-label="Finish package">

@@ -3,7 +3,7 @@
 import { headers } from "next/headers";
 
 import { allow, connectionKey } from "@/lib/reservation/limit";
-import { SLOT_RE, VISIT_INTERESTS, slotLabel, type SlotKey, type VisitRow } from "@/lib/siteVisits/shared";
+import { SLOT_RE, VISIT_INTERESTS, cleanTimeZone, localTimeLabel, slotLabel, type SlotKey, type VisitKind, type VisitRow } from "@/lib/siteVisits/shared";
 import { bookVisit, cancelVisit, changeVisit, tokenOk } from "@/lib/siteVisits/store";
 
 // The booking page (/visit) and the visitor's own page to change or cancel (/visit/manage). The rules are in
@@ -15,7 +15,7 @@ export interface VisitFormState {
   fieldErrors?: Record<string, string>;
   /** After "that time has just gone": other free times. */
   alternatives?: SlotKey[];
-  booked?: { slot: string; firstName: string; manageUrl: string; icsUrl: string; emailed: boolean; email: string };
+  booked?: { slot: string; kind: VisitKind; phone: string; localTime: string; firstName: string; manageUrl: string; icsUrl: string; emailed: boolean; email: string };
 }
 
 // Picking a time and typing a name and a number takes longer than this.
@@ -52,11 +52,14 @@ export async function submitVisit(_prev: VisitFormState, formData: FormData): Pr
   const interest = text(formData, "interest", 40);
   const note = text(formData, "note", 1000);
   const utm = text(formData, "utm_source", 80);
+  // A video tour on WhatsApp instead of coming to the site; the browser says which time zone it is in (for their own time).
+  const kind: VisitKind = text(formData, "kind", 10) === "video" ? "video" : "site";
+  const tz = cleanTimeZone(text(formData, "tz", 60));
 
   if (!SLOT_RE.test(slot)) errors.slot = "Please pick a day and a time.";
   if (name.length < 2 || !/\p{L}/u.test(name)) errors.name = "Please enter your name.";
   const digits = phone.replace(/\D/g, "");
-  if (!PHONE_CHARS_RE.test(phone) || digits.length < 7 || digits.length > 15) errors.phone = "Please enter your phone or WhatsApp number, with the country code.";
+  if (!PHONE_CHARS_RE.test(phone) || digits.length < 7 || digits.length > 15) errors.phone = kind === "video" ? "Please enter your WhatsApp number, with the country code." : "Please enter your phone or WhatsApp number, with the country code.";
   if (email && !EMAIL_RE.test(email)) errors.email = "Please check your email address (or leave it empty).";
   const people = peopleRaw ? Number(peopleRaw) : null;
   if (people !== null && (!Number.isInteger(people) || people < 1 || people > 10)) errors.people = "Please choose how many of you are coming.";
@@ -73,7 +76,7 @@ export async function submitVisit(_prev: VisitFormState, formData: FormData): Pr
 
   // The tag itself too: Instagram's own links say "ig", so the CRM can tell Facebook from Instagram.
   const adSource = utm.toLowerCase().replace(/[^a-z0-9_.-]/g, "").slice(0, 40);
-  const result = await bookVisit({ slot, name, phone, email, people, interest, note, source: "website", leadSource: leadSourceFrom(utm), adSource });
+  const result = await bookVisit({ slot, kind, tz, name, phone, email, people: kind === "video" ? null : people, interest, note, source: "website", leadSource: leadSourceFrom(utm), adSource });
   if (!result.ok) {
     if (result.reason === "taken") {
       return {
@@ -91,13 +94,16 @@ export async function submitVisit(_prev: VisitFormState, formData: FormData): Pr
         alternatives: result.alternatives,
       };
     }
-    return { status: "error", message: "We couldn't book your visit just now. Please try again in a minute, or call or WhatsApp us and we'll book it for you." };
+    return { status: "error", message: `We couldn't book your ${kind === "video" ? "video tour" : "visit"} just now. Please try again in a minute, or call or WhatsApp us and we'll book it for you.` };
   }
   return {
     status: "success",
-    message: "Your visit is booked.",
+    message: kind === "video" ? "Your video tour is booked." : "Your visit is booked.",
     booked: {
       slot: result.visit.slot,
+      kind,
+      phone,
+      localTime: localTimeLabel(result.visit.slot, tz),
       firstName: name.split(/\s+/)[0] || name,
       manageUrl: result.manageUrl,
       icsUrl: result.icsUrl,

@@ -91,11 +91,16 @@ const actionsDone = new Set<string>();
 /** A tap being watched to see whether anything came of it. */
 interface DeadCheck {
   control: Element;
-  /** Something near the control changed after the tap. */
+  /** The part of the page the control works on (a pop-up, a list with its filters), when it has one. */
+  region: Element | null;
+  /** Something near the control, or anywhere in its region, changed after the tap. */
   changed: boolean;
 }
 const deadChecks = new Set<DeadCheck>();
 let observer: MutationObserver | null = null;
+/** How often the page was hidden or left, and how often something went full screen: a tap that led to either did something. */
+let hides = 0;
+let screenChanges = 0;
 
 /* --- Who is not recorded ---------------------------------------------------- */
 
@@ -265,6 +270,17 @@ export function trackAction(action: Action, detail?: string | null): void {
 /* --- Trouble ------------------------------------------------------------------------------- */
 
 const CONTROLS = 'a[href], button, [role="button"], summary, input[type="submit"], input[type="button"]';
+/**
+ * Where a control's answer can show (Niko, 24 Nov 2026: taps that worked were listed as "did nothing"). A pop-up's Next photo
+ * changes the picture beside it and a filter changes the list under it, so a dialog, or a part of the page marked
+ * data-visit-region, counts as a whole.
+ */
+const REGIONS = '[data-visit-region], [role="dialog"], dialog';
+/**
+ * A 3D model or a map (marked data-visit-canvas): its buttons and taps only redraw a picture, which a page can't see, and
+ * tapping it again and again is how it is used (turning, walking). Neither "did nothing" nor "tapped again and again" there.
+ */
+const DRAWN = "[data-visit-canvas]";
 
 function controlOf(target: EventTarget | null): Element | null {
   if (!(target instanceof Element)) return null;
@@ -318,7 +334,9 @@ function leavesTheSite(control: Element): boolean {
     if (control.hasAttribute("download") || control.target === "_blank") return true;
     if (/^(#|mailto:|tel:|sms:|javascript:)/i.test(href)) return true;
     try {
-      return new URL(control.href, window.location.href).origin !== window.location.origin;
+      const to = new URL(control.href, window.location.href);
+      // A file from the site itself (the calendar file of a booked visit): the phone opens it in its own app.
+      return to.origin !== window.location.origin || to.pathname.startsWith("/api/");
     } catch {
       return true;
     }
@@ -326,8 +344,30 @@ function leavesTheSite(control: Element): boolean {
   return false;
 }
 
+/** A link to another page of this site: on a slow phone that page can take a few seconds to come. */
+function opensAnotherPage(control: Element): boolean {
+  if (!(control instanceof HTMLAnchorElement)) return false;
+  try {
+    const to = new URL(control.href, window.location.href);
+    return to.origin === window.location.origin && (to.pathname !== window.location.pathname || to.search !== window.location.search);
+  } catch {
+    return false;
+  }
+}
+
+/** How long a link to another page may take before the tap counts as one that did nothing. */
+const NAV_WAIT_MS = 8000;
+
 function disabled(control: Element): boolean {
   return (control as HTMLButtonElement).disabled === true || control.getAttribute("aria-disabled") === "true";
+}
+
+/** A choice already chosen (a finish package, a filter, the page you are on): tapping it again rightly changes nothing. */
+function alreadyOn(control: Element): boolean {
+  const on = (name: string) => control.getAttribute(name) === "true";
+  if (on("aria-pressed") || on("aria-checked") || on("aria-selected")) return true;
+  const current = control.getAttribute("aria-current");
+  return current !== null && current !== "false";
 }
 
 /**
@@ -343,7 +383,13 @@ function onMutations(records: MutationRecord[]): void {
     if (check.changed) continue;
     for (const record of records) {
       const target = record.target;
-      if (target === body || target === root || check.control.contains(target) || target.contains(check.control)) {
+      if (
+        target === body ||
+        target === root ||
+        check.control.contains(target) ||
+        target.contains(check.control) ||
+        (check.region !== null && check.region.contains(target))
+      ) {
         check.changed = true;
         break;
       }
@@ -352,12 +398,14 @@ function onMutations(records: MutationRecord[]): void {
 }
 
 function watchForNothing(control: Element): void {
-  if (!page || deadChecks.size >= 3 || disabled(control) || leavesTheSite(control)) return;
+  if (!page || deadChecks.size >= 3 || disabled(control) || leavesTheSite(control) || alreadyOn(control)) return;
   const where = `${window.location.pathname}${window.location.search}${window.location.hash}`;
   const focus = document.activeElement;
   const path = page.path;
   const label = labelOf(control);
-  const check: DeadCheck = { control, changed: false };
+  const hidesBefore = hides;
+  const screensBefore = screenChanges;
+  const check: DeadCheck = { control, region: control.closest(REGIONS), changed: false };
 
   deadChecks.add(check);
   if (!observer) {
@@ -374,30 +422,42 @@ function watchForNothing(control: Element): void {
       if (!page || page.path !== path || notRecorded()) return;
       const nowAt = `${window.location.pathname}${window.location.search}${window.location.hash}`;
       const somethingHappened =
-        nowAt !== where || check.changed || !control.isConnected || document.activeElement !== focus || document.hidden;
+        nowAt !== where ||
+        check.changed ||
+        !control.isConnected ||
+        document.activeElement !== focus ||
+        document.hidden ||
+        hides !== hidesBefore ||
+        screenChanges !== screensBefore;
       if (!somethingHappened && troubleAllowed()) push({ kind: "dead", path, label });
     } catch {
       // Never into the UI.
     }
-  }, DEAD_TAP_MS);
+  }, opensAnotherPage(control) ? NAV_WAIT_MS : DEAD_TAP_MS);
 }
 
 function onClick(event: MouseEvent): void {
   try {
     if (!page || notRecorded()) return;
     const control = controlOf(event.target);
-    const at = performance.now();
-    taps.push({ at, x: event.clientX, y: event.clientY });
-    taps = taps.filter((tap) => at - tap.at < 2000).slice(-10);
-    noteRage(control, at);
     if (control instanceof HTMLAnchorElement) {
       const action = actionForHref(control.getAttribute("href"));
       if (action) trackAction(action);
     }
+    // A 3D model or a map answers by redrawing itself, and is tapped again and again by design.
+    if (event.target instanceof Element && event.target.closest(DRAWN)) return;
+    const at = performance.now();
+    taps.push({ at, x: event.clientX, y: event.clientY });
+    taps = taps.filter((tap) => at - tap.at < 2000).slice(-10);
+    noteRage(control, at);
     if (control) watchForNothing(control);
   } catch {
     // Never into the UI.
   }
+}
+
+function onFullscreen(): void {
+  screenChanges += 1;
 }
 
 function onScroll(): void {
@@ -420,10 +480,21 @@ function onError(event: ErrorEvent): void {
   }
 }
 
+/**
+ * A promise of this site's own code that failed with nobody to catch it. Anything else (a failure with no error in it, or
+ * one from another site's script: an advert tag, a browser add-on, the link checkers that open the links in emails) is not
+ * something a visitor is stuck on, and came in as "Rejection" with nothing to go on (23 Nov 2026).
+ */
+function ownFailure(reason: unknown): reason is Error {
+  if (!(reason instanceof Error)) return false;
+  const stack = typeof reason.stack === "string" ? reason.stack : "";
+  return stack.includes(window.location.origin) || stack.includes("/_next/");
+}
+
 function onRejection(event: PromiseRejectionEvent): void {
   try {
-    if (!page || notRecorded() || !troubleAllowed()) return;
-    const name = event.reason instanceof Error ? event.reason.name : "Rejection";
+    if (!page || notRecorded() || !ownFailure(event.reason) || !troubleAllowed()) return;
+    const name = event.reason.name;
     push({ kind: "error", path: page.path, label: /^[A-Za-z]{1,40}$/.test(name) ? name : "Rejection" });
   } catch {
     // Never into the UI.
@@ -434,6 +505,7 @@ function onRejection(event: PromiseRejectionEvent): void {
 
 /** The tab is hidden or the page is going away: report the time spent and send what is waiting. */
 function onHide(): void {
+  hides += 1;
   try {
     flushPendingRage();
     leavePage();
@@ -463,6 +535,8 @@ export function startVisitRecord(): void {
     window.addEventListener("unhandledrejection", onRejection);
     document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("pagehide", onHide);
+    document.addEventListener("fullscreenchange", onFullscreen);
+    document.addEventListener("webkitfullscreenchange", onFullscreen);
   } catch {
     // Never into the UI.
   }

@@ -45,11 +45,13 @@ export function ProgressGallery({ updates }: { updates: ConstructionUpdate[] }) 
 
   const active = lightboxIndex !== null ? filtered[lightboxIndex] : null;
 
+  // One region for the tap check: a filter changes the photos under it, Next changes the photo in the pop-up.
   return (
-    <>
+    <div data-visit-region style={{ display: "contents" }}>
       <div className={styles.filters}>
         <button
           className={filter === "all" ? styles.chipActive : styles.chip}
+          aria-pressed={filter === "all"}
           onClick={() => setFilter("all")}
         >
           All
@@ -58,6 +60,7 @@ export function ProgressGallery({ updates }: { updates: ConstructionUpdate[] }) 
           <button
             key={s}
             className={filter === s ? styles.chipActive : styles.chip}
+            aria-pressed={filter === s}
             onClick={() => setFilter(s)}
           >
             {s}
@@ -98,6 +101,6 @@ export function ProgressGallery({ updates }: { updates: ConstructionUpdate[] }) 
           onNext={showNext}
         />
       )}
-    </>
+    </div>
   );
 }

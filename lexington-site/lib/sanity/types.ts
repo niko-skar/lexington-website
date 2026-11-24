@@ -107,6 +107,8 @@ export interface FinancingPlan {
   mortgageRows: MortgageRow[];
   mortgageNote: string;
   buyToRent: {
+    /** A month, e.g. "$850–$1,250/mo" (added 24 Nov 2026; may be missing). */
+    studioRange?: string;
     oneBedroomRange: string;
     twoBedroomRange: string;
     projectedYieldPct: number;
@@ -115,6 +117,8 @@ export interface FinancingPlan {
     description: string;
     coveredItems: string[];
     note: string;
+    /** A small guide figure under the note (added 24 Nov 2026; may be missing). */
+    guide?: string;
   };
 }
 

@@ -96,11 +96,13 @@ export function Gallery({ images }: { images: GalleryImage[] }) {
     );
   }
 
+  // One region for the tap check: a filter changes the photos under it, Next changes the photo in the pop-up.
   return (
-    <>
+    <div data-visit-region style={{ display: "contents" }}>
       <div className={styles.filters}>
         <button
           className={filter === "all" ? styles.chipActive : styles.chip}
+          aria-pressed={filter === "all"}
           onClick={() => setFilter("all")}
         >
           All
@@ -109,6 +111,7 @@ export function Gallery({ images }: { images: GalleryImage[] }) {
           <button
             key={c}
             className={filter === c ? styles.chipActive : styles.chip}
+            aria-pressed={filter === c}
             onClick={() => setFilter(c)}
           >
             {CATEGORY_LABEL[c]}
@@ -134,6 +137,6 @@ export function Gallery({ images }: { images: GalleryImage[] }) {
           onNext={showNext}
         />
       )}
-    </>
+    </div>
   );
 }

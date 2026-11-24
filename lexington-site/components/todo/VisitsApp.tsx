@@ -154,7 +154,7 @@ export function VisitsApp({
           <span className={`${v.status} ${v[`s_${x.status}`] ?? ""}`}>{STATUS_LABEL[x.status]}</span>
         </div>
         <p className={v.line}>
-          {[x.people ? `${x.people} ${x.people === 1 ? "person" : "people"}` : "", x.interest && x.interest !== "Not sure yet" ? x.interest : "", `booked ${BOOKED_VIA[x.source]}`].filter(Boolean).join(" · ")}
+          {[x.kind === "video" ? "Video tour on WhatsApp" : "", x.people ? `${x.people} ${x.people === 1 ? "person" : "people"}` : "", x.interest && x.interest !== "Not sure yet" ? x.interest : "", `booked ${BOOKED_VIA[x.source]}`].filter(Boolean).join(" · ")}
         </p>
         {x.note && <p className={v.note}>&ldquo;{x.note}&rdquo;</p>}
         <p className={v.meta}>

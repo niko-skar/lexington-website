@@ -132,6 +132,7 @@ export function InteractiveMap({ fullBleed }: InteractiveMapProps = {}) {
   return (
     <div
       ref={mapRef}
+      data-visit-canvas
       className={`${styles.map} ${fullBleed ? styles.fullBleed : ""}`}
       role="region"
       aria-label="Map showing The Lexington's location in Shiashie, East Legon"

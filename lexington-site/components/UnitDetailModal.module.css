@@ -10,14 +10,85 @@
 }
 
 .panel {
+  /* The pop-up's inner margin, which the button bar at its foot reaches out over. */
+  --pad: var(--space-7);
   background: var(--paper);
   border-radius: var(--radius);
   max-width: 720px;
   width: 100%;
   max-height: 88vh;
   overflow-y: auto;
-  padding: var(--space-7);
+  padding: var(--pad);
   position: relative;
+}
+
+/* The next step (WhatsApp, a visit, reserving): pinned to the foot of the pop-up while the plans scroll under it. */
+.actions {
+  position: sticky;
+  bottom: calc(-1 * var(--pad));
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: var(--space-6) calc(-1 * var(--pad)) calc(-1 * var(--pad));
+  padding: 14px var(--pad) calc(14px + env(safe-area-inset-bottom, 0px));
+  background: var(--paper);
+  border-top: 1px solid rgba(21, 24, 26, 0.12);
+  box-shadow: 0 -12px 24px -20px rgba(10, 11, 12, 0.5);
+}
+
+.action {
+  flex: 1 1 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 46px;
+  padding: 10px 16px;
+  border: 1px solid rgba(21, 24, 26, 0.3);
+  border-radius: var(--radius);
+  color: var(--ink);
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color 0.2s var(--ease), border-color 0.2s var(--ease), color 0.2s var(--ease);
+}
+
+.action:hover {
+  border-color: var(--brass);
+  color: var(--clay);
+}
+
+.action:focus-visible {
+  outline: 2px solid var(--brass);
+  outline-offset: 2px;
+}
+
+.whatsapp {
+  flex-grow: 1.6;
+  background: #25d366;
+  border-color: #25d366;
+}
+
+.whatsapp:hover {
+  background: #1fbd5b;
+  border-color: #1fbd5b;
+  color: var(--ink);
+}
+
+.reserve {
+  background: var(--clay);
+  border-color: var(--clay);
+  color: var(--paper);
+}
+
+.reserve:hover {
+  background: var(--clay-lt);
+  border-color: var(--clay-lt);
+  color: var(--paper);
 }
 
 .close {
@@ -150,6 +221,30 @@
 
 /* On a phone the home's lines get the pop-up's full width, and the status sits beside the number. */
 @media (max-width: 560px) {
+  /* More of a small screen for the plans: a slimmer frame round the pop-up. */
+  .overlay {
+    padding: 12px;
+  }
+
+  .panel {
+    --pad: 20px;
+    max-height: 92vh;
+  }
+
+  .close {
+    top: 12px;
+    right: 12px;
+  }
+
+  /* WhatsApp across the top, the visit and reserving side by side under it; the long words go. */
+  .whatsapp {
+    flex-basis: 100%;
+  }
+
+  .wide {
+    display: none;
+  }
+
   .head {
     display: grid;
     grid-template-columns: auto 1fr;

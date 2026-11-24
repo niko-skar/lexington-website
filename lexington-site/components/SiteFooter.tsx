@@ -90,6 +90,7 @@ export async function SiteFooter() {
               <a href={`mailto:${siteSettings.contactEmail}`}>{siteSettings.contactEmail}</a>
               <Link href="/visit">Book a Site Visit</Link>
               <Link href="/reserve">Reserve a Unit</Link>
+              <Link href="/buying-from-abroad">Buying from Abroad</Link>
             </div>
           </div>
         </div>

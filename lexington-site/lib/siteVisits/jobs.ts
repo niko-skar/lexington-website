@@ -23,7 +23,7 @@ const HOUR = 3_600_000;
 
 const visitLine = (v: JobVisit) =>
   [
-    `${timeLabel(v.slot)} ${v.name}`,
+    `${timeLabel(v.slot)} ${v.name}${v.kind === "video" ? " (video tour on WhatsApp)" : ""}`,
     v.people ? `${v.people} ${v.people === 1 ? "person" : "people"}` : "",
     v.phone,
     v.interest && v.interest !== "Not sure yet" ? v.interest.toLowerCase() : "",

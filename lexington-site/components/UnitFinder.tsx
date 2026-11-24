@@ -105,9 +105,15 @@ interface UnitFinderProps {
   tiers: PackageTier[];
   /** VAT on the prices (Site settings; off until registered). */
   vat: Vat;
+  /** The sales number (Site settings), for the WhatsApp button in a home's pop-up. */
+  contactPhone: string;
 }
 
-export function UnitFinder({ units, tiers, vat }: UnitFinderProps) {
+/** The kinds of home as a buyer says them, smallest first (the row of kinds at the top of the list). */
+const TYPE_WORDS = ["Studios", "One bedroom", "Two bedrooms", "Three bedrooms", "Duplex penthouses"];
+const typeWords = (type: string) => TYPE_WORDS[typeRank(type)] ?? type;
+
+export function UnitFinder({ units, tiers, vat, contactPhone }: UnitFinderProps) {
   // The filters a click picked; null until then (the link's filter, else All).
   const [floorPick, setFloor] = useState<FloorFilter | null>(null);
   const [typePick, setType] = useState<TypeFilter | null>(null);
@@ -214,6 +220,25 @@ export function UnitFinder({ units, tiers, vat }: UnitFinderProps) {
 
   const availableInFiltered = filtered.filter((u) => u.status === "available").length;
 
+  // The row of kinds at the top of the list (Niko, 24 Nov 2026: homes first; on a phone the first home used to sit three
+  // screens down, under the finish packages). Each kind says how many are still for sale and the lowest price among
+  // those, at the finish chosen under the list; picking one filters the list.
+  const kinds = [...types]
+    .sort((a, b) => typeRank(a) - typeRank(b) || a.localeCompare(b))
+    .map((t) => {
+      const forSale = units.filter((u) => u.bedroomType === t && u.status === "available");
+      return { type: t, available: forSale.length, from: forSale.length > 0 ? Math.min(...forSale.map(shownAt)) : null };
+    });
+  const availableAll = units.filter((u) => u.status === "available").length;
+  const tierName = tiers.find((t) => t.key === selectedTier)?.name ?? null;
+
+  function pickType(t: TypeFilter) {
+    setType(t);
+    // On a phone the list sits under the other filters: bring its top up (a laptop already shows it).
+    const list = document.getElementById("pricing-list");
+    if (list && list.getBoundingClientRect().top > window.innerHeight * 0.75) list.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
   function handleSort(column: SortColumn) {
     setSortColumn(column);
     if (sortBy === column) {
@@ -241,20 +266,42 @@ export function UnitFinder({ units, tiers, vat }: UnitFinderProps) {
   const compareUnits = units.filter((u) => compareIds.includes(u._id));
 
   return (
-    <div>
-      <div className={styles.packages}>
-        <PackageTiers tiers={tiers} selected={selectedTier} onSelect={setSelectedTier} vat={vat} />
-      </div>
-
+    // One region for the tap check: a filter or a finish changes the list, not itself.
+    <div data-visit-region>
       {/* scrollMarginTop clears the sticky header (100px), so #pricing
           lands right under it instead of the browser's default
           flush-to-viewport-top jump. */}
-      <div id="pricing" className={styles.filters} style={{ scrollMarginTop: 140 }}>
+      <div id="pricing" style={{ scrollMarginTop: 140 }}>
+        <div className={styles.kinds} role="group" aria-label="Kind of home">
+          <button type="button" className={styles.kind} aria-pressed={type === "all"} onClick={() => pickType("all")}>
+            <span className={styles.kindName}>All homes</span>
+            <span className={styles.kindLeft}>{availableAll} available</span>
+          </button>
+          {kinds.map((k) => (
+            <button key={k.type} type="button" className={styles.kind} aria-pressed={type === k.type} onClick={() => pickType(k.type)}>
+              <span className={styles.kindName}>{typeWords(k.type)}</span>
+              <span className={styles.kindFrom}>
+                {k.from !== null ? (
+                  <>
+                    from {formatUSD(k.from)}
+                    <VatTag vat={vat} />
+                  </>
+                ) : (
+                  "All reserved or sold"
+                )}
+              </span>
+              <span className={styles.kindLeft}>{k.available} available</span>
+            </button>
+          ))}
+        </div>
+
+        <div className={styles.filters}>
         <div className={styles.filterGroup}>
           <span className={styles.filterLabel}>Floor</span>
           <div className={styles.pills}>
             <button
               className={floor === "all" ? styles.pillActive : styles.pill}
+              aria-pressed={floor === "all"}
               onClick={() => setFloor("all")}
             >
               All
@@ -263,30 +310,10 @@ export function UnitFinder({ units, tiers, vat }: UnitFinderProps) {
               <button
                 key={f}
                 className={floor === f ? styles.pillActive : styles.pill}
+                aria-pressed={floor === f}
                 onClick={() => setFloor(f)}
               >
                 {formatFloor(f)}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className={styles.filterGroup}>
-          <span className={styles.filterLabel}>Type</span>
-          <div className={styles.pills}>
-            <button
-              className={type === "all" ? styles.pillActive : styles.pill}
-              onClick={() => setType("all")}
-            >
-              All
-            </button>
-            {types.map((t) => (
-              <button
-                key={t}
-                className={type === t ? styles.pillActive : styles.pill}
-                onClick={() => setType(t)}
-              >
-                {t}
               </button>
             ))}
           </div>
@@ -299,6 +326,7 @@ export function UnitFinder({ units, tiers, vat }: UnitFinderProps) {
               <button
                 key={s}
                 className={status === s ? styles.pillActive : styles.pill}
+                aria-pressed={status === s}
                 onClick={() => setStatus(s)}
               >
                 {s === "all" ? "All" : s[0].toUpperCase() + s.slice(1)}
@@ -323,10 +351,17 @@ export function UnitFinder({ units, tiers, vat }: UnitFinderProps) {
             ))}
           </div>
         </div>
+        </div>
       </div>
 
       <div id="pricing-list" className={styles.count} style={{ scrollMarginTop: 120 }}>
         {availableInFiltered} of {filtered.length} shown are available
+        {tiers.length > 1 && tierName && (
+          <span className={styles.countFinish}>
+            {" "}
+            · Prices with the {tierName} finish. <a href="#finishes">Finish packages</a>
+          </span>
+        )}
       </div>
 
       <div className={styles.tableWrap}>
@@ -491,6 +526,11 @@ export function UnitFinder({ units, tiers, vat }: UnitFinderProps) {
       )}
       <VatNote vat={vat} />
 
+      {/* The finish packages, under the homes (they used to come first): choosing one changes the prices in the list. */}
+      <div id="finishes" className={styles.packages} style={{ scrollMarginTop: 120 }}>
+        <PackageTiers tiers={tiers} selected={selectedTier} onSelect={setSelectedTier} vat={vat} />
+      </div>
+
       {openUnit && (
         <UnitDetailModal
           unit={openUnit}
@@ -499,6 +539,7 @@ export function UnitFinder({ units, tiers, vat }: UnitFinderProps) {
           tiers={tiers}
           selectedTier={selectedTier}
           vat={vat}
+          contactPhone={contactPhone}
           onClose={() => {
             setSelectedUnit(null);
             setLinkClosed(true);

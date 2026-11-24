@@ -390,7 +390,7 @@ export function factPackText(pack: FactPack): string {
 
   add(
     "RESERVING",
-    `- A reservation fee of ${formatUSD(pack.reservationFeeUSD)}${feeVatSuffix(pack.vat)} holds a residence. Each available unit has its own reserve link below; the general one is ${pack.links.reserve}`,
+    `- A reservation fee of ${formatUSD(pack.reservationFeeUSD)}${feeVatSuffix(pack.vat)} holds a residence: it is the standard deposit. Each available unit has its own reserve link below; the general one is ${pack.links.reserve}`,
     "- After a reservation request, the sales team agrees with the buyer how they will pay and then sends the matching bank details themselves.",
     ""
   );
@@ -398,7 +398,8 @@ export function factPackText(pack: FactPack): string {
   add(
     "SITE VISITS",
     "- Our team shows the site Monday to Saturday, 8am to 6pm (Accra time, GMT). A visit takes about an hour; it is a building site, so closed shoes are best.",
-    `- Anyone can book a visit themselves, at a time that suits them: ${pack.links.visit}`
+    `- Anyone can book a visit themselves, at a time that suits them: ${pack.links.visit}`,
+    `- Someone abroad, or who can't come, can have a video tour instead: the team video calls them on WhatsApp and shows them round, on the same days and hours. They book it themselves here: ${pack.links.visit}?kind=video`
   );
   if (pack.visits) {
     const times = freeTimesText(pack.visits.free, pack.visits.nowMs, 7);

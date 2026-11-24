@@ -1,0 +1,115 @@
+/* Buying from abroad: the steps, in order, then the video tour. */
+
+.steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 var(--space-8);
+  max-width: 1080px;
+}
+
+.step {
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  gap: var(--space-4);
+  padding: var(--space-6) 0;
+  border-top: 1px solid rgba(21, 24, 26, 0.14);
+}
+
+.number {
+  font-family: var(--font-serif);
+  font-size: 30px;
+  line-height: 1;
+  color: var(--brass-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.title {
+  font-family: var(--font-serif);
+  font-size: 22px;
+  line-height: 1.25;
+  font-weight: 400;
+  text-wrap: balance;
+}
+
+.text {
+  margin-top: 8px;
+  max-width: 60ch;
+  font-size: 15.5px;
+  line-height: 1.65;
+  color: #4f4c45;
+}
+
+.link {
+  display: inline-block;
+  margin-top: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--clay);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+}
+
+.link:hover {
+  color: var(--clay-lt);
+}
+
+.link:focus-visible,
+.whatsapp:focus-visible {
+  outline: 2px solid var(--brass);
+  outline-offset: 3px;
+}
+
+.ctaTitle {
+  margin-top: 14px;
+  font-size: var(--fs-600);
+  text-wrap: balance;
+}
+
+.ctaText {
+  max-width: 560px;
+  margin: 16px auto 0;
+  color: #555;
+  font-size: 16.5px;
+}
+
+.ctaActions {
+  margin-top: 32px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 16px 28px;
+}
+
+.whatsapp {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+@media (max-width: 760px) {
+  .steps {
+    grid-template-columns: 1fr;
+  }
+
+  .step {
+    grid-template-columns: 44px 1fr;
+    padding: var(--space-5) 0;
+  }
+
+  .number {
+    font-size: 24px;
+  }
+
+  .title {
+    font-size: 20px;
+  }
+}
