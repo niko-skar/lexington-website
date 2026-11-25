@@ -12,7 +12,7 @@ const NAV_LINKS = [
   { href: "/amenities", label: "Amenities" },
   { href: "/gallery", label: "Gallery" },
   { href: "/progress", label: "Progress" },
-  { href: "/invest", label: "Invest" },
+  { href: "/invest", label: "How to Buy" },
   { href: "/about", label: "Our Story" },
 ];
 
