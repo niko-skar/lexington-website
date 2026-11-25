@@ -208,10 +208,18 @@ export interface SlabInput {
   /** Numbered rows, when only part of the width is poured (none: the whole width). */
   rowFrom?: string | null;
   rowTo?: string | null;
-  /** mm, when typed instead of the drawing's. */
+  /** mm, when typed instead of the drawing's (as measured on site). */
   thickness?: number | null;
   /** The beams under the slab (on unless taken off). */
   beams?: boolean;
+  /** The beams' full depth (the slab included) as measured on site, mm, instead of the drawing's. */
+  beamDepth?: number | null;
+  /**
+   * Where each end's blockout is, in metres from its grid line: past it (+, the pour takes in more) or short of it
+   * (−). Niko, 25 Nov 2026: "we did the slab blockout a meter past gridline H". An end at the slab's edge has none.
+   */
+  fromShift?: number | null;
+  toShift?: number | null;
 }
 export interface OtherInput {
   what: string;
@@ -225,6 +233,11 @@ export interface EstimateInput {
   other?: OtherInput;
   /** Per cent added before rounding up (spillage, the pump line, a little over). */
   extra: number;
+  /**
+   * The figures checked on site (Niko, 25 Nov 2026: "each pour you need to ask me to double check so we get it
+   * accurate"): the order to the concrete company waits for it.
+   */
+  checked?: boolean;
 }
 
 /** Niko, 9 Nov 2026: columns take a high slump, around 20-22 cm; a slab around 15-17 cm. */
@@ -341,6 +354,30 @@ export function rangeOf(grid: EstGrid[], from: string | null | undefined, to: st
 /** In a range that ends at a grid line, the line itself belongs to the range after it (so two pours never share it). */
 const within = (v: number, [lo, hi]: [number, number]) => v >= lo && (hi >= BIG ? v <= hi : v < hi);
 
+/** An end of a pour that's the slab's own edge (its first or last lettered line): no blockout there. */
+export function isEdgeLine(grid: EstGrid[], id: string | null | undefined): boolean {
+  if (!grid.length || !id) return false;
+  const sorted = [...grid].sort((a, b) => a.pos - b.pos);
+  return id === sorted[0].id || id === sorted[sorted.length - 1].id;
+}
+
+/**
+ * The range picked with its blockouts: each end moved past its line (+ m: the pour takes in more) or short of it (− m).
+ * Null when the lines aren't there, are the same, or the blockouts cross.
+ */
+export function pourRange(grid: EstGrid[], from: string, to: string, fromShift?: number | null, toShift?: number | null): [number, number] | null {
+  const range = rangeOf(grid, from, to);
+  const a = posOf(grid, from);
+  const b = posOf(grid, to);
+  if (!range || a === null || b === null) return null;
+  const mm = (m: number | null | undefined) => (m && Number.isFinite(m) ? Math.round(m * 1000) : 0);
+  const [lowShift, highShift] = a <= b ? [mm(fromShift), mm(toShift)] : [mm(toShift), mm(fromShift)];
+  let [lo, hi] = range;
+  if (lo > -BIG) lo -= lowShift;
+  if (hi < BIG) hi += highShift;
+  return hi > lo ? [lo, hi] : null;
+}
+
 /* ---------- columns ---------- */
 
 function itemVolume(it: EstItem, h: number): { mm3: number; plan: number } {
@@ -433,8 +470,9 @@ export function slabWork(floor: EstFloor, input: SlabInput): SlabWork | string {
   if (!outline || outline.length < 4) return `There's no slab outline for the ${floor.name.toLowerCase()} in the as-built record.`;
   const spec = slabSpecFor(floor.key);
   if (!spec) return `There's no slab drawing for the ${floor.name.toLowerCase()}.`;
-  const xr = rangeOf(floor.xs, input.from, input.to);
-  if (!xr) return "Pick two different grid lines: from one to the other.";
+  if (!rangeOf(floor.xs, input.from, input.to)) return "Pick two different grid lines: from one to the other.";
+  const xr = pourRange(floor.xs, input.from, input.to, input.fromShift, input.toShift);
+  if (!xr) return "The blockouts cross: check the metres past or short of the grid lines.";
   const yr = input.rowFrom || input.rowTo ? rangeOf(floor.ys, input.rowFrom ?? null, input.rowTo ?? null) : ([-BIG, BIG] as [number, number]);
   if (!yr) return "Pick two different rows: from one to the other.";
   const typed = input.thickness && input.thickness > 0 ? input.thickness : null;
@@ -508,7 +546,9 @@ export function slabWork(floor: EstFloor, input: SlabInput): SlabWork | string {
       const lo = Math.max(lo0, span[0], b.along === "row" ? minX - EDGE_TOLERANCE : minY - EDGE_TOLERANCE);
       const hi = Math.min(hi0, span[1], b.along === "row" ? maxX + EDGE_TOLERANCE : maxY + EDGE_TOLERANCE);
       if (hi <= lo) continue;
-      const down = (v: number) => Math.max(0, b.depth - (b.along === "row" ? thicknessAt(v, zones) : thicknessAt(at, zones)));
+      // As measured on site when typed (all the slab's beams), else the drawing's.
+      const depth = input.beamDepth && input.beamDepth > 0 ? input.beamDepth : b.depth;
+      const down = (v: number) => Math.max(0, depth - (b.along === "row" ? thicknessAt(v, zones) : thicknessAt(at, zones)));
       let len = 0;
       let vol = 0;
       let runStart: number | null = null;
@@ -562,12 +602,22 @@ export function slabWork(floor: EstFloor, input: SlabInput): SlabWork | string {
   };
 }
 
+/** "1 m", "0.5 m", "1.25 m" */
+const metres = (m: number) => `${Math.round(Math.abs(m) * 100) / 100} m`;
+
+/** An end's blockout in words ("blockout 1 m past H"), or "" on the line or at the slab's edge. */
+function blockoutWords(floor: EstFloor, line: string, shift: number | null | undefined): string {
+  if (!shift || isEdgeLine(floor.xs, line)) return "";
+  return `blockout ${metres(shift)} ${shift > 0 ? "past" : "short of"} ${line}`;
+}
+
 function rangeWords(floor: EstFloor, input: SlabInput): string {
   const xs = [...floor.xs].sort((a, b) => a.pos - b.pos);
   const whole = (!input.from || input.from === xs[0]?.id) && (!input.to || input.to === xs[xs.length - 1]?.id);
   const across = whole ? "" : `grid ${input.from} to ${input.to}`;
   const rows = input.rowFrom && input.rowTo ? `rows ${input.rowFrom} to ${input.rowTo}` : "";
-  return [across, rows].filter(Boolean).join(", ");
+  const ends = [blockoutWords(floor, input.from, input.fromShift), blockoutWords(floor, input.to, input.toShift)].filter(Boolean).join(" and ");
+  return [across, rows, ends].filter(Boolean).join(", ");
 }
 
 function slabPart(floor: EstFloor, input: SlabInput): EstimatePart | string {
@@ -575,13 +625,22 @@ function slabPart(floor: EstFloor, input: SlabInput): EstimatePart | string {
   if (typeof work === "string") return work;
   if (work.area <= 0) return "There's no slab between those grid lines.";
   const spec = slabSpecFor(floor.key)!;
-  const typed = input.thickness && input.thickness > 0;
+  const typed = !!(input.thickness && input.thickness > 0);
+  const deep = !!(input.beamDepth && input.beamDepth > 0) && input.beams !== false;
+  const drawn = `${[...new Set(spec.zones.map((z) => z.t))].join(" / ")} mm slab, ${[...new Set(spec.beams.map((b) => b.depth))].join(" / ")} mm beams`;
   const lines = [
     ...work.byThickness.map((z) => `Slab ${z.t} mm: ${fmt(z.area)} m² = ${fmt(z.m3)} m³`),
     ...(work.openings > 0.05 ? [`Openings left out: ${fmt(work.openings)} m² (voids, stairs, lift shafts)`] : []),
-    ...(input.beams === false ? ["Beams under the slab: left out"] : work.beamLength > 0 ? [`Beams under the slab: ${fmt(work.beamLength, 0)} m = ${fmt(work.beams)} m³`] : []),
-    typed ? `Thickness as typed; ${input.beams === false ? "" : "beams "}from ${spec.source}` : `From ${spec.source}`,
-    ...(spec.borrowed ? [spec.borrowed] : []),
+    ...(input.beams === false
+      ? ["Beams under the slab: left out"]
+      : work.beamLength > 0
+        ? [`Beams under the slab${deep ? `, ${input.beamDepth} mm deep` : ""}: ${fmt(work.beamLength, 0)} m = ${fmt(work.beams)} m³`]
+        : []),
+    // What was typed from the site, against the drawing (Niko, 25 Nov 2026: the 3rd floor was built 180 / 600).
+    typed || deep
+      ? `As measured: ${[typed ? `slab ${input.thickness} mm` : "", deep ? `beams ${input.beamDepth} mm deep` : ""].filter(Boolean).join(", ")} (the drawing: ${drawn})`
+      : `From ${spec.source}`,
+    ...(spec.borrowed && !(typed && (deep || input.beams === false)) ? [spec.borrowed] : []),
   ];
   const where = rangeWords(floor, input);
   return {

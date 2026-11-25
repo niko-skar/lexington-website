@@ -6,6 +6,7 @@ import {
   clipToBox,
   DEFAULT_EXTRA,
   EXTRA_CHOICES,
+  isEdgeLine,
   orderLines,
   orderText,
   slabSpecFor,
@@ -96,7 +97,16 @@ function slabStart(floors: EstFloor[], key: string | null): SlabInput {
  * The estimate when a kind is picked: what was picked before stays (columns to both keeps the columns); a new part
  * starts on the floor the pour's words name ("1st floor columns"), the slab of "both" on the floor above the columns.
  */
-export function startEstimate(kind: EstimateKind, prev: EstimateInput | null, floors: EstFloor[], what: string, volume: string): EstimateInput {
+/** The slab and beams as last measured on site and checked (a new slab starts from them; the drawing's are shown beside). */
+export interface Measured {
+  thickness: number | null;
+  beamDepth: number | null;
+  /** The pour they were checked for, and its day. */
+  what: string;
+  day: string;
+}
+
+export function startEstimate(kind: EstimateKind, prev: EstimateInput | null, floors: EstFloor[], what: string, volume: string, measured?: Measured | null): EstimateInput {
   const named = floorInWords(what, floors);
   // Only what the last kind was using carries over (a slab picked for "columns" never was).
   const hadColumns = prev && (prev.kind === "columns" || prev.kind === "both") && prev.columns?.floor ? prev.columns : null;
@@ -104,9 +114,10 @@ export function startEstimate(kind: EstimateKind, prev: EstimateInput | null, fl
   const below = hadSlab ? (floors.find((f) => f.next?.key === hadSlab.floor)?.key ?? null) : null;
   const columns = hadColumns ?? columnsStart(floors, kind === "both" && below ? below : named);
   const above = floors.find((f) => f.key === columns.floor)?.next?.key ?? null;
-  const slab = hadSlab ?? slabStart(floors, kind === "both" ? above : named);
+  // A new slab starts with the thickness and beams as last measured (the site builds them the same way): checked again.
+  const slab = hadSlab ?? { ...slabStart(floors, kind === "both" ? above : named), thickness: measured?.thickness ?? null, beamDepth: measured?.beamDepth ?? null };
   const other: OtherInput = (prev?.kind === "other" ? prev.other : null) ?? { what: what.trim(), m3: numberOf(volume), slump: "" };
-  return { kind, extra: prev?.extra ?? DEFAULT_EXTRA, columns, slab, other };
+  return { kind, extra: prev?.extra ?? DEFAULT_EXTRA, columns, slab, other, checked: false };
 }
 
 /** Only what the kind uses, for saving. */
@@ -114,6 +125,7 @@ export function estimateToSend(v: EstimateInput): EstimateInput {
   return {
     kind: v.kind,
     extra: v.extra,
+    checked: !!v.checked,
     ...(v.kind === "columns" || v.kind === "both" ? { columns: v.columns } : {}),
     ...(v.kind === "slab" || v.kind === "both" ? { slab: v.slab } : {}),
     ...(v.kind === "other" ? { other: v.other } : {}),
@@ -130,6 +142,7 @@ export function EstimatePanel({
   result,
   disabled,
   lastPour,
+  measured,
 }: {
   floors: EstFloor[] | null;
   error: string;
@@ -139,10 +152,13 @@ export function EstimatePanel({
   disabled: boolean;
   /** What the last pour worked out at against what really came, said above the extra (25 Nov 2026). */
   lastPour?: string | null;
+  /** The slab and beams as last measured and checked on site (the check says where its figures came from). */
+  measured?: Measured | null;
 }) {
   if (error) return <p className={styles.sheetError}>{error}</p>;
   if (!floors) return <p className={styles.sheetNote}>Getting the building&rsquo;s measurements…</p>;
-  const set = (patch: Partial<EstimateInput>) => onChange({ ...value, ...patch });
+  // Anything picked differently has to be checked on site again.
+  const set = (patch: Partial<EstimateInput>) => onChange({ ...value, ...patch, checked: false });
   return (
     <div className={es.panel}>
       {(value.kind === "columns" || value.kind === "both") && value.columns && (
@@ -152,7 +168,143 @@ export function EstimatePanel({
         <SlabPicker floors={floors} value={value.slab} onChange={(slab) => set({ slab })} disabled={disabled} titled={value.kind === "both"} />
       )}
       {value.kind === "other" && value.other && <OtherPicker value={value.other} onChange={(other) => set({ other })} disabled={disabled} />}
-      <Summary result={result} extra={value.extra} onExtra={(extra) => set({ extra })} disabled={disabled} lastPour={lastPour} />
+      <SiteCheck key={value.kind} floors={floors} value={value} onChange={onChange} disabled={disabled} measured={measured ?? null} />
+      <Summary result={result} extra={value.extra} onExtra={(extra) => onChange({ ...value, extra })} disabled={disabled} lastPour={lastPour} />
+    </div>
+  );
+}
+
+/* ---------- checked on site (Niko, 25 Nov 2026: "each pour you need to ask me to double check so we get it accurate") ---------- */
+
+// The 24 Nov 3rd floor slab worked out at 59.5 m³ from the drawing (17.5 cm slab, 50 cm beams, from grid H) and
+// took about 70: on site the slab was 18 cm, the beams 60 cm and the blockout 1 m past grid H (67.3 m³ as built).
+// So every pour worked out from the building asks for what's really there, then a tick; its order waits for the tick.
+
+/** The slab's thickness, the beams' depth and each end's blockout as measured, then "I've checked these on site". */
+function SiteCheck({
+  floors,
+  value,
+  onChange,
+  disabled,
+  measured,
+}: {
+  floors: EstFloor[];
+  value: EstimateInput;
+  onChange: (v: EstimateInput) => void;
+  disabled: boolean;
+  measured: Measured | null;
+}) {
+  const slab = (value.kind === "slab" || value.kind === "both") && value.slab?.floor ? value.slab : null;
+  const floor = slab ? (floors.find((f) => f.key === slab.floor) ?? null) : null;
+  const spec = floor ? slabSpecFor(floor.key) : null;
+  const [thick, setThick] = useState(slab?.thickness ? String(slab.thickness) : "");
+  const [depth, setDepth] = useState(slab?.beamDepth ? String(slab.beamDepth) : "");
+  const putSlab = (patch: Partial<SlabInput>) => slab && onChange({ ...value, slab: { ...slab, ...patch }, checked: false });
+  const drawnT = spec ? [...new Set(spec.zones.map((z) => z.t))].join(" / ") : "";
+  const drawnD = spec ? [...new Set(spec.beams.map((b) => b.depth))].join(" / ") : "";
+  const fromMeasured = !!measured && !!slab && slab.thickness === measured.thickness && slab.beamDepth === measured.beamDepth && !!(measured.thickness || measured.beamDepth);
+  return (
+    <section className={value.checked ? `${es.check} ${es.checkDone}` : es.check} aria-label="Check on site">
+      <h3 className={es.blockTitle}>Check on site</h3>
+      <p className={es.note}>The drawing isn&rsquo;t always what&rsquo;s built. Measure these on site, then tick: the order to the concrete company waits for it.</p>
+      {slab && floor && (
+        <>
+          <div className={es.grid2}>
+            <label className={styles.label}>
+              Slab thickness (mm)
+              <input
+                className={styles.input}
+                inputMode="numeric"
+                value={thick}
+                placeholder={drawnT ? `${drawnT} drawing` : "e.g. 180"}
+                onChange={(e) => {
+                  setThick(e.target.value);
+                  putSlab({ thickness: numberOf(e.target.value) });
+                }}
+                disabled={disabled}
+                aria-label="Slab thickness (mm)"
+              />
+            </label>
+            <label className={styles.label}>
+              Beams, full depth (mm)
+              <input
+                className={styles.input}
+                inputMode="numeric"
+                value={depth}
+                placeholder={drawnD ? `${drawnD} drawing` : "e.g. 600"}
+                onChange={(e) => {
+                  setDepth(e.target.value);
+                  putSlab({ beamDepth: numberOf(e.target.value) });
+                }}
+                disabled={disabled || slab.beams === false}
+                aria-label="Beams, full depth (mm)"
+              />
+            </label>
+          </div>
+          <p className={es.hint}>
+            {spec ? `The drawing: ${drawnT} mm slab, ${drawnD} mm beams (the beams' depth takes in the slab). ` : ""}
+            {fromMeasured ? `Filled in as measured for ${measured!.what} (${measured!.day.slice(8, 10).replace(/^0/, "")} ${MONTHS[Number(measured!.day.slice(5, 7)) - 1] ?? ""}): check them again.` : "Empty: the drawing's are used."}
+          </p>
+          {[
+            { line: slab.from, shift: slab.fromShift, key: "fromShift" as const },
+            { line: slab.to, shift: slab.toShift, key: "toShift" as const },
+          ]
+            .filter((end) => !isEdgeLine(floor.xs, end.line))
+            .map((end) => (
+              <EndPick key={end.key} line={end.line} shift={end.shift ?? null} onShift={(m) => putSlab({ [end.key]: m })} disabled={disabled} />
+            ))}
+        </>
+      )}
+      {(value.kind === "columns" || value.kind === "both") && <p className={es.note}>Columns: check the ones picked and the height against the site.</p>}
+      {value.kind === "other" && <p className={es.note}>Check the m³ typed against the site.</p>}
+      <button type="button" className={value.checked ? es.tickOn : es.tick} aria-pressed={!!value.checked} onClick={() => onChange({ ...value, checked: !value.checked })} disabled={disabled}>
+        <span className={es.tickBox} aria-hidden="true">
+          ✓
+        </span>
+        <span>{value.checked ? "Checked on site" : "I've checked these on site"}</span>
+      </button>
+    </section>
+  );
+}
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** Where a pour's end stops: on its grid line, past it (the pour takes in more) or short of it, and by how much. */
+function EndPick({ line, shift, onShift, disabled }: { line: string; shift: number | null; onShift: (m: number | null) => void; disabled: boolean }) {
+  // Kept here as tapped, so clearing the metres to type new ones doesn't put it back on the line.
+  const [way, setWay] = useState<"on" | "past" | "short">(!shift ? "on" : shift > 0 ? "past" : "short");
+  const [text, setText] = useState(shift ? String(Math.abs(shift)) : "1");
+  const put = (w: "on" | "past" | "short", t: string) => {
+    setWay(w);
+    setText(t);
+    const m = numberOf(t);
+    onShift(w === "on" || !m ? null : w === "past" ? m : -m);
+  };
+  return (
+    <div className={es.end}>
+      <span className={styles.label}>Blockout at grid {line}</span>
+      <div className={styles.chips} role="group" aria-label={`Blockout at grid ${line}`}>
+        {(["on", "past", "short"] as const).map((w) => (
+          <button key={w} type="button" className={way === w ? styles.chipOn : styles.chip} aria-pressed={way === w} onClick={() => put(w, text)} disabled={disabled}>
+            {w === "on" ? "On the line" : w === "past" ? "Past it" : "Short of it"}
+          </button>
+        ))}
+      </div>
+      {way !== "on" && (
+        <label className={es.endMetres}>
+          <input
+            className={styles.input}
+            inputMode="decimal"
+            value={text}
+            onChange={(e) => put(way, e.target.value)}
+            aria-label={`Metres ${way === "past" ? "past" : "short of"} grid ${line}`}
+            disabled={disabled}
+          />
+          <span>
+            m {way === "past" ? "past" : "short of"} grid {line}
+          </span>
+        </label>
+      )}
     </div>
   );
 }
@@ -249,7 +401,6 @@ function SlabPicker({ floors, value, onChange, disabled, titled }: { floors: Est
   const ys = floor ? sorted(floor.ys) : [];
   const spec = floor ? slabSpecFor(floor.key) : null;
   const work = floor ? slabWork(floor, value) : null;
-  const [thick, setThick] = useState(value.thickness ? String(value.thickness) : "");
   const rows = !!(value.rowFrom || value.rowTo);
   const pickFloor = (f: EstFloor) => {
     const fx = sorted(f.xs);
@@ -332,30 +483,14 @@ function SlabPicker({ floors, value, onChange, disabled, titled }: { floors: Est
               </p>
             </>
           )}
-          <div className={es.grid2}>
-            <label className={styles.label}>
-              Thickness (mm)
-              <input
-                className={styles.input}
-                inputMode="numeric"
-                value={thick}
-                placeholder={spec ? `${[...new Set(spec.zones.map((z) => z.t))].join(" / ")} drawing` : "e.g. 200"}
-                onChange={(e) => {
-                  setThick(e.target.value);
-                  onChange({ ...value, thickness: numberOf(e.target.value) });
-                }}
-                disabled={disabled}
-                aria-label="Thickness (mm)"
-              />
-            </label>
-            <div className={es.beamPick}>
-              <span className={styles.label}>Beams under it</span>
-              <button type="button" className={value.beams !== false ? styles.chipOn : styles.chip} aria-pressed={value.beams !== false} onClick={() => onChange({ ...value, beams: value.beams === false })} disabled={disabled}>
-                {value.beams !== false ? "Counted" : "Left out"}
-              </button>
-            </div>
+          {/* The thickness and the beams' depth as measured are in Check on site, below (25 Nov 2026). */}
+          <div className={es.beamPick}>
+            <span className={styles.label}>Beams under it</span>
+            <button type="button" className={value.beams !== false ? styles.chipOn : styles.chip} aria-pressed={value.beams !== false} onClick={() => onChange({ ...value, beams: value.beams === false })} disabled={disabled}>
+              {value.beams !== false ? "Counted" : "Left out"}
+            </button>
           </div>
-          {spec && <p className={es.note}>Thickness and beams from {spec.source}.</p>}
+          {spec && <p className={es.note}>The drawing&rsquo;s slab and beams: {spec.source}.</p>}
           {spec?.borrowed && <p className={es.warn}>{spec.borrowed}</p>}
         </>
       )}
@@ -657,7 +792,12 @@ export function PourOrderSheet({
   const [m3Text, setM3Text] = useState<string[]>(() => form.lines.map((l) => (l.m3 ? String(l.m3) : "")));
   const [error, setError] = useState("");
   const text = orderText(b.day, form);
-  const problem = form.lines.some((l) => !(l.m3 > 0))
+  // Niko, 25 Nov 2026: "each pour you need to ask me to double check". A pour worked out from the building is ordered
+  // only once its figures are checked on site (the website refuses it before, too).
+  const unchecked = b.phase === "check" && !!b.estimate && !b.estimate.input.checked;
+  const problem = unchecked
+    ? "Check the figures on site first: close this, tap Change on the pour, measure, and tick Checked on site."
+    : form.lines.some((l) => !(l.m3 > 0))
     ? "Type the m³ of each part."
     : form.phone.trim() && !PHONE_RE.test(form.phone.trim())
       ? "Type their WhatsApp number in digits, e.g. 024 123 4567."
@@ -701,6 +841,7 @@ export function PourOrderSheet({
         <p className={styles.sheetNote}>
           {b.what}, {pourWhen(b.day)}
         </p>
+        {unchecked && <p className={es.warn}>Not checked on site yet. Tap Change on the pour, measure the slab, the beams and the blockouts, and tick Checked on site: then it can be ordered.</p>}
         <div className={es.grid2}>
           <label className={styles.label}>
             Concrete company

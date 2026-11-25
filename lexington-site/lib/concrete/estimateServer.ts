@@ -97,7 +97,7 @@ function cleanInput(value: unknown): EstimateInput {
   const kind = ESTIMATE_KINDS.find((k) => k === value.kind) as EstimateKind | undefined;
   if (!kind) throw new TodoError(400, "Pick columns, slab, both or other.");
   const extra = num(value.extra);
-  const out: EstimateInput = { kind, extra: EXTRA_CHOICES.some((e) => e === extra) ? (extra as number) : DEFAULT_EXTRA };
+  const out: EstimateInput = { kind, extra: EXTRA_CHOICES.some((e) => e === extra) ? (extra as number) : DEFAULT_EXTRA, checked: value.checked === true };
   const floor = (v: unknown) => (typeof v === "string" && FLOOR_RE.test(v) ? v : "");
   const grid = (v: unknown) => (typeof v === "string" && GRID_RE.test(v) ? v : null);
   if (kind === "columns" || kind === "both") {
@@ -111,7 +111,27 @@ function cleanInput(value: unknown): EstimateInput {
     const s = isObj(value.slab) ? value.slab : {};
     const thickness = num(s.thickness);
     if (thickness !== null && !(thickness >= 50 && thickness <= 1000)) throw new TodoError(400, "Type the slab's thickness in mm, e.g. 200.");
-    out.slab = { floor: floor(s.floor), from: grid(s.from) ?? "", to: grid(s.to) ?? "", rowFrom: grid(s.rowFrom), rowTo: grid(s.rowTo), thickness, beams: s.beams !== false };
+    // As measured on site (25 Nov 2026): the beams' full depth, and each end's blockout past (+) or short of (−) its line.
+    const beamDepth = num(s.beamDepth);
+    if (beamDepth !== null && !(beamDepth >= 100 && beamDepth <= 3000)) throw new TodoError(400, "Type the beams' full depth in mm, e.g. 600.");
+    const shift = (v: unknown) => {
+      const m = num(v);
+      if (m === null || m === 0) return null;
+      if (!(Math.abs(m) <= 30)) throw new TodoError(400, "Type the blockout in metres from the grid line, e.g. 1.");
+      return Math.round(m * 100) / 100;
+    };
+    out.slab = {
+      floor: floor(s.floor),
+      from: grid(s.from) ?? "",
+      to: grid(s.to) ?? "",
+      rowFrom: grid(s.rowFrom),
+      rowTo: grid(s.rowTo),
+      thickness,
+      beams: s.beams !== false,
+      beamDepth,
+      fromShift: shift(s.fromShift),
+      toShift: shift(s.toShift),
+    };
   }
   if (kind === "other") {
     const o = isObj(value.other) ? value.other : {};

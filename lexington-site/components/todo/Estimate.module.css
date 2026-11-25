@@ -243,6 +243,82 @@
 .total b {
   font-family: var(--x-num);
 }
+/* Check on site (25 Nov 2026): what's really built, then a tick; the order waits for it. */
+.check {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 2px solid var(--x-amber);
+  border-radius: 10px;
+  background: var(--x-amber-soft);
+}
+.checkDone {
+  border-color: var(--x-ok);
+  background: var(--x-ok-soft);
+}
+/* The two boxes line up when one label takes two lines on a phone. */
+.check .grid2 {
+  align-items: end;
+}
+.end {
+  display: grid;
+  gap: 6px;
+}
+.endMetres {
+  display: grid;
+  grid-template-columns: 96px auto;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+}
+.tick,
+.tickOn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 52px;
+  padding: 8px 12px;
+  border: 1px solid var(--x-line);
+  border-radius: 8px;
+  background: var(--x-surface);
+  color: var(--x-ink);
+  font-size: 16px;
+  font-weight: 700;
+  text-align: left;
+}
+.tickOn {
+  border-color: var(--x-ok);
+}
+.tickBox {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 2px solid var(--x-line);
+  border-radius: 6px;
+  color: transparent;
+}
+.tickOn .tickBox {
+  border-color: var(--x-ok);
+  background: var(--x-ok);
+  color: var(--x-on-color);
+}
+/* On a pour's card: checked on site (who and when), or not yet. */
+.checked {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--x-ok);
+}
+.unchecked {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--x-amber);
+}
+
 /* What the last pour really took against what it worked out at (25 Nov 2026). */
 .lastPour {
   margin: 0;

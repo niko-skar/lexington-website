@@ -12,7 +12,7 @@ import cx from "./Concrete.module.css";
 import { DayLine, plural, TruckList, trucksWords } from "./ConcreteTrucks";
 import es from "./Estimate.module.css";
 import { cubesLine, PourCubesCard } from "./PourCubes";
-import { EstimatePanel, estimateToSend, PourOrderSheet, startEstimate, useEstimateFloors } from "./PourEstimate";
+import { EstimatePanel, estimateToSend, PourOrderSheet, startEstimate, useEstimateFloors, type Measured } from "./PourEstimate";
 import { PourPhotos } from "./PourPhotos";
 import ps from "./Pours.module.css";
 import styles from "./Todo.module.css";
@@ -205,6 +205,15 @@ function OrderLines({ booking: b, onOrder }: { booking: PourBooking; onOrder?: (
     <>
       <p className={ps.line}>{[ordered(b) ? `Ordered ${ordered(b)}` : "Nothing ordered yet", b.curer ? `cured by ${b.curer.name}` : ""].filter(Boolean).join(" · ")}</p>
       {b.estimate && <p className={es.worked}>Worked out: {b.estimate.result.parts.map((p) => `${p.label} ${m3(p.m3)} m³`).join(" + ")}</p>}
+      {/* Checked on site (25 Nov 2026): who and when; before the pour, a reminder that the order waits for it. */}
+      {b.estimate &&
+        (b.estimate.input.checked ? (
+          <p className={es.checked}>
+            ✓ Checked on site{b.estimate.by ? ` by ${b.estimate.by}` : ""}, {when(b.estimate.at)}
+          </p>
+        ) : b.phase === "check" ? (
+          <p className={es.unchecked}>Not checked on site yet: tap Change, measure the slab, beams and blockouts, and tick. The order waits for it.</p>
+        ) : null)}
       {b.po &&
         (onOrder ? (
           <button type="button" className={es.poLink} onClick={() => onOrder(b.po!.id)}>
@@ -557,13 +566,22 @@ export function BookSheet({
       setFilled({ what: result.what, volume: String(result.order) });
     }
   }
+  // The slab and beams as last measured and checked on site (25 Nov 2026): a new slab starts from them, to check again.
+  const measured = useMemo<Measured | null>(() => {
+    const done = info.pours
+      .filter((p) => p.estimate?.input.checked && (p.estimate.input.slab?.thickness || p.estimate.input.slab?.beamDepth))
+      .sort((x, y) => (y.estimate?.at ?? "").localeCompare(x.estimate?.at ?? ""));
+    const last = done[0];
+    const slab = last?.estimate?.input.slab;
+    return last && slab ? { thickness: slab.thickness ?? null, beamDepth: slab.beamDepth ?? null, what: last.what, day: last.day } : null;
+  }, [info.pours]);
   const pickKind = (k: EstimateInput["kind"]) => {
     if (est?.kind === k) return setEst(null);
-    setEst(startEstimate(k, est, floors ?? [], what, volume));
+    setEst(startEstimate(k, est, floors ?? [], what, volume, measured));
   };
   // The building came after the kind was picked: start its parts now.
   if (est && floors && ((est.kind !== "other" && !est.columns?.floor && !est.slab?.floor) || (est.kind === "other" && !est.other))) {
-    setEst(startEstimate(est.kind, null, floors, what, volume));
+    setEst(startEstimate(est.kind, null, floors, what, volume, measured));
   }
 
   const priceNumber = price.trim() ? Number(price.replace(/,/g, "").trim()) : null;
@@ -616,7 +634,7 @@ export function BookSheet({
             </button>
           ))}
         </div>
-        {est && <EstimatePanel floors={floors} error={floorsError} value={est} onChange={setEst} result={result} disabled={saving} lastPour={lastPour} />}
+        {est && <EstimatePanel floors={floors} error={floorsError} value={est} onChange={setEst} result={result} disabled={saving} lastPour={lastPour} measured={measured} />}
         {!booking && (
           <>
             <span className={styles.label}>Checklist before the pour</span>
@@ -667,6 +685,9 @@ export function BookSheet({
         <p className={styles.sheetNote}>
           The first waybill on that day marks it poured: its curing starts then, {info.curingDays} days, on the roll call and Payday.
         </p>
+        {est && !est.checked && (
+          <p className={es.unchecked}>Not checked on site yet: it can be booked now, and the order to the concrete company waits until it&rsquo;s checked.</p>
+        )}
         {error && (
           <p className={styles.sheetError} role="alert">
             {error}

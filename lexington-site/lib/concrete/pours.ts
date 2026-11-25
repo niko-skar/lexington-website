@@ -405,6 +405,10 @@ export async function changePour(me: TodoMe, id: unknown, body: Data): Promise<v
 export async function orderPour(me: TodoMe, id: unknown, value: unknown): Promise<void> {
   const state = await rollcallState();
   const { id: key, p } = pourOf(state, id);
+  // Niko, 25 Nov 2026: "each pour you need to ask me to double check so we get it accurate". A pour worked out from
+  // the building goes to the concrete company only once its figures are checked on site (thickness, beams, blockouts).
+  const saved = (await pourEstimates([key])).get(key)?.estimate;
+  if (p.phase === "check" && saved && !saved.input.checked) throw new TodoError(409, "Check the figures on site first: tap Change on the pour, measure, and tick Checked on site.");
   const order = checkOrder(value);
   const total = Math.round(order.lines.reduce((s, l) => s + l.m3, 0) * 10) / 10;
   const change: Data = {};
