@@ -38,7 +38,7 @@ const METHODS: Array<{ key: PayMethod; label: string }> = [
 ];
 
 /**
- * The price calculator on the Payment Plans page (Niko, 25 Nov 2026): a home, its finish, and how to pay (in full, a
+ * The price calculator at the top of /invest (Niko, 25 Nov 2026): a home, its finish, and how to pay (in full, a
  * payment plan with monthly or quarterly payments, or a mortgage): the discount, what is paid when, and the estimated
  * monthly building management fee. A link from a home's pop-up opens it on that home (?unit=203B#calculator).
  */

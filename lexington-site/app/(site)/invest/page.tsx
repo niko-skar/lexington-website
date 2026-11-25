@@ -29,7 +29,7 @@ export async function generateMetadata() {
   const settings = await client.fetch<SiteSettings>(siteSettingsQuery);
   return pageMetadata({
     path: "/invest",
-    title: "Payment Plans & Financing | The Lexington",
+    title: "Prices & Financing | The Lexington",
     description: `Work out what you would pay for a home at The Lexington in East Legon, Accra: today's discounts, payment plans with monthly or quarterly payments, mortgage financing and the monthly building fee. Reserve from $10,000${feeVatSuffix(vatFrom(settings))}.`,
   });
 }
@@ -101,7 +101,7 @@ export default async function InvestPage() {
   return (
     <>
       <PageIntro
-        eyebrow="Payment Plans"
+        eyebrow="Invest"
         title="Prices, payment plans and financing."
         lede="Work out what you would pay for any home: in full with today's discount, on a payment plan with monthly or quarterly payments, or with a mortgage. With the monthly building fee."
       />
