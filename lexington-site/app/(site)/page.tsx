@@ -4,6 +4,7 @@ import {
   amenitiesQuery,
   financingPlanQuery,
   galleryImagesQuery,
+  latestProgressReportQuery,
   siteSettingsQuery,
   unitsQuery,
 } from "@/lib/sanity/queries";
@@ -11,6 +12,7 @@ import type {
   Amenity,
   FinancingPlan,
   GalleryImage,
+  ProgressReport,
   SiteSettings,
   Unit,
 } from "@/lib/sanity/types";
@@ -28,16 +30,18 @@ import { SplitSection } from "@/components/SplitSection";
 import { StatStrip } from "@/components/StatStrip";
 import { Reveal } from "@/components/Reveal";
 import { InteractiveMap } from "@/components/InteractiveMap";
+import { LatestUpdate } from "@/components/LatestUpdate";
 
 export const revalidate = 600;
 
 export default async function HomePage() {
-  const [units, images, amenities, financingPlan, siteSettings] = await Promise.all([
+  const [units, images, amenities, financingPlan, siteSettings, latestUpdate] = await Promise.all([
     client.fetch<Unit[]>(unitsQuery),
     client.fetch<GalleryImage[]>(galleryImagesQuery),
     client.fetch<Amenity[]>(amenitiesQuery),
     client.fetch<FinancingPlan>(financingPlanQuery),
     client.fetch<SiteSettings>(siteSettingsQuery),
+    client.fetch<ProgressReport | null>(latestProgressReportQuery),
   ]);
 
   const availableUnits = units.filter((u) => u.status === "available");
@@ -105,6 +109,13 @@ export default async function HomePage() {
               ]}
             />
           </Reveal>
+          {/* The newest site update, under the figures (Niko, 25 Nov 2026: progress went into the Gallery, out of the
+              menu, so the proof that it's being built stays on the first page). Its button opens the Gallery on Progress. */}
+          {latestUpdate && (
+            <div style={{ marginTop: "clamp(32px, 4vw, 56px)" }}>
+              <LatestUpdate report={latestUpdate} onHome more={{ href: "/progress", label: "See all progress photos" }} />
+            </div>
+          )}
         </div>
       </section>
 

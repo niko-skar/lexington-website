@@ -6,12 +6,13 @@ import { useState } from "react";
 
 import styles from "./SiteHeader.module.css";
 
-const NAV_LINKS = [
+// A shorter menu (Niko, 25 Nov 2026): Progress is inside the Gallery now (/progress opens it on Progress, so Gallery
+// is lit there too), and Buyer Portal is a small link after Contact Us, for those who already bought.
+const NAV_LINKS: { href: string; label: string; alsoOn?: string[] }[] = [
   { href: "/", label: "Home" },
   { href: "/residences", label: "Residences" },
   { href: "/amenities", label: "Amenities" },
-  { href: "/gallery", label: "Gallery" },
-  { href: "/progress", label: "Progress" },
+  { href: "/gallery", label: "Gallery", alsoOn: ["/progress"] },
   { href: "/invest", label: "How to Buy" },
   { href: "/about", label: "Our Story" },
 ];
@@ -33,7 +34,7 @@ export function SiteHeader() {
             <Link
               key={link.href}
               href={link.href}
-              aria-current={pathname === link.href ? "page" : undefined}
+              aria-current={pathname === link.href || link.alsoOn?.includes(pathname) ? "page" : undefined}
               onClick={() => setOpen(false)}
             >
               {link.label}
@@ -46,6 +47,7 @@ export function SiteHeader() {
               loaded by the public pages never follows into it (see GoogleTagManager.tsx). */}
           <a
             href="/login"
+            className={styles.portal}
             aria-current={pathname === "/login" ? "page" : undefined}
             onClick={() => setOpen(false)}
           >

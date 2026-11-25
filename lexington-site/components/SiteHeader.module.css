@@ -98,6 +98,20 @@
   background: var(--brass-lt);
 }
 
+/* Buyer Portal: a small, quieter link after Contact Us, for people who already bought (Niko, 25 Nov 2026). */
+.nav a.portal {
+  padding: 4px 0 4px 18px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  opacity: 0.85;
+  border-left: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.nav a.portal:hover,
+.nav a.portal[aria-current="page"] {
+  opacity: 1;
+}
+
 .toggle {
   display: none;
   width: 40px;
@@ -129,8 +143,9 @@
   top: 7px;
 }
 
-/* A narrower laptop: the same menu, a little tighter, so every label stays on one line. */
-@media (min-width: 1181px) and (max-width: 1360px) {
+/* A narrower laptop: the same menu, a little tighter, so every label stays on one line. The shorter menu (25 Nov 2026)
+   fits down to 1101 px; below that, the phone menu. */
+@media (min-width: 1101px) and (max-width: 1360px) {
   .nav {
     gap: 20px;
   }
@@ -145,7 +160,7 @@
   }
 }
 
-@media (max-width: 1180px) {
+@media (max-width: 1100px) {
   .nav {
     position: fixed;
     inset: 100px 0 0 0;
@@ -168,6 +183,12 @@
 
   .nav a {
     font-size: 17px;
+  }
+
+  .nav a.portal {
+    padding: 6px 0;
+    font-size: 13px;
+    border-left: 0;
   }
 
   .toggle {
