@@ -76,6 +76,20 @@ To use the site's tapes, download the full backup from the admin As-built page
 - Getting round: drag to orbit, or fly with the keys: W/S forward and back along the view, A/D sideways, Q/E down and
   up, the arrows to look up, down, left and right, Shift to go faster.
 
+## Drawing sheets
+
+A floor's as-built setting-out plan for the structural engineer: an A1 sheet at 1:100 (PDF) with the grid, slab edges,
+columns, walls, lift cores, stairs and openings set out from the grid lines, schedules, what differs from the drawing,
+and the columns of the floor below where they sit off; plus the same plan as a DXF (mm, 1:1, on layers) for CAD.
+
+```
+node structure/tools/export-sheet.ts asbuilt_live.json 2 > structure/private/sheets/sheet-2.json
+python3 structure/tools/draw_sheet.py structure/private/sheets/sheet-2.json structure/private/sheets/LEX-AB-02
+```
+
+`export-sheet.ts` reads the as-built documents with the as-built app's own geometry code; `draw_sheet.py` needs
+`pip install reportlab ezdxf`. The sheets are made from the live record, so they stay in the git-ignored private folder.
+
 ## Analyses and checks
 
 - Gravity: self-weight, finishes and walls, imposed load. Every reaction adds back to the applied load.
