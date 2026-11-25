@@ -19,9 +19,11 @@ const CATEGORY_LABEL: Record<GalleryCategory, string> = {
 
 /**
  * The order of the buttons, and of the photos under "All" (Niko, 25 Nov 2026: "reorder the gallery photos so it follows
- * the order of the buttons. Exterior first, interior, then amenities and so on"). Family photos are never shown.
+ * the order of the buttons. Exterior first, interior, then amenities and so on"). Family photos are never shown, nor
+ * floor plans (Niko, 25 Nov 2026: "in gallery remove all the floor plan photos, it's unnecessary and too many"): each
+ * home's plans stay in its pop-up on Residences, which shows these same pictures.
  */
-const CATEGORY_ORDER: readonly GalleryCategory[] = ["exterior", "interior", "amenity", "floorplan", "progress"];
+const CATEGORY_ORDER: readonly GalleryCategory[] = ["exterior", "interior", "amenity", "progress"];
 const rank = (c: GalleryCategory) => {
   const i = CATEGORY_ORDER.indexOf(c);
   return i === -1 ? CATEGORY_ORDER.length : i;
