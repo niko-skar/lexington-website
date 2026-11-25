@@ -174,3 +174,56 @@
   text-transform: uppercase;
   color: var(--brass-text);
 }
+
+/* The tabs sit under the sticky header when "See all photos from the site" jumps back up to them. */
+.filters {
+  scroll-margin-top: 120px;
+}
+
+/* A line the page's own intro doesn't say ("Real photos from the site ...", "Renders are illustrative ..."). */
+.note {
+  margin: calc(var(--space-6) * -0.5) 0 var(--space-5);
+  max-width: 70ch;
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: #5b5850;
+}
+
+/* Progress: the newest site update, then every photo from the site by stage. */
+.progress {
+  display: grid;
+  gap: var(--space-6);
+}
+
+.progress .groupTitle {
+  margin: 0 0 var(--space-4);
+}
+
+/* Under "All", after the newest photos from the site. */
+.more {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-top: var(--space-4);
+  padding: 10px 20px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink);
+  border: 1px solid var(--ink);
+  border-radius: var(--radius);
+  transition: background-color 0.2s var(--ease), color 0.2s var(--ease);
+}
+
+.more:hover {
+  color: var(--paper);
+  background: var(--ink);
+}
+
+.more:focus-visible,
+.chip:focus-visible,
+.chipActive:focus-visible {
+  outline: 2px solid var(--brass-text);
+  outline-offset: 2px;
+}

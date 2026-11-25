@@ -52,13 +52,14 @@ export function ProgressGallery({ updates }: { updates: ConstructionUpdate[] }) 
   // One region for the tap check: a filter changes the photos under it, Next changes the photo in the pop-up.
   return (
     <div data-visit-region style={{ display: "contents" }}>
-      <div className={styles.filters}>
+      {/* Inside the Gallery's Progress (25 Nov 2026), under its own All: so "All stages". */}
+      <div className={styles.filters} role="group" aria-label="Stage">
         <button
           className={filter === "all" ? styles.chipActive : styles.chip}
           aria-pressed={filter === "all"}
           onClick={() => setFilter("all")}
         >
-          All
+          All stages
         </button>
         {stages.map((s) => (
           <button

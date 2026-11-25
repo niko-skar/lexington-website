@@ -75,3 +75,14 @@
     transition: none;
   }
 }
+
+/* On the home page: one row of three, on a phone too. */
+@media (max-width: 560px) {
+  .photosRow {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.more {
+  margin-top: 22px;
+}

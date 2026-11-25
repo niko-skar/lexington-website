@@ -1,11 +1,6 @@
 import { pageMetadata } from "@/lib/seo";
-import { client } from "@/lib/sanity/client";
-import { galleryImagesQuery, siteSettingsQuery } from "@/lib/sanity/queries";
-import type { GalleryImage, SiteSettings } from "@/lib/sanity/types";
 
-import { PageIntro } from "@/components/PageIntro";
-import { Gallery } from "@/components/Gallery";
-import { Button } from "@/components/Button";
+import { GalleryPage } from "@/components/GalleryPage";
 
 export const revalidate = 600;
 
@@ -13,40 +8,9 @@ export const metadata = pageMetadata({
   path: "/gallery",
   title: "Gallery | The Lexington",
   description:
-    "Interiors, exteriors and views of The Lexington — eight storeys of residences under construction in Shiashie, East Legon, Accra.",
+    "Interiors, exteriors and views of The Lexington, and photos from the site as its eight storeys go up in Shiashie, East Legon, Accra.",
 });
 
-export default async function GalleryPage() {
-  const [images, siteSettings] = await Promise.all([
-    client.fetch<GalleryImage[]>(galleryImagesQuery),
-    client.fetch<SiteSettings>(siteSettingsQuery),
-  ]);
-
-  return (
-    <>
-      <PageIntro {...siteSettings.galleryIntro} />
-
-      <section style={{ paddingTop: "clamp(24px, 3vw, 40px)" }}>
-        <div className="wrap">
-          <Gallery images={images} />
-        </div>
-      </section>
-
-      <section className="section sectionAlt" style={{ textAlign: "center" }}>
-        <div className="wrap">
-          <div className="eyebrow" style={{ justifyContent: "center", display: "flex" }}>
-            Next Step
-          </div>
-          <h2 style={{ marginTop: 14, fontSize: "var(--fs-600)" }}>
-            See pricing by floor.
-          </h2>
-          <div style={{ marginTop: 32, display: "flex", justifyContent: "center" }}>
-            <Button href="/residences" variant="clay">
-              View Residences
-            </Button>
-          </div>
-        </div>
-      </section>
-    </>
-  );
+export default function Page() {
+  return <GalleryPage entry="gallery" />;
 }

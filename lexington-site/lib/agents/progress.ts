@@ -173,7 +173,8 @@ export async function publishProgress(input: PublishInput): Promise<PublishResul
       });
       await tx.commit();
       log.website = { ok: true, at: now(), attempts: (log.website?.attempts ?? 0) + 1 };
-      revalidatePath("/progress");
+      // The update shows on /progress (the Gallery opened on Progress), the Gallery and the home page (25 Nov 2026).
+      for (const path of ["/progress", "/gallery", "/"]) revalidatePath(path);
     } catch (error) {
       const message = error instanceof Error ? error.message : "unknown error";
       log.website = { ok: false, error: message, attempts: (log.website?.attempts ?? 0) + 1 };
