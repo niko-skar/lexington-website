@@ -817,17 +817,18 @@ function viewOvertime(date, ws, isToday){
   return h;
 }
 /* ---------- overtime for everyone at once (25 Nov 2026) ----------
-   Niko: "give me a button that says apply overtime to all those that were present". Everyone listed for overtime that
-   day (here at some point, not a steel bender) gets the same hours, except anyone marked gone at closing. The hours
-   start from the most anyone has that day (1h when nobody has any), step by half an hour, and a second tap applies
-   them: they go over anyone's own hours, which can be changed after with their own − and +. */
-const otPresent = (date, ws) => ws.filter(w => TRADES[w.trade].group !== "steel" && slotsFor(date).some(sl => mark(date, w.id, sl.id)?.s === "in") && mark(date, w.id, "c")?.s !== "out");
+   Niko: "give me a button that says apply overtime to all those that were present", then "it needs to only mark all
+   the ones that i've given any time to for overtime, if the time is 0 then they left and aren't part of the overtime".
+   So everyone with some overtime that day (not a steel bender) gets the same hours; anyone at 0h stays at 0h. The hours
+   start from the most anyone has that day, step by half an hour, and a second tap applies them: they go over each
+   one's own hours, which can be changed after with their own − and +. */
+const otPresent = (date, ws) => ws.filter(w => TRADES[w.trade].group !== "steel" && otOf(date, w.id) > 0);
 const otAllHours = (date, list) => S.otAll?.date === date ? S.otAll.hours : (Math.max(0, ...list.map(w => otOf(date, w.id))) || 1);
 function otAllHtml(date, ws){
   const list = otPresent(date, ws);
-  if (!list.length) return "";
+  if (!list.length) return `<p class="note otallnone">Give overtime with + to each one who stayed: then one button can give them all the same hours.</p>`;
   const hours = otAllHours(date, list), rateH = Number(S.settings.otRate), armed = S.confirmOtAll === date;
-  return `<div class="otall"><div class="otallline"><div class="wname"><b>Everyone who was here</b>
+  return `<div class="otall"><div class="otallline"><div class="wname"><b>Everyone with overtime</b>
       <span class="meta">${list.length} ${list.length === 1 ? "person" : "people"}${money() ? " · "+ghs(hours*rateH).replace(".00","")+" each" : ""}</span></div>
     <div class="otctl">
       <button class="step" data-act="otallstep" data-v="-0.5" aria-label="Less overtime for everyone" ${hours > 0.5 ? "" : "disabled"}>−</button>
@@ -835,7 +836,7 @@ function otAllHtml(date, ws){
       <button class="step" data-act="otallstep" data-v="0.5" aria-label="More overtime for everyone" ${hours < 12 ? "" : "disabled"}>+</button>
     </div></div>
     <button class="btn primary otallbtn" data-act="otall">${armed ? "Tap again: "+hrs(hours)+" for all "+list.length : "Apply overtime to all those that were present"}</button>
-    <p class="note">Anyone marked gone at closing is left out. Change anyone after with their own − and +.</p></div>`;
+    <p class="note">Only those you've given some overtime: anyone at 0h left, and stays at 0h. Change anyone after with their own − and +.</p></div>`;
 }
 function setOtAll(date, ws){
   const list = otPresent(date, ws);
