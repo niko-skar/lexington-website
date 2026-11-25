@@ -2,6 +2,7 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 
 import { addDaysISO, firstName, todayISO } from "@/lib/crm";
+import { samePerson } from "@/lib/crmMatch";
 import { closeIfChatAnswered } from "@/lib/crmReplies";
 import { internationalDigits } from "@/lib/format";
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
@@ -349,6 +350,80 @@ export async function saveMetaLead(input: MetaFormLead): Promise<{ id: string; i
     return { id: doc._id, isNew: true };
   } catch (err) {
     console.error("Could not save the Facebook lead to the CRM:", err);
+    return null;
+  }
+}
+
+export interface PriceListLead {
+  name: string;
+  /** One of the two, as they gave it. */
+  email: string;
+  phone: string;
+  /** Used only when this is a brand-new prospect (website, meta_ads, google_ads). */
+  source: string;
+  /** The advert's tag they came with (utm_source), kept on a new prospect. */
+  adSource: string;
+  /** The line for their timeline: what they asked for and what was sent. */
+  note: string;
+  task: { text: string; dueInDays: number; waitingOn: "me" | "them" };
+}
+
+/**
+ * Someone who asked for the price list on the website (25 Nov 2026): the same person's record if there is one (by
+ * email, else by phone: lib/crmMatch.ts), else a new prospect, with the request in the timeline and a step to follow
+ * up. Answers the record's id, or null. Never throws: the price list must go out whatever happens here.
+ */
+export async function savePriceListLead(input: PriceListLead): Promise<string | null> {
+  try {
+    const client = getBuyersClient();
+    const now = new Date().toISOString();
+    const email = input.email.trim().toLowerCase().slice(0, 160);
+    const phone = input.phone.trim().slice(0, 40);
+    const task = {
+      _key: newKey(),
+      text: input.task.text.slice(0, 200),
+      due: addDaysISO(todayISO(), input.task.dueInDays),
+      waitingOn: input.task.waitingOn,
+      done: false,
+      createdAt: now,
+    };
+    const entry = { _key: newKey(), at: now, kind: "system" as const, text: input.note.slice(0, 1000) };
+    const existingId = await samePerson(email, phone);
+    if (existingId) {
+      const existing = await client.fetch<{ stage?: string; email?: string; phone?: string } | null>(`*[_id == $id][0]{ stage, email, phone }`, { id: existingId });
+      if (existing) {
+        await client
+          .transaction()
+          .patch(existingId, (p) => p.setIfMissing({ tasks: [], notes: [] }))
+          // One append per patch (see saveWebsiteLead).
+          .patch(existingId, (p) => p.append("tasks", [task]))
+          .patch(existingId, (p) => {
+            let next = p.append("notes", [entry]);
+            if (!existing.email && email) next = next.set({ email });
+            if (!existing.phone && phone) next = next.set({ phone });
+            // Someone written off who comes back is a live prospect again.
+            return existing.stage === "lost" ? next.set({ stage: "new" }).unset(["lostReason"]) : next;
+          })
+          .commit();
+        return existingId;
+      }
+    }
+    const doc = await client.create({
+      _type: "lead",
+      name: input.name.trim().slice(0, 120),
+      ...(email && { email }),
+      ...(phone && { phone }),
+      source: input.source,
+      ...(input.adSource && { adSource: input.adSource.slice(0, 40) }),
+      stage: "new",
+      interest: "Price list",
+      paymentPreference: "undecided",
+      tasks: [task],
+      notes: [entry],
+    });
+    return doc._id;
+  } catch (err) {
+    console.error("Could not save the price list request to the CRM:", err);
     return null;
   }
 }

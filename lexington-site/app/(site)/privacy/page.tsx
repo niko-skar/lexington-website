@@ -14,7 +14,7 @@ export const metadata = pageMetadata({
     "How The Lexington collects, uses and protects the personal information you share through our website, enquiry forms, Facebook and Instagram lead forms and WhatsApp.",
 });
 
-const UPDATED = "14 October 2026";
+const UPDATED = "25 November 2026";
 
 export default async function PrivacyPage() {
   const siteSettings = await client.fetch<SiteSettings>(siteSettingsQuery);
@@ -60,6 +60,11 @@ export default async function PrivacyPage() {
               you give it, how many of you are coming and any note. We use them
               to arrange and confirm the visit, to remind you the day before,
               and to offer you another time if you can&rsquo;t make it.
+            </li>
+            <li>
+              <strong>If you ask for the price list:</strong> your name and the
+              email address or WhatsApp number you give. We send you the price
+              list there and keep your details so we can follow up with you.
             </li>
             <li>
               <strong>Usage information:</strong> pages visited, device and

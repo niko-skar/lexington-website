@@ -17,37 +17,34 @@ const CATEGORY_LABEL: Record<GalleryCategory, string> = {
   progress: "Progress",
 };
 
+/**
+ * The order of the buttons, and of the photos under "All" (Niko, 25 Nov 2026: "reorder the gallery photos so it follows
+ * the order of the buttons. Exterior first, interior, then amenities and so on"). Family photos are never shown.
+ */
+const CATEGORY_ORDER: readonly GalleryCategory[] = ["exterior", "interior", "amenity", "floorplan", "progress"];
+const rank = (c: GalleryCategory) => {
+  const i = CATEGORY_ORDER.indexOf(c);
+  return i === -1 ? CATEGORY_ORDER.length : i;
+};
+
 // The first photos on the page are what the page "loads" on, so they are asked
 // for straight away; the rest wait until they are scrolled near.
 const EAGER_PHOTOS = 3;
 
 export function Gallery({ images }: { images: GalleryImage[] }) {
-  const categories = useMemo(
-    () =>
-      Array.from(new Set(images.map((i) => i.category))).filter(
-        (c) => c !== "family"
-      ),
-    [images]
-  );
+  const shown = useMemo(() => images.filter((i) => CATEGORY_ORDER.includes(i.category)), [images]);
+  const categories = useMemo(() => CATEGORY_ORDER.filter((c) => shown.some((i) => i.category === c)), [shown]);
 
   const [filter, setFilter] = useState<GalleryCategory | "all">("all");
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
+  // In the buttons' order, then each category's own order; the pop-up's Next and Previous follow the same order.
   const filtered = useMemo(
     () =>
-      images
-        .filter((i) => i.category !== "family")
+      shown
         .filter((i) => filter === "all" || i.category === filter)
-        // Progress (construction) photos always sort after every other
-        // category in the "All" view — there are far more of them than
-        // building/interior shots, so left to `order` alone they'd bury
-        // the finished-building photos the gallery exists to showcase.
-        .sort((a, b) => {
-          const aLast = a.category === "progress" ? 1 : 0;
-          const bLast = b.category === "progress" ? 1 : 0;
-          return aLast !== bLast ? aLast - bLast : a.order - b.order;
-        }),
-    [images, filter]
+        .sort((a, b) => rank(a.category) - rank(b.category) || a.order - b.order),
+    [shown, filter]
   );
 
   const closeLightbox = useCallback(() => setLightboxIndex(null), []);
@@ -62,15 +59,17 @@ export function Gallery({ images }: { images: GalleryImage[] }) {
 
   const active = lightboxIndex !== null ? filtered[lightboxIndex] : null;
 
-  // `filtered` already sorts progress after everything else, but the grid
-  // below is a CSS multi-column layout that balances by height across all
-  // 3 columns — with far more progress photos than curated ones, that
-  // balancing puts progress photos at the *top* of columns 2 and 3, right
-  // next to row 1. Rendering progress as a second, separate grid forces a
-  // hard break so it only appears once every curated photo has scrolled by.
-  const progressSplit = filtered.findIndex((img) => img.category === "progress");
-  const curatedShots = progressSplit === -1 ? filtered : filtered.slice(0, progressSplit);
-  const progressShots = progressSplit === -1 ? [] : filtered.slice(progressSplit);
+  // The grid is a CSS multi-column layout (it fills each column top to bottom), so one grid holding every category
+  // would mix them across the rows. Under "All" each category gets its own block, in the buttons' order.
+  const groups = useMemo(() => {
+    const out: Array<{ category: GalleryCategory; start: number; photos: GalleryImage[] }> = [];
+    filtered.forEach((img, i) => {
+      const last = out[out.length - 1];
+      if (last && last.category === img.category) last.photos.push(img);
+      else out.push({ category: img.category, start: i, photos: [img] });
+    });
+    return out;
+  }, [filtered]);
 
   // A photo is a button, so it can be reached and opened from the keyboard.
   function thumb(img: GalleryImage, index: number) {
@@ -119,13 +118,12 @@ export function Gallery({ images }: { images: GalleryImage[] }) {
         ))}
       </div>
 
-      <div className={styles.grid}>{curatedShots.map((img, i) => thumb(img, i))}</div>
-
-      {progressShots.length > 0 && (
-        <div className={styles.grid} style={{ marginTop: curatedShots.length > 0 ? "var(--space-6)" : 0 }}>
-          {progressShots.map((img, i) => thumb(img, curatedShots.length + i))}
-        </div>
-      )}
+      {groups.map((g, gi) => (
+        <section key={g.category} className={styles.group} aria-label={CATEGORY_LABEL[g.category]} style={gi > 0 ? { marginTop: "var(--space-7)" } : undefined}>
+          {filter === "all" && <h2 className={styles.groupTitle}>{CATEGORY_LABEL[g.category]}</h2>}
+          <div className={styles.grid}>{g.photos.map((img, i) => thumb(img, g.start + i))}</div>
+        </section>
+      ))}
 
       {active && (
         <Lightbox

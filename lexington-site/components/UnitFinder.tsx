@@ -21,6 +21,7 @@ import { CompareModal } from "./CompareModal";
 import { VatNote, VatTag } from "./Vat";
 import { has3DModel, levelOfPlan, warm3D } from "./Penthouse3D";
 import { PackageTiers } from "./PackageTiers";
+import { PriceListForm } from "./PriceListForm";
 import styles from "./UnitFinder.module.css";
 
 type FloorFilter = number | "all";
@@ -295,6 +296,9 @@ export function UnitFinder({ units, tiers, vat, contactPhone }: UnitFinderProps)
           ))}
         </div>
 
+        {/* For visitors not ready to talk (Niko, 25 Nov 2026): the price list by email or WhatsApp, folded to one line here. */}
+        <PriceListForm from="/residences" collapsed />
+
         <div className={styles.filters}>
         <div className={styles.filterGroup}>
           <span className={styles.filterLabel}>Floor</span>
@@ -525,6 +529,10 @@ export function UnitFinder({ units, tiers, vat, contactPhone }: UnitFinderProps)
         <p className={styles.empty}>No units match these filters.</p>
       )}
       <VatNote vat={vat} />
+
+      <div className={styles.priceList} id="price-list">
+        <PriceListForm from="/residences" />
+      </div>
 
       {/* The finish packages, under the homes (they used to come first): choosing one changes the prices in the list. */}
       <div id="finishes" className={styles.packages} style={{ scrollMarginTop: 120 }}>

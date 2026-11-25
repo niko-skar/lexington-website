@@ -79,7 +79,8 @@ export const siteSettings = defineType({
     defineField({ name: "amenitiesIntro", title: "Amenities intro", type: "object", fields: pageIntroFields, group: "pages" }),
     defineField({ name: "galleryIntro", title: "Gallery intro", type: "object", fields: pageIntroFields, group: "pages" }),
     defineField({ name: "progressIntro", title: "Progress intro", type: "object", fields: pageIntroFields, group: "pages" }),
-    defineField({ name: "investIntro", title: "Invest intro", type: "object", fields: pageIntroFields, group: "pages" }),
+    // Not shown since 25 Nov 2026: the page is "Payment Plans" with its own heading over the price calculator.
+    defineField({ name: "investIntro", title: "Invest intro (not shown)", type: "object", fields: pageIntroFields, group: "pages", hidden: true }),
     defineField({ name: "aboutIntro", title: "About intro", type: "object", fields: pageIntroFields, group: "pages" }),
     defineField({ name: "contactIntro", title: "Contact intro", type: "object", fields: pageIntroFields, group: "pages" }),
   ],

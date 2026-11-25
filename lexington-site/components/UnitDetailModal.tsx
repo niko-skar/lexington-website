@@ -147,6 +147,11 @@ export function UnitDetailModal({
           </div>
           <StatusBadge status={unit.status} />
         </div>
+        {available && (
+          <a className={styles.calcLink} href={`/invest?unit=${unitQuery}#calculator`}>
+            Work out the payments for {unit.unitNumber}
+          </a>
+        )}
 
         {/* The units with a 3D model (PH2b, 405B, 204B) get their 3D plan as the first thing under the price. */}
         {has3D && (

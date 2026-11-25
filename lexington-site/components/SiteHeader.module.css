@@ -64,6 +64,8 @@
   font-weight: 500;
   letter-spacing: 0.03em;
   text-transform: uppercase;
+  /* A label never breaks onto two lines ("Payment Plans", "Buyer Portal"). */
+  white-space: nowrap;
   position: relative;
   padding: 6px 0;
   transition: color 0.2s var(--ease);
@@ -127,7 +129,23 @@
   top: 7px;
 }
 
-@media (max-width: 1040px) {
+/* A narrower laptop: the same menu, a little tighter, so every label stays on one line. */
+@media (min-width: 1181px) and (max-width: 1360px) {
+  .nav {
+    gap: 20px;
+  }
+
+  .nav a {
+    font-size: 12.5px;
+    letter-spacing: 0.02em;
+  }
+
+  .cta {
+    padding: 9px 14px !important;
+  }
+}
+
+@media (max-width: 1180px) {
   .nav {
     position: fixed;
     inset: 100px 0 0 0;

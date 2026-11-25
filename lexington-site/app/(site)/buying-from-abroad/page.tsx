@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { Button } from "@/components/Button";
 import { PageIntro } from "@/components/PageIntro";
+import { PriceListForm } from "@/components/PriceListForm";
 import { Reveal } from "@/components/Reveal";
 import { offerSchedule } from "@/lib/agents/factsCore";
 import { formatUSD, whatsappUrl } from "@/lib/format";
@@ -101,6 +102,12 @@ export default async function BuyingFromAbroadPage() {
               </li>
             ))}
           </ol>
+        </div>
+      </section>
+
+      <section className="section sectionStone" id="price-list" style={{ paddingTop: 0 }}>
+        <div className="wrap">
+          <PriceListForm from="/buying-from-abroad" />
         </div>
       </section>
 

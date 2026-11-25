@@ -3,17 +3,24 @@ import { dayMonth, nextOfferLine } from "@/lib/offerText";
 import { pageMetadata } from "@/lib/seo";
 import { client } from "@/lib/sanity/client";
 import { urlFor } from "@/lib/sanity/image";
-import { financingPlanQuery, galleryImagesQuery, siteSettingsQuery } from "@/lib/sanity/queries";
-import type { FinancingPlan, GalleryImage, SiteSettings } from "@/lib/sanity/types";
-import { feeVatSuffix, vatFrom } from "@/lib/vat";
+import { financingPlanQuery, galleryImagesQuery, packageTiersQuery, siteSettingsQuery, unitsQuery } from "@/lib/sanity/queries";
+import type { FinancingPlan, GalleryImage, PackageTiers, SiteSettings, Unit } from "@/lib/sanity/types";
+import { mortgagePctFrom } from "@/lib/calculator";
+import { formatArea } from "@/lib/area";
+import { formatFloor } from "@/lib/format";
+import { floorTierName, isTierClamped, priceAtTier } from "@/lib/pricing";
+import { kindRank, kindWords } from "@/lib/priceList/data";
+import { feeVatSuffix, vatFrom, withVat } from "@/lib/vat";
 import { formatUSD } from "@/lib/format";
 import { RESERVATION_FEE_USD } from "@/lib/reservation/config";
 
 import { PageIntro } from "@/components/PageIntro";
+import { PriceCalculator, type CalcHome } from "@/components/PriceCalculator";
 import { OfferBand } from "@/components/OfferBand";
 import { SplitSection } from "@/components/SplitSection";
 import { Button } from "@/components/Button";
 import { Reveal } from "@/components/Reveal";
+import { PriceListForm } from "@/components/PriceListForm";
 import planTableStyles from "@/components/PlanTable.module.css";
 
 export const revalidate = 600;
@@ -22,8 +29,8 @@ export async function generateMetadata() {
   const settings = await client.fetch<SiteSettings>(siteSettingsQuery);
   return pageMetadata({
     path: "/invest",
-    title: "Invest & Financing | The Lexington",
-    description: `Payment plans, reservation terms and finish packages for buyers at The Lexington in East Legon, Accra. Reserve your unit from $10,000${feeVatSuffix(vatFrom(settings))}.`,
+    title: "Payment Plans & Financing | The Lexington",
+    description: `Work out what you would pay for a home at The Lexington in East Legon, Accra: today's discounts, payment plans with monthly or quarterly payments, mortgage financing and the monthly building fee. Reserve from $10,000${feeVatSuffix(vatFrom(settings))}.`,
   });
 }
 
@@ -31,10 +38,12 @@ export async function generateMetadata() {
 const monthly = (range: string) => `${range.replace(/\s*\/\s*mo(nth)?\.?\s*$/i, "").trim()} a month`;
 
 export default async function InvestPage() {
-  const [financingPlan, images, siteSettings] = await Promise.all([
+  const [financingPlan, images, siteSettings, units, packageTiers] = await Promise.all([
     client.fetch<FinancingPlan>(financingPlanQuery),
     client.fetch<GalleryImage[]>(galleryImagesQuery),
     client.fetch<SiteSettings>(siteSettingsQuery),
+    client.fetch<Unit[]>(unitsQuery),
+    client.fetch<PackageTiers | null>(packageTiersQuery),
   ]);
 
   const vat = vatFrom(siteSettings);
@@ -61,18 +70,68 @@ export default async function InvestPage() {
       ].filter((row) => row.pcts.some((p) => p != null))
     : [];
 
+  // The price calculator: every home still for sale, by kind then price, with its price for each finish as the website
+  // shows it (Niko, 25 Nov 2026).
+  const tiers = packageTiers?.tiers ?? [];
+  const calcHomes: CalcHome[] = (units ?? [])
+    .filter((u) => u.status === "available")
+    .sort((a, b) => kindRank(a.bedroomType) - kindRank(b.bedroomType) || priceAtTier(a, "standard", tiers) - priceAtTier(b, "standard", tiers))
+    .map((u) => {
+      const clamped = tiers.length > 0 && isTierClamped(u, tiers[0].key, tiers);
+      return {
+        unitNumber: u.unitNumber,
+        kind: kindWords(u.bedroomType),
+        floor: u.floor === 0 ? "Ground floor" : `Floor ${formatFloor(u.floor)}`,
+        areaSqm: u.areaSqm,
+        size: `${formatArea(u.areaSqm, "sqm")} · ${formatArea(u.areaSqm, "sqft")}`,
+        prices: Object.fromEntries(tiers.map((t) => [t.key, withVat(priceAtTier(u, t.key, tiers), vat)])),
+        includedNote: clamped ? `${floorTierName(u, tiers)} finish included as standard` : null,
+        minTier: clamped ? (tiers.find((t) => t.name === floorTierName(u, tiers))?.key ?? null) : null,
+      };
+    });
+  const calcOffer = offer
+    ? {
+        fullPct: offer.fullPaymentPct,
+        planPct: offer.planPct,
+        until: offer.endsOn ? dayMonth(offer.endsOn) : null,
+        nextLine: next ? nextOfferLine(next) : null,
+      }
+    : null;
+
   return (
     <>
-      <PageIntro {...siteSettings.investIntro} />
+      <PageIntro
+        eyebrow="Payment Plans"
+        title="Prices, payment plans and financing."
+        lede="Work out what you would pay for any home: in full with today's discount, on a payment plan with monthly or quarterly payments, or with a mortgage. With the monthly building fee."
+      />
 
       {offer && <OfferBand message={offer.text} limited={Boolean(offer.endsOn)} after={next ? nextOfferLine(next) : null} />}
+
+      {calcHomes.length > 0 && (
+        <section id="calculator" className="section sectionStone" style={{ paddingTop: "clamp(40px, 5vw, 72px)", scrollMarginTop: 100 }}>
+          <div className="wrap">
+            <div className="eyebrow">Price calculator</div>
+            <h2 style={{ fontSize: "var(--fs-600)", marginTop: 14, marginBottom: 32 }}>Work out your payments.</h2>
+            <PriceCalculator
+              homes={calcHomes}
+              tiers={tiers.map((t) => ({ key: t.key, name: t.name }))}
+              offer={calcOffer}
+              mortgagePct={mortgagePctFrom(financingPlan.mortgageNote)}
+              deposit={RESERVATION_FEE_USD}
+              vatOn={vat.on}
+              contactPhone={siteSettings.contactPhone}
+            />
+          </div>
+        </section>
+      )}
 
       <section className="section sectionStone" style={{ paddingTop: "clamp(32px, 4vw, 56px)" }}>
         <div className="wrap">
           <Reveal>
             <div className="eyebrow">Financing Options</div>
             <h2 style={{ fontSize: "var(--fs-600)", marginTop: 14 }}>
-              Payment plans.
+              How paying works.
             </h2>
             {/* Niko, 24 Nov 2026: "$10k reservation should be the standard deposit, remove anything that mentions 20% or
                 other". The instalment tables (20% at 30 days, 4, 8 and 12 months, and the mortgage's 30% / 70%) are no
@@ -243,6 +302,13 @@ export default async function InvestPage() {
           </p>
         </SplitSection>
       )}
+
+      {/* The price list by email or WhatsApp, for those not ready to talk yet (Niko, 25 Nov 2026). */}
+      <section className="section sectionStone" id="price-list" style={{ paddingTop: "clamp(40px, 5vw, 64px)", paddingBottom: "clamp(40px, 5vw, 64px)" }}>
+        <div className="wrap">
+          <PriceListForm from="/invest" />
+        </div>
+      </section>
 
       <section className="section sectionStone" style={{ textAlign: "center", background: "var(--stone)" }}>
         <div className="wrap">

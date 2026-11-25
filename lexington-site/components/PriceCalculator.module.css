@@ -1,0 +1,315 @@
+/* The price calculator: the choices on the left, the figures on the right (stacked on a phone). */
+
+.calc {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: var(--space-7);
+  align-items: start;
+}
+
+.inputs {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.field {
+  display: grid;
+  gap: 8px;
+}
+
+.field label,
+.group legend {
+  padding: 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--brass-text);
+}
+
+.field select {
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 12px;
+  font: inherit;
+  font-size: 15px;
+  color: var(--ink);
+  background: #fff;
+  border: 1px solid rgba(21, 24, 26, 0.24);
+  border-radius: var(--radius);
+}
+
+.field select:focus-visible {
+  outline: 2px solid var(--brass);
+  outline-offset: 1px;
+}
+
+.group {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.group legend {
+  margin-bottom: 8px;
+}
+
+.choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.choice {
+  min-height: 42px;
+  padding: 8px 16px;
+  font-size: 14px;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid rgba(21, 24, 26, 0.2);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: border-color 0.2s var(--ease), background-color 0.2s var(--ease);
+}
+
+.choice:hover:not(:disabled) {
+  border-color: var(--brass);
+}
+
+.choice[aria-pressed="true"] {
+  background: var(--brass);
+  border-color: var(--brass);
+  /* Bolder without changing the width (see UnitFinder's pills). */
+  text-shadow: 0 0 0.6px currentColor, 0 0 0.6px currentColor;
+}
+
+.choice:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.choice:focus-visible,
+.reserve:focus-visible,
+.whatsapp:focus-visible {
+  outline: 2px solid var(--brass-text);
+  outline-offset: 2px;
+}
+
+.hint {
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--clay);
+}
+
+/* ---- the figures ---- */
+
+.result {
+  padding: var(--space-6);
+  background: var(--paper);
+  border: 1px solid rgba(21, 24, 26, 0.14);
+  border-top: 3px solid var(--brass);
+  border-radius: var(--radius);
+}
+
+.home {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 14px;
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid rgba(21, 24, 26, 0.12);
+}
+
+.unit {
+  font-family: var(--font-serif);
+  font-size: 28px;
+  line-height: 1;
+}
+
+.meta {
+  font-size: 14px;
+  color: #5b5850;
+}
+
+.rows {
+  margin: var(--space-4) 0 0;
+  display: grid;
+  gap: 10px;
+}
+
+.rows > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+}
+
+.rows dt {
+  font-size: 14px;
+  color: #4f4c45;
+}
+
+.rows dd {
+  margin: 0;
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.rows dd small {
+  margin-left: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--brass-text);
+}
+
+.saving dd {
+  color: #3f6b46;
+  font-weight: 600;
+}
+
+.extra dd {
+  color: var(--clay);
+  font-weight: 600;
+}
+
+.total {
+  margin-top: 4px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(21, 24, 26, 0.12);
+}
+
+.total dt {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.total dd {
+  font-family: var(--font-serif);
+  font-size: 26px;
+  font-weight: 600;
+}
+
+.steps {
+  list-style: none;
+  margin: var(--space-5) 0 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.steps li {
+  display: grid;
+  grid-template-columns: 58px 1fr;
+  gap: 12px;
+  font-size: 14.5px;
+  line-height: 1.55;
+}
+
+.when {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--brass-text);
+  padding-top: 3px;
+}
+
+.what strong {
+  font-family: var(--font-serif);
+  font-size: 19px;
+  font-weight: 600;
+}
+
+.fee {
+  margin-top: var(--space-5);
+  padding: 14px 16px;
+  display: grid;
+  gap: 2px;
+  background: rgba(176, 141, 87, 0.1);
+  border-radius: var(--radius);
+}
+
+.feeLabel {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--brass-text);
+}
+
+.feeValue {
+  font-family: var(--font-serif);
+  font-size: 20px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.feeNote {
+  font-size: 12.5px;
+  color: #6b6355;
+}
+
+.actions {
+  margin-top: var(--space-5);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.reserve,
+.whatsapp {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  padding: 10px 18px;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: none;
+  border-radius: var(--radius);
+}
+
+.reserve {
+  color: var(--paper);
+  background: var(--clay);
+}
+
+.reserve:hover {
+  background: var(--clay-lt);
+}
+
+.whatsapp {
+  color: var(--ink);
+  background: #25d366;
+}
+
+.whatsapp:hover {
+  background: #1fbd5b;
+}
+
+.small {
+  margin-top: var(--space-4);
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: #6b6355;
+}
+
+@media (max-width: 880px) {
+  .calc {
+    grid-template-columns: 1fr;
+    gap: var(--space-6);
+  }
+
+  .result {
+    padding: var(--space-5) var(--space-4);
+  }
+
+  .reserve,
+  .whatsapp {
+    flex: 1 1 100%;
+  }
+}

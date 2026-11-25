@@ -1,0 +1,206 @@
+/* "Send me the price list": a band with a name, an email or WhatsApp number and one button; or, folded, a small button. */
+
+.box {
+  padding: var(--space-6) var(--space-6) var(--space-5);
+  background: var(--paper);
+  border: 1px solid rgba(21, 24, 26, 0.14);
+  border-left: 3px solid var(--brass);
+  border-radius: var(--radius);
+}
+
+.title {
+  margin-top: 10px;
+  font-size: clamp(1.4rem, 1.15rem + 1vw, 1.9rem);
+  line-height: 1.2;
+  text-wrap: balance;
+}
+
+.title:focus {
+  outline: none;
+}
+
+.lede {
+  margin-top: 10px;
+  max-width: 62ch;
+  font-size: 15px;
+  line-height: 1.6;
+  color: #4f4c45;
+}
+
+.form {
+  margin-top: var(--space-5);
+}
+
+.fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) auto;
+  gap: 12px 14px;
+  align-items: start;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+}
+
+.field label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--brass-text);
+}
+
+.field input {
+  width: 100%;
+  min-height: 46px;
+  padding: 10px 12px;
+  font: inherit;
+  font-size: 15px;
+  color: var(--ink);
+  background: #fff;
+  border: 1px solid rgba(21, 24, 26, 0.24);
+  border-radius: var(--radius);
+}
+
+.field input:focus-visible {
+  outline: 2px solid var(--brass);
+  outline-offset: 1px;
+}
+
+.field input[aria-invalid="true"] {
+  border-color: var(--clay);
+}
+
+.fieldError,
+.formError {
+  font-size: 13px;
+  color: var(--clay);
+}
+
+.formError {
+  margin-bottom: 12px;
+}
+
+/* The button sits on the line of the boxes (under their labels). */
+.send {
+  margin-top: 23px;
+  min-height: 46px;
+  padding: 10px 20px;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--paper);
+  background: var(--clay);
+  border: 1px solid var(--clay);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background-color 0.2s var(--ease);
+}
+
+.send:hover {
+  background: var(--clay-lt);
+  border-color: var(--clay-lt);
+}
+
+.send:focus-visible,
+.open:focus-visible,
+.teaserButton:focus-visible {
+  outline: 2px solid var(--brass);
+  outline-offset: 2px;
+}
+
+.send:disabled {
+  opacity: 0.7;
+  cursor: progress;
+}
+
+.small {
+  margin-top: 12px;
+  font-size: 12.5px;
+  color: #6b6355;
+}
+
+.small a {
+  color: var(--brass-text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.open {
+  display: inline-flex;
+  align-items: center;
+  margin-top: var(--space-4);
+  min-height: 46px;
+  padding: 10px 20px;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink);
+  background: var(--brass);
+  border-radius: var(--radius);
+  text-decoration: none;
+}
+
+.open:hover {
+  background: var(--brass-lt, #c9a670);
+}
+
+/* Folded: one line under the kinds of home. */
+.teaser {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  margin-bottom: var(--space-5);
+}
+
+.teaserButton {
+  padding: 0;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--clay);
+  background: none;
+  border: 0;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+  cursor: pointer;
+}
+
+.teaserButton:hover {
+  color: var(--clay-lt);
+}
+
+.teaserText {
+  font-size: 13.5px;
+  color: #6b6355;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  .box {
+    padding: var(--space-5) var(--space-4) var(--space-4);
+  }
+
+  .fields {
+    grid-template-columns: 1fr;
+  }
+
+  .send {
+    margin-top: 4px;
+    width: 100%;
+  }
+}

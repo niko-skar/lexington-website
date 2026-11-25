@@ -1,3 +1,9 @@
+/* The price list band, after the homes. */
+.priceList {
+  margin-top: var(--space-7);
+  scroll-margin-top: 120px;
+}
+
 /* The finish packages, under the list. */
 .packages {
   margin-top: var(--space-8);

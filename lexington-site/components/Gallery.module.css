@@ -159,3 +159,18 @@
   font: inherit;
   color: inherit;
 }
+
+/* Under "All": one block per category, in the order of the buttons, each with its name. */
+.group {
+  scroll-margin-top: 120px;
+}
+
+.groupTitle {
+  margin: 0 0 var(--space-4);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--brass-text);
+}

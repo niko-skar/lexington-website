@@ -1,36 +1,22 @@
 import Image from "next/image";
 import Link from "next/link";
-import { JetBrains_Mono } from "next/font/google";
 
 import { pageMetadata } from "@/lib/seo";
 import { client } from "@/lib/sanity/client";
 import { urlFor } from "@/lib/sanity/image";
 import { familyMembersQuery, galleryImagesQuery, siteSettingsQuery } from "@/lib/sanity/queries";
 import type { FamilyMember, GalleryImage, SiteSettings } from "@/lib/sanity/types";
-import {
-  FAMILY,
-  FIGURES,
-  GENERATION_PLATES,
-  OLYMPIAN_URL,
-  PLACES,
-  RECORD,
-  coordsOf,
-  ordinalOf,
-  romanOf,
-} from "@/lib/olympian";
+import { FAMILY, GENERATION_PLATES, OLYMPIAN_URL, RECORD, ordinalOf, romanOf } from "@/lib/olympian";
 
 import { PageIntro } from "@/components/PageIntro";
 import { SplitSection } from "@/components/SplitSection";
+import { StatStrip } from "@/components/StatStrip";
 import { Button } from "@/components/Button";
 import { Reveal } from "@/components/Reveal";
 
 import styles from "./about.module.css";
 
 export const revalidate = 600;
-
-// The drawing-set labels of olympiandevelopments.com (sheet numbers, plates,
-// coordinates). Loaded on this page only.
-const mono = JetBrains_Mono({ subsets: ["latin"], weight: ["400", "500"], variable: "--font-mono", display: "swap" });
 
 export const metadata = pageMetadata({
   path: "/about",
@@ -40,9 +26,11 @@ export const metadata = pageMetadata({
 });
 
 /**
- * Our Story, in the manner of olympiandevelopments.com: a statement, the three
- * generations (told apart by number — no first names, no family photos; see
- * lib/olympian.ts), the record of the family's work, then The Lexington.
+ * Our Story in The Lexington's own look (Niko, 25 Nov 2026: "our story page also needs to be in the lexington brand and
+ * format, right now it's just lifted from olympian developments website"): the site's intro band, its serif headings and
+ * brass labels, the figures strip of the home page, cards and a split section. The facts are the same record as before
+ * (lib/olympian.ts and Sanity's family entries). PRIVACY RULE: the family name only — no first names, no photographs of
+ * family members; the generations are told apart by number.
  */
 export default async function AboutPage() {
   const [members, images, siteSettings] = await Promise.all([
@@ -53,121 +41,77 @@ export default async function AboutPage() {
 
   const exteriorImage = images.filter((i) => i.category === "exterior").find((i) => i.order > 0);
 
-  // Only years and bio are read from each member — never the name or photo.
+  // Only the years and the bio are read from each entry — never the name or the photo.
   const generations = members.map((m, i) => ({
     key: m._id,
     numeral: romanOf(i),
     ordinal: ordinalOf(i),
     years: m.years,
-    born: m.years.match(/\d{4}/)?.[0] ?? "",
     bio: m.bio,
     ...(GENERATION_PLATES[i] ?? { tags: [], places: [] }),
   }));
 
   return (
-    <div className={mono.variable}>
+    <>
       <PageIntro
         eyebrow={siteSettings.aboutIntro.eyebrow}
         title={siteSettings.aboutIntro.title}
         lede={siteSettings.aboutIntro.lede || `The ${FAMILY} family, building in Ghana since the 1960s.`}
       />
 
-      {/* 01 — Statement */}
-      <section className={`section ${styles.statement}`} aria-label="Statement">
+      {/* The family company, and the figures */}
+      <section className="section sectionStone" style={{ paddingTop: "clamp(48px, 6vw, 88px)" }}>
         <div className="wrap">
           <Reveal>
-            <div className={styles.sheetHead}>
-              <span className={styles.sheetNo}>01 — Statement</span>
-              <span className={styles.sheetNote}>The family behind The Lexington</span>
-            </div>
-            <p className={styles.statementText}>
+            <div className="eyebrow">Olympian Developments</div>
+            <h2 className={styles.title}>A family company, building in Ghana since the 1960s.</h2>
+            <p className={styles.lede}>
               <a href={OLYMPIAN_URL} target="_blank" rel="noopener" className="devLink">
                 Olympian Developments
               </a>{" "}
-              is the {FAMILY} family&rsquo;s <em>development company.</em> The family&rsquo;s
-              work in Ghana runs back to the <em>1960s</em> — from the planning of a city to eight storeys rising in
-              East Legon.
+              is the {FAMILY} family&rsquo;s development company. The family&rsquo;s work in Ghana runs back to the 1960s, from
+              the planning of a city to eight storeys rising in East Legon.
             </p>
           </Reveal>
           <Reveal delay={120}>
-            <dl className={styles.figures}>
-              {FIGURES.map((f) => (
-                <div key={f.label} className={styles.figure}>
-                  <dt className={styles.figLabel}>{f.label}</dt>
-                  <dd className={styles.figValue}>{f.value}</dd>
-                </div>
-              ))}
-            </dl>
+            <div className={styles.figures}>
+              <StatStrip
+                stats={[
+                  { value: 3, label: `Generations of the ${FAMILY} family` },
+                  { value: 1960, suffix: "s", label: "Building in Ghana since", noGrouping: true },
+                  { value: 4, label: "Countries: Ghana, the UK, Côte d'Ivoire, Romania" },
+                  { value: 8, label: "Storeys rising on Duala Close" },
+                ]}
+              />
+            </div>
           </Reveal>
         </div>
       </section>
 
-      {/* 02 — Lineage */}
-      <section className={`section sectionAlt ${styles.lineage}`} aria-labelledby="lineage-title">
+      {/* Three generations */}
+      <section className="section sectionAlt">
         <div className="wrap">
-          <div className={styles.sheetHead}>
-            <span className={styles.sheetNo}>02 — Lineage</span>
-            <span className={styles.sheetNote}>Earlier work is credited to the generation that led it</span>
-          </div>
-          <div className={styles.titleRow}>
-            <h2 id="lineage-title" className={styles.bigTitle}>
-              Three generations
-            </h2>
-            <p className={styles.titleLede}>
-              The {FAMILY} family, building in Ghana <em>since the 1960s.</em>
-            </p>
-          </div>
-
+          <Reveal>
+            <div className="eyebrow">Three generations</div>
+            <h2 className={styles.title}>Each generation, its own work.</h2>
+            <p className={styles.lede}>The earlier projects are credited to the generation that led them.</p>
+          </Reveal>
           <ol className={styles.generations}>
             {generations.map((g, i) => (
               <li key={g.key}>
                 <Reveal delay={i * 100} className={styles.generation}>
-                  <figure className={styles.plateFigure}>
-                    <div
-                      className={`${styles.plate} ${
-                        g.plate ? (g.plate.kind === "drawing" ? styles.plateDrawing : styles.platePhoto) : styles.plateNumeral
-                      }`}
-                    >
-                      <div className={styles.plateTop}>
-                        <span>Plate 02.{i + 1}</span>
-                        <span>{g.born}</span>
-                      </div>
-                      <div className={styles.plateBody}>
-                        {g.plate ? (
-                          <Image
-                            src={g.plate.src}
-                            alt={g.plate.alt}
-                            width={g.plate.w}
-                            height={g.plate.h}
-                            sizes="(max-width: 880px) 92vw, 30vw"
-                          />
-                        ) : (
-                          <span className={styles.numeral} aria-hidden="true">
-                            {g.numeral}
-                          </span>
-                        )}
-                      </div>
-                      <ul className={styles.plateFoot}>
-                        {g.places.map((p) => (
-                          <li key={p}>
-                            <span>{PLACES[p].name}</span>
-                            <span>{coordsOf(p)}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                    <figcaption className={styles.figCaption}>
-                      Fig. 02.{i + 1} — {g.plate ? g.plate.caption : `Generation ${g.numeral}`}
-                    </figcaption>
-                  </figure>
-
+                  <div className={`${styles.picture} ${g.plate?.kind === "drawing" ? styles.drawing : ""}`}>
+                    {g.plate ? (
+                      <Image src={g.plate.src} alt={g.plate.alt} width={g.plate.w} height={g.plate.h} sizes="(max-width: 880px) 92vw, 30vw" />
+                    ) : (
+                      <span className={styles.numeral} aria-hidden="true">
+                        {g.numeral}
+                      </span>
+                    )}
+                  </div>
                   <div className={styles.genText}>
-                    <div className={styles.kicker}>
-                      {FAMILY} · Generation {g.numeral}
-                    </div>
-                    <h3 className={styles.genTitle}>
-                      <em>{g.ordinal}</em> generation
-                    </h3>
+                    <div className={styles.kicker}>{FAMILY}</div>
+                    <h3 className={styles.genTitle}>{g.ordinal} generation</h3>
                     <div className={styles.years}>{g.years}</div>
                     <p className={styles.bio}>{g.bio}</p>
                     {g.tags.length > 0 && (
@@ -185,49 +129,37 @@ export default async function AboutPage() {
         </div>
       </section>
 
-      {/* 03 — Record */}
-      <section className={`section ${styles.record}`} aria-labelledby="record-title">
+      {/* The record */}
+      <section className="section sectionStone">
         <div className="wrap">
-          <div className={styles.sheetHead}>
-            <span className={styles.sheetNo}>03 — Record</span>
-            <span className={styles.sheetNote}>Each project is credited to the generation that led it</span>
-          </div>
-          <div className={styles.titleRow}>
-            <h2 id="record-title" className={styles.bigTitle}>
-              The record
-            </h2>
-            <p className={styles.titleLede}>
-              Six decades, <em>four countries.</em>
-            </p>
-          </div>
-
-          <ol className={styles.recordList}>
+          <Reveal>
+            <div className="eyebrow">The record</div>
+            <h2 className={styles.title}>Six decades, four countries.</h2>
+          </Reveal>
+          <ul className={styles.record}>
             {RECORD.map((p, i) => (
-              <li key={p.name} className={styles.recordRow}>
-                <span className={styles.recordNo}>{String(i + 1).padStart(2, "0")}</span>
-                <div className={styles.recordMain}>
-                  <h3 className={styles.recordName}>{p.name}</h3>
-                  <div className={styles.recordMeta}>
-                    <span>{p.location}</span>
-                    <span className={p.current ? styles.live : undefined}>{p.period}</span>
+              <li key={p.name}>
+                <Reveal delay={(i % 2) * 80} className={styles.project}>
+                  <div className={styles.projectTop}>
+                    <span className={styles.place}>{p.location}</span>
+                    <span className={p.current ? styles.now : styles.period}>{p.period}</span>
                   </div>
-                  <p className={styles.recordSummary}>{p.summary}</p>
-                </div>
-                <div className={styles.recordSide}>
-                  <span>Led by the {ordinalOf(p.ledBy).toLowerCase()} generation</span>
-                  <span className={styles.recordCoords}>{coordsOf(p.places[0])}</span>
-                  {p.link && (
-                    <Link href={p.link.href} className={styles.recordLink}>
-                      {p.link.label} →
-                    </Link>
-                  )}
-                </div>
+                  <h3 className={styles.projectName}>{p.name}</h3>
+                  <p className={styles.projectText}>{p.summary}</p>
+                  <div className={styles.projectFoot}>
+                    <span>Led by the {ordinalOf(p.ledBy).toLowerCase()} generation</span>
+                    {p.link && (
+                      <Link href={p.link.href} className={styles.projectLink}>
+                        {p.link.label}
+                      </Link>
+                    )}
+                  </div>
+                </Reveal>
               </li>
             ))}
-          </ol>
-
+          </ul>
           <a href={`${OLYMPIAN_URL}/work`} target="_blank" rel="noopener" className={styles.outLink}>
-            See all the work, in full, at olympiandevelopments.com ↗
+            See all the work at olympiandevelopments.com
           </a>
         </div>
       </section>
@@ -241,9 +173,9 @@ export default async function AboutPage() {
           title="Building on that foundation."
         >
           <p>
-            The Lexington is the latest chapter in a family history written across Tema&rsquo;s master plan,
-            MTN&rsquo;s headquarters, and a resort in the Carpathians. It carries the same standard forward — into
-            eight storeys in Shiashie, East Legon.
+            The Lexington is the latest chapter in a family history written across Tema&rsquo;s master plan, MTN&rsquo;s
+            headquarters, and a resort in the Carpathians. It carries the same standard forward — into eight storeys in
+            Shiashie, East Legon.
           </p>
           <Button href="/residences" variant="outline-dark">
             View Residences
@@ -263,10 +195,10 @@ export default async function AboutPage() {
             </Button>
           </div>
           <a href={OLYMPIAN_URL} target="_blank" rel="noopener" className={styles.olympianLink}>
-            Olympian Developments · olympiandevelopments.com ↗
+            Olympian Developments · olympiandevelopments.com
           </a>
         </div>
       </section>
-    </div>
+    </>
   );
 }

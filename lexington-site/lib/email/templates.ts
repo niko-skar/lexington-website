@@ -806,3 +806,68 @@ function videoTourEmail({
 
   return { subject: subject[kind], html: shell(siteSettings, body) };
 }
+
+// ---- the price list (lib/actions/priceList.ts) -------------------------------------------------------------------
+
+/**
+ * The price list someone asked for on the website (25 Nov 2026): the PDF is attached; the email says what is in it at a
+ * glance (each kind's "from" price and how many are left, the offer), and where to go next (the homes, a visit or a video
+ * tour, WhatsApp).
+ */
+export function priceListEmail({
+  name,
+  kinds,
+  offerLine,
+  vatOn,
+  links,
+  whatsappHref,
+  siteSettings,
+}: {
+  name: string;
+  /** "Studios", "from $76,800", "9 available" */
+  kinds: Array<{ label: string; from: string; available: string }>;
+  /** The offer running today, in one line, or "" when none. */
+  offerLine: string;
+  vatOn: boolean;
+  links: { residences: string; visit: string };
+  whatsappHref: string;
+  siteSettings: SiteSettings;
+}) {
+  const first = escapeHtml(name.trim().split(/\s+/)[0] || name);
+  const rows: Array<[string, string]> = kinds.map((k) => [k.label, `${k.from} · ${k.available}`]);
+  const body = `
+    <tr>
+      <td style="padding:44px 40px 8px;">
+        <div style="font-family:${FONT_SERIF}; font-size:24px; color:${C.ink}; line-height:1.3; margin-bottom:18px;">
+          Your price list, ${first}.
+        </div>
+        <p style="font-family:${FONT_SANS}; font-size:15px; line-height:1.7; color:${C.body}; margin:0 0 16px;">
+          Thank you for your interest in The Lexington. Today&rsquo;s price list is attached as a PDF: every home still for sale, with its floor, size and price${vatOn ? " (VAT included)" : ""}, the finishes, parking and storage, and how to pay.
+        </p>
+        ${
+          offerLine
+            ? `<p style="font-family:${FONT_SANS}; font-size:14.5px; line-height:1.6; color:${C.clay}; margin:0 0 20px;"><strong>${escapeHtml(offerLine)}</strong></p>`
+            : ""
+        }
+      </td>
+    </tr>
+    ${factsBox(rows)}
+    <tr>
+      <td style="padding:0 40px 8px;">
+        <p style="font-family:${FONT_SANS}; font-size:14.5px; line-height:1.6; color:${C.body}; margin:0 0 10px;">
+          Every home has its own 3D floor plan on our website. When you are ready, come and see the building, or book a video tour on WhatsApp if you live abroad.
+        </p>
+      </td>
+    </tr>
+    ${ctaButton(escapeHtml(links.residences), "See the homes")}
+    <tr>
+      <td style="padding:0 40px 32px;">
+        <p style="font-family:${FONT_SANS}; font-size:13px; line-height:1.7; color:${C.muted}; margin:0;">
+          <a href="${escapeHtml(links.visit)}" style="color:${C.clay};">Book a site visit or a video tour</a> &nbsp;·&nbsp;
+          <a href="${escapeHtml(whatsappHref)}" style="color:${C.clay};">Message us on WhatsApp</a><br />
+          Prices change as homes are reserved: the website always shows the latest. If you didn&rsquo;t ask for this price list, you can ignore this email.
+        </p>
+      </td>
+    </tr>`;
+  return { subject: "Your price list — The Lexington", html: shell(siteSettings, body) };
+}
