@@ -149,7 +149,7 @@ export interface Step {
  * checkers that open the links in emails came in as "Rejection" errors (Niko, 24 Nov 2026). Those older reports are left out,
  * so the list only shows what is worth a look; they leave the 30-day record by themselves.
  */
-export const TAP_CHECK_MENDED_AT = "2026-11-25T00:00:00.000Z";
+export const TAP_CHECK_MENDED_AT = "2026-11-25T07:00:00.000Z";
 
 function oldFalseAlarm(event: StoredEvent): boolean {
   return event.at < TAP_CHECK_MENDED_AT && (event.k === "dead" || (event.k === "error" && event.l === "Rejection"));
