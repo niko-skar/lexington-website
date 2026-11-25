@@ -64,7 +64,7 @@ export async function settleDepositSales({ dry = false }: { dry?: boolean } = {}
     });
   }
   if (!dry && out.some((s) => s.sold.length)) {
-    for (const path of ["/", "/residences", "/invest", "/reserve"]) revalidatePath(path);
+    for (const path of ["/", "/residences", "/invest", "/price-calculator", "/reserve"]) revalidatePath(path);
   }
   return out;
 }

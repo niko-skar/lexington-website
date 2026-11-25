@@ -28,8 +28,12 @@ export function ProgressGallery({ updates }: { updates: ConstructionUpdate[] }) 
   const [filter, setFilter] = useState<string | "all">("all");
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
+  // Newest photo first, under every button (Niko, 25 Nov 2026: "if i click a floor, or any of these buttons, make sure
+  // its the most recent photo first to the oldest"). `order` is the site's timeline: the progress reporter adds each new
+  // photo after the last, and older photos added later were slotted in by date (decimal orders), so it reads newest
+  // first backwards. The buttons themselves stay in building order.
   const filtered = useMemo(
-    () => updates.filter((u) => filter === "all" || u.stage === filter),
+    () => updates.filter((u) => filter === "all" || u.stage === filter).sort((a, b) => b.order - a.order),
     [updates, filter]
   );
 

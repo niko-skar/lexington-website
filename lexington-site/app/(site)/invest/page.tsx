@@ -3,19 +3,13 @@ import { dayMonth, nextOfferLine } from "@/lib/offerText";
 import { pageMetadata } from "@/lib/seo";
 import { client } from "@/lib/sanity/client";
 import { urlFor } from "@/lib/sanity/image";
-import { financingPlanQuery, galleryImagesQuery, packageTiersQuery, siteSettingsQuery, unitsQuery } from "@/lib/sanity/queries";
-import type { FinancingPlan, GalleryImage, PackageTiers, SiteSettings, Unit } from "@/lib/sanity/types";
-import { mortgagePctFrom } from "@/lib/calculator";
-import { formatArea } from "@/lib/area";
-import { formatFloor } from "@/lib/format";
-import { floorTierName, isTierClamped, priceAtTier } from "@/lib/pricing";
-import { kindRank, kindWords } from "@/lib/priceList/data";
-import { feeVatSuffix, vatFrom, withVat } from "@/lib/vat";
+import { financingPlanQuery, galleryImagesQuery, siteSettingsQuery, unitsQuery } from "@/lib/sanity/queries";
+import type { FinancingPlan, GalleryImage, SiteSettings, Unit } from "@/lib/sanity/types";
+import { feeVatSuffix, vatFrom } from "@/lib/vat";
 import { formatUSD } from "@/lib/format";
 import { RESERVATION_FEE_USD } from "@/lib/reservation/config";
 
 import { PageIntro } from "@/components/PageIntro";
-import { PriceCalculator, type CalcHome } from "@/components/PriceCalculator";
 import { OfferBand } from "@/components/OfferBand";
 import { SplitSection } from "@/components/SplitSection";
 import { Button } from "@/components/Button";
@@ -38,12 +32,11 @@ export async function generateMetadata() {
 const monthly = (range: string) => `${range.replace(/\s*\/\s*mo(nth)?\.?\s*$/i, "").trim()} a month`;
 
 export default async function InvestPage() {
-  const [financingPlan, images, siteSettings, units, packageTiers] = await Promise.all([
+  const [financingPlan, images, siteSettings, units] = await Promise.all([
     client.fetch<FinancingPlan>(financingPlanQuery),
     client.fetch<GalleryImage[]>(galleryImagesQuery),
     client.fetch<SiteSettings>(siteSettingsQuery),
     client.fetch<Unit[]>(unitsQuery),
-    client.fetch<PackageTiers | null>(packageTiersQuery),
   ]);
 
   const vat = vatFrom(siteSettings);
@@ -70,33 +63,8 @@ export default async function InvestPage() {
       ].filter((row) => row.pcts.some((p) => p != null))
     : [];
 
-  // The price calculator: every home still for sale, by kind then price, with its price for each finish as the website
-  // shows it (Niko, 25 Nov 2026).
-  const tiers = packageTiers?.tiers ?? [];
-  const calcHomes: CalcHome[] = (units ?? [])
-    .filter((u) => u.status === "available")
-    .sort((a, b) => kindRank(a.bedroomType) - kindRank(b.bedroomType) || priceAtTier(a, "standard", tiers) - priceAtTier(b, "standard", tiers))
-    .map((u) => {
-      const clamped = tiers.length > 0 && isTierClamped(u, tiers[0].key, tiers);
-      return {
-        unitNumber: u.unitNumber,
-        kind: kindWords(u.bedroomType),
-        floor: u.floor === 0 ? "Ground floor" : `Floor ${formatFloor(u.floor)}`,
-        areaSqm: u.areaSqm,
-        size: `${formatArea(u.areaSqm, "sqm")} · ${formatArea(u.areaSqm, "sqft")}`,
-        prices: Object.fromEntries(tiers.map((t) => [t.key, withVat(priceAtTier(u, t.key, tiers), vat)])),
-        includedNote: clamped ? `${floorTierName(u, tiers)} finish included as standard` : null,
-        minTier: clamped ? (tiers.find((t) => t.name === floorTierName(u, tiers))?.key ?? null) : null,
-      };
-    });
-  const calcOffer = offer
-    ? {
-        fullPct: offer.fullPaymentPct,
-        planPct: offer.planPct,
-        until: offer.endsOn ? dayMonth(offer.endsOn) : null,
-        nextLine: next ? nextOfferLine(next) : null,
-      }
-    : null;
+  // The button to the price calculator shows while there is a home to work out.
+  const forSale = (units ?? []).filter((u) => u.status === "available").length;
 
   return (
     <>
@@ -108,20 +76,26 @@ export default async function InvestPage() {
 
       {offer && <OfferBand message={offer.text} limited={Boolean(offer.endsOn)} after={next ? nextOfferLine(next) : null} />}
 
-      {calcHomes.length > 0 && (
-        <section id="calculator" className="section sectionStone" style={{ paddingTop: "clamp(40px, 5vw, 72px)", scrollMarginTop: 100 }}>
-          <div className="wrap">
-            <div className="eyebrow">Price calculator</div>
-            <h2 style={{ fontSize: "var(--fs-600)", marginTop: 14, marginBottom: 32 }}>Work out your payments.</h2>
-            <PriceCalculator
-              homes={calcHomes}
-              tiers={tiers.map((t) => ({ key: t.key, name: t.name }))}
-              offer={calcOffer}
-              mortgagePct={mortgagePctFrom(financingPlan.mortgageNote)}
-              deposit={RESERVATION_FEE_USD}
-              vatOn={vat.on}
-              contactPhone={siteSettings.contactPhone}
-            />
+      {/* The calculator has a page of its own (Niko, 25 Nov 2026: "turn the price calculator into a button that opens a
+          page that starts with the residences"); the old #calculator links still land here, on its button. */}
+      {forSale > 0 && (
+        <section
+          id="calculator"
+          className="section sectionStone"
+          style={{ paddingTop: "clamp(40px, 5vw, 72px)", paddingBottom: "clamp(24px, 3vw, 40px)", scrollMarginTop: 100 }}
+        >
+          <div className="wrap" style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: "20px 40px" }}>
+            <div style={{ maxWidth: 640 }}>
+              <div className="eyebrow">Price calculator</div>
+              <h2 style={{ fontSize: "var(--fs-600)", marginTop: 14 }}>Work out your payments.</h2>
+              <p style={{ marginTop: 14, color: "#555", fontSize: 16 }}>
+                Pick any home, or up to four to compare side by side: today&apos;s discount, the {fee} deposit, monthly or
+                quarterly payments, a mortgage and the monthly building fee.
+              </p>
+            </div>
+            <Button href="/price-calculator" variant="clay">
+              Open the price calculator
+            </Button>
           </div>
         </section>
       )}

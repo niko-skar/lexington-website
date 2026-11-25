@@ -9,6 +9,7 @@ import { balconyOf, formatArea, splitArea, terraceOf, type AreaUnit } from "@/li
 import { useAreaUnit } from "./useAreaUnit";
 import { floorTierName, isTierClamped, priceAtTier, tierAddon } from "@/lib/pricing";
 import { withVat, type Vat } from "@/lib/vat";
+import { calculatorHref } from "@/lib/calculatorLink";
 
 import { VatNote, VatTag } from "./Vat";
 import { StatusBadge } from "./StatusBadge";
@@ -41,6 +42,7 @@ const baseRows: { label: string; render: (u: Unit, area: AreaUnit) => ReactNode 
 export function CompareModal({ units, tiers, vat, onClose }: CompareModalProps) {
   const dialogRef = useDialog<HTMLDivElement>(onClose);
   const areaUnit = useAreaUnit();
+  const forSale = units.filter((u) => u.status === "available");
 
   useEffect(() => {
     trackAction("compare");
@@ -125,6 +127,12 @@ export function CompareModal({ units, tiers, vat, onClose }: CompareModalProps) 
           </table>
           <VatNote vat={vat} />
         </div>
+        {/* The same homes' payments side by side, on the price calculator (only homes still for sale have one). */}
+        {forSale.length > 0 && (
+          <a className={styles.payments} href={calculatorHref(forSale.map((u) => u.unitNumber))}>
+            Compare the payments{forSale.length < units.length ? ` for ${forSale.map((u) => u.unitNumber).join(", ")}` : ""}
+          </a>
+        )}
       </div>
     </div>
   );

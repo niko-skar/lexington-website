@@ -1,35 +1,14 @@
 "use client";
 
-import { useEffect, useId, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { FEE_PER_SQM, PLAN_MONTHS, monthlyFee, payFor, type PayMethod, type PlanEvery } from "@/lib/calculator";
+import type { CalcHome, CalcOffer } from "@/lib/calculatorHomes";
 import { formatUSD, whatsappUrl } from "@/lib/format";
 import styles from "./PriceCalculator.module.css";
 
-export interface CalcHome {
-  unitNumber: string;
-  /** "One bedroom" */
-  kind: string;
-  /** "Floor 2", "Ground floor" */
-  floor: string;
-  areaSqm: number;
-  /** "70 sqm · 753 sq ft" */
-  size: string;
-  /** The price shown for each finish (VAT included while VAT is on). */
-  prices: Record<string, number>;
-  /** Finishes this home can't have below ("premium" for a penthouse), with the note to show. */
-  includedNote: string | null;
-  minTier: string | null;
-}
-
-export interface CalcOffer {
-  fullPct: number | null;
-  planPct: number | null;
-  /** "30 November", when the offer has a last day. */
-  until: string | null;
-  /** The offer after it: "From 1 December: 10% off with full payment, or 5% off with a payment plan." */
-  nextLine: string | null;
-}
+/** How many homes can be compared at once (as many as Residences' Compare). */
+export const MAX_HOMES = 4;
 
 const METHODS: Array<{ key: PayMethod; label: string }> = [
   { key: "full", label: "Pay in full" },
@@ -38,9 +17,11 @@ const METHODS: Array<{ key: PayMethod; label: string }> = [
 ];
 
 /**
- * The price calculator at the top of /invest (Niko, 25 Nov 2026): a home, its finish, and how to pay (in full, a
- * payment plan with monthly or quarterly payments, or a mortgage): the discount, what is paid when, and the estimated
- * monthly building management fee. A link from a home's pop-up opens it on that home (?unit=203B#calculator).
+ * The price calculator page (Niko, 25 Nov 2026: "turn the price calculator into a button that opens a page that starts
+ * with the residences and you can pick the one you want to use the calculator with, see if it makes sense to allow
+ * someone to compare the payments price calculator with multiple units"). First the homes still for sale (pick one, or
+ * up to four to compare), then how to pay (finish, in full, a plan paid monthly or quarterly, or a mortgage), then each
+ * home's figures side by side. A link can pick homes: ?unit=203B or ?units=203B,108B.
  */
 export function PriceCalculator({
   homes,
@@ -59,210 +40,308 @@ export function PriceCalculator({
   vatOn: boolean;
   contactPhone: string;
 }) {
-  const uid = useId();
-  const [unit, setUnit] = useState(homes[0]?.unitNumber ?? "");
+  const [picked, setPicked] = useState<string[]>([]);
+  const [kind, setKind] = useState<string>("all");
   const [tier, setTier] = useState(tiers[0]?.key ?? "standard");
   const [method, setMethod] = useState<PayMethod>("plan");
   const [months, setMonths] = useState<number>(12);
   const [every, setEvery] = useState<PlanEvery>("month");
+  const resultsRef = useRef<HTMLElement>(null);
+  const [resultsInView, setResultsInView] = useState(false);
 
-  // A link can pick the home: /invest?unit=203B#calculator (from a home's pop-up on Residences).
+  // Homes a link picked (?unit=203B from a home's pop-up, ?units=203B,108B from Residences' Compare).
   useEffect(() => {
-    const wanted = new URLSearchParams(window.location.search).get("unit")?.trim().toLowerCase();
-    const found = wanted ? homes.find((h) => h.unitNumber.toLowerCase() === wanted) : null;
+    const q = new URLSearchParams(window.location.search);
+    const wanted = [q.get("unit") ?? "", ...(q.get("units") ?? "").split(",")]
+      .map((s) => s.trim().toLowerCase())
+      .filter(Boolean);
+    const found = homes.filter((h) => wanted.includes(h.unitNumber.toLowerCase())).map((h) => h.unitNumber).slice(0, MAX_HOMES);
+    if (found.length === 0) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- the address bar can only be read in the browser
-    if (found) setUnit(found.unitNumber);
+    setPicked(found);
+    requestAnimationFrame(() => resultsRef.current?.scrollIntoView({ behavior: "instant", block: "start" }));
   }, [homes]);
 
-  const home = homes.find((h) => h.unitNumber === unit) ?? homes[0];
-  const kinds = useMemo(() => Array.from(new Set(homes.map((h) => h.kind))), [homes]);
-  if (!home) return null;
+  // The "See payments" bar shows on a phone while the figures are out of sight.
+  useEffect(() => {
+    const el = resultsRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(([entry]) => setResultsInView(entry.isIntersecting), { threshold: 0.05 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
 
-  const listPrice = home.prices[tier] ?? home.prices[tiers[0]?.key] ?? 0;
-  const result = payFor({ listPrice, method, offer, mortgagePct, deposit, months, every });
-  const [feeLow, feeHigh] = monthlyFee(home.areaSqm);
+  const kinds = useMemo(() => {
+    const out: Array<{ kind: string; count: number; from: number }> = [];
+    for (const h of homes) {
+      const price = h.prices[tiers[0]?.key] ?? 0;
+      const k = out.find((x) => x.kind === h.kind);
+      if (k) {
+        k.count += 1;
+        k.from = Math.min(k.from, price);
+      } else out.push({ kind: h.kind, count: 1, from: price });
+    }
+    return out;
+  }, [homes, tiers]);
+
+  const shown = homes.filter((h) => kind === "all" || h.kind === kind);
+  const chosen = picked.map((n) => homes.find((h) => h.unitNumber === n)).filter((h): h is CalcHome => Boolean(h));
+  const full = picked.length >= MAX_HOMES;
+
+  function toggle(unit: string) {
+    setPicked((list) => (list.includes(unit) ? list.filter((u) => u !== unit) : list.length >= MAX_HOMES ? list : [...list, unit]));
+  }
+
+  const tierRank = (key: string | null) => (key === null ? -1 : tiers.findIndex((t) => t.key === key));
   const vat = vatOn ? " incl. VAT" : "";
-  const tierName = tiers.find((t) => t.key === tier)?.name ?? "";
-  const changeLabel =
-    method === "mortgage"
-      ? `Mortgage financing (+${result.changePct}%)`
-      : result.changePct < 0
-        ? `${method === "full" ? "Paying in full" : "Payment plan"} discount (${-result.changePct}%${offer?.until ? `, until ${offer.until}` : ""})`
-        : "";
   const howWords =
     method === "full"
       ? "paying in full"
       : method === "plan"
         ? `on a ${months}-month payment plan with ${every === "month" ? "monthly" : "quarterly"} payments`
         : "with a mortgage";
-  const whatsappHref = whatsappUrl(
-    contactPhone,
-    `Hi, I'm interested in ${home.unitNumber} at The Lexington (${home.kind}, ${home.areaSqm} sqm), ${howWords}, ${tierName} finish. Can you tell me more?`
-  );
 
   return (
-    <div className={styles.calc}>
-      <div className={styles.inputs}>
-        <div className={styles.field}>
-          <label htmlFor={`${uid}-home`}>Home</label>
-          <select id={`${uid}-home`} value={home.unitNumber} onChange={(e) => setUnit(e.target.value)}>
-            {kinds.map((k) => (
-              <optgroup key={k} label={k}>
-                {homes
-                  .filter((h) => h.kind === k)
-                  .map((h) => (
-                    <option key={h.unitNumber} value={h.unitNumber}>
-                      {h.unitNumber} · {h.floor} · {h.areaSqm} sqm · {formatUSD(h.prices[tiers[0]?.key] ?? 0)}
-                    </option>
-                  ))}
-              </optgroup>
-            ))}
-          </select>
+    <div className={styles.page}>
+      {/* 1. The homes */}
+      <section className={styles.step} aria-labelledby="calc-homes">
+        <div className={styles.stepHead}>
+          <h2 id="calc-homes" className={styles.stepTitle}>
+            <span className={styles.stepNo}>1</span> Pick a home, or up to {MAX_HOMES} to compare
+          </h2>
+          <span className={styles.count} aria-live="polite">
+            {picked.length === 0 ? "None picked yet" : `${picked.length} of ${MAX_HOMES} picked`}
+          </span>
         </div>
+        <div className={styles.kinds} role="group" aria-label="Kind of home">
+          <button type="button" className={styles.kind} aria-pressed={kind === "all"} onClick={() => setKind("all")}>
+            All homes <small>{homes.length}</small>
+          </button>
+          {kinds.map((k) => (
+            <button key={k.kind} type="button" className={styles.kind} aria-pressed={kind === k.kind} onClick={() => setKind(k.kind)}>
+              {k.kind} <small>from {formatUSD(k.from)}</small>
+            </button>
+          ))}
+        </div>
+        <ul className={styles.homes}>
+          {shown.map((h) => {
+            const on = picked.includes(h.unitNumber);
+            return (
+              <li key={h.unitNumber}>
+                <button
+                  type="button"
+                  className={styles.home}
+                  aria-pressed={on}
+                  disabled={!on && full}
+                  onClick={() => toggle(h.unitNumber)}
+                  title={!on && full ? `Up to ${MAX_HOMES} at a time: take one off first` : undefined}
+                >
+                  <span className={styles.homeTop}>
+                    <span className={styles.homeUnit}>{h.unitNumber}</span>
+                    <span className={styles.tick} aria-hidden="true">
+                      {on ? "✓" : "+"}
+                    </span>
+                  </span>
+                  <span className={styles.homeMeta}>
+                    {h.type} · {h.floor} · {h.areaSqm} sqm
+                  </span>
+                  <span className={styles.homePrice}>
+                    {formatUSD(h.prices[tiers[0]?.key] ?? 0)}
+                    {vat && <small>{vat}</small>}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+        {full && <p className={styles.hint}>Up to {MAX_HOMES} at a time: take one off to pick another.</p>}
+      </section>
 
-        <fieldset className={styles.group}>
-          <legend>Finish</legend>
-          <div className={styles.choices}>
-            {tiers.map((t) => {
-              const below = home.minTier !== null && tiers.findIndex((x) => x.key === t.key) < tiers.findIndex((x) => x.key === home.minTier);
-              return (
-                <button key={t.key} type="button" className={styles.choice} aria-pressed={tier === t.key} disabled={below} onClick={() => setTier(t.key)}>
+      {/* 2. How to pay */}
+      <section className={styles.step} aria-labelledby="calc-how">
+        <h2 id="calc-how" className={styles.stepTitle}>
+          <span className={styles.stepNo}>2</span> How you would pay
+        </h2>
+        <div className={styles.settings}>
+          <fieldset className={styles.group}>
+            <legend>Finish</legend>
+            <div className={styles.choices}>
+              {tiers.map((t) => (
+                <button key={t.key} type="button" className={styles.choice} aria-pressed={tier === t.key} onClick={() => setTier(t.key)}>
                   {t.name}
                 </button>
+              ))}
+            </div>
+          </fieldset>
+          <fieldset className={styles.group}>
+            <legend>Paying</legend>
+            <div className={styles.choices}>
+              {METHODS.filter((m) => m.key !== "mortgage" || mortgagePct !== null).map((m) => (
+                <button key={m.key} type="button" className={styles.choice} aria-pressed={method === m.key} onClick={() => setMethod(m.key)}>
+                  {m.label}
+                </button>
+              ))}
+            </div>
+          </fieldset>
+          {method === "plan" && (
+            <>
+              <fieldset className={styles.group}>
+                <legend>Over</legend>
+                <div className={styles.choices}>
+                  {PLAN_MONTHS.map((n) => (
+                    <button key={n} type="button" className={styles.choice} aria-pressed={months === n} onClick={() => setMonths(n)}>
+                      {n} months
+                    </button>
+                  ))}
+                </div>
+              </fieldset>
+              <fieldset className={styles.group}>
+                <legend>Payments</legend>
+                <div className={styles.choices}>
+                  <button type="button" className={styles.choice} aria-pressed={every === "month"} onClick={() => setEvery("month")}>
+                    Monthly
+                  </button>
+                  <button type="button" className={styles.choice} aria-pressed={every === "quarter"} onClick={() => setEvery("quarter")}>
+                    Quarterly
+                  </button>
+                </div>
+              </fieldset>
+            </>
+          )}
+        </div>
+      </section>
+
+      {/* 3. The figures, side by side */}
+      <section ref={resultsRef} id="payments" className={styles.step} aria-labelledby="calc-results">
+        <h2 id="calc-results" className={styles.stepTitle}>
+          <span className={styles.stepNo}>3</span> Your payments
+        </h2>
+        {chosen.length === 0 ? (
+          <p className={styles.empty}>Pick a home above to see its payments.</p>
+        ) : (
+          <div className={styles.results} data-count={chosen.length}>
+            {chosen.map((home) => {
+              const ownTier = tierRank(home.minTier) > tierRank(tier) && home.minTier ? home.minTier : tier;
+              const tierName = tiers.find((t) => t.key === ownTier)?.name ?? "";
+              const r = payFor({ listPrice: home.prices[ownTier] ?? home.prices[tier] ?? 0, method, offer, mortgagePct, deposit, months, every });
+              const [feeLow, feeHigh] = monthlyFee(home.areaSqm);
+              const changeLabel =
+                method === "mortgage"
+                  ? `Mortgage (+${r.changePct}%)`
+                  : r.changePct < 0
+                    ? `${method === "full" ? "Full payment" : "Plan"} discount (${-r.changePct}%${offer?.until ? `, to ${offer.until}` : ""})`
+                    : "";
+              return (
+                <article key={home.unitNumber} className={styles.result}>
+                  <div className={styles.resultHead}>
+                    <div>
+                      <div className={styles.unit}>{home.unitNumber}</div>
+                      <div className={styles.meta}>
+                        {home.type} · {home.floor} · {home.size}
+                      </div>
+                    </div>
+                    <button type="button" className={styles.remove} onClick={() => toggle(home.unitNumber)} aria-label={`Take ${home.unitNumber} off`}>
+                      ×
+                    </button>
+                  </div>
+                  {ownTier !== tier && home.includedNote && <p className={styles.note}>{home.includedNote}</p>}
+
+                  <dl className={styles.rows}>
+                    <div>
+                      <dt>List price ({tierName})</dt>
+                      <dd>{formatUSD(r.listPrice)}</dd>
+                    </div>
+                    {changeLabel && (
+                      <div className={r.changeAmount < 0 ? styles.saving : styles.extra}>
+                        <dt>{changeLabel}</dt>
+                        <dd>
+                          {r.changeAmount < 0 ? "−" : "+"}
+                          {formatUSD(Math.abs(r.changeAmount))}
+                        </dd>
+                      </div>
+                    )}
+                    <div className={styles.total}>
+                      <dt>{method === "mortgage" ? "Price with a mortgage" : "Your price"}</dt>
+                      <dd>{formatUSD(r.price)}</dd>
+                    </div>
+                  </dl>
+
+                  <div className={styles.pay}>
+                    <div className={styles.payRow}>
+                      <span className={styles.when}>Today</span>
+                      <span>
+                        {formatUSD(r.deposit)} reservation{vatOn ? " (VAT included)" : ""}, the standard deposit
+                      </span>
+                    </div>
+                    <div className={styles.payRow}>
+                      <span className={styles.when}>Then</span>
+                      {method === "plan" && r.payments ? (
+                        <span>
+                          <strong className={styles.big}>
+                            {formatUSD(r.payments.amount)} a {r.payments.every === "month" ? "month" : "quarter"}
+                          </strong>
+                          <span className={styles.sub}>
+                            {r.payments.count} payments over {months} months
+                            {r.payments.last !== r.payments.amount ? `, the last ${formatUSD(r.payments.last)}` : ""}
+                          </span>
+                        </span>
+                      ) : method === "mortgage" ? (
+                        <span>
+                          <strong className={styles.big}>{formatUSD(r.balance)}</strong>
+                          <span className={styles.sub}>through your mortgage; your bank sets the monthly repayments</span>
+                        </span>
+                      ) : (
+                        <span>
+                          <strong className={styles.big}>{formatUSD(r.balance)}</strong>
+                          <span className={styles.sub}>the balance</span>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className={styles.fee}>
+                    <span className={styles.feeLabel}>Building fee, estimated</span>
+                    <span className={styles.feeValue}>
+                      {formatUSD(feeLow)}–{formatUSD(feeHigh)} a month
+                    </span>
+                  </div>
+
+                  <div className={styles.actions}>
+                    <a className={styles.reserve} href={`/reserve?unit=${encodeURIComponent(home.unitNumber)}`}>
+                      Reserve {home.unitNumber}
+                    </a>
+                    <a
+                      className={styles.whatsapp}
+                      href={whatsappUrl(contactPhone, `Hi, I'm interested in ${home.unitNumber} at The Lexington (${home.type}, ${home.areaSqm} sqm), ${howWords}, ${tierName} finish. Can you tell me more?`)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Ask on WhatsApp
+                    </a>
+                  </div>
+                </article>
               );
             })}
           </div>
-          {home.includedNote && <p className={styles.hint}>{home.includedNote}</p>}
-        </fieldset>
-
-        <fieldset className={styles.group}>
-          <legend>How you pay</legend>
-          <div className={styles.choices}>
-            {METHODS.filter((m) => m.key !== "mortgage" || mortgagePct !== null).map((m) => (
-              <button key={m.key} type="button" className={styles.choice} aria-pressed={method === m.key} onClick={() => setMethod(m.key)}>
-                {m.label}
-              </button>
-            ))}
-          </div>
-        </fieldset>
-
-        {method === "plan" && (
-          <>
-            <fieldset className={styles.group}>
-              <legend>Over</legend>
-              <div className={styles.choices}>
-                {PLAN_MONTHS.map((n) => (
-                  <button key={n} type="button" className={styles.choice} aria-pressed={months === n} onClick={() => setMonths(n)}>
-                    {n} months
-                  </button>
-                ))}
-              </div>
-            </fieldset>
-            <fieldset className={styles.group}>
-              <legend>Payments</legend>
-              <div className={styles.choices}>
-                <button type="button" className={styles.choice} aria-pressed={every === "month"} onClick={() => setEvery("month")}>
-                  Monthly
-                </button>
-                <button type="button" className={styles.choice} aria-pressed={every === "quarter"} onClick={() => setEvery("quarter")}>
-                  Quarterly
-                </button>
-              </div>
-            </fieldset>
-          </>
         )}
-      </div>
-
-      <div className={styles.result} aria-live="polite">
-        <div className={styles.home}>
-          <span className={styles.unit}>{home.unitNumber}</span>
-          <span className={styles.meta}>
-            {home.kind} · {home.floor} · {home.size}
-          </span>
-        </div>
-
-        <dl className={styles.rows}>
-          <div>
-            <dt>List price ({tierName} finish)</dt>
-            <dd>
-              {formatUSD(result.listPrice)}
-              {vat && <small>{vat}</small>}
-            </dd>
-          </div>
-          {changeLabel && (
-            <div className={result.changeAmount < 0 ? styles.saving : styles.extra}>
-              <dt>{changeLabel}</dt>
-              <dd>
-                {result.changeAmount < 0 ? "−" : "+"}
-                {formatUSD(Math.abs(result.changeAmount))}
-              </dd>
-            </div>
-          )}
-          <div className={styles.total}>
-            <dt>{method === "mortgage" ? "Price with a mortgage" : "Your price"}</dt>
-            <dd>{formatUSD(result.price)}</dd>
-          </div>
-        </dl>
-
-        <ol className={styles.steps}>
-          <li>
-            <span className={styles.when}>Today</span>
-            <span className={styles.what}>
-              {formatUSD(result.deposit)} reservation{vatOn ? " (VAT included)" : ""}: the standard deposit, which holds your home.
-            </span>
-          </li>
-          {method === "full" && (
-            <li>
-              <span className={styles.when}>Then</span>
-              <span className={styles.what}>The balance of {formatUSD(result.balance)}.</span>
-            </li>
-          )}
-          {method === "plan" && result.payments && (
-            <li>
-              <span className={styles.when}>Then</span>
-              <span className={styles.what}>
-                <strong>
-                  {formatUSD(result.payments.amount)} a {result.payments.every === "month" ? "month" : "quarter"}
-                </strong>{" "}
-                for {months} months ({result.payments.count} payments
-                {result.payments.last !== result.payments.amount ? `, the last one ${formatUSD(result.payments.last)}` : ""}).
-              </span>
-            </li>
-          )}
-          {method === "mortgage" && (
-            <li>
-              <span className={styles.when}>Then</span>
-              <span className={styles.what}>
-                {formatUSD(result.balance)} through your mortgage. Your bank sets the monthly repayments.
-              </span>
-            </li>
-          )}
-        </ol>
-
-        <div className={styles.fee}>
-          <span className={styles.feeLabel}>Building management fee, estimated</span>
-          <span className={styles.feeValue}>
-            {formatUSD(feeLow)}–{formatUSD(feeHigh)} a month
-          </span>
-          <span className={styles.feeNote}>
-            About US${FEE_PER_SQM.low}–{FEE_PER_SQM.high} per sqm a month for {home.areaSqm} sqm; set each year with the building&rsquo;s budget.
-          </span>
-        </div>
-
-        <div className={styles.actions}>
-          <a className={styles.reserve} href={`/reserve?unit=${encodeURIComponent(home.unitNumber)}`}>
-            Reserve {home.unitNumber}
-          </a>
-          <a className={styles.whatsapp} href={whatsappHref} target="_blank" rel="noopener noreferrer">
-            Ask about it on WhatsApp
-          </a>
-        </div>
-
         <p className={styles.small}>
-          {offer?.nextLine ? `${offer.nextLine} ` : ""}A guide to the figures: your sale agreement sets the final amounts and dates. Amounts are rounded to the
-          dollar.
+          Prices are in US dollars{vatOn ? " and include VAT" : ""}. {offer?.nextLine ? `${offer.nextLine} ` : ""}The building fee is an estimate of about US$
+          {FEE_PER_SQM.low}–{FEE_PER_SQM.high} per sqm a month, set each year with the building&rsquo;s budget. A guide to the figures: your sale agreement sets
+          the final amounts and dates. Amounts are rounded to the dollar.
         </p>
-      </div>
+      </section>
+
+      {/* On a phone: back to the figures after picking homes */}
+      {chosen.length > 0 && !resultsInView && (
+        <div className={styles.bar}>
+          <span>
+            {chosen.length === 1 ? chosen[0].unitNumber : `${chosen.length} homes`} picked
+          </span>
+          <button type="button" onClick={() => resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}>
+            See payments
+          </button>
+        </div>
+      )}
     </div>
   );
 }

@@ -43,7 +43,8 @@ export function Gallery({ images }: { images: GalleryImage[] }) {
     () =>
       shown
         .filter((i) => filter === "all" || i.category === filter)
-        .sort((a, b) => rank(a.category) - rank(b.category) || a.order - b.order),
+        // Construction photos newest first, like the Progress page (25 Nov 2026); the rest in their own order.
+        .sort((a, b) => rank(a.category) - rank(b.category) || (a.category === "progress" ? b.order - a.order : a.order - b.order)),
     [shown, filter]
   );
 

@@ -90,3 +90,29 @@
   color: var(--brass-text);
   white-space: normal;
 }
+
+/* Under the table: the same homes on the price calculator. */
+.payments {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-top: var(--space-5);
+  padding: 10px 20px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--paper);
+  background: var(--clay);
+  border-radius: var(--radius);
+}
+
+.payments:hover {
+  background: var(--clay-lt);
+}
+
+.payments:focus-visible {
+  outline: 2px solid var(--brass-text);
+  outline-offset: 2px;
+}

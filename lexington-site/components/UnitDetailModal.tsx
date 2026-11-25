@@ -17,6 +17,7 @@ import { StatusBadge } from "./StatusBadge";
 import { useDialog } from "./useDialog";
 import { WhatsAppIcon } from "./WhatsAppIcon";
 import { unitWhatsAppText } from "@/lib/unitMessage";
+import { calculatorHref } from "@/lib/calculatorLink";
 import styles from "./UnitDetailModal.module.css";
 
 interface UnitDetailModalProps {
@@ -148,7 +149,7 @@ export function UnitDetailModal({
           <StatusBadge status={unit.status} />
         </div>
         {available && (
-          <a className={styles.calcLink} href={`/invest?unit=${unitQuery}#calculator`}>
+          <a className={styles.calcLink} href={calculatorHref([unit.unitNumber])}>
             Work out the payments for {unit.unitNumber}
           </a>
         )}

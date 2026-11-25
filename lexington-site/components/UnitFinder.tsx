@@ -15,6 +15,7 @@ import { setAreaUnit, useAreaUnit } from "./useAreaUnit";
 import { floorTierName, isTierClamped, priceAtTier, tierAddon } from "@/lib/pricing";
 import { StatusBadge } from "./StatusBadge";
 import { withVat, type Vat } from "@/lib/vat";
+import { calculatorHref } from "@/lib/calculatorLink";
 
 import { UnitDetailModal } from "./UnitDetailModal";
 import { CompareModal } from "./CompareModal";
@@ -265,6 +266,7 @@ export function UnitFinder({ units, tiers, vat, contactPhone }: UnitFinderProps)
   }
 
   const compareUnits = units.filter((u) => compareIds.includes(u._id));
+  const compareForSale = compareUnits.filter((u) => u.status === "available");
 
   return (
     // One region for the tap check: a filter or a finish changes the list, not itself.
@@ -557,13 +559,21 @@ export function UnitFinder({ units, tiers, vat, contactPhone }: UnitFinderProps)
 
       {compareUnits.length > 0 && (
         <div className={styles.compareBar}>
-          <span className={styles.compareBarCount}>
-            {compareUnits.length} of {MAX_COMPARE} selected — {compareUnits.map((u) => u.unitNumber).join(", ")}
-          </span>
-          <div className={styles.compareBarActions}>
+          <div className={styles.compareBarTop}>
+            <span className={styles.compareBarCount}>
+              {compareUnits.length} of {MAX_COMPARE} selected — {compareUnits.map((u) => u.unitNumber).join(", ")}
+            </span>
             <button className={styles.compareBarClear} onClick={() => setCompareIds([])}>
               Clear
             </button>
+          </div>
+          <div className={styles.compareBarActions}>
+            {/* The picked homes' payments side by side, on the price calculator (only homes still for sale have one). */}
+            {compareForSale.length > 0 && (
+              <a className={styles.compareBarPayments} href={calculatorHref(compareForSale.map((u) => u.unitNumber))}>
+                <span className={styles.compareBarWide}>Compare&nbsp;</span>payments
+              </a>
+            )}
             <button
               className={styles.compareBarButton}
               disabled={compareUnits.length < 2}

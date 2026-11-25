@@ -345,7 +345,15 @@
   max-width: calc(100vw - 32px);
 }
 
+.compareBarTop {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  min-width: 0;
+}
+
 .compareBarCount {
+  min-width: 0;
   font-size: 13.5px;
   white-space: nowrap;
   overflow: hidden;
@@ -392,6 +400,34 @@
   cursor: not-allowed;
 }
 
+/* To the price calculator with the picked homes: an outline beside the brass Compare button. */
+.compareBarPayments {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 9px 16px;
+  color: var(--paper);
+  border: 1px solid var(--brass);
+  border-radius: var(--radius);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.compareBarPayments:hover {
+  background: rgba(176, 141, 87, 0.2);
+}
+
+.compareBarPayments:focus-visible,
+.compareBarButton:focus-visible,
+.compareBarClear:focus-visible {
+  outline: 2px solid var(--brass);
+  outline-offset: 2px;
+}
+
 @media (max-width: 640px) {
   /* Two kinds a row and tighter filters, so the first homes show on the first screens of a phone. */
   .kinds {
@@ -427,19 +463,41 @@
     padding: 7px 13px;
   }
 
+}
+
+/* Phones (the WhatsApp button's sizes): the bar keeps clear of that button in the bottom-right corner (16px in, 52px
+   wide), with the picked homes and Clear on top and "Payments" beside "Compare (2)" underneath. */
+@media (max-width: 720px) {
   .compareBar {
-    left: 16px;
-    right: 16px;
+    left: 12px;
+    right: 80px;
     bottom: 16px;
     transform: none;
     max-width: none;
     flex-direction: column;
     align-items: stretch;
+    gap: 10px;
+    padding: 12px 14px;
+  }
+
+  .compareBarTop {
+    justify-content: space-between;
     gap: 12px;
   }
 
   .compareBarActions {
-    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .compareBarPayments,
+  .compareBarButton {
+    flex: 1 1 0;
+    padding: 10px 6px;
+    font-size: 12.5px;
+  }
+
+  .compareBarWide {
+    display: none;
   }
 }
 
