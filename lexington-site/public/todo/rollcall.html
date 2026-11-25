@@ -44,6 +44,9 @@ header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background
 .otctl .step{width:44px;height:44px;border-radius:10px;border:1px solid var(--line);background:var(--bg);font-weight:600;font-size:20px}
 .otctl .step:disabled{opacity:.4}
 .othrs{min-width:40px;text-align:center;font:700 20px/1 var(--display)}
+.otall{margin:14px 0 6px;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+.otallline{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.otallbtn{width:100%;height:48px;margin-top:10px}
 .finish{height:44px;padding:0 12px}
 .otmark{display:block;font-size:11px;color:var(--accent);font-weight:600}
 .seg button{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 4px;display:flex;flex-direction:column;align-items:center}
@@ -792,6 +795,7 @@ function viewOvertime(date, ws, isToday){
   const rateH = Number(S.settings.otRate);
   let h = `<p class="note">Overtime is anything after ${clock(closeFor(date))}${money() ? ", paid at "+ghs(rateH).replace(".00","")+" an hour" : ""}. Only people who were here today are listed; steel benders aren't.
     ${isToday ? "Tap <b>Finished now</b> when someone stops work and the hours are worked out to the nearest half hour. Adjust with − and +." : ""}</p>`;
+  h += otAllHtml(date, ws);
   for (const g of GROUPS.filter(g => g.id !== "steel")){
     const list = ws.filter(w => TRADES[w.trade].group === g.id && (slotsFor(date).some(sl => mark(date, w.id, sl.id)?.s === "in") || otOf(date, w.id)));
     if (!list.length) continue;
@@ -811,6 +815,38 @@ function viewOvertime(date, ws, isToday){
     h += `</div></section>`;
   }
   return h;
+}
+/* ---------- overtime for everyone at once (25 Nov 2026) ----------
+   Niko: "give me a button that says apply overtime to all those that were present". Everyone listed for overtime that
+   day (here at some point, not a steel bender) gets the same hours, except anyone marked gone at closing. The hours
+   start from the most anyone has that day (1h when nobody has any), step by half an hour, and a second tap applies
+   them: they go over anyone's own hours, which can be changed after with their own − and +. */
+const otPresent = (date, ws) => ws.filter(w => TRADES[w.trade].group !== "steel" && slotsFor(date).some(sl => mark(date, w.id, sl.id)?.s === "in") && mark(date, w.id, "c")?.s !== "out");
+const otAllHours = (date, list) => S.otAll?.date === date ? S.otAll.hours : (Math.max(0, ...list.map(w => otOf(date, w.id))) || 1);
+function otAllHtml(date, ws){
+  const list = otPresent(date, ws);
+  if (!list.length) return "";
+  const hours = otAllHours(date, list), rateH = Number(S.settings.otRate), armed = S.confirmOtAll === date;
+  return `<div class="otall"><div class="otallline"><div class="wname"><b>Everyone who was here</b>
+      <span class="meta">${list.length} ${list.length === 1 ? "person" : "people"}${money() ? " · "+ghs(hours*rateH).replace(".00","")+" each" : ""}</span></div>
+    <div class="otctl">
+      <button class="step" data-act="otallstep" data-v="-0.5" aria-label="Less overtime for everyone" ${hours > 0.5 ? "" : "disabled"}>−</button>
+      <span class="othrs num">${hrs(hours)}</span>
+      <button class="step" data-act="otallstep" data-v="0.5" aria-label="More overtime for everyone" ${hours < 12 ? "" : "disabled"}>+</button>
+    </div></div>
+    <button class="btn primary otallbtn" data-act="otall">${armed ? "Tap again: "+hrs(hours)+" for all "+list.length : "Apply overtime to all those that were present"}</button>
+    <p class="note">Anyone marked gone at closing is left out. Change anyone after with their own − and +.</p></div>`;
+}
+function setOtAll(date, ws){
+  const list = otPresent(date, ws);
+  if (!list.length) return;
+  const v = Math.max(0, Math.min(12, Math.round(otAllHours(date, list)*2)/2));
+  const patch = {ot:Object.fromEntries(list.map(w => [w.id, v]))};
+  S.days[date] = deepMerge({date, ...(S.days[date]||{})}, patch);
+  S.confirmOtAll = null;
+  render();
+  writeDoc("days/"+date, patch, {date});
+  toast("Overtime "+hrs(v)+" for "+list.length+" "+(list.length === 1 ? "person" : "people"));
 }
 function setOt(wid, hours){
   const date = S.date, v = Math.max(0, Math.min(12, Math.round(hours*2)/2));
@@ -1131,11 +1167,12 @@ document.addEventListener("click", async e => {
   if (a === "tab"){ if (!tabAllowed(v)) return; S.tab = v; S.payForm = null; S.dayEdit = null; window.scrollTo(0,0); return render(); }
   if (!S.db) return;
   if (a === "dismisserr"){ S.saveError = null; return render(); }
-  const WRITES = ["wagesloc","mark","rest","ot","otnow","waive","pay","savepay","unpay","savenewworker","saveworker","toggleactive","savesettings","delphoto","setpay","machine","savepour","stoppour","delpour","deldry","tick","addcheck","poured","clsave","cldel"];
+  const WRITES = ["wagesloc","mark","rest","ot","otall","otnow","waive","pay","savepay","unpay","savenewworker","saveworker","toggleactive","savesettings","delphoto","setpay","machine","savepour","stoppour","delpour","deldry","tick","addcheck","poured","clsave","cldel"];
   if (S.readOnly && WRITES.includes(a)){ window.scrollTo(0,0); return toast("View only. Ask the owner for edit access."); }
   // A second tap is needed to pour with checks left, or to delete a checklist: anything else in between starts over.
   if (a !== "poured") S.confirmPoured = null;
   if (a !== "cldel") S.confirmClDel = null;
+  if (a !== "otall") S.confirmOtAll = null;
   switch (a){
     case "day": { const d = addDays(parseYmd(S.date), Number(v)); if (ymd(d) > todayStr()) return; S.date = ymd(d); break; }
     case "gotoday": S.date = todayStr(); S.slot = autoSlot(); break;
@@ -1238,6 +1275,8 @@ document.addEventListener("click", async e => {
       S.clEdit = null; S.clDraft = null; clearDrafts("cl-");
       toast("Checklist deleted: "+t.name); break; }
     case "ot": return setOt(wid, otOf(S.date, wid) + Number(v));
+    case "otallstep": { const list = otPresent(S.date, workerList()); S.otAll = {date:S.date, hours:Math.max(0.5, Math.min(12, otAllHours(S.date, list) + Number(v)))}; break; }
+    case "otall": if (S.confirmOtAll !== S.date){ S.confirmOtAll = S.date; break; } return setOtAll(S.date, workerList());
     case "otnow": { const n = new Date(), mins = n.getHours()*60 + n.getMinutes() - toMin(closeFor(S.date));
       if (mins < 15) return toast("It's not past closing time yet.");
       setOt(wid, mins/60); return toast(S.workers[wid].name+": "+hrs(Math.round(mins/30)/2)+" overtime"); }
