@@ -2,11 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import type { PourCubes } from "@/lib/concrete/pourExtras";
 import {
   clockOf,
-  cubic,
-  daySummary,
-  leftYardAt,
   MAX_COMMENT,
   MAX_FIELD,
   roadMinutes,
@@ -15,10 +13,10 @@ import {
   shortDate,
   tidyTime,
   truckFlags,
+  trucksByPour,
   trucksOn,
   type ArrivedFrom,
   type ConcreteData,
-  type Flag,
   type PourBooking,
   type PourDay,
   type PourInfo,
@@ -29,18 +27,22 @@ import { photoAt, type TodoMe } from "@/lib/todo/shared";
 import { AccessSheet } from "./AccessSheet";
 import { errorText, send, startPolling } from "./api";
 import cx from "./Concrete.module.css";
-import { BookedPours, PouredPours, pourStatus, TruckPour } from "./ConcretePours";
+import { BookSheet, DayCard, lastPourWords, PourCard, TruckPour, useFolds } from "./ConcretePours";
+import { Flags, trucksWords } from "./ConcreteTrucks";
 import { forgetPhoto, uploadPhoto } from "./photo";
 import { arrivalOf } from "./photoTime";
+import { PourChecklists } from "./PourChecklists";
 import { setPourDataSink } from "./pourPhotoQueue";
 import ps from "./Pours.module.css";
 import { SiteHeader, SiteMenu } from "./SiteChrome";
 import styles from "./Todo.module.css";
 
-// The concrete trucks on a pour day (lib/concrete/shared.ts says what and why). "Truck arrived" opens the
-// camera: the photo of the waybill makes the truck at once, timed by the photo, and its sheet opens while
-// Claude reads the waybill; the slump, cubes and a comment go in when the tests are done. Each day shows its
-// trucks in the order they came, how long each took from the yard, and anything that doesn't add up.
+// The concrete page (lib/concrete/shared.ts says what and why). "Truck arrived" opens the camera: the photo of the
+// waybill makes the truck at once, timed by the photo, and its sheet opens while Claude reads the waybill; the slump,
+// cubes and a comment go in when the tests are done. Since 25 Nov 2026 each pour is one card with everything about it
+// (ConcretePours.tsx): booked with its checklist and pre-pour photos, then its trucks as they come in (how long each
+// took from the yard, anything that doesn't add up), its curing and its cubes. Today's pour comes first, then the
+// pours booked, then the ones poured; the pour checklists are at the bottom (they were on the roll call's Workers).
 
 type ToastData = { text: string; tone?: "error" };
 /** A waybill photo on its way: uploading, then making the truck; kept with its time if the signal drops. */
@@ -62,28 +64,10 @@ const dayTitle = (day: string) => {
   if (day === ghanaDay(Date.now() - 86_400_000)) return `Yesterday, ${shortDate(day)}`;
   return longDay(day);
 };
-const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 const sortTrucks = (list: Truck[]) => [...list].sort((a, b) => b.arrivedAt.localeCompare(a.arrivedAt));
-
-/** The road time as a badge: green within the limit, red over it or impossible, amber when it can't be worked out. */
-function RoadBadge({ minutes, waiting }: { minutes: number | null; waiting?: boolean }) {
-  if (minutes === null) return <span className={`${cx.badge} ${cx.badgeWait}`}>{waiting ? "reading…" : "no time"}</span>;
-  const tone = minutes < 0 || minutes > ROAD_MAX_MIN ? cx.badgeBad : minutes < 7 ? cx.badgeCheck : cx.badgeOk;
-  return <span className={`${cx.badge} ${tone}`}>{minutes < 0 ? "check time" : `${minutes} min`}</span>;
-}
-
-function Flags({ flags }: { flags: Flag[] }) {
-  if (!flags.length) return null;
-  return (
-    <ul className={cx.flags}>
-      {flags.map((f) => (
-        <li key={f.kind} className={f.tone === "bad" ? cx.flagBad : cx.flagCheck}>
-          {f.text}
-        </li>
-      ))}
-    </ul>
-  );
-}
+const noCubes = (pourId: string): PourCubes => ({ pourId, taken: null, takenAt: null, target: 35, tests: [] });
+/** A card on the page: a pour (booked or poured), or a day's trucks no listed pour has. */
+type Card = { key: string; date: string; booking?: PourBooking; day?: string; trucks: Truck[] };
 
 export function ConcreteApp({
   me,
@@ -248,32 +232,74 @@ export function ConcreteApp({
     setPending((list) => list.filter((x) => x.key !== p.key));
   };
 
-  /* ---------- the days ---------- */
+  /* ---------- the pours, each with its trucks ---------- */
 
   const today = ghanaDay();
-  const days = useMemo(() => {
-    const set = new Set(data.trucks.map((t) => t.day));
-    return [...set].sort((a, b) => b.localeCompare(a));
-  }, [data.trucks]);
+  const info = data.pours;
+  const bookings = useMemo(() => info?.pours ?? [], [info]);
+  const { byPour, byDay } = useMemo(() => trucksByPour(data.trucks, bookings), [data.trucks, bookings]);
+  const [folds, setFold] = useFolds();
+  const [bookSheet, setBookSheet] = useState<{ booking: PourBooking | null } | null>(null);
   const pourOf = (day: string) => data.days.find((d) => d.day === day) ?? null;
-  const bookingsOn = (day: string): PourBooking[] => data.pours?.pours.filter((b) => b.day === day) ?? [];
-  const statusLines = (day: string) =>
-    bookingsOn(day).map((b) => (
-      <p key={b.id} className={b.phase === "poured" ? ps.status : `${ps.status} ${ps.statusWait}`}>
-        {pourStatus(b)}
-      </p>
-    ));
+  const bookingsOn = (day: string): PourBooking[] => bookings.filter((b) => b.day === day);
   const todays = trucksOn(data.trucks, today);
-  const todaySum = daySummary(todays);
   const open = openId ? data.trucks.find((t) => t.id === openId) ?? null : null;
+  const say = (text: string, error?: boolean) => showToast({ text, tone: error ? "error" : undefined });
+
+  const cards: Card[] = [
+    ...bookings.map((b) => ({ key: b.id, date: b.phase === "poured" && b.poured ? b.poured : b.day, booking: b, trucks: byPour.get(b.id) ?? [] })),
+    ...[...byDay].map(([day, list]) => ({ key: `day:${day}`, date: day, day, trucks: list })),
+  ];
+  // Today's first (booked, going or done), then the pours booked (soonest first), then the ones poured (latest first).
+  const onToday = cards.filter((c) => c.date === today || c.trucks.some((t) => t.day === today));
+  const bookedCards = cards.filter((c) => !onToday.includes(c) && c.booking?.phase === "check").sort((a, b) => a.date.localeCompare(b.date) || a.key.localeCompare(b.key));
+  const pastCards = cards.filter((c) => !onToday.includes(c) && !bookedCards.includes(c)).sort((a, b) => b.date.localeCompare(a.date) || a.key.localeCompare(b.key));
+
+  const renderCard = (c: Card) => {
+    if (c.booking && info) {
+      const b = c.booking;
+      const cubes = info.cubes?.find((x) => x.pourId === b.id) ?? noCubes(b.id);
+      return (
+        <PourCard
+          key={c.key}
+          booking={b}
+          trucks={c.trucks}
+          all={data.trucks}
+          day={pourOf(b.day)}
+          cubes={cubes}
+          photos={info.photos ?? []}
+          me={me}
+          orderDefaults={info.orderDefaults}
+          fold={folds[c.key]}
+          onFold={(o) => setFold(c.key, o)}
+          onData={putData}
+          onToast={say}
+          onChange={() => setBookSheet({ booking: b })}
+          onOrder={onOrder}
+          onTruck={setOpenId}
+        />
+      );
+    }
+    const day = c.day ?? c.date;
+    return (
+      <DayCard
+        key={c.key}
+        day={day}
+        trucks={c.trucks}
+        all={data.trucks}
+        record={pourOf(day)}
+        booked={bookingsOn(day).length}
+        fold={folds[c.key]}
+        onFold={(o) => setFold(c.key, o)}
+        onTruck={setOpenId}
+        onDay={() => setDayOpen(day)}
+      />
+    );
+  };
 
   return (
     <>
-      <SiteHeader
-        title="Concrete"
-        sub={todays.length ? `Today ${plural(todaySum.trucks, "truck")} · ${cubic(todaySum.volume)} m³` : "No trucks today"}
-        onMenu={() => setMenuOpen(true)}
-      />
+      <SiteHeader title="Concrete" sub={todays.length ? `Today ${trucksWords(todays)}` : "No trucks today"} onMenu={() => setMenuOpen(true)} />
 
       {signedOut && (
         <div className={styles.banner} role="alert">
@@ -300,7 +326,8 @@ export function ConcreteApp({
               </label>
             </div>
             <p className={cx.hint}>
-              Photo the waybill as the truck arrives: the photo&rsquo;s time is its arrival. Consar to site takes about {ROAD_USUAL_MIN} min, {ROAD_MAX_MIN} at most.
+              {todays.length ? "" : "No trucks yet today. "}Photo the waybill as the truck arrives: the photo&rsquo;s time is its arrival. Consar to site takes about {ROAD_USUAL_MIN} min,{" "}
+              {ROAD_MAX_MIN} at most.
             </p>
 
             {pending.map((p) => (
@@ -328,49 +355,56 @@ export function ConcreteApp({
               </div>
             ))}
 
-            {data.pours && <BookedPours info={data.pours} me={me} onData={putData} onToast={(text, error) => showToast({ text, tone: error ? "error" : undefined })} onOrder={onOrder} />}
-            {data.pours && <PouredPours info={data.pours} trucks={data.trucks} me={me} onData={putData} onToast={(text, error) => showToast({ text, tone: error ? "error" : undefined })} />}
-
-            {!days.includes(today) && (
-              <section className={styles.group}>
-                <h2 className={styles.groupTitle}>{dayTitle(today)}</h2>
-                <PourLine pour={pourOf(today)} delivered={0} onEdit={() => setDayOpen(today)} />
-                {statusLines(today)}
-                {!pending.length && <p className={styles.empty}>No trucks yet today. When a concrete truck arrives, tap Truck arrived and photo its waybill.</p>}
+            {onToday.length > 0 && (
+              <section className={styles.group} aria-label="Today">
+                <h2 className={styles.groupTitle}>
+                  {dayTitle(today)} {todays.length ? <span>{trucksWords(todays)}</span> : null}
+                </h2>
+                {onToday.map(renderCard)}
               </section>
             )}
 
-            {days.map((day) => {
-              const list = trucksOn(data.trucks, day);
-              const sum = daySummary(list);
-              const pour = pourOf(day);
-              const late = list.filter((t) => truckFlags(t, data.trucks, pour).some((f) => f.tone === "bad")).length;
-              return (
-                <section key={day} className={styles.group}>
-                  <h2 className={styles.groupTitle}>
-                    {dayTitle(day)}{" "}
-                    <span>
-                      {plural(sum.trucks, "truck")} · {cubic(sum.volume)} m³
-                    </span>
-                  </h2>
-                  <PourLine pour={pour} delivered={sum.volume} onEdit={() => setDayOpen(day)} />
-                  {statusLines(day)}
-                  {(sum.averageRoad !== null || late > 0) && (
-                    <p className={cx.dayStats}>
-                      {sum.averageRoad !== null ? `Average ${sum.averageRoad} min from the yard` : ""}
-                      {sum.averageRoad !== null && late ? " · " : ""}
-                      {late ? <b className={cx.bad}>{plural(late, "truck")} to look at</b> : null}
-                    </p>
-                  )}
-                  {[...list].reverse().map((t) => (
-                    <TruckCard key={t.id} truck={t} number={list.indexOf(t) + 1} flags={truckFlags(t, data.trucks, pour)} onOpen={() => setOpenId(t.id)} />
-                  ))}
-                </section>
-              );
-            })}
+            <section className={styles.group} aria-label="Pours booked">
+              <h2 className={styles.groupTitle}>
+                Booked <span>{bookedCards.length || ""}</span>
+              </h2>
+              {bookedCards.map(renderCard)}
+              {info && (
+                <button type="button" className={ps.book} onClick={() => setBookSheet({ booking: null })}>
+                  + Book a pour
+                </button>
+              )}
+              {!bookings.some((b) => b.phase === "check") && (
+                <p className={ps.hint}>Book each pour before its day: its checklist goes with it, and the first waybill that day marks it poured and starts its curing.</p>
+              )}
+            </section>
+
+            {pastCards.length > 0 && (
+              <section className={styles.group} aria-label="Poured">
+                <h2 className={styles.groupTitle}>Poured</h2>
+                {pastCards.map(renderCard)}
+              </section>
+            )}
+
+            {info && <PourChecklists lists={info.checklists} canEdit={!!info.canEditChecklists} onData={putData} onToast={say} />}
           </>
         )}
       </main>
+
+      {bookSheet && info && (
+        <BookSheet
+          info={info}
+          office={me.kind === "admin"}
+          booking={bookSheet.booking}
+          lastPour={lastPourWords(bookings, byPour)}
+          onClose={() => setBookSheet(null)}
+          onSaved={(next, text) => {
+            putData(next);
+            setBookSheet(null);
+            say(text);
+          }}
+        />
+      )}
 
       {/* "capture" opens the camera straight away on phones; the other picks a photo taken earlier. */}
       <input id={CAMERA} className={styles.hiddenInput} type="file" accept="image/*" capture="environment" onChange={(e) => void pick(e)} />
@@ -437,69 +471,6 @@ export function ConcreteApp({
         </div>
       )}
     </>
-  );
-}
-
-/** What the day's pour is and what was ordered, with a button to say. */
-function PourLine({ pour, delivered, onEdit }: { pour: PourDay | null; delivered: number; onEdit: () => void }) {
-  const said = pour && (pour.pour || pour.mix || pour.volume);
-  return (
-    <div className={cx.pourLine}>
-      {said ? (
-        <p>
-          {pour.pour ? <b>{pour.pour}</b> : null}
-          {pour.pour && (pour.mix || pour.volume) ? " · " : ""}
-          {pour.mix || pour.volume ? `ordered ${[pour.mix, pour.volume ? `${cubic(pour.volume)} m³` : ""].filter(Boolean).join(", ")}` : ""}
-          {pour.volume ? (
-            <span className={delivered > pour.volume ? cx.bad : undefined}>
-              {" "}
-              · {cubic(delivered)} of {cubic(pour.volume)} m³ in
-            </span>
-          ) : null}
-        </p>
-      ) : (
-        <p className={cx.muted}>What&rsquo;s being poured, and the mix ordered?</p>
-      )}
-      <button type="button" onClick={onEdit}>
-        {said ? "Change" : "Add"}
-      </button>
-    </div>
-  );
-}
-
-function TruckCard({ truck: t, number, flags, onOpen }: { truck: Truck; number: number; flags: Flag[]; onOpen: () => void }) {
-  const minutes = roadMinutes(t);
-  const left = leftYardAt(t);
-  const tests = [t.slump ? `Slump ${t.slump} mm` : "", t.cubes ? "Cubes taken" : ""].filter(Boolean).join(" · ");
-  return (
-    <button type="button" id={t.id} className={`${cx.truck} ${flags.some((f) => f.tone === "bad") ? cx.truckBad : ""}`} onClick={onOpen}>
-      {t.photoUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element -- a resized copy from the image store
-        <img className={cx.thumb} src={photoAt(t.photoUrl, 240)} alt="" loading="lazy" />
-      ) : (
-        <span className={cx.thumb} />
-      )}
-      <span className={cx.body}>
-        <span className={cx.truckTop}>
-          <span className={cx.truckName}>
-            #{number} {t.lorry ?? (t.reading === "working" ? "" : "Truck")}
-            {t.volume ? ` · ${cubic(t.volume)} m³` : ""}
-          </span>
-          <RoadBadge minutes={minutes} waiting={t.reading === "working"} />
-        </span>
-        <span className={cx.line}>
-          {t.reading === "working"
-            ? `On site ${clockOf(t.arrivedAt)} · reading the waybill…`
-            : left
-              ? `Left the yard ${clockOf(left)} · on site ${clockOf(t.arrivedAt)}`
-              : `On site ${clockOf(t.arrivedAt)}`}
-        </span>
-        {(t.mix || tests) && <span className={cx.line}>{[t.mix, tests].filter(Boolean).join(" · ")}</span>}
-        {t.comment && <span className={cx.comment}>&ldquo;{t.comment}&rdquo;</span>}
-        {t.reading === "failed" && <span className={cx.flagCheck}>The waybill couldn&rsquo;t be read: tap to type it in.</span>}
-        <Flags flags={flags.filter((f) => !(f.kind === "notime" && t.reading === "failed"))} />
-      </span>
-    </button>
   );
 }
 

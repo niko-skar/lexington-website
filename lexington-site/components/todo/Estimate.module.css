@@ -243,6 +243,15 @@
 .total b {
   font-family: var(--x-num);
 }
+/* What the last pour really took against what it worked out at (25 Nov 2026). */
+.lastPour {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--x-amber-soft);
+  color: var(--x-ink);
+  font-size: 14px;
+}
 
 /* ---------- on the pour's card ---------- */
 .worked {

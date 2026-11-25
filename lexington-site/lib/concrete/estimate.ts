@@ -230,7 +230,8 @@ export interface EstimateInput {
 /** Niko, 9 Nov 2026: columns take a high slump, around 20-22 cm; a slab around 15-17 cm. */
 export const COLUMN_SLUMP = "20–22 cm";
 export const SLAB_SLUMP = "15–17 cm";
-export const EXTRA_CHOICES = [0, 5, 10] as const;
+// 15 and 20 since 25 Nov 2026: the 3rd floor slab (H to N) worked out at 59.5 m³ from the drawings and took about 70.
+export const EXTRA_CHOICES = [0, 5, 10, 15, 20] as const;
 export const DEFAULT_EXTRA = 5;
 /** A lift core's door is left out of the walls up to this height in each pour, mm. */
 export const LIFT_DOOR_HEIGHT = 2100;

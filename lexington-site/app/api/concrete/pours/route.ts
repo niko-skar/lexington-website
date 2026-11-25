@@ -1,5 +1,5 @@
 import { addPourPhoto, attachCubeForm, deletePourPhoto, setCubeResult, setCubes } from "@/lib/concrete/pourFiles";
-import { bookPour, changePour, deletePour, orderPour, pourDone, pourUndone, tickPour } from "@/lib/concrete/pours";
+import { bookPour, changePour, deleteChecklist, deletePour, orderPour, pourDone, pourUndone, saveChecklist, tickPour } from "@/lib/concrete/pours";
 import { concreteData } from "@/lib/concrete/server";
 import { errorResponse, readJson, requireTodoUser, TodoError } from "@/lib/todo/server";
 
@@ -15,6 +15,8 @@ export const dynamic = "force-dynamic";
  * pourId, kind, previewId, original: { url, pathname, bytes?, width?, height? }, takenAt? } and { action: "photoDelete",
  * id }; its cubes { action: "cubes", pourId, taken?, target? }, a test's results { action: "cubeResult", pourId, age,
  * testedOn, strengths } or the lab's form { action: "cubeForm", pourId, age, formId }. Anyone who opens Concrete.
+ * The pour checklists (25 Nov 2026, moved here from the roll call): one made or changed { action: "checklist", id?, name,
+ * checks: [{ key?, text }] } or taken off { action: "checklistDelete", id }: the office, or a login with Workers.
  * Answers with the concrete page's data as it is now.
  */
 export async function POST(request: Request): Promise<Response> {
@@ -33,6 +35,8 @@ export async function POST(request: Request): Promise<Response> {
     else if (body.action === "cubes") await setCubes(me, body);
     else if (body.action === "cubeResult") await setCubeResult(me, body);
     else if (body.action === "cubeForm") await attachCubeForm(me, body);
+    else if (body.action === "checklist") await saveChecklist(me, body);
+    else if (body.action === "checklistDelete") await deleteChecklist(me, body.id);
     else throw new TodoError(400, "That button isn't known.");
     return Response.json(await concreteData(me));
   } catch (error) {

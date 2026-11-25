@@ -113,8 +113,10 @@ export interface PourInfo {
   /** The listed pours' pre-pour photos, and their concrete cubes (lib/concrete/pourExtras.ts). */
   photos: PourPhoto[];
   cubes: PourCubes[];
-  /** The roll call's checklists, to start a pour from. */
-  checklists: Array<{ id: string; name: string }>;
+  /** The roll call's checklists, to start a pour from (edited on the concrete page since 25 Nov 2026), checks in order. */
+  checklists: PourChecklist[];
+  /** This login may change the checklists (the office, or a login with the roll call's Workers part, as before). */
+  canEditChecklists?: boolean;
   /** Who can cure: the roll call's active workers (not the steel benders), foremen first. */
   curers: Array<{ id: string; name: string }>;
   /** Days of curing a pour gets now (the roll call's settings). */
@@ -123,6 +125,13 @@ export interface PourInfo {
   orderDefaults?: Partial<PourOrder> | null;
   /** The office's: a m³ of ready-mix as it last cost, and where that's from (a new pour's purchase order starts from it). */
   concretePrice?: { price: number; from: string } | null;
+}
+
+/** One of the pour checklists: a booked pour starts with a copy of its checks. */
+export interface PourChecklist {
+  id: string;
+  name: string;
+  checks: Array<{ key: string; text: string }>;
 }
 
 import type { PourOrder, SavedEstimate, SavedOrder } from "./estimate";
@@ -135,7 +144,7 @@ export interface ConcreteData {
   pours?: PourInfo;
 }
 
-export type FlagKind = "late" | "quick" | "before" | "date" | "twice" | "mix" | "notime";
+export type FlagKind = "late" | "quick" | "before" | "date" | "twice" | "mix" | "notime" | "novolume";
 export interface Flag {
   kind: FlagKind;
   /** "bad": something went wrong; "check": worth a look. */
@@ -224,6 +233,8 @@ export function truckFlags(t: Truck, all: readonly Truck[], day?: PourDay | null
   } else if (t.reading !== "working") {
     flags.push({ kind: "notime", tone: "check", text: "No time from the waybill yet: type it in to check the road time." });
   }
+  // A torn or smudged waybill (24 Nov 2026: the 7th truck's m³ was torn off, so the day read "60 of 60 m³" when 70 came).
+  if (t.volume === null && t.reading !== "working") flags.push({ kind: "novolume", tone: "check", text: "No m³ on the waybill: tap to type it in." });
   if (t.waybillDate && t.waybillDate !== t.day) flags.push({ kind: "date", tone: "check", text: `The waybill is dated ${shortDate(t.waybillDate)}, the truck came ${shortDate(t.day)}.` });
   // Its number as digits without leading zeros: "0026019" typed as "26019" is the same waybill.
   const key = (no: string | null) => no?.replace(/\D/g, "").replace(/^0+/, "") ?? "";
@@ -242,18 +253,52 @@ export function truckFlags(t: Truck, all: readonly Truck[], day?: PourDay | null
   return flags;
 }
 
-/** The checks a phone alert is sent for (a missing time is only shown on the page). */
-export const alertFlags = (flags: Flag[]) => flags.filter((f) => f.kind !== "notime");
+/** The checks a phone alert is sent for (a missing time or m³ is only shown on the page). */
+export const alertFlags = (flags: Flag[]) => flags.filter((f) => f.kind !== "notime" && f.kind !== "novolume");
 
 /** A day's trucks in the order they arrived. */
 export const trucksOn = (all: readonly Truck[], day: string) => all.filter((t) => t.day === day).sort((a, b) => a.arrivedAt.localeCompare(b.arrivedAt));
 
+/**
+ * What some trucks brought: the m³ on their waybills, how many have none (torn, smudged: not while still being read),
+ * the usual load (the middle one of those known), and the likely total with each missing one counted at it.
+ */
+export function delivered(list: readonly Truck[]): { known: number; missing: number; usual: number | null; likely: number } {
+  const loads = list.map((t) => t.volume).filter((v): v is number => v !== null && v > 0).sort((a, b) => a - b);
+  const known = Math.round(loads.reduce((s, v) => s + v, 0) * 10) / 10;
+  const missing = list.filter((t) => t.volume === null && t.reading !== "working").length;
+  const usual = loads.length ? loads[Math.floor((loads.length - 1) / 2)] : null;
+  return { known, missing, usual, likely: Math.round((known + missing * (usual ?? 0)) * 10) / 10 };
+}
+
 export function daySummary(dayTrucks: readonly Truck[]) {
-  const volume = dayTrucks.reduce((n, t) => n + (t.volume ?? 0), 0);
+  const got = delivered(dayTrucks);
   const roads = dayTrucks.map(roadMinutes).filter((m): m is number => m !== null && m >= 0);
   return {
     trucks: dayTrucks.length,
-    volume: Math.round(volume * 10) / 10,
+    /** m³ on the waybills. */
+    volume: got.known,
+    /** Trucks with no m³ on their waybill, and the total with those counted at the usual load. */
+    missing: got.missing,
+    likely: got.likely,
     averageRoad: roads.length ? Math.round(roads.reduce((a, b) => a + b, 0) / roads.length) : null,
   };
+}
+
+/**
+ * Which pour each truck brought: the one it's tied to (lib/concrete/pours.ts ties it when it arrives), else the only
+ * pour listed on its day. The rest (a pour not listed any more, two pours that day and none picked yet, or none booked)
+ * go by their day.
+ */
+export function trucksByPour(trucks: readonly Truck[], pours: readonly Pick<PourBooking, "id" | "day">[]): { byPour: Map<string, Truck[]>; byDay: Map<string, Truck[]> } {
+  const byPour = new Map<string, Truck[]>();
+  const byDay = new Map<string, Truck[]>();
+  const listed = new Set(pours.map((b) => b.id));
+  for (const t of [...trucks].sort((a, b) => a.arrivedAt.localeCompare(b.arrivedAt))) {
+    const onDay = pours.filter((b) => b.day === t.day);
+    const pourId = t.pourId && listed.has(t.pourId) ? t.pourId : !t.pourId && onDay.length === 1 ? onDay[0].id : null;
+    if (pourId) byPour.set(pourId, [...(byPour.get(pourId) ?? []), t]);
+    else byDay.set(t.day, [...(byDay.get(t.day) ?? []), t]);
+  }
+  return { byPour, byDay };
 }

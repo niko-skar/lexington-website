@@ -45,6 +45,30 @@
   color: var(--x-muted);
 }
 
+/* ---------- a pour's trucks, inside its card (25 Nov 2026) ---------- */
+.trucks {
+  display: grid;
+  gap: 6px;
+}
+.came {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+.truckGrid {
+  display: grid;
+  gap: 8px;
+  margin-top: 4px;
+}
+.truckGrid .truck {
+  margin-bottom: 0;
+}
+@media (min-width: 1024px) {
+  .truckGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 /* ---------- a truck ---------- */
 .truck {
   display: grid;

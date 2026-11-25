@@ -129,6 +129,7 @@ export function EstimatePanel({
   onChange,
   result,
   disabled,
+  lastPour,
 }: {
   floors: EstFloor[] | null;
   error: string;
@@ -136,6 +137,8 @@ export function EstimatePanel({
   onChange: (v: EstimateInput) => void;
   result: EstimateResult | null;
   disabled: boolean;
+  /** What the last pour worked out at against what really came, said above the extra (25 Nov 2026). */
+  lastPour?: string | null;
 }) {
   if (error) return <p className={styles.sheetError}>{error}</p>;
   if (!floors) return <p className={styles.sheetNote}>Getting the building&rsquo;s measurements…</p>;
@@ -149,7 +152,7 @@ export function EstimatePanel({
         <SlabPicker floors={floors} value={value.slab} onChange={(slab) => set({ slab })} disabled={disabled} titled={value.kind === "both"} />
       )}
       {value.kind === "other" && value.other && <OtherPicker value={value.other} onChange={(other) => set({ other })} disabled={disabled} />}
-      <Summary result={result} extra={value.extra} onExtra={(extra) => set({ extra })} disabled={disabled} />
+      <Summary result={result} extra={value.extra} onExtra={(extra) => set({ extra })} disabled={disabled} lastPour={lastPour} />
     </div>
   );
 }
@@ -411,7 +414,19 @@ function OtherPicker({ value, onChange, disabled }: { value: OtherInput; onChang
   );
 }
 
-function Summary({ result, extra, onExtra, disabled }: { result: EstimateResult | null; extra: number; onExtra: (e: number) => void; disabled: boolean }) {
+function Summary({
+  result,
+  extra,
+  onExtra,
+  disabled,
+  lastPour,
+}: {
+  result: EstimateResult | null;
+  extra: number;
+  onExtra: (e: number) => void;
+  disabled: boolean;
+  lastPour?: string | null;
+}) {
   if (!result) return null;
   return (
     <div className={es.summary} aria-live="polite" aria-label="Worked out">
@@ -431,6 +446,7 @@ function Summary({ result, extra, onExtra, disabled }: { result: EstimateResult 
         </div>
       ))}
       {result.problem && <p className={es.problem}>{result.problem}</p>}
+      {lastPour && <p className={es.lastPour}>{lastPour}</p>}
       <span className={styles.label}>Add a little over</span>
       <div className={styles.chips} role="group" aria-label="Add a little over">
         {EXTRA_CHOICES.map((e) => (

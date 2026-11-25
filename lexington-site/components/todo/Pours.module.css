@@ -617,3 +617,165 @@
   margin: 0;
   font-size: 15px;
 }
+
+/* ---------- one card per pour, folding (25 Nov 2026) ---------- */
+.fold {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--x-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.foldText {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.fold .what {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.sum {
+  font-size: 14px;
+  color: var(--x-muted);
+}
+.sumLate {
+  font-weight: 700;
+  color: var(--x-warn);
+}
+.chev {
+  flex: none;
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 4px;
+  color: var(--x-accent);
+  font-weight: 600;
+}
+.chev::after {
+  content: "";
+  width: 7px;
+  height: 7px;
+  margin-left: 2px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: translateY(-2px) rotate(45deg);
+}
+.fold[aria-expanded="true"] .chev::after {
+  transform: translateY(2px) rotate(-135deg);
+}
+/* A part of an open card: the checklist, the trucks, the order. */
+.part {
+  display: grid;
+  gap: 6px;
+  margin-top: 6px;
+  padding-top: 10px;
+  border-top: 1px solid var(--x-line);
+}
+.part > .top .progress {
+  margin-top: 0;
+}
+.checkWhen {
+  display: block;
+  font-size: 12px;
+  color: var(--x-muted);
+}
+/* A day's trucks with no pour to go with. */
+.cardDay {
+  box-shadow: inset 4px 0 0 var(--x-line);
+}
+.dayMuted {
+  font-family: var(--x-display);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--x-muted);
+}
+
+/* ---------- the pour checklists, moved here from the roll call (25 Nov 2026) ---------- */
+.lists {
+  display: grid;
+  border: 1px solid var(--x-line);
+  border-radius: 10px;
+  background: var(--x-surface);
+  overflow: hidden;
+}
+.listRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+}
+.listRow + .listRow {
+  border-top: 1px solid var(--x-line);
+}
+.listRow div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.listRow b {
+  font-size: 16px;
+  overflow-wrap: anywhere;
+}
+.listRow span {
+  font-size: 14px;
+  color: var(--x-muted);
+}
+.listRow button {
+  flex: none;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--x-line);
+  border-radius: 8px;
+  background: var(--x-bg);
+  color: var(--x-ink);
+  font-weight: 600;
+}
+.lists + .link {
+  justify-self: start;
+  margin-top: 6px;
+}
+.clRows {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.clRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 44px 44px;
+  align-items: start;
+  gap: 6px;
+}
+.clRow button,
+.clAdd button {
+  min-height: 44px;
+  border: 1px solid var(--x-line);
+  border-radius: 8px;
+  background: var(--x-bg);
+  color: var(--x-ink);
+  font-weight: 700;
+}
+.clRow button:disabled {
+  opacity: 0.4;
+}
+.clAdd {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px;
+}
+.clAdd button {
+  padding: 0 16px;
+}

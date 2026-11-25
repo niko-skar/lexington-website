@@ -662,7 +662,7 @@ function pourFormHtml(date){
   if (!old) h += `<span class="calc">Checklist before the pour</span>
     <div class="chips">${lists.map(([id, t]) => `<button data-act="nplist" data-v="${id}" class="${list === id ? "on" : ""}" aria-pressed="${list === id}">${esc(t.name)}</button>`).join("")}
       <button data-act="nplist" data-v="none" class="none${checking ? "" : " on"}" aria-pressed="${!checking}">No checklist (already poured)</button></div>
-    ${S.can.workers ? `<button class="linkbtn" data-act="gochecklists">Edit checklists</button>` : ""}`;
+    <p class="calc">The checklists are edited on the Concrete page.</p>`;
   if (checking) return h + whoField + `<p class="calc">Tick each check before the pour. When it's poured, tap Poured and the curing starts by itself${money() ? ": "+ghs(curingRate()).replace(".00","")+" a day for "+curingDays()+" days, "+ghs(curingDryRate()).replace(".00","")+" off each time it's found dry" : " for "+curingDays()+" days"}.</p>
     <div class="row"><button class="btn primary" data-act="savepour">${old ? "Save" : "Start checklist"}</button><button class="btn" data-act="cancelpour">Cancel</button>
       ${old ? `<button class="btn danger" data-act="delpour" data-v="${f.id}">${S.confirmDelPour === f.id ? "Tap again to delete" : "Delete pour"}</button>` : ""}</div>
@@ -1115,10 +1115,9 @@ function viewWorkers(){
     <label for="st-curingDry">Curing found dry, GH₵ off<input class="field num" id="st-curingDry" inputmode="decimal" value="${v("curingDry")}"></label>
     <label for="st-curingDays">Curing days per pour<input class="field num" id="st-curingDays" inputmode="numeric" value="${v("curingDays")}"></label>
     </div>
-    <p class="calc">A day's pay is split into three: morning, afternoon and closing. On Saturdays there's no lunch, so it's two: morning and closing (Saturday closing time). To pay a half day or a full day instead, tap that day under the worker's name on Payday. Lateness is measured from the start time to when you tapped Here in the morning, and the deduction is minutes late ÷ ${paidMinutes()/60} working hours (start to closing, less lunch) × day rate. Overtime is paid per hour after closing time. The steel machines are ticked Used at the bottom of Today on the days they work; each day costs the rate set when it was ticked. Curing: the person curing is paid the curing rate once for each day any of their pours is curing, however many pours there are (a Sunday is paid with the next week), less the dry amount each time you find it dry and take the photo; a pour keeps the amounts it started with. Pour checklists are below: + New pour on Today starts one; tick the checks before the pour, and Poured starts the curing with these amounts.</p>
+    <p class="calc">A day's pay is split into three: morning, afternoon and closing. On Saturdays there's no lunch, so it's two: morning and closing (Saturday closing time). To pay a half day or a full day instead, tap that day under the worker's name on Payday. Lateness is measured from the start time to when you tapped Here in the morning, and the deduction is minutes late ÷ ${paidMinutes()/60} working hours (start to closing, less lunch) × day rate. Overtime is paid per hour after closing time. The steel machines are ticked Used at the bottom of Today on the days they work; each day costs the rate set when it was ticked. Curing: the person curing is paid the curing rate once for each day any of their pours is curing, however many pours there are (a Sunday is paid with the next week), less the dry amount each time you find it dry and take the photo; a pour keeps the amounts it started with. Pour checklists are on the Concrete page: a pour booked there, or + New pour on Today, starts with one; tick the checks before the pour, and Poured starts the curing with these amounts.</p>
     <button class="btn primary" data-act="savesettings">Save rates & hours</button></div>`;
   }
-  h += checklistsHtml();
   return h;
 }
 

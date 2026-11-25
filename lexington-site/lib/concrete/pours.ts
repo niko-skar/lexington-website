@@ -2,6 +2,7 @@ import "server-only";
 import { randomBytes } from "node:crypto";
 
 import { readRollcallRecords, saveRollcallRecord } from "@/lib/rollcall/server";
+import { rollcallAccess } from "@/lib/rollcall/shared";
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
 import { POUR_DAY_PREFIX, TRUCK_PREFIX } from "@/lib/site/ids";
 import { ghanaDay } from "@/lib/store/shared";
@@ -11,7 +12,7 @@ import { checkEstimate, checkOrder, dropEstimate, lastOrder, pourEstimates, save
 import { cancelPourOrder, concretePrice, pourOrders, syncPourOrder, type PourForOrder } from "./pourOrder";
 import { UNDO_POURED_DAYS } from "./pourExtras";
 import { pourCubes, pourPhotos } from "./pourFiles";
-import type { PourBooking, PourCheck, PourInfo, Truck } from "./shared";
+import type { PourBooking, PourCheck, PourChecklist, PourInfo, Truck } from "./shared";
 
 // Every pour's checklist ends with the cubes (Niko, 3 Nov 2026: "part of the checklist should include concrete cubes
 // ready to be taken").
@@ -157,12 +158,70 @@ export async function listPours(me?: TodoMe | null): Promise<PourInfo> {
     })),
     photos,
     cubes,
-    checklists: state.checklists.map((c) => ({ id: c.id, name: c.name })),
+    checklists: state.checklists.map(checklistOf),
+    canEditChecklists: canEditChecklists(me),
     curers: curers(state),
     curingDays: state.curing.days,
     orderDefaults,
     ...(office ? { concretePrice: concrete } : {}),
   };
+}
+
+/* ---------- the checklists (Niko, 25 Nov 2026: "put this into the concrete section and out of payroll") ---------- */
+
+// They're still the roll call's own records ("checklists/<id>": { name, n, items: { <key>: { text, n } | null } },
+// a check taken out kept as null, a list deleted kept with deleted: true), written exactly as its page wrote them, so a
+// pour started from one on the roll call's + New pour gets the same list.
+
+const CHECKLIST_ID_RE = /^[A-Za-z0-9_.-]{1,60}$/;
+const MAX_CHECKS = 60;
+
+const itemsInOrder = (items: Record<string, Item>) =>
+  Object.entries(items)
+    .filter((e): e is [string, NonNullable<Item>] => !!e[1] && !!e[1].text)
+    .sort((a, b) => (Number(a[1].n) || 0) - (Number(b[1].n) || 0));
+
+const checklistOf = (c: State["checklists"][number]): PourChecklist => ({ id: c.id, name: c.name, checks: itemsInOrder(c.items).map(([key, x]) => ({ key, text: String(x.text) })) });
+
+/** Who changes the checklists: the office, or a login with the roll call's Workers part (who could on the roll call). */
+export const canEditChecklists = (me?: TodoMe | null) => !!me && (me.kind === "admin" || rollcallAccess(me.sections).workers);
+
+const newKey = (prefix: string) => `${prefix}${Date.now().toString(36)}${randomBytes(3).toString("hex")}`;
+
+/** A checklist made or changed as a whole: its name and its checks in order ({ id?, name, checks: [{ key?, text }] }). */
+export async function saveChecklist(me: TodoMe, body: Data): Promise<string> {
+  if (!canEditChecklists(me)) throw new TodoError(403, "Only the office can change the checklists.");
+  const name = cleanText(body.name, 60, "checklist's name");
+  if (!name) throw new TodoError(400, "Give the checklist a name, e.g. Stairs.");
+  const raw = Array.isArray(body.checks) ? (body.checks as unknown[]) : [];
+  if (raw.length > MAX_CHECKS) throw new TodoError(400, `That's too many checks (${MAX_CHECKS} at most).`);
+  const checks = raw
+    .map((c) => (isObj(c) ? { key: typeof c.key === "string" && CHECK_KEY_RE.test(c.key) ? c.key : null, text: cleanText(c.text, 300, "check") } : null))
+    .filter((c): c is { key: string | null; text: string } => !!c && !!c.text);
+  if (!checks.length) throw new TodoError(400, "Add at least one check.");
+  const state = await rollcallState();
+  const isNew = body.id === undefined || body.id === null || body.id === "";
+  const old = isNew ? null : state.checklists.find((c) => c.id === body.id);
+  if (!isNew && !old) throw new TodoError(404, "That checklist isn't there any more.");
+  if (state.checklists.some((c) => c.id !== old?.id && c.name.toLowerCase() === name.toLowerCase())) throw new TodoError(409, `There's a checklist called ${name} already.`);
+  const id = old?.id ?? newKey("cl");
+  if (!CHECKLIST_ID_RE.test(id)) throw new TodoError(400, "That checklist isn't there any more.");
+  // A check keeps its key while it's on the list (only an old one's key is kept); one taken out stays as null.
+  const kept = new Set(old ? Object.keys(old.items) : []);
+  const items: Record<string, Item> = {};
+  checks.forEach((c, i) => (items[c.key && kept.has(c.key) && !items[c.key] ? c.key : newKey("c")] = { text: c.text, n: i + 1 }));
+  if (old) for (const [key] of itemsInOrder(old.items)) if (!(key in items)) items[key] = null;
+  await saveRollcallRecord(me.name, "checklists", id, "set", { name, items, ...(old ? {} : { n: Date.now(), created: new Date().toISOString() }) });
+  return id;
+}
+
+/** A checklist taken off the list (pours booked from it keep their own copy). */
+export async function deleteChecklist(me: TodoMe, id: unknown): Promise<void> {
+  if (!canEditChecklists(me)) throw new TodoError(403, "Only the office can change the checklists.");
+  const state = await rollcallState();
+  const found = typeof id === "string" ? state.checklists.find((c) => c.id === id) : undefined;
+  if (!found) throw new TodoError(404, "That checklist isn't there any more.");
+  await saveRollcallRecord(me.name, "checklists", found.id, "update", { deleted: true });
 }
 
 /** The m³ of a booking as order lines: its estimate's parts when they add up to what's ordered, else the whole as one. */

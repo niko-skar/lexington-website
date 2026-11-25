@@ -1,13 +1,15 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState, useSyncExternalStore } from "react";
 
 import { estimate, ESTIMATE_KINDS, KIND_NAMES, type EstimateInput, type PourOrder } from "@/lib/concrete/estimate";
-import { addDays, dayWords as pourDayWords, UNDO_POURED_DAYS, type PourCubes, type PourPhoto } from "@/lib/concrete/pourExtras";
-import { type ConcreteData, type PourBooking, type PourInfo, type Truck } from "@/lib/concrete/shared";
+import { addDays, dayWords as pourDayWords, isDue, UNDO_POURED_DAYS, type PourCubes, type PourPhoto } from "@/lib/concrete/pourExtras";
+import { cubic, delivered, shortDate, type ConcreteData, type PourBooking, type PourDay, type PourInfo, type Truck } from "@/lib/concrete/shared";
 import { ghanaDay } from "@/lib/store/shared";
 import type { TodoMe } from "@/lib/todo/shared";
 import { errorText, send, when } from "./api";
+import cx from "./Concrete.module.css";
+import { DayLine, plural, TruckList, trucksWords } from "./ConcreteTrucks";
 import es from "./Estimate.module.css";
 import { cubesLine, PourCubesCard } from "./PourCubes";
 import { EstimatePanel, estimateToSend, PourOrderSheet, startEstimate, useEstimateFloors } from "./PourEstimate";
@@ -15,91 +17,214 @@ import { PourPhotos } from "./PourPhotos";
 import ps from "./Pours.module.css";
 import styles from "./Todo.module.css";
 
-// Pours booked on the concrete page (lib/concrete/pours.ts says what and why): each booked for a day with what's
-// poured, the mix and m³ ordered, a checklist (a copy of one of the roll call's) and who cures it. Its checks are
-// ticked here or on the roll call; the first waybill on its day marks it poured and starts its curing. Each has its
-// pre-pour photos (PourPhotos.tsx); once poured, its concrete cubes' tests (PourCubes.tsx).
+// A pour on the concrete page, all in one card (Niko, 25 Nov 2026: "concrete is disjointed, one pour is on top and then
+// the photos of the waybills for the truck is at the bottom. put them together and make it easy to fold or hide all
+// the information about that pour"). Booked (lib/concrete/pours.ts): what's poured, the order, its checklist and its
+// pre-pour photos (PourPhotos.tsx); the first waybill on its day marks it poured. Poured: its trucks with their
+// waybills, its curing, its concrete cubes' tests (PourCubes.tsx), how the checks stood and its photos. The title folds
+// it to a line; the card keeps it folded or open on this phone until tapped again.
 
 const ordered = (b: PourBooking) => [b.mix, b.volume ? `${b.volume} m³` : ""].filter(Boolean).join(", ");
 const money = (n: number) => `GH₵ ${n.toLocaleString("en-GB", { maximumFractionDigits: 2 })}`;
 const PO_STAGE: Record<string, string> = { planned: "to order", ordered: "ordered", closed: "closed", cancelled: "cancelled" };
 /** "PO-0012 · GH₵ 25,721 · to order" (the office's). */
 const poWords = (po: NonNullable<PourBooking["po"]>) => `Purchase order ${po.number} · ${money(po.amount)} · ${PO_STAGE[po.status] ?? po.status}`;
+const m3 = (v: number) => v.toLocaleString("en-GB", { maximumFractionDigits: 1 });
 
-/** What the day's bookings came to, under the day's heading: poured and curing, or still waiting. */
-export function pourStatus(b: PourBooking): string {
-  if (b.phase === "poured" && b.poured) {
-    const last = b.curingDays ? addDays(b.poured, b.curingDays - 1) : null;
-    return `${b.what}: poured, curing${b.curingDays ? ` ${b.curingDays} days, to ${pourDayWords(last!)}` : ""}${b.curer ? ` (${b.curer.name})` : ""}`;
+/* ---------- which cards are folded, kept on this phone ---------- */
+
+const FOLDS = "lexington-concrete-open";
+const KEEP_FOLDS = 80;
+let folds: string | null = null;
+const foldWatchers = new Set<() => void>();
+const readFolds = () => {
+  if (folds === null) {
+    try {
+      folds = localStorage.getItem(FOLDS) ?? "{}";
+    } catch {
+      folds = "{}";
+    }
   }
-  const done = b.checks.filter((c) => c.ok).length;
-  return `${b.what}: booked${b.checks.length ? `, ${done} of ${b.checks.length} checks` : ""}; its first truck marks it poured`;
+  return folds;
+};
+const watchFolds = (fn: () => void) => {
+  foldWatchers.add(fn);
+  return () => {
+    foldWatchers.delete(fn);
+  };
+};
+
+/** Each card's open or folded, as last tapped on this phone (a card never tapped opens as it should by itself). */
+export function useFolds(): [Record<string, boolean>, (key: string, open: boolean) => void] {
+  const raw = useSyncExternalStore(watchFolds, readFolds, () => "{}");
+  const map = useMemo<Record<string, boolean>>(() => {
+    try {
+      return JSON.parse(raw) as Record<string, boolean>;
+    } catch {
+      return {};
+    }
+  }, [raw]);
+  const setFold = useCallback((key: string, open: boolean) => {
+    let now: Record<string, boolean> = {};
+    try {
+      now = JSON.parse(readFolds()) as Record<string, boolean>;
+    } catch {
+      now = {};
+    }
+    delete now[key];
+    now[key] = open;
+    folds = JSON.stringify(Object.fromEntries(Object.entries(now).slice(-KEEP_FOLDS)));
+    try {
+      localStorage.setItem(FOLDS, folds);
+    } catch {
+      // A private window: it's kept while the page is open.
+    }
+    foldWatchers.forEach((fn) => fn());
+  }, []);
+  return [map, setFold];
 }
 
-/** The pours booked and not poured yet, soonest first, each with its checklist. */
-export function BookedPours({
-  info,
+/**
+ * A card that hasn't been tapped: a pour booked is open (its checklist is ticked in the days before it); a poured one
+ * while it matters now (poured today or yesterday, a cube test due or late).
+ */
+export function opensByItself(b: PourBooking, cubes: PourCubes | undefined, today = ghanaDay()): boolean {
+  if (b.phase === "check") return true;
+  return (b.poured ?? "") >= addDays(today, -1) || !!cubes?.tests.some((t) => isDue(t, today));
+}
+
+/* ---------- a pour's card ---------- */
+
+/** While it cures: "curing to Mon 30 Nov" (once it's cured, nothing). */
+function curingWords(b: PourBooking, today: string): string {
+  if (!b.poured || !b.curingDays) return "";
+  const last = addDays(b.poured, b.curingDays - 1);
+  return last >= today ? `curing to ${pourDayWords(last)}` : "";
+}
+
+export function PourCard({
+  booking: b,
+  trucks,
+  all,
+  day,
+  cubes,
+  photos,
   me,
+  orderDefaults,
+  fold,
+  onFold,
   onData,
   onToast,
+  onChange,
   onOrder,
+  onTruck,
 }: {
-  info: PourInfo;
+  booking: PourBooking;
+  /** The trucks that brought it, in the order they came. */
+  trucks: Truck[];
+  /** Every truck on the page (a truck's checks compare it with the others). */
+  all: Truck[];
+  /** Its day's record: the mix ordered, for the trucks' checks. */
+  day: PourDay | null;
+  cubes: PourCubes;
+  photos: PourPhoto[];
   me: TodoMe;
+  orderDefaults: Partial<PourOrder> | null | undefined;
+  /** Open or folded as last tapped on this phone; never tapped: as it opened by itself. */
+  fold: boolean | undefined;
+  onFold: (open: boolean) => void;
   onData: (data: ConcreteData) => void;
   onToast: (text: string, error?: boolean) => void;
+  onChange: () => void;
   /** Opens a purchase order in Finance (the office). */
   onOrder?: (orderId: string) => void;
+  onTruck: (id: string) => void;
 }) {
-  const [sheet, setSheet] = useState<{ booking: PourBooking | null } | null>(null);
-  const coming = info.pours.filter((b) => b.phase === "check");
+  // Whether it opens by itself is settled when the card first shows: a cube result typed in, or the day turning over,
+  // never folds it while it's being worked on.
+  const [auto] = useState(() => opensByItself(b, cubes));
+  const open = fold ?? auto;
+  const today = ghanaDay();
+  const booked = b.phase !== "poured" || !b.poured;
+  const count = photos.filter((p) => p.pourId === b.id).length;
+  const done = b.checks.filter((c) => c.ok).length;
+  // Its cubes in a line ("7 days 31.2 MPa ✓ · 14 days due Fri 7 Nov"), red while a test is due or late.
+  const cube = booked ? null : { text: cubesLine(cubes, today), late: cubes.tests.some((t) => isDue(t, today)) };
+  const words = pourDayWords(booked ? b.day : b.poured!);
+  const label = booked
+    ? `${words}${b.day < today ? " · not marked poured" : ""}`
+    : `Poured ${words === "Today" || words === "Yesterday" ? words.toLowerCase() : words}`;
+  const summary = booked
+    ? [
+        ordered(b) ? `Ordered ${ordered(b)}` : "",
+        b.checks.length ? `${done} of ${b.checks.length} checked` : "",
+        count ? plural(count, "photo") : "",
+        b.order?.sentAt ? "order sent" : "",
+      ]
+    : [trucks.length ? trucksWords(trucks) : "poured by hand", curingWords(b, today)];
+  const after = !booked && count ? plural(count, "photo") : "";
   return (
-    <section className={styles.group} aria-label="Pours booked">
-      <h2 className={styles.groupTitle}>
-        Pours booked <span>{coming.length || ""}</span>
-      </h2>
-      {coming.map((b) => (
-        <PourCard
-          key={b.id}
-          booking={b}
-          photos={info.photos ?? []}
-          me={me}
-          orderDefaults={info.orderDefaults}
-          onData={onData}
-          onToast={onToast}
-          onChange={() => setSheet({ booking: b })}
-          onOrder={onOrder}
-        />
-      ))}
-      <button type="button" className={ps.book} onClick={() => setSheet({ booking: null })}>
-        + Book a pour
+    <article className={`${ps.card} ${booked ? "" : ps.cardPoured}`} aria-label={`${booked ? "Pour" : "Poured"}: ${b.what}`}>
+      <div className={ps.top}>
+        <span className={booked ? ps.day : ps.dayPoured}>{label}</span>
+        {booked && (
+          <button type="button" className={ps.link} onClick={onChange}>
+            Change
+          </button>
+        )}
+      </div>
+      <button type="button" className={ps.fold} aria-expanded={open} onClick={() => onFold(!open)}>
+        <span className={ps.foldText}>
+          <span className={ps.what}>{b.what}</span>
+          <span className={ps.sum}>
+            {summary.filter(Boolean).join(" · ")}
+            {cube ? (
+              <>
+                {" · "}
+                <span className={cube.late ? ps.sumLate : undefined}>{cube.text}</span>
+              </>
+            ) : null}
+            {after ? ` · ${after}` : ""}
+          </span>
+        </span>
+        <span className={ps.chev}>{open ? "Fold" : "Open"}</span>
       </button>
-      {!coming.length && <p className={ps.hint}>Book each pour before its day: its checklist goes with it, and the first waybill that day marks it poured and starts its curing.</p>}
-      {sheet && (
-        <BookSheet
-          info={info}
-          office={me.kind === "admin"}
-          booking={sheet.booking}
-          onClose={() => setSheet(null)}
-          onSaved={(data, text) => {
-            onData(data);
-            setSheet(null);
-            onToast(text);
-          }}
-        />
-      )}
-    </section>
+      {open &&
+        (booked ? (
+          <BookedBody booking={b} photos={photos} me={me} orderDefaults={orderDefaults} onData={onData} onToast={onToast} onOrder={onOrder} />
+        ) : (
+          <PouredBody booking={b} trucks={trucks} all={all} day={day} cubes={cubes} photos={photos} me={me} onData={onData} onToast={onToast} onOrder={onOrder} onTruck={onTruck} />
+        ))}
+    </article>
   );
 }
 
-function PourCard({
+/** What was ordered and worked out, the purchase order, the order sent (both kinds of card). */
+function OrderLines({ booking: b, onOrder }: { booking: PourBooking; onOrder?: (orderId: string) => void }) {
+  return (
+    <>
+      <p className={ps.line}>{[ordered(b) ? `Ordered ${ordered(b)}` : "Nothing ordered yet", b.curer ? `cured by ${b.curer.name}` : ""].filter(Boolean).join(" · ")}</p>
+      {b.estimate && <p className={es.worked}>Worked out: {b.estimate.result.parts.map((p) => `${p.label} ${m3(p.m3)} m³`).join(" + ")}</p>}
+      {b.po &&
+        (onOrder ? (
+          <button type="button" className={es.poLink} onClick={() => onOrder(b.po!.id)}>
+            {poWords(b.po)}
+          </button>
+        ) : (
+          <p className={es.worked}>{poWords(b.po)}</p>
+        ))}
+      {b.order?.sentAt && <p className={es.sent}>Order sent to {b.order.supplier || "the concrete company"} {when(b.order.sentAt)}</p>}
+    </>
+  );
+}
+
+function BookedBody({
   booking: b,
   photos,
   me,
   orderDefaults,
   onData,
   onToast,
-  onChange,
   onOrder,
 }: {
   booking: PourBooking;
@@ -108,7 +233,6 @@ function PourCard({
   orderDefaults: Partial<PourOrder> | null | undefined;
   onData: (data: ConcreteData) => void;
   onToast: (text: string, error?: boolean) => void;
-  onChange: () => void;
   onOrder?: (orderId: string) => void;
 }) {
   // A tick shows at once; the website catches up (and a failure puts it back).
@@ -149,37 +273,14 @@ function PourCard({
   };
 
   return (
-    <article className={ps.card} aria-label={`Pour: ${b.what}`}>
-      <div className={ps.top}>
-        <span className={ps.day}>{pourDayWords(b.day)}</span>
-        <button type="button" className={ps.link} onClick={onChange}>
-          Change
-        </button>
-      </div>
-      <p className={ps.what}>{b.what}</p>
-      <p className={ps.line}>
-        {[ordered(b) ? `Ordered ${ordered(b)}` : "", b.curer ? `cured by ${b.curer.name}` : ""].filter(Boolean).join(" · ")}
-      </p>
-      {b.estimate && (
-        <p className={es.worked}>
-          Worked out: {b.estimate.result.parts.map((p) => `${p.label} ${p.m3.toLocaleString("en-GB", { maximumFractionDigits: 1 })} m³`).join(" + ")}
-        </p>
-      )}
-      {b.po &&
-        (onOrder ? (
-          <button type="button" className={es.poLink} onClick={() => onOrder(b.po!.id)}>
-            {poWords(b.po)}
-          </button>
-        ) : (
-          <p className={es.worked}>{poWords(b.po)}</p>
-        ))}
-      {b.order?.sentAt && <p className={es.sent}>Order sent to {b.order.supplier || "the concrete company"} {when(b.order.sentAt)}</p>}
+    <>
+      <OrderLines booking={b} onOrder={onOrder} />
       <button type="button" className={es.orderButton} onClick={() => setOrdering(true)}>
         {b.order?.sentAt ? "Order on WhatsApp again" : "Order on WhatsApp"}
       </button>
       {ordering && <PourOrderSheet booking={b} defaults={orderDefaults} onClose={() => setOrdering(false)} onData={onData} onToast={onToast} />}
       {checks.length > 0 && (
-        <>
+        <div className={ps.part}>
           <p className={ps.progress}>
             {b.checklist ?? "Checklist"}: {checks.length - left} of {checks.length} checked
           </p>
@@ -195,85 +296,56 @@ function PourCard({
               </li>
             ))}
           </ul>
-        </>
+        </div>
       )}
       <PourPhotos pourId={b.id} photos={photos} me={me} onData={onData} onToast={onToast} />
+      <div className={ps.part}>
+        <p className={ps.progress}>Trucks</p>
+        <p className={ps.line}>
+          {b.day === ghanaDay()
+            ? "None yet. When one arrives, tap Truck arrived at the top and photo its waybill: the first one marks this pour poured and starts its curing."
+            : `The first waybill on ${pourDayWords(b.day).toLowerCase() === "tomorrow" ? "tomorrow" : shortDate(b.day)} marks this pour poured and starts its curing.`}
+        </p>
+      </div>
       <button type="button" className={left ? ps.pouredLeft : ps.poured} onClick={() => void poured()} disabled={busy}>
         {busy ? "Saving…" : !left ? "Poured: start curing" : armed ? `Tap again: poured with ${left} not checked` : `Poured by hand (${left} not checked yet)`}
       </button>
-    </article>
+    </>
   );
 }
 
-const noCubes = (pourId: string): PourCubes => ({ pourId, taken: null, takenAt: null, target: 35, tests: [] });
-
-/**
- * The pours poured these last weeks, newest first: their cubes' tests (due 7, 14 and 28 days after) and their pre-pour
- * photos. A pour with a test due, or poured in the last three days, opens by itself; the others fold to one line.
- * `trucks` are the page's: a pour one of them brought was poured by its waybill, not by a tap.
- */
-export function PouredPours({
-  info,
-  trucks,
-  me,
-  onData,
-  onToast,
-}: {
-  info: PourInfo;
-  trucks: Truck[];
-  me: TodoMe;
-  onData: (data: ConcreteData) => void;
-  onToast: (text: string, error?: boolean) => void;
-}) {
-  const poured = info.pours.filter((b) => b.phase === "poured" && b.poured).sort((a, b) => (b.poured ?? "").localeCompare(a.poured ?? "") || a.what.localeCompare(b.what));
-  if (!poured.length) return null;
-  return (
-    <section className={styles.group} aria-label="Poured">
-      <h2 className={styles.groupTitle}>
-        Poured <span>cubes and photos</span>
-      </h2>
-      {poured.map((b) => (
-        <PouredCard
-          key={b.id}
-          booking={b}
-          cubes={info.cubes?.find((c) => c.pourId === b.id) ?? noCubes(b.id)}
-          photos={info.photos ?? []}
-          byTruck={trucks.some((t) => t.pourId === b.id)}
-          me={me}
-          onData={onData}
-          onToast={onToast}
-        />
-      ))}
-    </section>
-  );
-}
-
-function PouredCard({
+function PouredBody({
   booking: b,
+  trucks,
+  all,
+  day,
   cubes,
   photos,
-  byTruck,
   me,
   onData,
   onToast,
+  onOrder,
+  onTruck,
 }: {
   booking: PourBooking;
+  trucks: Truck[];
+  all: Truck[];
+  day: PourDay | null;
   cubes: PourCubes;
   photos: PourPhoto[];
-  /** A truck's waybill marked it poured (deleting that truck is what puts it back). */
-  byTruck: boolean;
   me: TodoMe;
   onData: (data: ConcreteData) => void;
   onToast: (text: string, error?: boolean) => void;
+  onOrder?: (orderId: string) => void;
+  onTruck: (id: string) => void;
 }) {
   const today = ghanaDay();
-  const due = cubes.tests.some((t) => t.average === null && t.due && t.due <= today) || (b.poured ?? "") >= addDays(today, -3);
-  const [open, setOpen] = useState(due);
-  const count = photos.filter((p) => p.pourId === b.id).length;
-  const words = pourDayWords(b.poured!);
+  const [showChecks, setShowChecks] = useState(false);
+  const done = b.checks.filter((c) => c.ok).length;
+  const last = b.curingDays ? addDays(b.poured!, b.curingDays - 1) : null;
   // "Poured" tapped by mistake (Niko, 16 Nov 2026): back to booked, while nothing says it really was poured (no
   // truck, no cubes) and it's within three days (lib/concrete/pours.ts pourUndone checks the same).
-  const canUndo = !byTruck && !(cubes.taken ?? 0) && !cubes.tests.some((t) => t.average !== null || t.form) && (b.poured ?? "") >= addDays(today, -UNDO_POURED_DAYS);
+  const canUndo = !trucks.length && !(cubes.taken ?? 0) && !cubes.tests.some((t) => t.average !== null || t.form) && (b.poured ?? "") >= addDays(today, -UNDO_POURED_DAYS);
   const [armed, setArmed] = useState(false);
   const [busy, setBusy] = useState(false);
   const undo = async () => {
@@ -290,38 +362,156 @@ function PouredCard({
     }
   };
   return (
-    <article className={`${ps.card} ${ps.cardPoured}`} aria-label={`Poured: ${b.what}`}>
-      <div className={ps.top}>
-        <span className={ps.dayPoured}>Poured {words === "Today" || words === "Yesterday" ? words.toLowerCase() : words}</span>
-        <button type="button" className={ps.link} onClick={() => setOpen(!open)} aria-expanded={open}>
-          {open ? "Fold" : "Open"}
-        </button>
+    <>
+      <div className={ps.part}>
+        <p className={ps.progress}>Trucks</p>
+        {trucks.length ? (
+          <TruckList trucks={trucks} all={all} day={day} ordered={b.volume} worked={b.estimate?.result.m3 ?? null} going={b.poured === today} onOpen={onTruck} />
+        ) : (
+          <p className={ps.line}>Marked poured by hand: no waybills here.</p>
+        )}
       </div>
-      <p className={ps.what}>{b.what}</p>
-      {open ? (
-        <>
-          <PourCubesCard pour={b} cubes={cubes} onData={onData} onToast={onToast} />
-          <PourPhotos pourId={b.id} photos={photos} me={me} onData={onData} onToast={onToast} />
-          {canUndo && (
-            <button type="button" className={armed ? `${ps.pouredLeft} ${styles.dangerArmed}` : ps.pouredLeft} onClick={() => void undo()} disabled={busy}>
-              {busy ? "Saving…" : armed ? "Tap again: not poured, back to booked" : "Not poured? Undo"}
-            </button>
-          )}
-        </>
-      ) : (
+      {last && (
         <p className={ps.line}>
-          {cubesLine(cubes, today)}
-          {count ? ` · ${count} ${count === 1 ? "photo" : "photos"}` : ""}
+          {last >= today ? `Curing ${b.curingDays} days, to ${pourDayWords(last)}` : `Cured ${b.curingDays} days, to ${pourDayWords(last)}`}
+          {b.curer ? ` (${b.curer.name})` : ""}
         </p>
+      )}
+      <PourCubesCard pour={b} cubes={cubes} onData={onData} onToast={onToast} />
+      {b.checks.length > 0 && (
+        <div className={ps.part}>
+          <div className={ps.top}>
+            <p className={ps.progress}>
+              {b.checklist ?? "Checklist"}: {done} of {b.checks.length} checked{done === b.checks.length ? " ✓" : ""}
+            </p>
+            <button type="button" className={ps.link} onClick={() => setShowChecks(!showChecks)} aria-expanded={showChecks}>
+              {showChecks ? "Hide" : "Show"}
+            </button>
+          </div>
+          {showChecks && (
+            <ul className={ps.checks}>
+              {b.checks.map((c) => (
+                <li key={c.key} className={c.ok ? ps.checkOn : ps.check}>
+                  <span className={ps.box} aria-hidden="true">
+                    {c.ok ? "✓" : "–"}
+                  </span>
+                  <span>
+                    {c.text}
+                    <small className={ps.checkWhen}>{c.ok ? (c.at ? `Checked ${when(c.at)}` : "Checked") : "Not checked"}</small>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+      <PourPhotos pourId={b.id} photos={photos} me={me} onData={onData} onToast={onToast} />
+      {(b.volume || b.estimate || b.po || b.order?.sentAt) && (
+        <div className={ps.part}>
+          <p className={ps.progress}>The order</p>
+          <OrderLines booking={b} onOrder={onOrder} />
+        </div>
+      )}
+      {canUndo && (
+        <button type="button" className={armed ? `${ps.pouredLeft} ${styles.dangerArmed}` : ps.pouredLeft} onClick={() => void undo()} disabled={busy}>
+          {busy ? "Saving…" : armed ? "Tap again: not poured, back to booked" : "Not poured? Undo"}
+        </button>
+      )}
+    </>
+  );
+}
+
+/* ---------- a day's trucks with no pour to go with ---------- */
+
+/**
+ * Trucks no listed pour has: on a day with nothing booked (or before pours were booked here), or two pours booked that
+ * day and nobody has said which one a truck brought yet.
+ */
+export function DayCard({
+  day,
+  trucks,
+  all,
+  record,
+  booked,
+  fold,
+  onFold,
+  onTruck,
+  onDay,
+}: {
+  day: string;
+  trucks: Truck[];
+  all: Truck[];
+  record: PourDay | null;
+  /** Pours booked that day: two or more, and the trucks wait to be told which one they brought. */
+  booked: number;
+  /** Open or folded as last tapped on this phone; never tapped: open on its own day. */
+  fold: boolean | undefined;
+  onFold: (open: boolean) => void;
+  onTruck: (id: string) => void;
+  onDay: () => void;
+}) {
+  const [auto] = useState(() => day === ghanaDay());
+  const open = fold ?? auto;
+  const today = ghanaDay();
+  const words = pourDayWords(day);
+  return (
+    <article className={`${ps.card} ${ps.cardDay}`} aria-label={`Trucks: ${shortDate(day)}`}>
+      <div className={ps.top}>
+        <span className={ps.dayMuted}>{words}</span>
+      </div>
+      <button type="button" className={ps.fold} aria-expanded={open} onClick={() => onFold(!open)}>
+        <span className={ps.foldText}>
+          <span className={ps.what}>{record?.pour || "Concrete trucks"}</span>
+          <span className={ps.sum}>
+            {trucksWords(trucks)}
+            {booked > 1 ? " · which pour?" : ""}
+          </span>
+        </span>
+        <span className={ps.chev}>{open ? "Fold" : "Open"}</span>
+      </button>
+      {open && (
+        <>
+          {booked > 1 ? (
+            <p className={cx.flagCheck}>{booked} pours are booked that day: tap each truck to say which one it brought.</p>
+          ) : (
+            <DayLine pour={record} trucks={trucks} onEdit={onDay} />
+          )}
+          {/* The day's line says what came of what was ordered: the list doesn't say it again. */}
+          <TruckList trucks={trucks} all={all} day={record} ordered={booked > 1 ? (record?.volume ?? null) : null} worked={null} going={day === today} onOpen={onTruck} />
+        </>
       )}
     </article>
   );
 }
 
-function BookSheet({
+/* ---------- booking a pour ---------- */
+
+/**
+ * The last pour that was worked out and came in by truck: what the drawings said against what came (24 Nov 2026: the
+ * 3rd floor slab worked out at 59.5 m³ and took about 70), said where the next one is worked out.
+ */
+export function lastPourWords(pours: readonly PourBooking[], byPour: ReadonlyMap<string, Truck[]>): string | null {
+  const today = ghanaDay();
+  const done = pours
+    .filter((b) => b.phase === "poured" && b.poured && b.poured < today && (b.estimate?.result.m3 ?? 0) > 0 && (byPour.get(b.id)?.length ?? 0) > 0)
+    .sort((a, b) => (b.poured ?? "").localeCompare(a.poured ?? ""));
+  for (const b of done) {
+    const got = delivered(byPour.get(b.id)!);
+    const came = got.missing && got.usual !== null ? got.likely : got.known;
+    if (!(came > 0)) continue;
+    const worked = b.estimate!.result.m3;
+    const pct = Math.round((came / worked - 1) * 100);
+    const how = Math.abs(pct) < 3 ? "about what it worked out at" : `${Math.abs(pct)}% ${pct > 0 ? "more" : "less"}`;
+    return `Last pour, ${b.what} on ${shortDate(b.poured!)}: worked out at ${m3(worked)} m³, ${got.missing ? "about " : ""}${cubic(came)} m³ came (${how}).`;
+  }
+  return null;
+}
+
+export function BookSheet({
   info,
   office,
   booking,
+  lastPour,
   onClose,
   onSaved,
 }: {
@@ -329,6 +519,8 @@ function BookSheet({
   /** The office: the price of a m³ for the pour's purchase order. */
   office: boolean;
   booking: PourBooking | null;
+  /** What the last pour worked out at against what came (lastPourWords). */
+  lastPour: string | null;
   onClose: () => void;
   onSaved: (data: ConcreteData, text: string) => void;
 }) {
@@ -424,7 +616,7 @@ function BookSheet({
             </button>
           ))}
         </div>
-        {est && <EstimatePanel floors={floors} error={floorsError} value={est} onChange={setEst} result={result} disabled={saving} />}
+        {est && <EstimatePanel floors={floors} error={floorsError} value={est} onChange={setEst} result={result} disabled={saving} lastPour={lastPour} />}
         {!booking && (
           <>
             <span className={styles.label}>Checklist before the pour</span>
