@@ -15,6 +15,7 @@ import {
   MIN_DAILY,
   WHATSAPP_TEST,
   dayIn,
+  isFollowUp,
   metaMinimumFrom,
   midnightDecisions,
   monthStart,
@@ -306,7 +307,8 @@ async function gatherMeta(config: MetaConfig, nowMs: number, startFor: (today: s
     const budget = budgetOf(row, end);
     if (budget === null) return;
     const s = stats.get(row.id) ?? { spend: 0, leads: 0 };
-    const group = waSets.has(row.id) || waCampaigns.has(row.id) ? "whatsapp" : "form";
+    // The name holds the campaign's name for both levels: a follow-up campaign keeps its fixed budget (isFollowUp).
+    const group = isFollowUp(name) ? "followup" : waSets.has(row.id) || waCampaigns.has(row.id) ? "whatsapp" : "form";
     // Only a daily budget has today's spend as its floor (a lifetime budget is written as a new total).
     const today$ = num(row.daily_budget) > 0 ? Math.round((spentToday.get(row.id) ?? 0) * 100) / 100 : undefined;
     holders.push({

@@ -42,9 +42,10 @@ export interface Holder {
   last14: { spend: number; leads: number };
   /**
    * "whatsapp": a WhatsApp campaign (its ads open the buyers' form that ends with a WhatsApp button; until 13 Nov they
-   * opened the chat straight away). Otherwise the lead forms. Either way the results are form entries that aren't cold.
+   * opened the chat straight away). "followup": a follow-up campaign for people who have been on the website (see
+   * isFollowUp): its budget is fixed. Otherwise the lead forms. The results are form entries that aren't cold.
    */
-  group?: "whatsapp" | "form";
+  group?: "whatsapp" | "form" | "followup";
   /**
    * Meta, daily budgets only: what it has spent so far in the ad account's day. Meta won't take a daily budget below
    * that (see `lowestToday`), and the US and Canada adverts spend most of their day before the 6:00 GMT run (the
@@ -74,6 +75,17 @@ export function whatsappCampaignIds(
     ...adsets.filter((a) => a.destination_type === "WHATSAPP").map((a) => a.campaign_id ?? ""),
     ...campaigns.filter((c) => /whatsapp/i.test(c.name ?? "")).map((c) => c.id),
   ]);
+}
+
+/**
+ * A follow-up campaign: ads shown again to people who have been on the website, inviting them to book a visit (Niko,
+ * 25 Nov 2026, step 3 of aiming the advertising at the website and WhatsApp instead of the Facebook forms). They bring
+ * visits, not form entries, so results can't judge them: the autopilot leaves their budget as it is, never pauses them
+ * for results, and gives the other campaigns what is left of the day (their spend counts in the month all the same).
+ * The ads manager leaves their ads alone. Named "LEX follow-up · ...".
+ */
+export function isFollowUp(name: string | undefined): boolean {
+  return /follow[\s-]?up/i.test(name ?? "");
 }
 
 export interface PilotInput {
@@ -372,8 +384,16 @@ export function planPilot(input: PilotInput): PilotPlan {
   const mayRaise = (id: string) => !input.lastChanged[id] || daysBetween(input.lastChanged[id], input.today) >= RAISE_AFTER_DAYS;
 
   for (const channel of ["meta", "google"] as const) {
-    const holders = running(channel);
-    const channelDaily = allowance[channel];
+    // The follow-up campaigns keep their own fixed budget; the others share what is left of the channel's day.
+    const fixed = running(channel).filter((h) => h.group === "followup");
+    const holders = running(channel).filter((h) => h.group !== "followup");
+    const fixedDaily = cents(fixed.reduce((s, h) => s + h.dailyBudget, 0));
+    if (fixed.length) {
+      notes.push(
+        `${usd(fixedDaily)} a day goes to the follow-up ads for people who have been on the website (a fixed amount); the other ${CHANNEL_NAMES[channel]} adverts share the rest of its ${usd(allowance[channel])}.`
+      );
+    }
+    const channelDaily = Math.max(0, Math.floor((allowance[channel] - fixedDaily) * 100) / 100);
 
     if (!input.canSpend[channel]) {
       // Google paused for a payment, say: hold its campaigns at the minimum, so a restart can't
@@ -398,7 +418,7 @@ export function planPilot(input: PilotInput): PilotPlan {
       continue;
     }
     if (!holders.length) {
-      notes.push(`No ${CHANNEL_NAMES[channel]} adverts are running, so its share of the budget (${usd(channelDaily)} a day) isn't being used.`);
+      if (channelDaily >= 0.01) notes.push(`No ${fixed.length ? "other " : ""}${CHANNEL_NAMES[channel]} adverts are running, so ${fixed.length ? "the rest of " : ""}its share of the budget (${usd(channelDaily)} a day) isn't being used.`);
       continue;
     }
 

@@ -31,7 +31,7 @@ import {
   type NewAd,
 } from "./adsManagerCore";
 import { pilotSettings, readPilotSwitch, realShares } from "./adsPilot";
-import { dayIn, whatsappCampaignIds, type Holder } from "./adsPilotCore";
+import { dayIn, isFollowUp, whatsappCampaignIds, type Holder } from "./adsPilotCore";
 import { factCheck } from "./factcheck";
 import { loadFactPack } from "./facts";
 import { allowedAmounts, factPackText, soldOutWords, type FactPack } from "./factsCore";
@@ -226,6 +226,15 @@ async function readAccount(config: MetaConfig, nowMs: number): Promise<Account> 
   ]);
 
   const GONE = new Set(["DELETED", "ARCHIVED"]);
+  // The follow-up campaigns (adsPilotCore.isFollowUp: ads for people who have been on the website, sending them to book
+  // a visit) are left alone: their ads aren't the manager's, and they bring visits, not form entries.
+  const followUp = new Set((campaigns.data ?? []).filter((c) => isFollowUp(c.name)).map((c) => c.id));
+  const followUpSets = new Set((adsets.data ?? []).filter((s) => followUp.has(s.campaign_id ?? "")).map((s) => s.id));
+  if (adsets.data) adsets.data = adsets.data.filter((s) => !followUpSets.has(s.id));
+  if (ads.data) ads.data = ads.data.filter((a) => !followUpSets.has(a.adset_id ?? ""));
+  if (last14.data) last14.data = last14.data.filter((r) => !followUpSets.has(r.adset_id ?? ""));
+  if (last90.data) last90.data = last90.data.filter((r) => !followUpSets.has(r.adset_id ?? ""));
+  if (campaigns.data) campaigns.data = campaigns.data.filter((c) => !followUp.has(c.id));
   const campaignOn = new Map((campaigns.data ?? []).map((c) => [c.id, c.status === "ACTIVE" && !GONE.has(c.effective_status ?? "")]));
   // The WhatsApp campaigns (adsPilotCore.whatsappCampaignIds): their form ad sets are the buyers' form that ends on
   // WhatsApp (13 Nov 2026), and their ads use that form.
