@@ -695,14 +695,22 @@ def dxf(data, path):
     x1 = max(max(p[0] for p in pts), max(gx.values())) + 3000
     y0 = min(min(p[1] for p in pts), min(gy.values())) - 3000
     y1 = max(max(p[1] for p in pts), max(gy.values())) + 3000
-    for k, v in gx.items():
-        msp.add_line(P(v, y0), P(v, y1), dxfattribs={"layer": "A-GRID", "ltscale": 20})
-        for yy in (y0 - 600, y1 + 600):
+    def staggered(lines):
+        """(id, pos, step): a bubble within 950 mm of the one before steps 1 m further out."""
+        out, last, k = [], None, 0
+        for name, v in sorted(lines.items(), key=lambda kv: kv[1]):
+            k = k + 1 if last is not None and abs(v - last) < 950 and k == 0 else 0
+            out.append((name, v, k))
+            last = v
+        return out
+    for k, v, st in staggered(gx):
+        msp.add_line(P(v, y0 - 1000 * st), P(v, y1 + 1000 * st), dxfattribs={"layer": "A-GRID", "ltscale": 20})
+        for yy in (y0 - 600 - 1000 * st, y1 + 600 + 1000 * st):
             msp.add_circle(P(v, yy), 450, dxfattribs={"layer": "A-GRID-TEXT"})
             msp.add_text(k, height=350, dxfattribs={"layer": "A-GRID-TEXT"}).set_placement(P(v, yy), align=TextEntityAlignment.MIDDLE_CENTER)
-    for k, v in gy.items():
-        msp.add_line(P(x0, v), P(x1, v), dxfattribs={"layer": "A-GRID", "ltscale": 20})
-        for xx in (x0 - 600, x1 + 600):
+    for k, v, st in staggered(gy):
+        msp.add_line(P(x0 - 1000 * st, v), P(x1 + 1000 * st, v), dxfattribs={"layer": "A-GRID", "ltscale": 20})
+        for xx in (x0 - 600 - 1000 * st, x1 + 600 + 1000 * st):
             msp.add_circle(P(xx, v), 450, dxfattribs={"layer": "A-GRID-TEXT"})
             msp.add_text(k, height=350, dxfattribs={"layer": "A-GRID-TEXT"}).set_placement(P(xx, v), align=TextEntityAlignment.MIDDLE_CENTER)
     msp.add_lwpolyline([P(*p) for p in pts], close=True, dxfattribs={"layer": "S-SLAB-EDGE", "const_width": 0})
@@ -736,16 +744,18 @@ def dxf(data, path):
         msp.add_line(P(bx0, by0), P(bx1, by1), dxfattribs={"layer": layer})
         msp.add_line(P(bx0, by1), P(bx1, by0), dxfattribs={"layer": layer})
         msp.add_text(f"{o['name']} {round(bx1 - bx0)}x{round(by1 - by0)}", height=150, dxfattribs={"layer": "A-TEXT"}).set_placement(P(bx1 + 100, by0))
-    # dimensions: grid spacings top and left, each slab edge from its grid line
+    # dimensions: grid spacings top and left, each slab edge from its grid line; mm as drawn (no scale factor),
+    # whole numbers, figures above the line, architectural ticks
     style = "EZDXF"
+    DIMS = {"dimlfac": 1, "dimdec": 0, "dimtad": 1, "dimtsz": 120, "dimexo": 150, "dimexe": 150, "dimgap": 60}
     ytop = min(min(p[1] for p in pts), min(gy.values())) - 1500
     xs = sorted(gx.values())
     for a, b in zip(xs[:-1], xs[1:]):
-        msp.add_linear_dim(base=P(a, ytop), p1=P(a, ytop + 500), p2=P(b, ytop + 500), dimstyle=style, override={"dimtxt": 200, "dimasz": 120}, dxfattribs={"layer": "A-DIMS"}).render()
+        msp.add_linear_dim(base=P(a, ytop), p1=P(a, ytop + 500), p2=P(b, ytop + 500), dimstyle=style, override=dict(DIMS, dimtxt=200), dxfattribs={"layer": "A-DIMS"}).render()
     xl = min(min(p[0] for p in pts), min(gx.values())) - 1500
     ys = sorted(gy.values())
     for a, b in zip(ys[:-1], ys[1:]):
-        msp.add_linear_dim(base=P(xl, a), p1=P(xl + 500, a), p2=P(xl + 500, b), angle=90, dimstyle=style, override={"dimtxt": 200, "dimasz": 120}, dxfattribs={"layer": "A-DIMS"}).render()
+        msp.add_linear_dim(base=P(xl, a), p1=P(xl + 500, a), p2=P(xl + 500, b), angle=90, dimstyle=style, override=dict(DIMS, dimtxt=200), dxfattribs={"layer": "A-DIMS"}).render()
     for e in data["edges"]:
         if not e.get("segment") or not e.get("offset_actual") or abs(e["offset_actual"]) < 1:
             continue
@@ -753,11 +763,11 @@ def dxf(data, path):
         if e["axis"] == "y":
             mx = (ax + bx) / 2
             ref = gy[e["ref"]]
-            msp.add_linear_dim(base=P(mx, ref), p1=P(mx, ref), p2=P(mx, e["actual"]), angle=90, dimstyle=style, override={"dimtxt": 160, "dimasz": 100}, dxfattribs={"layer": "A-DIMS"}).render()
+            msp.add_linear_dim(base=P(mx, ref), p1=P(mx, ref), p2=P(mx, e["actual"]), angle=90, dimstyle=style, override=dict(DIMS, dimtxt=160), dxfattribs={"layer": "A-DIMS"}).render()
         else:
             my = (ay + by) / 2
             ref = gx[e["ref"]]
-            msp.add_linear_dim(base=P(ref, my), p1=P(ref, my), p2=P(e["actual"], my), dimstyle=style, override={"dimtxt": 160, "dimasz": 100}, dxfattribs={"layer": "A-DIMS"}).render()
+            msp.add_linear_dim(base=P(ref, my), p1=P(ref, my), p2=P(e["actual"], my), dimstyle=style, override=dict(DIMS, dimtxt=160), dxfattribs={"layer": "A-DIMS"}).render()
     msp.add_text(f"{data['floor']['name']} slab SSL +{data['floor']['level'] / 1000:.3f}: as-built setting out (from the as-built record, "
                  f"{data.get('exported', '')[:10]}). mm, 1:1. Grid B = x 0, grid {data['grid']['y'][0]['id']} = y 0.", height=300,
                  dxfattribs={"layer": "A-TEXT"}).set_placement(P(x0, y0 - 1500))
