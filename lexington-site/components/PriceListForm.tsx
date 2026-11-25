@@ -4,7 +4,7 @@ import { useActionState, useEffect, useId, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 
 import { requestPriceList, type PriceListFormState } from "@/lib/actions/priceList";
-import { trackLead } from "@/lib/analytics";
+import { trackLead, trackMetaEvent } from "@/lib/analytics";
 import { PRICE_LIST_PATH } from "@/lib/priceList/path";
 import { trackAction } from "@/lib/visits/client";
 import styles from "./PriceListForm.module.css";
@@ -49,6 +49,7 @@ export function PriceListForm({ from, collapsed = false, id }: { from: string; c
   useEffect(() => {
     if (state.status !== "success") return;
     trackLead({ form: "price_list" });
+    trackMetaEvent(state.meta);
     trackAction("enquiry");
     doneRef.current?.querySelector<HTMLElement>("[data-focus]")?.focus({ preventScroll: true });
   }, [state]);

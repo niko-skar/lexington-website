@@ -2,6 +2,8 @@
 
 import { headers } from "next/headers";
 
+import { newMetaEvent, reportToMeta } from "@/lib/meta/conversions";
+import type { MetaWebsiteEvent } from "@/lib/meta/conversionsCore";
 import { allow, connectionKey } from "@/lib/reservation/limit";
 import { SLOT_RE, VISIT_INTERESTS, cleanTimeZone, localTimeLabel, slotLabel, type SlotKey, type VisitKind, type VisitRow } from "@/lib/siteVisits/shared";
 import { bookVisit, cancelVisit, changeVisit, tokenOk } from "@/lib/siteVisits/store";
@@ -16,6 +18,8 @@ export interface VisitFormState {
   /** After "that time has just gone": other free times. */
   alternatives?: SlotKey[];
   booked?: { slot: string; kind: VisitKind; phone: string; localTime: string; firstName: string; manageUrl: string; icsUrl: string; emailed: boolean; email: string };
+  /** The event the website reported to Meta; the browser's pixel sends the same id. */
+  meta?: MetaWebsiteEvent;
 }
 
 // Picking a time and typing a name and a number takes longer than this.
@@ -96,8 +100,12 @@ export async function submitVisit(_prev: VisitFormState, formData: FormData): Pr
     }
     return { status: "error", message: `We couldn't book your ${kind === "video" ? "video tour" : "visit"} just now. Please try again in a minute, or call or WhatsApp us and we'll book it for you.` };
   }
+  // Meta hears about it from the website itself too: a booking is a "Schedule", worth more than a price list.
+  const meta = newMetaEvent("Schedule", kind === "video" ? "Video tour" : "Site visit");
+  await reportToMeta(meta, { email, phone, name, externalId: result.leadId ?? undefined });
   return {
     status: "success",
+    meta,
     message: kind === "video" ? "Your video tour is booked." : "Your visit is booked.",
     booked: {
       slot: result.visit.slot,

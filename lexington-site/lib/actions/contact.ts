@@ -6,6 +6,8 @@ import { Resend } from "resend";
 import { respondToNewLead } from "@/lib/agents/leadReply";
 import { notifyOwner } from "@/lib/alerts/notify";
 import { saveWebsiteLead } from "@/lib/crmIntake";
+import { newMetaEvent, reportToMeta } from "@/lib/meta/conversions";
+import type { MetaWebsiteEvent } from "@/lib/meta/conversionsCore";
 import { confirmationEmail, notificationEmail } from "@/lib/email/templates";
 import { whatsappUrl } from "@/lib/format";
 import { SITE_URL } from "@/lib/seo";
@@ -21,6 +23,8 @@ export interface ContactFormState {
   unit?: string;
   /** What was typed, sent back on an error so the form can keep it. */
   values?: { name: string; email: string; phone: string; unit: string; message: string };
+  /** The event the website reported to Meta; the browser's pixel sends the same id. */
+  meta?: MetaWebsiteEvent;
 }
 
 export async function sendEnquiry(
@@ -141,5 +145,9 @@ export async function sendEnquiry(
   // their answer: it takes a little while and must never hold up the form.
   if (leadId) after(() => respondToNewLead(leadId, { message }));
 
-  return { status: "success", message: "Thanks — we'll be in touch shortly.", unit };
+  // Meta hears about it from the website itself too (lib/meta/conversions.ts); the browser's pixel sends the same id.
+  const meta = newMetaEvent("Lead", "Contact enquiry", unit || undefined);
+  await reportToMeta(meta, { email, phone, name, externalId: leadId ?? undefined });
+
+  return { status: "success", message: "Thanks — we'll be in touch shortly.", unit, meta };
 }

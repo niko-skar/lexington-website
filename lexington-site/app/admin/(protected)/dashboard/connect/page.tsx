@@ -14,6 +14,7 @@ import { chatAgentOn, chatSummary, readChatSwitch } from "@/lib/agents/chat";
 import { pilotConnected, usd } from "@/lib/agents/adsPilotCore";
 import { autoReplyMode } from "@/lib/agents/leadReply";
 import { metaLeadsConfigured, readMetaLeadsState } from "@/lib/agents/metaLeads";
+import { META_PIXEL_ID, capiKey, readMetaCapiState } from "@/lib/meta/conversions";
 import { GOOGLE_SCRIPT_VERSION, googleAdsScript } from "@/lib/ads/google";
 import { readGoogleReport } from "@/lib/ads/googleStore";
 import { LEXINGTON_AD_ACCOUNT, metaConfig } from "@/lib/ads/meta";
@@ -88,7 +89,8 @@ export default async function ConnectPage() {
   const pilotRun = await readPilotRun();
   // Connected = its last run read the accounts and made a plan; a change Meta refused is shown below, not as a lost link.
   const pilotDone = pilotConnected(pilot.mode, pilotRun);
-  const [chats, chatSwitch] = await Promise.all([chatSummary().catch(() => null), readChatSwitch()]);
+  const [chats, chatSwitch, capiState] = await Promise.all([chatSummary().catch(() => null), readChatSwitch(), readMetaCapiState()]);
+  const capi = capiKey();
   const chatReady = Boolean(process.env.META_APP_SECRET && process.env.META_WEBHOOK_VERIFY_TOKEN);
   // Shown even once it is set: the same value goes into Facebook's webhook settings afterwards.
   const verifyToken = process.env.META_WEBHOOK_VERIFY_TOKEN?.trim() || null;
@@ -301,6 +303,47 @@ export default async function ConnectPage() {
             number is already built in.
           </li>
         </ol>
+      </Section>
+
+      <Section title="Meta: what the website tells it" done={Boolean(capiState?.lastOk)}>
+        <p>
+          Every enquiry, price-list request, visit booking and reservation request is reported to Meta by the website
+          itself, so Meta still sees it when the browser blocks its pixel, and can tell a visit booking (
+          <Code>Schedule</Code>) from an enquiry or price list (<Code>Lead</Code>) and a reservation request (
+          <Code>SubmitApplication</Code>). Email addresses and phone numbers go only as codes.
+        </p>
+        <p style={{ marginTop: 8 }}>
+          {capiState?.lastAt
+            ? capiState.lastOk
+              ? `Last one: ${capiState.lastEvent ?? "an event"}, ${formatWhen(capiState.lastAt)} GMT. Meta took it.`
+              : `Last one: ${capiState.lastEvent ?? "an event"}, ${formatWhen(capiState.lastAt)} GMT. Meta said: ${capiState.lastError ?? "no answer"}`
+            : "Nothing reported yet: it starts with the next enquiry or booking on the website."}
+          {capiState?.sent ? ` ${capiState.sent} taken so far.` : ""}
+        </p>
+        <p style={{ marginTop: 8 }}>
+          Key in use: <Code>{capi?.which ?? "none"}</Code>.{" "}
+          {capi?.which === "META_CAPI_TOKEN"
+            ? "The website has its own key, which does not run out."
+            : "Until the website has its own key it borrows the ads key, which runs out. To give it its own:"}
+        </p>
+        {capi?.which !== "META_CAPI_TOKEN" && (
+          <ol className={styles.steplist}>
+            <li>
+              Open <Ext href={`https://business.facebook.com/events_manager2/list/dataset/${META_PIXEL_ID}/settings`}>Events Manager, the dataset&rsquo;s Settings</Ext>{" "}
+              (dataset <Code>{META_PIXEL_ID}</Code>).
+            </li>
+            <li>
+              Under <strong>Conversions API</strong>, press <strong>Generate access token</strong> and copy it.
+            </li>
+            <li>
+              In Vercel, add it as <Code>META_CAPI_TOKEN</Code> and redeploy (see &ldquo;Where the settings go&rdquo;).
+            </li>
+          </ol>
+        )}
+        <p className={styles.hint} style={{ marginTop: 8 }}>
+          To watch one arrive: in Events Manager open <strong>Test events</strong>, copy its code (it starts with TEST), then open{" "}
+          <Code>/api/admin/meta-test?code=</Code> followed by the code. It shows only under Test events and counts for nothing.
+        </p>
       </Section>
 
       <Section title="Ads autopilot and ads manager" done={pilotDone}>

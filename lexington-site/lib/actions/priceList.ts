@@ -10,6 +10,8 @@ import { priceListEmail } from "@/lib/email/templates";
 import { formatUSD, whatsappUrl } from "@/lib/format";
 import { parsePriceListContact } from "@/lib/priceList/contact";
 import { PRICE_LIST_PATH, priceListFileName, type PriceListData } from "@/lib/priceList/data";
+import { newMetaEvent, reportToMeta } from "@/lib/meta/conversions";
+import type { MetaWebsiteEvent } from "@/lib/meta/conversionsCore";
 import { loadPriceList } from "@/lib/priceList/load";
 import { buildPriceListPdf } from "@/lib/priceList/pdf";
 import { allow, connectionKey } from "@/lib/reservation/limit";
@@ -32,6 +34,8 @@ export interface PriceListFormState {
   sentTo?: "email" | "whatsapp" | "email-failed";
   email?: string;
   firstName?: string;
+  /** The event the website reported to Meta; the browser's pixel sends the same id. */
+  meta?: MetaWebsiteEvent;
 }
 
 // A name and one more box take longer than this.
@@ -166,12 +170,17 @@ export async function requestPriceList(_prev: PriceListFormState, formData: Form
     ],
   });
 
+  // 4) Meta hears about it from the website itself too: a Lead, told apart from a visit booking by its name.
+  const meta = newMetaEvent("Lead", "Price list");
+  await reportToMeta(meta, { email, phone, name, externalId: leadId ?? undefined });
+
   return {
     status: "success",
     message: emailed ? "The price list is on its way to your inbox." : "Here is your price list.",
     sentTo: emailed ? "email" : email ? "email-failed" : "whatsapp",
     email,
     firstName: first,
+    meta,
   };
 }
 

@@ -4,7 +4,7 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 
 import { submitVisit, type VisitFormState } from "@/lib/actions/visit";
-import { trackLead } from "@/lib/analytics";
+import { trackLead, trackMetaEvent } from "@/lib/analytics";
 import { VISIT_INTERESTS, cleanTimeZone, dayLabel, localTimeLabel, rangeLabel, slotDay, slotLabel, type SlotKey, type VisitKind } from "@/lib/siteVisits/shared";
 import { trackAction } from "@/lib/visits/client";
 import buttonStyles from "../Button.module.css";
@@ -99,6 +99,7 @@ export function VisitBooker({
   useEffect(() => {
     if (state.status === "success") {
       trackLead({ form: state.booked?.kind === "video" ? "video_tour" : "site_visit" });
+      trackMetaEvent(state.meta);
       trackAction("enquiry");
       doneRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
       doneRef.current?.querySelector("h2")?.focus({ preventScroll: true });

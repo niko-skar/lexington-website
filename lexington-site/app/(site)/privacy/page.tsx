@@ -109,7 +109,10 @@ export default async function PrivacyPage() {
           <h2 style={{ marginTop: 40 }}>Cookies and advertising</h2>
           <p>
             We use cookies and the Meta Pixel to measure visits and show
-            relevant adverts. You can block or delete cookies in your browser
+            relevant adverts. When you send an enquiry, ask for the price list,
+            book a visit or request a reservation, our website also tells Meta,
+            with your email address and phone number in coded (hashed) form, so
+            we can see which adverts work. You can block or delete cookies in your browser
             settings, and manage ad preferences in your Facebook, Instagram
             and Google accounts.
           </p>

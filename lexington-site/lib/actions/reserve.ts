@@ -18,6 +18,8 @@ import {
   RESERVATION_FEE_USD,
   unitTypeFor,
 } from "@/lib/reservation/config";
+import { newMetaEvent, reportToMeta } from "@/lib/meta/conversions";
+import type { MetaWebsiteEvent } from "@/lib/meta/conversionsCore";
 import { allow, connectionKey } from "@/lib/reservation/limit";
 import { buildReservationFormPdf } from "@/lib/reservation/pdf";
 import {
@@ -46,6 +48,8 @@ export interface ReserveFormState {
   firstName?: string;
   /** False when the form could not go out by email: a person will send it. */
   emailed?: boolean;
+  /** The event the website reported to Meta; the browser's pixel sends the same id. */
+  meta?: MetaWebsiteEvent;
 }
 
 // Nobody can read four steps of questions and answer them in less than this.
@@ -267,10 +271,14 @@ export async function submitReservation(
     );
   }
 
+  // 4) Meta hears about it from the website itself too: a reservation request, the strongest sign there is.
+  const meta = newMetaEvent("SubmitApplication", "Reservation", unit?.unitNumber);
+  await reportToMeta(meta, { email: input.email, phone: input.phone, name: input.name, externalId: leadId ?? undefined });
+
   return ok(
     formEmailed
       ? "The reservation form is on its way to your inbox."
       : "We have your request. We couldn't send the form automatically, so a sales advisor will email it to you shortly.",
-    { unit: unit?.unitNumber, email: input.email, firstName: first, emailed: formEmailed }
+    { unit: unit?.unitNumber, email: input.email, firstName: first, emailed: formEmailed, meta }
   );
 }

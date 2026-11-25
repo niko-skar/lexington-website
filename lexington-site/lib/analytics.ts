@@ -13,6 +13,29 @@ type DataLayerEvent = Record<string, unknown> & { event: string };
 declare global {
   interface Window {
     dataLayer?: DataLayerEvent[];
+    /** Meta's pixel, loaded by the tag manager (GTM) on public pages. */
+    fbq?: (...args: unknown[]) => void;
+  }
+}
+
+/**
+ * The browser's half of a conversion the website has already reported to Meta itself (lib/meta/conversions.ts):
+ * the same event name and id, so Meta counts the two as one. Lead = an enquiry or the price list, Schedule = a visit
+ * or video tour booked, SubmitApplication = a reservation request. (The tag manager's old "Lead on every form" tag is
+ * paused since 25 Nov 2026, so nothing is counted twice.) Nothing happens when the pixel is blocked: the website's
+ * own report still goes.
+ */
+export function trackMetaEvent(event?: { name: string; id: string; contentName: string; unit?: string } | null) {
+  if (typeof window === "undefined" || !event?.id || typeof window.fbq !== "function") return;
+  try {
+    window.fbq(
+      "track",
+      event.name,
+      { content_name: event.contentName, content_category: "Apartments", ...(event.unit ? { content_ids: [event.unit] } : {}) },
+      { eventID: event.id }
+    );
+  } catch {
+    // The pixel is Meta's script: never let it break the page.
   }
 }
 

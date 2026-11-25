@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useFormStatus } from "react-dom";
 
 import { submitReservation, type ReserveFormState } from "@/lib/actions/reserve";
-import { trackLead } from "@/lib/analytics";
+import { trackLead, trackMetaEvent } from "@/lib/analytics";
 import { formatFloor, formatUSD } from "@/lib/format";
 import { formatArea } from "@/lib/area";
 import { useAreaUnit } from "./useAreaUnit";
@@ -210,6 +210,7 @@ export function ReserveForm({ units, contactPhone, contactEmail, whatsappHref, v
   useEffect(() => {
     if (state.status === "success") {
       trackLead({ unit: state.unit, form: "reservation" });
+      trackMetaEvent(state.meta);
       trackAction("enquiry");
       doneRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
       doneRef.current?.querySelector("h2")?.focus({ preventScroll: true });

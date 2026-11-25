@@ -4,7 +4,7 @@ import { useActionState, useEffect } from "react";
 import { useFormStatus } from "react-dom";
 
 import { sendEnquiry, type ContactFormState } from "@/lib/actions/contact";
-import { trackLead } from "@/lib/analytics";
+import { trackLead, trackMetaEvent } from "@/lib/analytics";
 import { trackAction } from "@/lib/visits/client";
 import styles from "./ContactForm.module.css";
 import buttonStyles from "./Button.module.css";
@@ -32,6 +32,7 @@ export function ContactForm() {
   useEffect(() => {
     if (state.status === "success") {
       trackLead({ unit: state.unit });
+      trackMetaEvent(state.meta);
       trackAction("enquiry");
     }
   }, [state]);
