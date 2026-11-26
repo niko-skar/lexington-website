@@ -6,6 +6,7 @@ import { ConnectPageButton } from "@/components/dashboard/ConnectPageButton";
 import { CopyButton } from "@/components/dashboard/CopyButton";
 import styles from "@/components/dashboard/Dashboard.module.css";
 import { PendingButton } from "@/components/dashboard/PendingButton";
+import { RegisterWhatsAppForm } from "@/components/dashboard/RegisterWhatsAppForm";
 import { TestClaudeButton } from "@/components/dashboard/TestClaudeButton";
 import { TestWhatsAppButton } from "@/components/dashboard/TestWhatsAppButton";
 import { setChatPausedAction } from "@/lib/actions/chat";
@@ -15,7 +16,7 @@ import { chatAgentOn, chatSummary, readChatSwitch } from "@/lib/agents/chat";
 import { pilotConnected, usd } from "@/lib/agents/adsPilotCore";
 import { autoReplyMode } from "@/lib/agents/leadReply";
 import { metaLeadsConfigured, readMetaLeadsState } from "@/lib/agents/metaLeads";
-import { firstWhatsAppOn, whatsAppConfigured } from "@/lib/agents/whatsapp";
+import { firstWhatsAppOn, whatsAppConfigured, whatsAppNumberInfo } from "@/lib/agents/whatsapp";
 import { DEFAULT_TEMPLATE } from "@/lib/agents/whatsappCore";
 import { META_PIXEL_ID, capiKey, readMetaCapiState } from "@/lib/meta/conversions";
 import { GOOGLE_SCRIPT_VERSION, googleAdsScript } from "@/lib/ads/google";
@@ -96,6 +97,7 @@ export default async function ConnectPage() {
   const capi = capiKey();
   const chatReady = Boolean(process.env.META_APP_SECRET && process.env.META_WEBHOOK_VERIFY_TOKEN);
   const waConnected = whatsAppConfigured();
+  const waNumber = waConnected ? await whatsAppNumberInfo() : null;
   // Shown even once it is set: the same value goes into Facebook's webhook settings afterwards.
   const verifyToken = process.env.META_WEBHOOK_VERIFY_TOKEN?.trim() || null;
   const sampleVerify = verifyToken ? null : randomBytes(18).toString("base64url");
@@ -292,7 +294,8 @@ export default async function ConnectPage() {
           <li>
             The number: in <Ext href="https://developers.facebook.com/apps">developers.facebook.com</Ext>, Lexington Publisher, Use
             cases, Connect on WhatsApp, Step 2, add the new SIM&rsquo;s number (a code comes by text or call). Never put WhatsApp on
-            that SIM. Its <strong>Phone number ID</strong> goes in Vercel as <Code>WHATSAPP_PHONE_NUMBER_ID</Code>.
+            that SIM. Its <strong>Phone number ID</strong> goes in Vercel as <Code>WHATSAPP_PHONE_NUMBER_ID</Code>. After the
+            redeploy, switch it on here with <strong>Switch on the number</strong> (Meta does that only through its API).
           </li>
           <li>
             The key: in Business Settings, System users, Lexington CRM, <strong>Generate token</strong> for Lexington Publisher with{" "}
@@ -314,6 +317,20 @@ export default async function ConnectPage() {
         {waConnected && (
           <>
             <p style={{ marginTop: 8 }}>
+              {waNumber
+                ? `The number ${waNumber.display}${waNumber.name ? ` (${waNumber.name})` : ""} is ${waNumber.on ? "switched on." : "NOT switched on yet."}`
+                : "Meta didn't say whether the number is switched on."}
+            </p>
+            {!waNumber?.on && (
+              <>
+                <p style={{ marginTop: 8 }}>
+                  Switch it on once: choose any 6 digits and keep them somewhere safe. They become the number&rsquo;s WhatsApp PIN, which
+                  Meta asks for if the number is ever moved. Meta allows 10 tries in 3 days.
+                </p>
+                <RegisterWhatsAppForm />
+              </>
+            )}
+            <p style={{ marginTop: 12 }}>
               Send the first message to one number to see it arrive (while the number is Meta&rsquo;s test number, only its five test
               numbers can get it):
             </p>

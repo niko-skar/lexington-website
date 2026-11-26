@@ -27,7 +27,7 @@ import {
  * THE FIRST WHATSAPP (Niko, 26 Nov 2026: "we can do the api ourselves ... just have to go out an get a new sim"). The
  * Lexington's own number runs on Meta's WhatsApp Cloud API. Every ten minutes (/api/cron/agents), a Facebook / Instagram
  * lead form entry from the last three days whose email reply has been decided gets one WhatsApp, the template Meta
- * approved ("Hi Ama, thank you for your enquiry about The Lexington ..."), in their daytime. When they answer, the chat
+ * approved ("Hi Ama, we received your enquiry about The Lexington Apartments, ..."), in their daytime. When they answer, the chat
  * assistant takes over as on Messenger (lib/agents/chat.ts), and Niko or the team can type in the WhatsApp box on their
  * record. The rules are in whatsappCore.ts.
  *
@@ -77,6 +77,56 @@ export async function sendFirstTemplate(to: string, name: string | null | undefi
     return { ok: false, error, passing: response.status >= 500 || response.status === 429, words };
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : "no connection", passing: true, words };
+  }
+}
+
+const graphError = (out: { error?: { message?: string; code?: number; error_data?: { details?: string } } } | null, status: number) =>
+  [out?.error?.code ? `(${out.error.code})` : "", out?.error?.message ?? `Meta answered ${status}`, out?.error?.error_data?.details ?? ""]
+    .filter(Boolean)
+    .join(" ");
+
+/** The number as Meta sees it, and whether it is switched on for the API (registered), for the Connect page. */
+export async function whatsAppNumberInfo(): Promise<{ display: string; name: string; on: boolean } | null> {
+  const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID?.trim();
+  const token = process.env.WHATSAPP_TOKEN?.trim();
+  if (!phoneId || !token) return null;
+  try {
+    const response = await fetch(`${graphBase()}/${phoneId}?fields=display_phone_number,verified_name,platform_type`, {
+      headers: { Authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(10_000),
+      cache: "no-store",
+    });
+    if (!response.ok) return null;
+    const out = (await response.json()) as { display_phone_number?: string; verified_name?: string; platform_type?: string };
+    return { display: out.display_phone_number ?? "", name: out.verified_name ?? "", on: out.platform_type === "CLOUD_API" };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Switches the number on for the API (Meta's "register", 26 Nov 2026: possible only through the API, not in WhatsApp
+ * Manager; Meta allows 10 tries per number in 3 days, so nothing here tries again by itself). The 6 digits become the
+ * number's two-step verification PIN, or must be that PIN when it already has one. They go straight to Meta and are
+ * never kept or logged.
+ */
+export async function registerWhatsAppNumber(pin: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID?.trim();
+  const token = process.env.WHATSAPP_TOKEN?.trim();
+  if (!phoneId || !token) return { ok: false, error: "WhatsApp isn't connected yet (WHATSAPP_PHONE_NUMBER_ID and WHATSAPP_TOKEN)." };
+  try {
+    const response = await fetch(`${graphBase()}/${phoneId}/register`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ messaging_product: "whatsapp", pin }),
+      signal: AbortSignal.timeout(20_000),
+      cache: "no-store",
+    });
+    const out = (await response.json().catch(() => null)) as { success?: boolean; error?: { message?: string; code?: number; error_data?: { details?: string } } } | null;
+    if (response.ok && out?.success) return { ok: true };
+    return { ok: false, error: graphError(out, response.status) };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "no connection" };
   }
 }
 

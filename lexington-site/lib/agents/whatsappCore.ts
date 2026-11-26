@@ -157,5 +157,20 @@ export function failureWords(error: string | undefined): string {
   if (/131050|stopped|opt/i.test(e)) return "they have stopped messages from businesses";
   if (/132001|template.*(not exist|does not exist)|132000/i.test(e)) return "the template isn't approved yet";
   if (/131030|allowed list|recipient.*list/i.test(e)) return "the test number can only message its five test numbers";
+  if (/133010|not registered/i.test(e)) return "The Lexington's number isn't switched on yet (\"Switch on the number\" on the Connect page)";
+  return e ? `WhatsApp said: ${e}` : "WhatsApp didn't say why";
+}
+
+/** Why switching the number on (Meta's "register") failed, in plain words for the Connect page. Pure. */
+export function registerFailureWords(error: string | undefined): string {
+  const e = error ?? "";
+  if (/133005|pin mismatch/i.test(e)) return "the number already has a PIN and those 6 digits aren't it";
+  if (/133008|133009|too many|too fast/i.test(e)) return "too many PIN tries: wait a few hours and try again";
+  if (/133015|wait a few minutes/i.test(e)) return "Meta asks to wait a few minutes before trying again";
+  if (/133016|rate limit/i.test(e)) return "Meta's limit of 10 tries in 3 days is used up: try again in 3 days";
+  if (/133006|re-?verif/i.test(e)) return "Meta wants the number verified again first (a code by text or call, in WhatsApp Manager)";
+  if (/\((?:10|200)\)|permission/i.test(e)) {
+    return "the website's key isn't allowed to do this: in Business Settings, System users, Lexington CRM, give it full control of the WhatsApp account";
+  }
   return e ? `WhatsApp said: ${e}` : "WhatsApp didn't say why";
 }
