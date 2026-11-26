@@ -14,6 +14,7 @@ import { CreateBuyerFromLeadForm, LeadDetailsForm } from "./LeadForms";
 import { ReplyPanel } from "./ReplyPanel";
 import { LiveStageChip, LostControls, StagePills, StageProvider } from "./StagePanel";
 import { AssignButton, OwnerTag, TeamProvider, useAssign } from "./Team";
+import { WhatsAppPanel } from "./WhatsAppPanel";
 
 // One prospect's page: who they are and how to reach them, the suggested reply, their stage, next steps and notes, their
 // details, and (the office only) their buyer login and Remove. The admin page (/admin/crm/<id>) and the app's Customers
@@ -30,7 +31,7 @@ export function ProspectView({ data }: { data: ProspectData }) {
 
 function ProspectScreen({ data }: { data: ProspectData }) {
   const host = useCrmHost();
-  const { lead, units, today, origin, chat, chatAs, twin, siteMismatch, defaultPrice } = data;
+  const { lead, units, today, origin, chat, chatAs, twin, siteMismatch, defaultPrice, whatsapp } = data;
   const open = openTasksOf(lead).sort((a, b) => (a.due ?? today).localeCompare(b.due ?? today));
   const done = (lead.tasks ?? []).filter((t) => t.done);
   const notes = [...(lead.notes ?? [])].sort((a, b) => b.at.localeCompare(a.at));
@@ -101,6 +102,7 @@ function ProspectScreen({ data }: { data: ProspectData }) {
 
       <div className={styles.detailGrid}>
         <div>
+          {whatsapp && <WhatsAppPanel lead={lead} lastTheirsAt={whatsapp.lastTheirsAt} open={whatsapp.open} />}
           <ReplyPanel lead={lead} />
 
           <section className={styles.panel}>

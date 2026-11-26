@@ -37,6 +37,8 @@ export interface ChatMessage {
   cards?: string[];
   /** Those cards' ids on Meta's side, so their echoes are known as the assistant's own. */
   cardMids?: string[];
+  /** The first WhatsApp after a lead form (a template Meta approved, lib/agents/whatsapp.ts), not the assistant's words. */
+  template?: boolean;
 }
 
 export interface ChatThread {
@@ -434,9 +436,20 @@ export function parseWebhook(body: unknown, appId?: string): ChatEvent[] {
         const value = change.value ?? {};
         if (change.field === "messages") {
           const contacts = (value.contacts as Array<{ wa_id?: string; profile?: { name?: string } }> | undefined) ?? [];
-          for (const m of (value.messages as Array<{ from?: string; id?: string; timestamp?: string; type?: string; text?: { body?: string } }> | undefined) ?? []) {
+          type WaMessage = {
+            from?: string;
+            id?: string;
+            timestamp?: string;
+            type?: string;
+            text?: { body?: string };
+            // A tap on a template's quick-reply button, or on an interactive message's button or list row.
+            button?: { text?: string };
+            interactive?: { button_reply?: { title?: string }; list_reply?: { title?: string } };
+          };
+          for (const m of (value.messages as WaMessage[] | undefined) ?? []) {
             if (!m.from || !m.id) continue;
-            const text = (m.text?.body ?? "").trim() || `[${m.type ?? "message"}]`;
+            const tapped = m.button?.text ?? m.interactive?.button_reply?.title ?? m.interactive?.list_reply?.title ?? "";
+            const text = (m.text?.body ?? "").trim() || tapped.trim() || `[${m.type ?? "message"}]`;
             const name = contacts.find((c) => c.wa_id === m.from)?.profile?.name;
             out.push({ kind: "incoming", channel: "whatsapp", senderId: m.from, text, mid: m.id, at: new Date(Number(m.timestamp ?? 0) * 1000 || Date.now()).toISOString(), ...(name && { name }) });
           }

@@ -2,13 +2,16 @@ import { after } from "next/server";
 
 import { handleChatEvent, signatureValid } from "@/lib/agents/chat";
 import { parseWebhook } from "@/lib/agents/chatCore";
+import { recordWhatsAppStatuses } from "@/lib/agents/whatsapp";
+import { parseStatuses } from "@/lib/agents/whatsappCore";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
 
 /**
- * Where Meta delivers the Page's Messenger and Instagram messages (and WhatsApp's, once that is
- * connected), set up on the dashboard's Connect page.
+ * Where Meta delivers the Page's Messenger and Instagram messages, and The Lexington's WhatsApp
+ * number's (Cloud API, 26 Nov 2026: its messages and its delivery reports), set up on the
+ * dashboard's Connect page and the app's WhatsApp settings.
  * GET: Meta checks the address with the verify token (META_WEBHOOK_VERIFY_TOKEN).
  * POST: each delivery, signed with the app secret (META_APP_SECRET); anything not signed by Meta
  * is refused. It answers at once (Meta wants that within seconds) and the chat agent works after.
@@ -36,9 +39,11 @@ export async function POST(request: Request) {
     return new Response("Not JSON", { status: 400 });
   }
   const events = parseWebhook(body, process.env.META_APP_ID?.trim() || undefined);
-  if (events.length) {
+  const statuses = parseStatuses(body);
+  if (events.length || statuses.length) {
     after(async () => {
       for (const event of events) await handleChatEvent(event);
+      await recordWhatsAppStatuses(statuses);
     });
   }
   return new Response("EVENT_RECEIVED", { status: 200 });

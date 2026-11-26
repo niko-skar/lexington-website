@@ -1,6 +1,7 @@
 import { followUpQuietChats } from "@/lib/agents/chat";
 import { draftMissingReplies } from "@/lib/agents/leadReply";
 import { metaLeadsConfigured, pollMetaLeads } from "@/lib/agents/metaLeads";
+import { sendFirstWhatsApps } from "@/lib/agents/whatsapp";
 import { notifyOwner } from "@/lib/alerts/notify";
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
 import type { ReplyDraft } from "@/lib/sanity/crmTypes";
@@ -13,8 +14,10 @@ const TEMP_WORDS: Record<string, string> = { hot: "HOT", warm: "warm", cold: "pr
 
 /**
  * Every ten minutes (vercel.json): new Facebook / Instagram lead form entries go into
- * the CRM, every recent enquiry still without a suggested reply gets one, and Niko
- * gets an alert in the site app (a buzz on his phone) about each new Facebook lead.
+ * the CRM, every recent enquiry still without a suggested reply gets one, form entries
+ * whose reply is decided get their first WhatsApp from The Lexington's number (when it is
+ * switched on, lib/agents/whatsapp.ts), and Niko gets an alert in the site app (a buzz on
+ * his phone) about each new Facebook lead.
  * Vercel sends "Authorization: Bearer <CRON_SECRET>"; without it nothing runs.
  */
 export async function GET(request: Request) {
@@ -26,6 +29,11 @@ export async function GET(request: Request) {
   try {
     const meta = metaLeadsConfigured() ? await pollMetaLeads() : null;
     const drafted = await draftMissingReplies(4);
+    // After the replies are written (and emailed by themselves where they may be): the first WhatsApp. Never stops the run.
+    const whatsapp = await sendFirstWhatsApps().catch((error: unknown) => {
+      console.error("[whatsapp] first messages failed:", error instanceof Error ? error.message : error);
+      return null;
+    });
     // Once an hour (the run in the hour's first ten minutes): the site-visit follow-up to chats that went quiet.
     const followUps = process.env.VERCEL_ENV !== "production" || new Date().getUTCMinutes() < 10 ? await followUpQuietChats() : null;
 
@@ -40,7 +48,12 @@ export async function GET(request: Request) {
       const lines = drafts.map((lead) => {
         const d = lead.replyDraft;
         const how = d?.temperature ? ` (${TEMP_WORDS[d.temperature]}${d.temperatureReason ? `: ${d.temperatureReason}` : ""})` : "";
-        return `• ${lead.name}${how}${autoSent(d) ? ": first reply emailed automatically" : d ? ": suggested reply ready" : ""}`;
+        const wa = whatsapp?.sent.some((s) => s.id === lead._id)
+          ? ", and a first WhatsApp sent"
+          : whatsapp?.failed.some((s) => s.id === lead._id)
+            ? " (the first WhatsApp could NOT be sent: see their record)"
+            : "";
+        return `• ${lead.name}${how}${autoSent(d) ? ": first reply emailed automatically" : d ? ": suggested reply ready" : ""}${wa}`;
       });
       const allSent = drafts.length > 0 && drafts.every((l) => autoSent(l.replyDraft));
       const someSent = drafts.some((l) => autoSent(l.replyDraft));
@@ -67,7 +80,7 @@ export async function GET(request: Request) {
       });
     }
 
-    return Response.json({ meta, drafted, followUps });
+    return Response.json({ meta, drafted, whatsapp, followUps });
   } catch (err) {
     console.error("Agents run failed:", err);
     return new Response("Agents run failed.", { status: 500 });

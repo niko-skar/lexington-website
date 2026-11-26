@@ -20,6 +20,8 @@ export interface ThreadRef {
   senderId?: string | null;
   /** An Instagram chat's own address, once looked up (lib/crmChatLinks.ts). */
   inboxUrl?: string | null;
+  /** When they last wrote (a WhatsApp chat on The Lexington's number: typed messages only within 24 hours of it). */
+  lastTheirsAt?: string | null;
 }
 
 export interface OriginFacts {

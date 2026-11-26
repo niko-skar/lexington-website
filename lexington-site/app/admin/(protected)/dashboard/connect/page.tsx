@@ -7,6 +7,7 @@ import { CopyButton } from "@/components/dashboard/CopyButton";
 import styles from "@/components/dashboard/Dashboard.module.css";
 import { PendingButton } from "@/components/dashboard/PendingButton";
 import { TestClaudeButton } from "@/components/dashboard/TestClaudeButton";
+import { TestWhatsAppButton } from "@/components/dashboard/TestWhatsAppButton";
 import { setChatPausedAction } from "@/lib/actions/chat";
 import { claudeConfigured } from "@/lib/ai/claude";
 import { pilotSettings, readPilotRun } from "@/lib/agents/adsPilot";
@@ -14,6 +15,8 @@ import { chatAgentOn, chatSummary, readChatSwitch } from "@/lib/agents/chat";
 import { pilotConnected, usd } from "@/lib/agents/adsPilotCore";
 import { autoReplyMode } from "@/lib/agents/leadReply";
 import { metaLeadsConfigured, readMetaLeadsState } from "@/lib/agents/metaLeads";
+import { firstWhatsAppOn, whatsAppConfigured } from "@/lib/agents/whatsapp";
+import { DEFAULT_TEMPLATE } from "@/lib/agents/whatsappCore";
 import { META_PIXEL_ID, capiKey, readMetaCapiState } from "@/lib/meta/conversions";
 import { GOOGLE_SCRIPT_VERSION, googleAdsScript } from "@/lib/ads/google";
 import { readGoogleReport } from "@/lib/ads/googleStore";
@@ -92,6 +95,7 @@ export default async function ConnectPage() {
   const [chats, chatSwitch, capiState] = await Promise.all([chatSummary().catch(() => null), readChatSwitch(), readMetaCapiState()]);
   const capi = capiKey();
   const chatReady = Boolean(process.env.META_APP_SECRET && process.env.META_WEBHOOK_VERIFY_TOKEN);
+  const waConnected = whatsAppConfigured();
   // Shown even once it is set: the same value goes into Facebook's webhook settings afterwards.
   const verifyToken = process.env.META_WEBHOOK_VERIFY_TOKEN?.trim() || null;
   const sampleVerify = verifyToken ? null : randomBytes(18).toString("base64url");
@@ -265,11 +269,57 @@ export default async function ConnectPage() {
           </li>
         </ol>
         <p className={styles.sub}>
-          WhatsApp: your number stays on the WhatsApp Business app on your phone and the assistant answers alongside you.
-          Meta only lets its WhatsApp partners connect a number that way, so it needs one partner account (a one-time step,
-          about 10 minutes, a code confirmed in the app). Then <Code>WHATSAPP_PHONE_NUMBER_ID</Code> and{" "}
-          <Code>WHATSAPP_TOKEN</Code> go in Vercel.
+          WhatsApp: The Lexington&rsquo;s own number, on Meta&rsquo;s WhatsApp API (see the next part). Your number stays on your phone
+          as it is.
         </p>
+      </Section>
+
+      <Section title="WhatsApp: The Lexington's own number" done={waConnected}>
+        <p>
+          A number of its own on Meta&rsquo;s WhatsApp API, with no phone app: the assistant answers it, and you or the team
+          write to people from the <strong>WhatsApp</strong> box on their record in Prospects. A few minutes after someone fills in a
+          Facebook / Instagram lead form (once its email reply is decided), it sends them one WhatsApp, in their daytime: the
+          message Meta approved, &ldquo;Hi Ama, thank you for your enquiry about The Lexington in East Legon. What kind of home are
+          you looking for? Reply here and we&rsquo;ll send you the prices and floor plans.&rdquo; WhatsApp lets the number write
+          freely only within 24 hours of a person&rsquo;s last message.
+        </p>
+        <p style={{ marginTop: 8 }}>
+          {waConnected
+            ? `Connected (number id ${process.env.WHATSAPP_PHONE_NUMBER_ID?.trim()}). The first message after a lead form is ${firstWhatsAppOn() ? "ON" : "OFF (set WHATSAPP_FIRST_MESSAGE to on in Vercel)"}. Template: ${process.env.WHATSAPP_TEMPLATE?.trim() || DEFAULT_TEMPLATE}.`
+            : `Not connected yet: ${process.env.WHATSAPP_PHONE_NUMBER_ID?.trim() ? "" : "WHATSAPP_PHONE_NUMBER_ID"}${!process.env.WHATSAPP_PHONE_NUMBER_ID?.trim() && !process.env.WHATSAPP_TOKEN?.trim() ? " and " : ""}${process.env.WHATSAPP_TOKEN?.trim() ? "" : "WHATSAPP_TOKEN"} missing in Vercel.`}
+        </p>
+        <ol className={styles.steplist}>
+          <li>
+            The number: in <Ext href="https://developers.facebook.com/apps">developers.facebook.com</Ext>, Lexington Publisher, Use
+            cases, Connect on WhatsApp, Step 2, add the new SIM&rsquo;s number (a code comes by text or call). Never put WhatsApp on
+            that SIM. Its <strong>Phone number ID</strong> goes in Vercel as <Code>WHATSAPP_PHONE_NUMBER_ID</Code>.
+          </li>
+          <li>
+            The key: in Business Settings, System users, Lexington CRM, <strong>Generate token</strong> for Lexington Publisher with{" "}
+            <Code>whatsapp_business_messaging</Code> and <Code>whatsapp_business_management</Code>, expiry Never. It goes in
+            Vercel as <Code>WHATSAPP_TOKEN</Code>, then a redeploy.
+          </li>
+          <li>
+            The webhook (in the same Step 2): callback address <Code>{`${SITE_URL}/api/meta/webhook`}</Code> and the verify token from
+            the Messages part above, then Verify and save, and tick <Code>messages</Code>.
+          </li>
+          <li>
+            The message: the template <Code>{DEFAULT_TEMPLATE}</Code>, approved in WhatsApp Manager, and a payment card there for
+            the first messages (a few US cents each).
+          </li>
+          <li>
+            Last: <Code>WHATSAPP_FIRST_MESSAGE</Code> = <Code>on</Code> in Vercel, and a redeploy.
+          </li>
+        </ol>
+        {waConnected && (
+          <>
+            <p style={{ marginTop: 8 }}>
+              Send the first message to one number to see it arrive (while the number is Meta&rsquo;s test number, only its five test
+              numbers can get it):
+            </p>
+            <TestWhatsAppButton />
+          </>
+        )}
       </Section>
 
       <Section title="Meta ads (Facebook and Instagram)" done={metaDone}>

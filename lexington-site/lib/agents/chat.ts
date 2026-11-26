@@ -53,6 +53,7 @@ import { factCheck } from "./factcheck";
 import { loadFactPack } from "./facts";
 import { factPackText, type UnitFact } from "./factsCore";
 import { pageAccess } from "./metaLeads";
+import { replyWindowOpen } from "./whatsappCore";
 
 /**
  * THE CHAT AGENT (Niko, 23 Oct 2026: "get the ai agents to respond to my facebook and whatsapp
@@ -62,10 +63,11 @@ import { pageAccess } from "./metaLeads";
  * private document per person (`chat.<channel>.<id>`), puts the person in Prospects with the chat
  * in their timeline, and alerts Niko (the site app, a buzz on his phone) when it hands a chat
  * over. When he answers himself (in
- * Business Suite, Messenger, Instagram or the WhatsApp Business app) it goes quiet in that chat.
+ * Business Suite, Messenger, Instagram, or the WhatsApp box on the prospect's page) it goes quiet in that chat.
  *
  * Off with CHAT_AGENT=off, or Pause on the Connect page. WhatsApp needs WHATSAPP_PHONE_NUMBER_ID
- * and WHATSAPP_TOKEN (the number connected through a WhatsApp partner, keeping the phone app).
+ * and WHATSAPP_TOKEN: The Lexington's own number on Meta's WhatsApp Cloud API, with no phone app
+ * (26 Nov 2026, "we can do the api ourselves"), so Niko and the team answer it from the CRM.
  */
 
 const PROD = process.env.VERCEL_ENV === "production";
@@ -104,7 +106,7 @@ export function signatureValid(raw: string, header: string | null, secret: strin
 
 // ---- sending ------------------------------------------------------------------------------------
 
-function graphBase(): string {
+export function graphBase(): string {
   const version = /^v\d+\.\d+$/.test(process.env.META_GRAPH_VERSION ?? "") ? process.env.META_GRAPH_VERSION : "v23.0";
   const base =
     process.env.VERCEL_ENV !== "production" && process.env.META_GRAPH_BASE
@@ -183,6 +185,78 @@ export async function remindInChat(threadId: string, text: string): Promise<"sen
     console.error("[chat] the visit reminder couldn't be sent:", error instanceof Error ? error.message : error);
     return "failed";
   }
+}
+
+// ---- The Lexington's WhatsApp number (Cloud API, 26 Nov 2026) ---------------------------------------------------
+
+/**
+ * The first WhatsApp after a lead form went (lib/agents/whatsapp.ts): the chat starts with it, tied to their record, so
+ * when they answer, the assistant knows what they were sent and whose chat it is. Answers the chat's id.
+ */
+export async function startWhatsAppThread(opts: { to: string; leadId: string; name?: string | null; text: string; mid: string; at: string }): Promise<string> {
+  const id = threadIdFor("whatsapp", opts.to);
+  const fresh = (): ChatThread => ({ _id: id, _type: "chatThread", channel: "whatsapp", senderId: opts.to, messages: [] });
+  await updateThread(
+    id,
+    (t) => {
+      if (t.messages.some((m) => m.mid === opts.mid)) return null;
+      t.messages = keepLast([...t.messages, { _key: newKey(), from: "agent", text: opts.text, at: opts.at, mid: opts.mid, template: true }]);
+      if (!t.leadId) t.leadId = opts.leadId;
+      if (opts.name?.trim() && !t.name) t.name = opts.name.trim().slice(0, 120);
+      return t;
+    },
+    fresh
+  );
+  return id;
+}
+
+/** A WhatsApp chat's state for the box on the prospect's page: when they last wrote, so whether typing is allowed. */
+export async function whatsAppChatState(threadId: string): Promise<{ lastTheirsAt: string | null; open: boolean } | null> {
+  const thread = await readThread(threadId);
+  if (!thread || thread.channel !== "whatsapp") return null;
+  const lastTheirsAt = [...thread.messages].reverse().find((m) => m.from === "them")?.at ?? null;
+  return { lastTheirsAt, open: replyWindowOpen(lastTheirsAt, Date.now()) };
+}
+
+/**
+ * A message typed in the WhatsApp box on a prospect's page (Niko, or the team in the app): it goes from The Lexington's
+ * number, the chat keeps it as the sales team's, and the assistant stays quiet in that chat for the next 12 hours, as
+ * when Niko answers a Messenger chat himself. WhatsApp allows typed messages only within 24 hours of the person's last.
+ */
+export async function sendWhatsAppByHand(threadId: string, text: string, by: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  const thread = await readThread(threadId);
+  if (!thread || thread.channel !== "whatsapp") return { ok: false, error: "This prospect has no chat with The Lexington's WhatsApp number." };
+  const lastTheirs = [...thread.messages].reverse().find((m) => m.from === "them");
+  if (!replyWindowOpen(lastTheirs?.at, Date.now())) {
+    return {
+      ok: false,
+      error: lastTheirs
+        ? "It's more than 24 hours since they last wrote, and WhatsApp then allows only the approved first message. Call them, or email them."
+        : "They haven't written back yet, and WhatsApp allows typed messages only after they do. Call them, or email them.",
+    };
+  }
+  let mid: string;
+  try {
+    mid = await send(thread, { text });
+  } catch (error) {
+    return { ok: false, error: `WhatsApp didn't take it: ${error instanceof Error ? error.message : "unknown error"}` };
+  }
+  const at = new Date().toISOString();
+  const saved = await updateThread(
+    threadId,
+    (t) => {
+      t.messages = keepLast([...t.messages, { _key: newKey(), from: "owner", text: text.slice(0, 2000), at, mid }]);
+      t.ownerActiveUntil = new Date(Date.parse(at) + OWNER_QUIET_HOURS * 3_600_000).toISOString();
+      t.handedOver = null;
+      return t;
+    },
+    () => thread
+  );
+  if (saved?.leadId) {
+    await leadNote(saved.leadId, `WhatsApp, ${by}: ${text}`);
+    await answeredInChat(saved.leadId, "whatsapp", "you", text);
+  }
+  return { ok: true };
 }
 
 /**
@@ -482,7 +556,8 @@ async function draft(thread: ChatThread, nowMs: number): Promise<Drafted> {
     if (slot && free.includes(slot)) book = slot;
     else text = notFreeText(slot, free);
   }
-  if (!thread.messages.some((m) => m.from === "agent")) text = `${introLine()}\n\n${text}`;
+  // The assistant's first message says who it is; the first WhatsApp after a lead form (a fixed template) doesn't count.
+  if (!thread.messages.some((m) => m.from === "agent" && !m.template)) text = `${introLine()}\n\n${text}`;
   const reason = loop
     ? "a long run of messages in an hour"
     : problems.length
@@ -554,7 +629,9 @@ async function bookFromChat(thread: ChatThread, d: Drafted): Promise<{ text: str
 async function tellNiko(thread: ChatThread, subject: string, lines: string[], nowMs: number): Promise<boolean> {
   if (thread.notifiedAt && nowMs - Date.parse(thread.notifiedAt) < 3_600_000) return false;
   const where =
-    thread.channel === "whatsapp" ? "Answer them in the WhatsApp Business app on your phone." : "Answer them in Business Suite or the Facebook / Instagram app.";
+    thread.channel === "whatsapp"
+      ? "Answer them in the WhatsApp box on their record (The Lexington's WhatsApp number is on the API, not in a phone app)."
+      : "Answer them in Business Suite or the Facebook / Instagram app.";
   return notifyOwner({
     kind: "chat",
     urgent: true,

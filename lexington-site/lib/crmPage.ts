@@ -1,5 +1,6 @@
 import "server-only";
 
+import { replyWindowOpen } from "@/lib/agents/whatsappCore";
 import { STAGES, todayISO } from "@/lib/crm";
 import { withInstagramLink } from "@/lib/crmChatLinks";
 import { chatLinkOf, originLabel, phoneTail, platformOf, type ChatLink, type Platform, type ThreadRef } from "@/lib/crmOrigin";
@@ -45,6 +46,11 @@ export interface ProspectData {
   defaultPrice?: number;
   /** The logins with Customers (whose list the prospect is on, and who the office can give them to). */
   team: CrmTeamMember[];
+  /**
+   * Their chat with The Lexington's WhatsApp number (Cloud API, 26 Nov 2026: no phone app, so it is answered from the
+   * WhatsApp box on this page), and when they last wrote in it.
+   */
+  whatsapp: { threadId: string; lastTheirsAt: string | null; open: boolean } | null;
 }
 
 const SOLD_STAGES = ["reserved", "paying", "paid", "handed_over"];
@@ -104,5 +110,13 @@ export async function prospectData(id: string): Promise<ProspectData | null> {
     siteMismatch,
     defaultPrice: lead.agreedPriceUSD ?? unit?.priceUSD,
     team: found.team ?? [],
+    whatsapp:
+      found.thread?.channel === "whatsapp" && found.thread._id
+        ? {
+            threadId: found.thread._id,
+            lastTheirsAt: found.thread.lastTheirsAt ?? null,
+            open: replyWindowOpen(found.thread.lastTheirsAt, Date.now()),
+          }
+        : null,
   };
 }

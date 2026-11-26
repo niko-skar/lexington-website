@@ -37,7 +37,7 @@ export const leadsListQuery = defineQuery(`{
 export const prospectPageQuery = defineQuery(`{
   "team": ${TEAM},
   "lead": *[_type == "lead" && _id == $id][0],
-  "thread": *[_type == "chatThread" && _id == *[_type == "lead" && _id == $id][0].chatThread][0]{ _id, channel, senderId, inboxUrl },
+  "thread": *[_type == "chatThread" && _id == *[_type == "lead" && _id == $id][0].chatThread][0]{ _id, channel, senderId, inboxUrl, "lastTheirsAt": messages[from == "them"][-1].at },
   "others": *[_type == "lead" && _id != $id && defined(phone)]{
     _id, name, phone, source, stage, metaPlatform, metaInboxUrl, adSource,
     "thread": *[_type == "chatThread" && _id == ^.chatThread][0]{ _id, channel, senderId, inboxUrl }

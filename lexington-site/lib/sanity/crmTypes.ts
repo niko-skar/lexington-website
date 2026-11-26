@@ -81,6 +81,8 @@ export interface Lead {
   adSource?: string;
   /** Their chat with the assistant (a chatThread id). */
   chatThread?: string;
+  /** The first WhatsApp from The Lexington's number after their lead form (lib/agents/whatsapp.ts, 26 Nov 2026). */
+  whatsappFirst?: { status?: string; at?: string; attempts?: number; mid?: string; to?: string; error?: string };
   /** In lists only: that chat's channel. */
   chatChannel?: string;
   /** The login (a buyerAccount id) whose list they're on, e.g. Rahma's (20 Nov 2026); none = the office's list. */
