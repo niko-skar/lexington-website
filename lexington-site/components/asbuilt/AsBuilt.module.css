@@ -1915,6 +1915,11 @@ textarea.text {
   font-size: 13px;
 }
 
+/* The figures, in a row of their own in the site app; here they sit in the bar as they always have. */
+.clashChips {
+  display: contents;
+}
+
 .clashBarTitle {
   font-weight: 700;
   color: #8f1d12;
@@ -2021,27 +2026,346 @@ textarea.text {
   font-variant-numeric: tabular-nums;
 }
 
-/* ---- inside the site app (/todo/asbuilt, 10 Nov 2026) ------------------------------
-   The same record on its own sheet of paper (light in the app's dark mode too), under the
-   app's header and over its bar. */
+/* ---- inside the site app (/todo/asbuilt) ---------------------------------------------------
+   10 Nov 2026: the record under the app's header and over its bar. 26 Nov 2026 (Niko: "make this more like it's
+   native in the app and less like it was lifted from a website and just pasted in, so its easier to use and more
+   intuitive"): the app's own look, light and dark alike: its colours and letters, its buttons, fields, cards, notes and
+   sheet. The floors and the views are the app's tabs in its header (components/todo/AsBuiltPart.tsx). Only the drawing
+   keeps its engineers' paper and colours, in light and dark alike: they're what the legend explains. */
 
 .inApp {
+  --ink: var(--x-ink);
+  --ink-soft: var(--x-muted);
+  --paper: var(--x-surface);
+  --paper-dim: var(--x-bg);
+  --stone: var(--x-line);
+  --stone-lt: var(--x-line);
+  --sage: var(--x-muted);
+  --brass-text: var(--x-amber);
+  --brass-text-deep: var(--x-amber);
+  /* Clay means "off the drawing" in the record: the app says that in its red. */
+  --clay: var(--x-warn);
+  --clay-lt: var(--x-warn);
+  --navy: var(--x-accent);
+  --font-serif: var(--x-display);
+  --font-sans: var(--x-body);
+  --radius: 8px;
   max-width: none;
-  padding: 12px;
-  border: 1px solid var(--stone-lt);
-  border-radius: 12px;
-  background: var(--paper);
-  color: var(--ink);
+  margin: 0;
+  padding: 0;
+  color: var(--x-ink);
+  font-family: var(--x-body);
 }
 
-.inApp .top {
-  margin-bottom: 6px;
+/* The drawing and its legend: the sheet as before. */
+.inApp .board,
+.inApp .legend {
+  --ink: #15181a;
+  --ink-soft: #4c6d86;
+  --paper: #f7f4ec;
+  --paper-dim: #ede7d8;
+  --stone: #c9c2b2;
+  --stone-lt: #e4dfd3;
+  --sage: #67735f;
+  --brass: #b08d57;
+  --clay: #8b4a34;
+  --clay-lt: #b26a4e;
+  --sky: #6f93ac;
+  --navy: #1e3a4c;
+  --navy-deep: #263a48;
+  --ab-none: #15181a;
+  --ab-ok: #67735f;
+  --ab-warn: #b08d57;
+  --ab-off: #8b4a34;
+  --ab-new: #6f93ac;
+  --ab-grid: #6f93ac;
+}
+
+/* ---- notes above the record ---- */
+
+.inApp .devBanner {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--x-amber-soft);
+  color: var(--x-amber);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* Like the store's "not opened today": a card with a coloured edge. */
+.inApp .clashBar {
+  display: grid;
+  gap: 10px;
+  margin: 0 0 12px;
+  padding: 12px 0 12px 14px;
+  border: 1px solid var(--x-line);
+  border-left: 4px solid var(--x-warn);
+  border-radius: 10px;
+  background: var(--x-warn-soft);
+  font-size: 15px;
+}
+
+.inApp .clashBarTitle {
+  margin: 0;
+  padding-right: 14px;
+  font-weight: 700;
+  color: var(--x-warn);
+}
+
+/* The figures: one row that slides sideways on a phone, wrapping on a laptop. */
+.inApp .clashChips {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  padding-right: 14px;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.inApp .clashChips::-webkit-scrollbar {
+  display: none;
+}
+
+.inApp .clashChip {
+  flex: none;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--x-line);
+  border-radius: 99px;
+  background: var(--x-surface);
+  color: var(--x-warn);
+  font-family: var(--x-body);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.inApp .clashChips .hint {
+  flex: none;
+  margin: 0;
+  white-space: nowrap;
+}
+
+@media (min-width: 1000px) {
+  .inApp .clashChips {
+    flex-wrap: wrap;
+    overflow: visible;
+  }
+}
+
+/* A void changed: this floor or all floors? */
+.inApp .allFloors {
+  margin: 0 0 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--x-line);
+  border-left: 4px solid var(--x-accent);
+  border-radius: 10px;
+  background: var(--x-accent-soft);
+  color: var(--x-ink);
+  font-size: 15px;
+}
+
+.inApp .allFloorsBtns .btn {
+  min-height: 44px;
+}
+
+/* ---- the plan ---- */
+
+/* As tall as the screen leaves under the app's header (--x-head, measured by the part) and over its bar. */
+.inApp .board {
+  height: max(320px, calc(100dvh - var(--x-head, 210px) - 66px - env(safe-area-inset-bottom, 0px) - 30px));
+  border: 1px solid var(--x-line);
+  border-radius: 12px;
+}
+
+/* A laptop: room left for a note above the plan (what doesn't fit), so its buttons stay on the screen; without one
+   the legend shows under it. */
+@media (min-width: 1000px) {
+  .inApp .board {
+    height: max(420px, calc(100dvh - var(--x-head, 220px) - 150px));
+  }
 }
 
 /* Full screen covers the app's header (20) and bar (30); the panel stays over the plan. */
 .inApp .board.boardFull,
 .inApp .boardPlacing.boardFull {
   z-index: 45;
+  height: 100dvh;
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+}
+
+/* The buttons on the drawing: the app's, floating over it. */
+.inApp .zoom {
+  gap: 8px;
+}
+
+.inApp .iconBtn {
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--x-line);
+  border-radius: 10px;
+  background: var(--x-surface);
+  color: var(--x-ink);
+  font-family: var(--x-body);
+  font-size: 22px;
+  font-weight: 500;
+  line-height: 1;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.14);
+}
+
+.inApp .fitBtn {
+  font-family: var(--x-display);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.inApp .boardTools {
+  gap: 8px;
+}
+
+.inApp .boardTools .btn {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--x-line);
+  border-radius: 99px;
+  background: var(--x-surface);
+  color: var(--x-ink);
+  font-family: var(--x-body);
+  font-size: 15px;
+  font-weight: 600;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.14);
+}
+
+.inApp .boardTools .btn[aria-pressed="true"] {
+  border-color: var(--x-accent);
+  background: var(--x-accent);
+  color: var(--x-accent-ink);
+}
+
+/* "Tap where the void is": like the app's messages, just over the "+ Void" it came from (at the top it could sit
+   under the app's header, or under the floor switcher on the full-screen plan). */
+.inApp .placingBar {
+  top: auto;
+  bottom: 64px;
+  gap: 12px;
+  padding: 6px 6px 6px 16px;
+  border-radius: 10px;
+  background: var(--x-ink);
+  color: var(--x-bg);
+  font-family: var(--x-body);
+  font-size: 15px;
+  font-weight: 600;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+.inApp .placingBar .btnOnDark {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid rgba(127, 127, 127, 0.45);
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font-weight: 700;
+}
+
+/* The floor switcher on the full-screen plan. */
+.inApp .fullBar {
+  background: var(--x-ink);
+  color: var(--x-bg);
+  font-family: var(--x-body);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.inApp .fullBar button {
+  min-width: 44px;
+  min-height: 44px;
+  background: rgba(127, 127, 127, 0.25);
+  color: inherit;
+}
+
+.inApp .fullBar span {
+  font-family: var(--x-display);
+  font-size: 17px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.inApp .fullBar .fullDone {
+  padding: 0 18px;
+  background: var(--x-accent);
+  color: var(--x-accent-ink);
+}
+
+.inApp .legend {
+  gap: 6px 16px;
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--x-muted);
+}
+
+.inApp .swatch {
+  border-color: var(--x-muted);
+}
+
+.inApp .hint {
+  font-size: 14px;
+  color: var(--x-muted);
+}
+
+/* ---- the panel: a sheet from the bottom on a phone, a card beside the plan on a laptop ---- */
+
+.inApp .panel {
+  border: 1px solid var(--x-line);
+  border-radius: 14px;
+  background: var(--x-surface);
+  color: var(--x-ink);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
+}
+
+.inApp .panelHead {
+  align-items: center;
+  gap: 12px;
+  padding: 16px 14px 12px 16px;
+  border-bottom: 1px solid var(--x-line);
+  background: var(--x-surface);
+}
+
+.inApp .panelKind {
+  font-family: var(--x-body);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: var(--x-muted);
+}
+
+.inApp .panelName {
+  margin-top: 2px;
+  font-family: var(--x-display);
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.02;
+  letter-spacing: 0.01em;
+}
+
+.inApp .close {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: var(--x-bg);
+  font-size: 26px;
+  font-weight: 400;
+  box-shadow: none;
+}
+
+.inApp .panelBody {
+  gap: 18px;
+  padding: 16px 16px 22px;
 }
 
 @media (min-width: 1000px) {
@@ -2059,16 +2383,654 @@ textarea.text {
 @media (max-width: 999px) {
   .inApp .panel {
     z-index: 50;
+    border-bottom: 0;
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -12px 32px rgba(0, 0, 0, 0.22);
   }
+  .inApp .panelHead {
+    padding-top: 22px;
+  }
+  .inApp .panelHead::before {
+    width: 44px;
+    margin-left: -22px;
+    background: var(--x-line);
+  }
+  .inApp .panelName {
+    font-size: 26px;
+  }
+}
+
+/* Its words and figures. */
+.inApp .status {
+  padding: 3px 10px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.inApp .statusNone {
+  background: var(--x-bg);
+  color: var(--x-muted);
+}
+
+.inApp .statusOk {
+  background: var(--x-ok-soft);
+  color: var(--x-ok);
+}
+
+.inApp .statusWarn {
+  background: var(--x-amber-soft);
+  color: var(--x-amber);
+}
+
+.inApp .statusOff {
+  background: var(--x-warn-soft);
+  color: var(--x-warn);
+}
+
+.inApp .statusNew,
+.inApp .fixedChip {
+  background: var(--x-accent-soft);
+  color: var(--x-accent);
+}
+
+.inApp .statusClash {
+  background: var(--x-warn);
+  color: var(--x-on-color);
+}
+
+.inApp .fact {
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--x-ink);
+}
+
+.inApp .blockTitle,
+.inApp .linePicker,
+.inApp .lineSizeLabel {
+  font-family: var(--x-body);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--x-muted);
+}
+
+.inApp .blockTitle {
+  margin-bottom: 10px;
+}
+
+.inApp .error {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--x-warn);
+}
+
+.inApp .faceRow {
+  grid-template-columns: 104px minmax(80px, 1fr) auto;
+  gap: 10px;
+}
+
+.inApp .faceLabel,
+.inApp .tapeField,
+.inApp .gapRow,
+.inApp .neighbour,
+.inApp .figRow {
+  font-size: 15px;
+}
+
+.inApp .faceLabel small,
+.inApp .tapeField small,
+.inApp .gapRow small,
+.inApp .neighbour small,
+.inApp .figName small,
+.inApp .lineGap small {
+  font-size: 13px;
+  color: var(--x-muted);
+}
+
+.inApp .gapRow {
+  grid-template-columns: minmax(0, 1fr) 124px;
+}
+
+.inApp .neighbour {
+  grid-template-columns: minmax(0, 1fr) 112px auto;
+}
+
+.inApp .tapeGrid {
+  grid-template-columns: repeat(auto-fit, minmax(124px, 1fr));
+}
+
+.inApp .derived {
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--x-bg);
+  font-size: 14px;
+}
+
+.inApp .miniLog {
+  font-size: 14px;
+  color: var(--x-muted);
+}
+
+.inApp .miniLog time {
+  font-family: var(--x-num);
+  font-size: 12px;
+  color: var(--x-muted);
+}
+
+.inApp .more {
+  border-top-color: var(--x-line);
+  font-size: 15px;
+}
+
+.inApp .more summary {
+  padding: 8px 0;
+  color: var(--x-accent);
+}
+
+.inApp .figValue {
+  font-family: var(--x-num);
+}
+
+.inApp .figRow {
+  grid-template-columns: minmax(0, 1fr) auto auto 44px;
+}
+
+.inApp .figRemove {
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--x-line);
+  border-radius: 8px;
+  background: var(--x-bg);
+  color: var(--x-muted);
+  font-size: 22px;
+}
+
+.inApp .clashNote,
+.inApp .fixedNote {
+  padding: 12px 14px;
+  border-left: 4px solid var(--x-warn);
+  border-radius: 10px;
+  background: var(--x-warn-soft);
+  color: var(--x-ink);
+  font-size: 14px;
+}
+
+.inApp .warnNote {
+  border-left-color: var(--x-amber);
+  background: var(--x-amber-soft);
+}
+
+.inApp .fixedNote {
+  border-left-color: var(--x-accent);
+  background: var(--x-accent-soft);
+}
+
+.inApp .othersLine {
+  font-size: 13px;
+  color: var(--x-muted);
+}
+
+.inApp .offWarn {
+  color: var(--x-amber);
+}
+
+.inApp .offClash {
+  color: var(--x-warn);
+}
+
+/* ---- fields and buttons: the app's ---- */
+
+.inApp .num,
+.inApp .text,
+.inApp .select {
+  min-height: 48px;
+  padding: 10px 12px;
+  border: 1px solid var(--x-line);
+  border-radius: 8px;
+  background: var(--x-bg);
+  color: var(--x-ink);
+  font-size: 17px;
+}
+
+.inApp .num {
+  font-family: var(--x-num);
+}
+
+.inApp .num:focus,
+.inApp .text:focus,
+.inApp .select:focus {
+  border-color: var(--x-accent);
+  box-shadow: 0 0 0 2px var(--x-accent-soft);
+}
+
+.inApp .numChanged {
+  border-color: var(--x-amber);
+  background: var(--x-amber-soft);
+}
+
+.inApp .side {
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid var(--x-line);
+  border-radius: 10px;
+  background: var(--x-surface);
+}
+
+.inApp .sideBtn {
+  min-height: 40px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--x-muted);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.inApp .sideBtn + .sideBtn {
+  border-left: 0;
+}
+
+.inApp .sideOn {
+  background: var(--x-accent);
+  color: var(--x-accent-ink);
+}
+
+.inApp .btn {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--x-line);
+  border-radius: 8px;
+  background: var(--x-bg);
+  color: var(--x-ink);
+  font-family: var(--x-body);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.inApp .btnPrimary,
+.inApp .btnGood {
+  min-height: 48px;
+  padding: 0 18px;
+  font-size: 16px;
+}
+
+.inApp .btnPrimary {
+  border-color: var(--x-accent);
+  background: var(--x-accent);
+  color: var(--x-accent-ink);
+}
+
+.inApp .btnGood {
+  border-color: var(--x-ok);
+  background: var(--x-ok);
+  color: var(--x-on-color);
+}
+
+.inApp .btnDanger {
+  border-color: var(--x-warn);
+  background: transparent;
+  color: var(--x-warn);
+}
+
+.inApp .btnQuiet {
+  border-color: transparent;
+  background: transparent;
+  color: var(--x-accent);
+  padding: 0 8px;
+}
+
+.inApp .btnSmall {
+  min-height: 40px;
+  padding: 0 12px;
+  font-size: 14px;
+}
+
+/* ---- Measure ---- */
+
+.inApp .summary {
+  font-size: 15px;
+}
+
+.inApp .group {
+  margin-bottom: 24px;
+}
+
+/* Headings like the app's: small capitals over the cards. */
+.inApp .groupTitle {
+  align-items: baseline;
+  gap: 8px;
+  margin: 0 2px 8px;
+  padding-bottom: 0;
+  border-bottom: 0;
+  font-family: var(--x-body);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--x-muted);
+}
+
+.inApp .groupTitle small {
+  font-family: var(--x-body);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--x-muted);
+}
+
+.inApp .items {
+  gap: 8px;
+}
+
+.inApp .item {
+  min-height: 56px;
+  padding: 12px 14px;
+  border: 1px solid var(--x-line);
+  border-radius: 10px;
+  background: var(--x-surface);
+  color: var(--x-ink);
+}
+
+.inApp .itemOn {
+  border-color: var(--x-accent);
+  box-shadow: inset 0 0 0 1px var(--x-accent);
+}
+
+.inApp .itemName {
+  font-size: 16px;
+}
+
+.inApp .itemSub {
+  font-size: 14px;
+  color: var(--x-muted);
+}
+
+.inApp .empty {
+  padding: 28px 12px;
+  border: 1px dashed var(--x-line);
+  border-radius: 10px;
+  font-size: 15px;
+  color: var(--x-muted);
+}
+
+/* Tape a line: the grid lines as the app's choice buttons, the line on a card. */
+.inApp .linePicker {
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+/* "Along grid" over its grid lines, so they get the whole row. */
+.inApp .linePicker > span {
+  flex-basis: 100%;
+  min-width: 0;
+}
+
+.inApp .pick {
+  min-width: 48px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--x-line);
+  border-radius: 8px;
+  background: var(--x-surface);
+  color: var(--x-ink);
+  font-family: var(--x-body);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.inApp .pickOn {
+  border-color: var(--x-accent);
+  background: var(--x-accent);
+  color: var(--x-accent-ink);
+}
+
+.inApp .lineEditor {
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid var(--x-line);
+  border-radius: 12px;
+  background: var(--x-surface);
+}
+
+.inApp .lineItem {
+  border-top-color: var(--x-line);
+}
+
+.inApp .lineName {
+  color: var(--x-ink);
+  font-size: 17px;
+}
+
+.inApp .lineGap {
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--x-bg);
+  font-size: 15px;
+}
+
+.inApp .lineArrow {
+  color: var(--x-muted);
+}
+
+/* ---- Set out ---- */
+
+.inApp .settings,
+.inApp .soLine,
+.inApp .card {
+  border: 1px solid var(--x-line);
+  border-radius: 10px;
+  background: var(--x-surface);
+}
+
+.inApp .settings {
+  padding: 12px 14px;
+  font-size: 14px;
+}
+
+.inApp .settings .num {
+  width: 92px;
+  min-height: 44px;
+  padding: 8px 10px;
+  font-size: 16px;
+}
+
+.inApp .soLine {
+  padding: 14px;
+}
+
+.inApp .soLineHead {
+  font-family: var(--x-display);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.inApp .soLineHead small,
+.inApp .soSize,
+.inApp .soNote,
+.inApp .soGap small,
+.inApp .cellMuted,
+.inApp .cardTitle span,
+.inApp .cardNote {
+  font-family: var(--x-body);
+  color: var(--x-muted);
+}
+
+.inApp .soLineHead small {
+  font-size: 13px;
+}
+
+.inApp .soBuilt {
+  font-size: 12px;
+  color: var(--x-ok);
+}
+
+.inApp .soBuilt::before {
+  background: var(--x-ok);
+}
+
+.inApp .soStart {
+  font-size: 15px;
+}
+
+.inApp .soGap {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--x-bg);
+  font-size: 15px;
+}
+
+.inApp .tableWrap {
+  border: 1px solid var(--x-line);
+  border-radius: 10px;
+  background: var(--x-surface);
+}
+
+.inApp .table {
+  font-size: 14px;
+}
+
+.inApp .table th {
+  background: var(--x-bg);
+  font-family: var(--x-body);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--x-muted);
+}
+
+.inApp .table td {
+  border-top-color: var(--x-line);
+}
+
+.inApp .card {
+  padding: 12px 14px;
+}
+
+.inApp .cardTitle {
+  color: var(--x-ink);
+  font-size: 17px;
+}
+
+.inApp .cardFaces dt {
+  font-size: 12px;
+  color: var(--x-muted);
+}
+
+.inApp .cardFaces dd {
+  font-size: 15px;
+}
+
+/* ---- History: each day a card of rows ---- */
+
+.inApp .historyDay {
+  margin: 20px 2px 8px;
+  font-family: var(--x-body);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--x-muted);
+}
+
+.inApp .history {
+  padding: 0 14px;
+  border: 1px solid var(--x-line);
+  border-radius: 10px;
+  background: var(--x-surface);
+}
+
+.inApp .historyItem {
+  align-items: center;
+  padding: 12px 0;
+  border-top: 1px solid var(--x-line);
+  font-size: 15px;
+}
+
+.inApp .historyItem:first-child {
+  border-top: 0;
+}
+
+.inApp .historyItem time {
+  font-family: var(--x-num);
+  font-size: 13px;
+  color: var(--x-muted);
+}
+
+/* A mouse: what can be clicked shows it, as in the app. */
+@media (hover: hover) and (pointer: fine) {
+  .inApp .btn:hover,
+  .inApp .item:hover,
+  .inApp .pick:hover,
+  .inApp .iconBtn:hover,
+  .inApp .clashChip:hover {
+    border-color: var(--x-muted);
+    background-color: var(--x-surface);
+  }
+  .inApp .btn:hover {
+    background-color: var(--x-bg);
+  }
+  .inApp .btnPrimary:hover,
+  .inApp .btnGood:hover,
+  .inApp .pickOn:hover {
+    border-color: transparent;
+    filter: brightness(1.08);
+  }
+  .inApp .btnPrimary:hover,
+  .inApp .pickOn:hover {
+    background-color: var(--x-accent);
+  }
+  .inApp .btnGood:hover {
+    background-color: var(--x-ok);
+  }
+  .inApp .btnDanger:hover {
+    border-color: var(--x-warn);
+    background-color: var(--x-warn);
+    color: var(--x-on-color);
+  }
+  .inApp .btnQuiet:hover {
+    border-color: transparent;
+    background-color: transparent;
+    color: var(--x-ink);
+  }
+  .inApp .figRemove:hover {
+    border-color: var(--x-warn);
+    color: var(--x-warn);
+  }
+}
+
+.inApp .floor:focus-visible,
+.inApp .btn:focus-visible,
+.inApp .iconBtn:focus-visible,
+.inApp .item:focus-visible,
+.inApp .pick:focus-visible,
+.inApp .clashChip:focus-visible {
+  outline: 2px solid var(--x-accent);
+  outline-offset: 2px;
 }
 
 /* A phone: the line editor's Save bar sits above the app's bar, not under it. */
 @media (max-width: 720px) {
-  .inApp {
-    padding: 8px;
-    border-radius: 10px;
-  }
   .inApp .lineActions {
     bottom: calc(66px + env(safe-area-inset-bottom, 0px));
+    margin: 0 -14px -14px;
+    padding: 10px 14px;
+    border-top: 1px solid var(--x-line);
+    border-radius: 0 0 12px 12px;
+    background: var(--x-surface);
+  }
+  /* Save and "Fill empty boxes with the drawing" side by side: one row kept at the bottom, not two. */
+  .inApp .lineActions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .inApp .lineActions .btn {
+    min-height: 52px;
+    padding: 4px 10px;
+    font-size: 15px;
+    line-height: 1.15;
+    white-space: normal;
   }
 }

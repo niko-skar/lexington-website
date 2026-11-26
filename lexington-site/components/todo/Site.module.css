@@ -2197,9 +2197,13 @@
 }
 
 /* ---------- the as-built record in the app (AsBuiltPart.tsx, 10 Nov 2026) ---------- */
-/* The plan wants the room: as wide as the screen allows on a laptop (the record's own limit is 1480 px). */
+/* In the app's own look (26 Nov 2026): the floors and the views in its header, which lines up with the record under it.
+   The plan wants the room: as wide as the screen allows on a laptop (the record's own limit is 1480 px). */
+.asbuiltPart {
+  --x-page: min(1480px, 100%);
+}
 .asbuiltMain {
-  max-width: min(1480px, 100%);
+  max-width: var(--x-page);
 }
 .bannerButton {
   margin-left: 6px;
@@ -2211,10 +2215,129 @@
   font: inherit;
   font-weight: 700;
 }
-@media (max-width: 720px) {
-  .asbuiltMain {
-    padding-left: max(8px, env(safe-area-inset-left, 0px));
-    padding-right: max(8px, env(safe-area-inset-right, 0px));
+/* "Where the 1st floor comes from": a row under the record that opens its sheet. */
+.abAbout {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 60px;
+  margin-top: 18px;
+  padding: 12px 14px;
+  border: 1px solid var(--x-line);
+  border-radius: 10px;
+  background: var(--x-surface);
+  color: var(--x-ink);
+  text-align: left;
+}
+.abAboutText {
+  flex: 1;
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+.abAboutText small {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--x-muted);
+}
+.abChevron {
+  flex: none;
+  font-size: 26px;
+  line-height: 1;
+  color: var(--x-muted);
+}
+.abAboutBody {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+}
+.abNotes {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.abNotes li {
+  padding: 10px 12px;
+  border-left: 4px solid var(--x-amber);
+  border-radius: 8px;
+  background: var(--x-amber-soft);
+  font-size: 15px;
+  line-height: 1.45;
+}
+/* Its messages ("Saved: ... Undo") in the app's look. On a phone they sit at the very bottom, over the bar for their
+   few seconds: higher up they'd cover the open panel's buttons or the line editor's Save. */
+.abToasts {
+  position: fixed;
+  z-index: 60;
+  left: max(12px, env(safe-area-inset-left, 0px));
+  right: max(12px, env(safe-area-inset-right, 0px));
+  bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  display: grid;
+  gap: 8px;
+  max-width: 536px;
+  margin: 0 auto;
+  pointer-events: none;
+}
+.abToast {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  padding: 8px 6px 8px 16px;
+  border-radius: 8px;
+  background: var(--x-ink);
+  color: var(--x-bg);
+  font-weight: 600;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  pointer-events: auto;
+}
+.abToast span {
+  flex: 1 1 160px;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.abToastButton {
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid rgba(127, 127, 127, 0.45);
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font-weight: 700;
+}
+.abToastClose {
+  width: 44px;
+  height: 44px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 24px;
+  line-height: 1;
+  opacity: 0.7;
+}
+/* A phone: the newest message only, as the app shows them (History has Undo for every change). */
+@media (max-width: 1023px) {
+  .abToast:not(:last-child) {
+    display: none;
+  }
+}
+@media (min-width: 1024px) {
+  .abToasts {
+    left: calc(var(--x-rail) + 24px);
+    right: 24px;
+    bottom: 24px;
+  }
+}
+@media (hover: hover) and (pointer: fine) {
+  .abAbout:hover {
+    border-color: var(--x-muted);
   }
 }
 

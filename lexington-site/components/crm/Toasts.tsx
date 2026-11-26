@@ -24,7 +24,15 @@ export function useToast(): ToastApi {
   return useContext(Context) ?? { show: () => {} };
 }
 
-export function ToastProvider({ children }: { children: ReactNode }) {
+/** Class names for another look (the site app's own toast, 26 Nov 2026); the CRM's when left out. */
+export interface ToastLook {
+  list?: string;
+  toast?: string;
+  undo?: string;
+  close?: string;
+}
+
+export function ToastProvider({ children, look }: { children: ReactNode; look?: ToastLook }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const nextId = useRef(1);
   const timers = useRef(new Map<number, number>());
@@ -53,14 +61,14 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <Context.Provider value={{ show }}>
       {children}
-      <div className={styles.toasts} role="status" aria-live="polite">
+      <div className={look?.list ?? styles.toasts} role="status" aria-live="polite">
         {toasts.map((toast) => (
-          <div key={toast.id} className={styles.toast}>
+          <div key={toast.id} className={look?.toast ?? styles.toast}>
             <span>{toast.message}</span>
             {toast.undo && (
               <button
                 type="button"
-                className={styles.toastUndo}
+                className={look?.undo ?? styles.toastUndo}
                 onClick={() => {
                   dismiss(toast.id);
                   void toast.undo?.();
@@ -69,7 +77,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 Undo
               </button>
             )}
-            <button type="button" className={styles.toastClose} aria-label="Dismiss" onClick={() => dismiss(toast.id)}>
+            <button type="button" className={look?.close ?? styles.toastClose} aria-label="Dismiss" onClick={() => dismiss(toast.id)}>
               ×
             </button>
           </div>

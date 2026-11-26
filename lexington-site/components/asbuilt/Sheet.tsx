@@ -1753,12 +1753,14 @@ export function ClashNotice({
       <span className={s.clashBarTitle}>
         {clashes.length === 1 ? "1 figure doesn’t fit the others" : `${clashes.length} figures don’t fit the others`}
       </span>
-      {clashes.slice(0, 4).map((c, i) => (
-        <button key={`${c.kind}${i}`} type="button" className={s.clashChip} onClick={() => onSelect(pick(c))}>
-          {label(c)} {mm(c.typed)} · {mm(Math.abs(c.off))} mm out
-        </button>
-      ))}
-      {clashes.length > 4 && <span className={s.hint}>and {clashes.length - 4} more</span>}
+      <span className={s.clashChips}>
+        {clashes.slice(0, 4).map((c, i) => (
+          <button key={`${c.kind}${i}`} type="button" className={s.clashChip} onClick={() => onSelect(pick(c))}>
+            {label(c)} {mm(c.typed)} · {mm(Math.abs(c.off))} mm out
+          </button>
+        ))}
+        {clashes.length > 4 && <span className={s.hint}>and {clashes.length - 4} more</span>}
+      </span>
     </div>
   );
 }

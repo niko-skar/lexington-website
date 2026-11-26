@@ -11,6 +11,8 @@ import { floorBelow } from "@/lib/asbuilt/setout";
 import {
   DEFAULT_TOLERANCE,
   type Change,
+  type ColumnEl,
+  type CoreEl,
   type Floor,
   type LogEntry,
   type OpeningEl,
@@ -35,6 +37,27 @@ const TABS: { key: AsBuiltTab; label: string }[] = [
   { key: "history", label: "History" },
 ];
 
+/**
+ * What the site app needs to put its own header and tabs around the record (Niko, 26 Nov 2026: "make this more like
+ * it's native in the app and less like it was lifted from a website"): the floors and the views to switch between,
+ * and the record itself to put under them.
+ */
+export interface AsBuiltFrame {
+  /** Every floor, from the ground up, with its short name ("Ground", "1st", ... "Roof"). */
+  floors: { key: string; short: string }[];
+  floor: Floor;
+  chooseFloor: (key: string) => void;
+  tabs: { key: AsBuiltTab; label: string }[];
+  tab: AsBuiltTab;
+  chooseTab: (key: AsBuiltTab) => void;
+  saving: boolean;
+  /** This floor's columns, walls and lift cores with anything measured on them, and how many there are. */
+  measured: number;
+  total: number;
+  /** The record: its notes, the view on screen and the open panel. */
+  body: React.ReactNode;
+}
+
 interface Props {
   initialFloors: Floor[];
   initialKey: string;
@@ -42,12 +65,18 @@ interface Props {
   /** False on a preview or local copy: changes go to a separate test record. */
   realRecord: boolean;
   /**
-   * Inside the site app (/todo/asbuilt, 10 Nov 2026): the app's own header names it, it sits on its sheet of paper
-   * under that header and over the app's bar, and it only keeps the address in step while it's the part on screen.
+   * Inside the site app (/todo/asbuilt, 10 Nov 2026): in the app's own look, under its header and over its bar, and it
+   * only keeps the address in step while it's the part on screen.
    */
   inApp?: boolean;
   active?: boolean;
+  /** The site app's header, floors and views around the record (26 Nov 2026); without it the admin page's own top. */
+  frame?: (frame: AsBuiltFrame) => React.ReactNode;
 }
+
+const shortName = (f: Floor) => (f.key === "g" ? "Ground" : f.key === "roof" ? "Roof" : f.name.replace(" floor", ""));
+/** Anything taped on it: its faces, its size, a gap to it or a figure to a slab edge. */
+const isMeasured = (e: ColumnEl | CoreEl) => Boolean(e.actual || e.w || e.h || e.gx || e.gy || e.edges?.length);
 
 interface Settings {
   tol: Tolerance;
@@ -85,7 +114,7 @@ function newVoidKey(): string {
   return `v${Array.from(bytes, (b) => (b % 36).toString(36)).join("")}`;
 }
 
-export function AsBuiltApp({ initialFloors, initialKey, initialTab, realRecord, inApp = false, active = true }: Props) {
+export function AsBuiltApp({ initialFloors, initialKey, initialTab, realRecord, inApp = false, active = true, frame }: Props) {
   const [floors, setFloors] = useState(initialFloors);
   const [floorKey, setFloorKey] = useState(initialKey);
   const [tab, setTab] = useState<AsBuiltTab>(initialTab);
@@ -401,82 +430,13 @@ export function AsBuiltApp({ initialFloors, initialKey, initialTab, realRecord, 
     />
   ) : null;
 
-  return (
-    <div className={[s.app, full ? s.appFull : "", inApp ? s.inApp : ""].filter(Boolean).join(" ")}>
-      {!realRecord && (
-        <div className={s.devBanner}>
-          Test copy: anything saved here is kept apart from the real record, so try things freely.
-        </div>
-      )}
+  const testCopy = !realRecord && (
+    <div className={s.devBanner}>Test copy: anything saved here is kept apart from the real record, so try things freely.</div>
+  );
 
-      <div className={s.top}>
-        {/* In the site app its header says "As-built" already. */}
-        {inApp ? <span className={s.title} /> : <h1 className={s.title}>As-built record</h1>}
-        <span className={s.saving} aria-live="polite">
-          {saving > 0 ? "Saving…" : ""}
-        </span>
-        <span className={s.downloads}>
-          {/* File downloads from a route handler, not pages, so plain links. */}
-          <a href="/admin/asbuilt/export?format=csv" download>
-            Download all (Excel)
-          </a>
-          <a href="/admin/asbuilt/export?format=json" download>
-            Backup file
-          </a>
-        </span>
-      </div>
-
-      <nav ref={floorRow} className={s.floors} aria-label="Floors">
-        {[...floors]
-          .sort((a, b) => b.order - a.order)
-          .map((f) => (
-            <button
-              key={f.key}
-              type="button"
-              className={f.key === floor.key ? s.floorActive : s.floor}
-              aria-pressed={f.key === floor.key}
-              onClick={() => chooseFloor(f.key)}
-            >
-              <span className={s.floorName}>
-                {f.key === "g" ? "Ground" : f.key === "roof" ? "Roof" : f.name.replace(" floor", "")}
-              </span>
-              <span className={s.floorCount}>{counts(f)}</span>
-            </button>
-          ))}
-      </nav>
-
-      <div className={s.tabs} role="tablist" aria-label="Views">
-        {TABS.map((t) => (
-          <button
-            key={t.key}
-            type="button"
-            role="tab"
-            aria-selected={tab === t.key}
-            className={tab === t.key ? s.tabActive : s.tab}
-            onClick={() => chooseTab(t.key)}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
-
-      <details className={s.about}>
-        <summary>
-          {floor.name} · level +{floor.level} · where this comes from
-          {floor.notes.length ? ` · ${floor.notes.length} drawing ${floor.notes.length === 1 ? "note" : "notes"}` : ""}
-        </summary>
-        <div className={s.aboutBody}>
-          <p>{floor.source}</p>
-          {floor.notes.length > 0 && (
-            <ul className={s.noteList}>
-              {floor.notes.map((n) => (
-                <li key={n}>{n}</li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </details>
-
+  // The record under the floors and views: what doesn't fit, a void's "this floor or all floors", the view and its panel.
+  const record = (
+    <>
       <ClashNotice floor={floor} tol={settings.tol} onSelect={setSelection} />
 
       {ask ? (
@@ -566,6 +526,106 @@ export function AsBuiltApp({ initialFloors, initialKey, initialTab, realRecord, 
         </div>
         {panel}
       </div>
+    </>
+  );
+
+  const className = [s.app, full ? s.appFull : "", inApp ? s.inApp : ""].filter(Boolean).join(" ");
+
+  // In the site app: its header holds the floors and the views, in the app's own look.
+  if (frame) {
+    const onFloor = [...floor.columns, ...floor.cores];
+    return frame({
+      floors: [...floors].sort((a, b) => a.order - b.order).map((f) => ({ key: f.key, short: shortName(f) })),
+      floor,
+      chooseFloor,
+      tabs: TABS,
+      tab,
+      chooseTab,
+      saving: saving > 0,
+      measured: onFloor.filter(isMeasured).length,
+      total: onFloor.length,
+      body: (
+        <div className={className}>
+          {testCopy}
+          {record}
+        </div>
+      ),
+    });
+  }
+
+  return (
+    <div className={className}>
+      {testCopy}
+
+      <div className={s.top}>
+        {/* In the site app its header says "As-built" already. */}
+        {inApp ? <span className={s.title} /> : <h1 className={s.title}>As-built record</h1>}
+        <span className={s.saving} aria-live="polite">
+          {saving > 0 ? "Saving…" : ""}
+        </span>
+        <span className={s.downloads}>
+          {/* File downloads from a route handler, not pages, so plain links. */}
+          <a href="/admin/asbuilt/export?format=csv" download>
+            Download all (Excel)
+          </a>
+          <a href="/admin/asbuilt/export?format=json" download>
+            Backup file
+          </a>
+        </span>
+      </div>
+
+      <nav ref={floorRow} className={s.floors} aria-label="Floors">
+        {[...floors]
+          .sort((a, b) => b.order - a.order)
+          .map((f) => (
+            <button
+              key={f.key}
+              type="button"
+              className={f.key === floor.key ? s.floorActive : s.floor}
+              aria-pressed={f.key === floor.key}
+              onClick={() => chooseFloor(f.key)}
+            >
+              <span className={s.floorName}>
+                {f.key === "g" ? "Ground" : f.key === "roof" ? "Roof" : f.name.replace(" floor", "")}
+              </span>
+              <span className={s.floorCount}>{counts(f)}</span>
+            </button>
+          ))}
+      </nav>
+
+      <div className={s.tabs} role="tablist" aria-label="Views">
+        {TABS.map((t) => (
+          <button
+            key={t.key}
+            type="button"
+            role="tab"
+            aria-selected={tab === t.key}
+            className={tab === t.key ? s.tabActive : s.tab}
+            onClick={() => chooseTab(t.key)}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      <details className={s.about}>
+        <summary>
+          {floor.name} · level +{floor.level} · where this comes from
+          {floor.notes.length ? ` · ${floor.notes.length} drawing ${floor.notes.length === 1 ? "note" : "notes"}` : ""}
+        </summary>
+        <div className={s.aboutBody}>
+          <p>{floor.source}</p>
+          {floor.notes.length > 0 && (
+            <ul className={s.noteList}>
+              {floor.notes.map((n) => (
+                <li key={n}>{n}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </details>
+
+      {record}
     </div>
   );
 }
