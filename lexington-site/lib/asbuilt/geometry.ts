@@ -437,6 +437,32 @@ export function resolveFloor(floor: Floor): Resolved {
     }
   }
 
+  // An edge split in two where its length changes (Niko, 26 Nov 2026): a piece with nothing measured of its own
+  // stays in line with the piece next to it, as the edge ran before the split, until it is measured itself.
+  // Pieces of one edge (joined by the steps between them) are a group; beside a measured piece of its group, an
+  // unmeasured piece follows it exactly, with no pull towards the drawing.
+  const ownMeasure = (e: SlabEdge) => has(e.actual) || items.some(({ el }) => el.edges?.some((f) => f.edge === e._key));
+  const parentOf = new Map<string, string>();
+  const rootOf = (key: string): string => {
+    const up = parentOf.get(key);
+    return up === undefined ? key : rootOf(up);
+  };
+  const ties: [SlabEdge, SlabEdge][] = [];
+  edgeList.forEach((step, k) => {
+    if (step.split !== "step") return;
+    const a = edgeList[(k - 1 + edgeList.length) % edgeList.length];
+    const b = edgeList[(k + 1) % edgeList.length];
+    if (a === b || a.axis !== b.axis || a.ref !== b.ref) return;
+    const ra = rootOf(a._key);
+    const rb = rootOf(b._key);
+    if (ra !== rb) parentOf.set(rb, ra);
+    if (!(ownMeasure(a) && ownMeasure(b))) ties.push([a, b]);
+  });
+  const measuredGroups = new Set(edgeList.filter(ownMeasure).map((e) => rootOf(e._key)));
+  for (const [a, b] of ties)
+    eqs.push({ coef: [[edgeVar(a._key), 1], [edgeVar(b._key), -1]], rhs: a.design - b.design, weight: FIGURE_WEIGHT });
+  const tied = new Set(ties.flat().map((e) => e._key));
+
   // Slab edges from their grid lines: taped, or the drawing.
   for (const edge of edgeList) {
     if (!lineOf(floor, edge.axis, edge.ref)) continue;
@@ -446,7 +472,8 @@ export function resolveFloor(floor: Floor): Resolved {
     ];
     if (has(edge.actual))
       eqs.push({ coef, rhs: edge.actual, weight: FIGURE_WEIGHT, fit: { kind: "edgeGrid", axis: edge.axis, typed: edge.actual, edge } });
-    else eqs.push({ coef, rhs: edge.design, weight: DRAWING_WEIGHT });
+    else if (!(tied.has(edge._key) && !ownMeasure(edge) && measuredGroups.has(rootOf(edge._key))))
+      eqs.push({ coef, rhs: edge.design, weight: DRAWING_WEIGHT });
   }
 
   // Spacings between neighbouring grid lines: taped, or the drawing.
@@ -898,6 +925,8 @@ export function openingNeighbours(floor: Floor, el: OpeningEl, maxReach = 4000):
 }
 
 export function edgeDeviation(floor: Floor, edge: SlabEdge): number | null {
+  // Where an edge was split, the drawing runs straight on: a step is never "off the drawing".
+  if (edge.split === "step") return null;
   if (!edgeMeasured(floor, edge)) return null;
   const a = edgePos(floor, edge, "actual");
   const d = edgePos(floor, edge, "design");

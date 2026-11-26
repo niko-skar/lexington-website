@@ -51,6 +51,7 @@ import {
   type TapeList,
 } from "@/lib/asbuilt/geometry";
 import { pathOf } from "@/lib/asbuilt/paths";
+import { joinPlan, splitChanges, splitLines, splitPlan, splitText } from "@/lib/asbuilt/split";
 import type {
   Axis,
   BoxEl,
@@ -162,17 +163,21 @@ export function Sheet({ floor, selection, tol, busy, onClose, onSave }: SheetPro
     const edge = floor.slab?.edges.find((e) => e._key === selection.key);
     if (edge) {
       const via = selection.via ? findBox(floor, selection.via.list, selection.via.key) : undefined;
-      kind = via ? `Slab edge, from ${boxTitle(selection.via!.list, via)}` : "Slab edge";
+      kind =
+        edge.split === "step" ? "Step in the slab edge" : via ? `Slab edge, from ${boxTitle(selection.via!.list, via)}` : "Slab edge";
       const at = edgePos(floor, edge, "actual");
       const line = linePos(floor, edge.axis, edge.ref, "actual");
       title = offsetText(edge.axis, at !== null && line !== null ? Math.round((at - line) * 10) / 10 : edge.design, edge.ref);
       const dev = edgeDeviation(floor, edge);
-      chip = (
-        <StatusChip
-          status={dev === null ? "none" : statusFor(Math.abs(dev), tol)}
-          worst={dev === null ? null : Math.abs(dev)}
-        />
-      );
+      chip =
+        edge.split === "step" ? (
+          <span className={has(edge.actual) ? s.statusOk : s.statusNone}>{has(edge.actual) ? "Measured" : "Not measured yet"}</span>
+        ) : (
+          <StatusChip
+            status={dev === null ? "none" : statusFor(Math.abs(dev), tol)}
+            worst={dev === null ? null : Math.abs(dev)}
+          />
+        );
       body = (
         <EdgeBody
           key={`${floor.key}:${edge._key}:${selection.via?.key ?? ""}:${floor._rev ?? ""}`}
@@ -1236,6 +1241,9 @@ function EdgeBody({
   const [text, setText] = useState(mm(Math.abs(current)));
   const [neg, setNeg] = useState(current === 0 ? (edge?.design ?? 0) < 0 : current < 0);
   const [fromText, setFromText] = useState(mine ? mm(mine.d) : "");
+  // A split waiting on which piece a column's figure is for (the grid line runs through that column).
+  const [asking, setAsking] = useState<string | null>(null);
+  const [joinArmed, setJoinArmed] = useState(false);
   if (!edge || !floor.slab) return null;
 
   const corners = slabCorners(floor, "actual");
@@ -1248,6 +1256,8 @@ function EdgeBody({
   const words = edge.axis === "x" ? ["left", "right"] : ["above", "below"];
   const typed = parseMm(text);
   const value = typed === null ? null : neg ? -typed : typed;
+  const isStep = edge.split === "step";
+  const label = isStep ? `Step in the slab edge at grid ${edge.ref}` : `Slab edge by ${span}`;
 
   const save = async () => {
     if (value === null) return;
@@ -1256,10 +1266,40 @@ function EdgeBody({
         { path: pathOf("slab.edges", edge._key, "actual"), value },
         { path: pathOf("slab.edges", edge._key, "at"), value: nowIso() },
       ],
-      `Slab edge by ${span}: ${offsetText(edge.axis, value, edge.ref)}${Math.round(value) !== Math.round(edge.design) ? ` (drawing ${mm(Math.abs(edge.design))})` : ""}`,
+      `${label}: ${offsetText(edge.axis, value, edge.ref)}${!isStep && Math.round(value) !== Math.round(edge.design) ? ` (drawing ${mm(Math.abs(edge.design))})` : ""}`,
       edge._key,
     );
   };
+
+  // Split where the length changes (Niko, 26 Nov 2026: "i need to be able to change each cantilever length"):
+  // the edge keeps the piece before the grid line, a new piece carries on after it, both at this edge's distance.
+  const splitAt = splitLines(floor, edge._key);
+  const askPlan = asking ? splitPlan(floor, edge._key, asking) : null;
+  const split = async (lineId: string, unsureTo?: "first" | "second") => {
+    const plan = splitPlan(floor, edge._key, lineId);
+    if (!plan) return;
+    if (plan.unsure.length && !unsureTo) {
+      setAsking(lineId);
+      return;
+    }
+    setAsking(null);
+    await onSave(splitChanges(floor, plan, unsureTo), splitText(plan, unsureTo), edge._key);
+  };
+  const join = edge.split === "part" ? joinPlan(floor, edge._key) : null;
+  const joinBack = async () => {
+    if (!join) return;
+    if (!joinArmed) {
+      setJoinArmed(true);
+      return;
+    }
+    setJoinArmed(false);
+    await onSave(
+      join.changes,
+      `Slab edge ${join.span}: joined back into one edge at grid ${join.step.ref}${join.dropped.length ? ` (${join.dropped.map((d) => `${d.name}'s ${mm(d.d)}`).join(", ")} taken off)` : ""}`,
+      join.into._key,
+    );
+  };
+  const intoAt = join ? (join.into.actual ?? join.into.design) : 0;
 
   // Taped from a column face: kept on the column exactly as typed. It never moves the edge
   // under another column's figure; if the figures don't agree, that shows as a clash.
@@ -1327,10 +1367,17 @@ function EdgeBody({
           label={(f) => itemRef(f.item)}
         />
       )}
-      <p className={s.fact}>
-        <span className={s.factStrong}>Drawing:</span> {offsetText(edge.axis, edge.design, edge.ref)}
-        {span && `, running ${span}`}.
-      </p>
+      {isStep ? (
+        <p className={s.fact}>
+          Where the edge steps from one part to the next (it was split at grid {edge.ref}). The drawing runs straight on
+          here.
+        </p>
+      ) : (
+        <p className={s.fact}>
+          <span className={s.factStrong}>Drawing:</span> {offsetText(edge.axis, edge.design, edge.ref)}
+          {span && `, running ${span}`}.
+        </p>
+      )}
       {edge.note && (
         <p className={s.fact} style={{ color: "var(--brass-text)" }}>
           Check: {edge.note}.
@@ -1385,12 +1432,12 @@ function EdgeBody({
                   { path: pathOf("slab.edges", edge._key, "actual"), value: edge.design },
                   { path: pathOf("slab.edges", edge._key, "at"), value: nowIso() },
                 ],
-                `Slab edge by ${span}: checked, same as the drawing`,
+                isStep ? `${label}: on grid ${edge.ref}` : `${label}: checked, same as the drawing`,
                 edge._key,
               )
             }
           >
-            Same as drawing
+            {isStep ? `On grid ${edge.ref}` : "Same as drawing"}
           </button>
           {edge.actual !== null && edge.actual !== undefined && (
             <button
@@ -1403,7 +1450,7 @@ function EdgeBody({
                     { path: pathOf("slab.edges", edge._key, "actual"), value: null },
                     { path: pathOf("slab.edges", edge._key, "at"), value: null },
                   ],
-                  `Slab edge by ${span}: measurement cleared`,
+                  `${label}: measurement cleared`,
                   edge._key,
                 )
               }
@@ -1413,6 +1460,58 @@ function EdgeBody({
           )}
         </div>
       </div>
+      {splitAt.length > 0 && (
+        <div className={s.splitBlock}>
+          <div className={s.blockTitle}>Two lengths along this edge?</div>
+          {askPlan ? (
+            <>
+              <p className={s.fact}>
+                {askPlan.unsure.map((u) => `${u.name}'s ${mm(u.d)}`).join(", ")} to this edge: grid {askPlan.step.ref} runs
+                through {askPlan.unsure.length === 1 ? "that column" : "those columns"}. Which part is it for?
+              </p>
+              <div className={s.row}>
+                <button type="button" className={s.btnPrimary} disabled={busy} onClick={() => split(askPlan.step.ref, "first")}>
+                  {askPlan.first}
+                </button>
+                <button type="button" className={s.btnPrimary} disabled={busy} onClick={() => split(askPlan.step.ref, "second")}>
+                  {askPlan.second}
+                </button>
+                <button type="button" className={s.btnQuiet} onClick={() => setAsking(null)}>
+                  Cancel
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className={s.hint}>
+                Split it where it changes: each part then has its own length.
+              </p>
+              <div className={s.row}>
+                {splitAt.map((id) => (
+                  <button key={id} type="button" className={s.btn} disabled={busy} onClick={() => split(id)}>
+                    Split at {id}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+      {join && (
+        <div className={s.splitBlock}>
+          <div className={s.blockTitle}>Split off at grid {join.step.ref}</div>
+          <p className={s.hint}>
+            Joining it back makes {join.span} one edge again, {offsetText(join.into.axis, intoAt, join.into.ref)}
+            {has(edge.actual) && Math.round(edge.actual) !== Math.round(intoAt) ? `: this part's ${mm(Math.abs(edge.actual))} goes` : ""}
+            {join.dropped.length ? `, and ${join.dropped.map((d) => `${d.name}'s ${mm(d.d)}`).join(", ")} with it` : ""}.
+          </p>
+          <div className={s.row}>
+            <button type="button" className={joinArmed ? s.btnDanger : s.btn} disabled={busy} onClick={joinBack}>
+              {joinArmed ? "Tap again to join it back" : "Join it back"}
+            </button>
+          </div>
+        </div>
+      )}
     </>
   );
 }

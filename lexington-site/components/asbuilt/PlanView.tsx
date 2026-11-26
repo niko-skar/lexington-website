@@ -1263,6 +1263,22 @@ export function PlanView({
             {designCorners && corners && JSON.stringify(designCorners) !== JSON.stringify(corners) && (
               <polygon points={designCorners.map((p) => p.join(",")).join(" ")} className={s.slabDesign} />
             )}
+            {/* Where an edge was split but both pieces are still the same length: a short mark across it. */}
+            {corners &&
+              view &&
+              floor.slab?.edges.map((edge, i) => {
+                if (edge.split !== "step") return null;
+                const [p, q] = edgeSegment(corners, i);
+                if (Math.hypot(q[0] - p[0], q[1] - p[1]) * view.k > 6) return null;
+                const cx = (p[0] + q[0]) / 2;
+                const cy = (p[1] + q[1]) / 2;
+                const r = 9 / view.k;
+                return edge.axis === "x" ? (
+                  <line key={`split${edge._key}`} x1={cx} x2={cx} y1={cy - r} y2={cy + r} className={s.splitMark} />
+                ) : (
+                  <line key={`split${edge._key}`} x1={cx - r} x2={cx + r} y1={cy} y2={cy} className={s.splitMark} />
+                );
+              })}
             {floor.openings.map(drawOpening)}
             {floor.cores.map(drawCore)}
             {floor.columns.map(drawColumn)}

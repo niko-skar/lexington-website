@@ -47,6 +47,12 @@ export interface SlabEdge {
   /** Where the drawing disagrees with itself about this edge. */
   note?: string;
   at?: string | null;
+  /**
+   * Made in the app by splitting a drawn edge where its length changes (Niko, 26 Nov 2026: "i need to be able to
+   * change each cantilever length"): "part" = the piece split off (it carries on the drawing's distance until it is
+   * measured), "step" = where the edge steps from one piece to the next (on the drawing it runs straight on).
+   */
+  split?: "part" | "step" | null;
 }
 
 /**

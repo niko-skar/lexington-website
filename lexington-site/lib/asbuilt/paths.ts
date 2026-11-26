@@ -1,9 +1,10 @@
-import type { Change, Floor } from "./types";
+import type { Change, Floor, SlabEdge } from "./types";
 
 /**
  * The only places a change may write to, as Sanity patch paths, e.g.
  *   columns[_key=="D3"].actual      grid[_key=="xD"].shift
  *   slab.edges[_key=="e3"].actual   openings[_key=="v1a2b"]   (a whole opening)
+ *   slab.edges                      (every slab edge at once: an edge split in two, or joined back)
  * Shared by the page (to show a change at once) and the server (to check and
  * store it), so both read a path the same way.
  */
@@ -17,7 +18,12 @@ export interface ParsedPath {
   key: string;
   /** Undefined = the whole item (adding or deleting an opening). */
   field?: FieldName;
+  /** The whole list (only the slab edges: a split or a join changes how many there are). */
+  all?: true;
 }
+
+/** Every slab edge at once, in their order round the outline. */
+export const EDGES_PATH = "slab.edges";
 
 const PATH_RE =
   /^(grid|columns|cores|openings|slab\.edges)\[_key=="([A-Za-z0-9_-]{1,40})"\](?:\.(shift|measured|actual|at|note|removed|name|kind|w|h|gx|gy|edges))?$/;
@@ -31,6 +37,7 @@ const FIELDS_BY_LIST: Record<ListName, FieldName[]> = {
 };
 
 export function parsePath(path: string): ParsedPath | null {
+  if (path === EDGES_PATH) return { list: "slab.edges", key: "", all: true };
   const m = PATH_RE.exec(path);
   if (!m) return null;
   const list = m[1] as ListName;
@@ -61,6 +68,7 @@ export function getItem(floor: Floor, list: ListName, key: string): Record<strin
 export function getAt(floor: Floor, path: string): unknown {
   const p = parsePath(path);
   if (!p) return null;
+  if (p.all) return floor.slab?.edges ?? null;
   const item = itemsOf(floor, p.list)?.find((i) => i._key === p.key);
   if (!item) return null;
   if (!p.field) return item;
@@ -73,6 +81,10 @@ export function applyChanges(floor: Floor, changes: Change[]): Floor {
   for (const change of changes) {
     const p = parsePath(change.path);
     if (!p) continue;
+    if (p.all) {
+      if (next.slab && Array.isArray(change.value)) next.slab.edges = structuredClone(change.value) as SlabEdge[];
+      continue;
+    }
     const items = itemsOf(next, p.list);
     if (!items) continue;
     const index = items.findIndex((i) => i._key === p.key);

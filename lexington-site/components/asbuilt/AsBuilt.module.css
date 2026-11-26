@@ -400,6 +400,20 @@
   fill: none;
 }
 
+/* Where a slab edge was split and both pieces are still the same length. */
+.splitMark {
+  stroke: var(--ink);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+/* The edge panel's "Split at F" and "Join it back". */
+.splitBlock {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--stone-lt);
+}
+
 .col {
   stroke: var(--ink);
   stroke-width: 1;

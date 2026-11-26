@@ -218,7 +218,11 @@ function floorRows(floor: Floor): (string | number | null)[][] {
       built,
       diff(absA, absD),
       edge.at ? when(edge.at) : "",
-      [edge.actual === null || edge.actual === undefined ? (absA !== null ? "from the column figures" : "") : "", edge.note ?? ""]
+      [
+        edge.split === "step" ? "step where the edge was split" : edge.split === "part" ? "split off in the app" : "",
+        edge.actual === null || edge.actual === undefined ? (absA !== null ? "from the column figures" : "") : "",
+        edge.note ?? "",
+      ]
         .filter(Boolean)
         .join("; "),
     ]);

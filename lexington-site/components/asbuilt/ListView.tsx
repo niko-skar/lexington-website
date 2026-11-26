@@ -146,8 +146,13 @@ export function ListView({ floor, tol, busy, selection, onSelect, onSave, onAddV
                   onClick={() => onSelect({ kind: "edge", key: edge._key })}
                 >
                   <span>
-                    <span className={s.itemName}>{offsetText(edge.axis, edge.actual ?? edge.design, edge.ref)}</span>
-                    <span className={s.itemSub}> · runs {span}</span>
+                    <span className={s.itemName}>
+                      {edge.split === "step" ? "Step " : ""}
+                      {offsetText(edge.axis, edge.actual ?? edge.design, edge.ref)}
+                    </span>
+                    <span className={s.itemSub}>
+                      {edge.split === "step" ? " · where the edge was split" : ` · runs ${span}${edge.split === "part" ? " (split off)" : ""}`}
+                    </span>
                     {edge.note && (
                       <span className={s.itemSub} style={{ color: "var(--brass-text)" }}>
                         {" "}

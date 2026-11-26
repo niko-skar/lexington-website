@@ -3,9 +3,10 @@
 import { randomBytes } from "node:crypto";
 
 import { linePos } from "@/lib/asbuilt/geometry";
-import { getAt, getItem, parsePath, pathOf, sameValue, type ParsedPath } from "@/lib/asbuilt/paths";
+import { EDGES_PATH, getAt, getItem, parsePath, pathOf, sameValue, type ParsedPath } from "@/lib/asbuilt/paths";
+import { edgesProblem } from "@/lib/asbuilt/split";
 import { floorId, isFloorKey, readFloorForPage, readFloorFull, readFloors, SEED_FLOORS } from "@/lib/asbuilt/store";
-import type { Change, EdgeFigure, Floor, LogEntry, OpeningEl, OpeningKind } from "@/lib/asbuilt/types";
+import type { Change, EdgeFigure, Floor, LogEntry, OpeningEl, OpeningKind, SlabEdge } from "@/lib/asbuilt/types";
 import { getAdminSession } from "@/lib/auth/session";
 import { getBuyersClient } from "@/lib/sanity/buyersClient";
 
@@ -96,8 +97,41 @@ function cleanOpening(v: unknown, key: string, floor: Floor, current: unknown): 
   };
 }
 
+/**
+ * Every slab edge at once: an edge split where its length changes, or a piece joined back (Niko, 26 Nov 2026).
+ * Pieces made in the app are checked field by field; every other edge must be exactly as stored (it is kept as
+ * stored), and the drawing's outline must stay the same (lib/asbuilt/split.ts edgesProblem).
+ */
+function cleanEdges(value: unknown, floor: Floor): SlabEdge[] {
+  const cur = floor.slab?.edges ?? [];
+  if (!cur.length) throw new Refused("This floor has no slab edges.");
+  if (!Array.isArray(value) || value.length < 4 || value.length > 160) throw new Refused("Those slab edges don't look right.");
+  const next = value.map((v): SlabEdge => {
+    const o = (v ?? {}) as Record<string, unknown>;
+    if (typeof o._key !== "string" || !KEY_RE.test(o._key)) throw new Refused("Those slab edges don't look right.");
+    if (cur.some((e) => e._key === o._key)) return o as unknown as SlabEdge;
+    if (o.split !== "part" && o.split !== "step") throw new Refused("Only a split can add a piece of slab edge.");
+    if ((o.axis !== "x" && o.axis !== "y") || !lineExists(floor, o.axis, o.ref)) throw new Refused("That grid line isn't on this floor.");
+    const actual = o.actual === null || o.actual === undefined ? null : num(o.actual, 30000);
+    const note = typeof o.note === "string" ? o.note.trim().slice(0, 500) : "";
+    return {
+      _key: o._key,
+      axis: o.axis,
+      ref: o.ref,
+      design: num(o.design, 30000),
+      ...(actual !== null ? { actual, ...(o.at ? { at: isoDate(o.at) } : {}) } : {}),
+      ...(note ? { note } : {}),
+      split: o.split,
+    };
+  });
+  const problem = edgesProblem(floor, next);
+  if (problem) throw new Refused(problem);
+  return next.map((e) => cur.find((c) => c._key === e._key) ?? e);
+}
+
 /** Checks one change and returns the value to store (null = remove). */
 function cleanValue(p: ParsedPath, value: unknown, floor: Floor, current: unknown): unknown {
+  if (p.all) return cleanEdges(value, floor);
   if (!p.field) {
     // A whole opening: add one made on site, or delete one that was added here.
     if (value === null) {
@@ -195,13 +229,32 @@ export async function saveAsBuiltAction(input: AsBuiltInput): Promise<AsBuiltRes
 
     const entries: { path: string; p: ParsedPath; before: unknown; after: unknown }[] = [];
     try {
-      for (const change of input.changes) {
+      // The slab edges first (a split, a join, or the undo of one), so a column's figure can go onto a piece
+      // of edge that comes back in the same save.
+      const ordered = [...input.changes].sort((a, b) => Number(b?.path === EDGES_PATH) - Number(a?.path === EDGES_PATH));
+      let work: Floor = doc;
+      for (const change of ordered) {
         const p = change && typeof change.path === "string" ? parsePath(change.path) : null;
         if (!p) throw new Refused("That change can't be saved.");
-        const item = getItem(doc, p.list, p.key);
+        const item = p.all ? null : getItem(work, p.list, p.key);
         if (p.field && !item) throw new Refused("That item isn't on this floor any more. Reload the page.");
-        const before = getAt(doc, change.path);
-        entries.push({ path: change.path, p, before, after: cleanValue(p, change.value, doc, item) });
+        const before = getAt(work, change.path);
+        const after = cleanValue(p, change.value, work, item);
+        entries.push({ path: change.path, p, before, after });
+        if (p.all) work = { ...work, slab: { edges: after as SlabEdge[] } };
+      }
+      // No column may be left with a figure to a piece of edge that has gone.
+      if (entries.some((e) => e.p.all)) {
+        const left = new Set((work.slab?.edges ?? []).map((e) => e._key));
+        const gone = new Set((doc.slab?.edges ?? []).map((e) => e._key).filter((k) => !left.has(k)));
+        for (const list of ["columns", "cores"] as const) {
+          for (const el of doc[list]) {
+            const saved = entries.find((e) => e.p.list === list && e.p.key === el._key && e.p.field === "edges");
+            const figures = (saved ? (saved.after as EdgeFigure[] | null) : el.edges) ?? [];
+            if (figures.some((f) => gone.has(f.edge)))
+              throw new Refused(`${el.name} ${el.x}/${el.y} has a figure to the piece of edge that would go: take it off first.`);
+          }
+        }
       }
     } catch (err) {
       if (err instanceof Refused) return fail(err.message);
@@ -211,7 +264,9 @@ export async function saveAsBuiltAction(input: AsBuiltInput): Promise<AsBuiltRes
     const tx = client.transaction();
     tx.patch(id, (patch) => patch.ifRevisionId(doc._rev as string).setIfMissing({ log: [], openings: [] }));
     for (const e of entries) {
-      if (e.after === null) {
+      if (e.p.all) {
+        tx.patch(id, (patch) => patch.set({ "slab.edges": e.after }));
+      } else if (e.after === null) {
         tx.patch(id, (patch) => patch.unset([e.path]));
       } else if (!e.p.field && !e.before) {
         tx.patch(id, (patch) => patch.insert("after", "openings[-1]", [e.after]));
