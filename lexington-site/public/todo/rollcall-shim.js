@@ -260,10 +260,10 @@
     },
   };
 
-  // Excel backups: the phone saves (or opens) the file.
+  // Excel backups and the bank's .xls file: the phone saves (or opens) the file. `type` defaults to .xlsx.
   const downloads = {
-    async save({ filename, data }) {
-      const url = URL.createObjectURL(new Blob([data], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
+    async save({ filename, data, type }) {
+      const url = URL.createObjectURL(new Blob([data], { type: type || "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
       const a = document.createElement("a");
       a.href = url;
       a.download = filename;

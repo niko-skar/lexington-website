@@ -153,6 +153,7 @@ button.dcell.sel{background:var(--chip);color:var(--ink)}
 .nick{font-weight:500;color:var(--muted)}
 .exportbox{margin-top:10px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px}
 .exportbox .paybar{margin-top:8px}
+.affbox p{margin:6px 0 0}
 .ro{margin:12px 0 0;background:var(--absent-soft);color:var(--absent);border:1px solid var(--absent);border-radius:12px;padding:12px 14px;font-size:14px}
 .ro b{display:block;font-size:15px;margin-bottom:2px}
 .ro.warn{background:var(--late-soft);color:var(--late);border-color:var(--late)}
@@ -947,7 +948,9 @@ function viewWeek(){
     ${locationsHtml(ws)}
     ${momoWeekHtml(W)}
     <div class="actions"><button class="btn" data-act="copy">Copy report for WhatsApp</button>
-      ${S.downloads ? `<button class="btn" data-act="exportmenu" aria-expanded="${!!S.exportOpen}">Export to Excel</button>` : ""}</div>
+      ${S.downloads ? `<button class="btn" data-act="exportmenu" aria-expanded="${!!S.exportOpen}">Export to Excel</button>` : ""}
+      ${S.downloads && money() ? `<button class="btn" data-act="affinitymenu" aria-expanded="${!!S.affinityOpen}">Download for Affinity</button>` : ""}</div>
+    ${S.downloads && money() && S.affinityOpen ? affinityBoxHtml(W, ws) : ""}
     ${S.downloads && S.exportOpen ? `<div class="exportbox"><span class="calc">${S.exporting ? "Building the spreadsheet…" : "Save a backup of attendance, overtime, deductions, steel machines, curing, pour checks, payments and workers:"}</span>
       <div class="paybar"><button data-act="export" data-v="week" ${S.exporting?"disabled":""}>This week</button>
       <button data-act="export" data-v="month" ${S.exporting?"disabled":""}>This month</button>
@@ -1312,8 +1315,10 @@ document.addEventListener("click", async e => {
     case "unpay": { const patch = {paid:{[wid]:null}};
       S.pays[S.week] = deepMerge({...(S.pays[S.week]||{})}, patch); writeDoc("payments/"+S.week, patch, {weekStart:S.week}); break; }
     case "copy": return copyReport();
-    case "exportmenu": S.exportOpen = !S.exportOpen; break;
+    case "exportmenu": S.exportOpen = !S.exportOpen; if (S.exportOpen) S.affinityOpen = false; break;
     case "export": return exportXlsx(v);
+    case "affinitymenu": S.affinityOpen = !S.affinityOpen; if (S.affinityOpen) S.exportOpen = false; break;
+    case "affinity": return affinityFile();
     case "checkmomo": {
       const nw = v === "nw", w = nw ? null : S.workers[v], pre = nw ? "nw-" : "ed-";
       const val = (k, fb) => String(S.draft[pre+k] ?? fb ?? "").trim();
@@ -1559,6 +1564,94 @@ async function exportXlsx(range){
     if (err?.code !== "declined") toast(err?.code === "rate_limited" ? "A save is already open. Finish that first." : "Export failed: "+(err?.message || "try again"));
   }
   S.exporting = false; render();
+}
+
+/* ---------- Affinity bulk transfer ---------- */
+// Niko, 26 Nov 2026: "Heres the bulk transfer template, can you adapt it to the payroll so I can send them all at
+// once." Affinity for Business takes its own Excel template (.xls): one sheet "affinity_bulk_transfer" with the
+// columns recipientName | amount | bank | accountNumber. The file holds the workers still to pay in the week shown who
+// have a MoMo number, each for exactly what Payday says; the box lists who's left out and what to look at first.
+// Networks by prefix: the same table as lib/rollcall/momoName.ts (keep the two alike).
+const MOMO_NETWORKS = [[/^0(24|25|53|54|55|59)/, "MTN"], [/^0(20|50)/, "Telecel"], [/^0(26|27|56|57)/, "AirtelTigo"]];
+// What Affinity's bank list calls each MoMo service. NOT confirmed yet (26 Nov 2026): if its upload wants other
+// names, change them here.
+const AFFINITY_BANK = {MTN:"MTN Mobile Money", Telecel:"Telecel Cash", AirtelTigo:"AirtelTigo Money"};
+const AFFINITY_HEAD = ["recipientName", "amount", "bank", "accountNumber"];
+/** The local 10-digit form ("0554349887") of a Ghana mobile number however it was typed, or null (as momoName.ts). */
+function localMomo(raw){
+  let d = String(raw ?? "").replace(/\(0\)/g, "").replace(/\D/g, "");
+  if (d.startsWith("00233")) d = d.slice(5); else if (d.startsWith("233")) d = d.slice(3);
+  if (d.length === 9) d = "0"+d;
+  return /^0[25]\d{8}$/.test(d) ? d : null;
+}
+const plainName = n => titleCase(String(n ?? "").replace(/\s*\(.*?\)\s*/g, " ").trim().replace(/\s+/g, " "));
+/** The week's MoMo payments for the bank file, who's left out (and why), and what to look at before approving. */
+function affinityRows(W, ws){
+  const rows = [], left = [], flags = [];
+  for (const r of W.rows){
+    if (!(r.net > 0) || r.paid) continue;
+    const w = r.w, worker = plainName(w.name), num = localMomo(w.momo);
+    if (!num){ left.push({worker, amount:r.net, why:w.momo ? "the MoMo number looks wrong" : ""}); continue; }
+    // A MoMo name check on this very number knows the account's name and network for sure.
+    const chk = w.momoCheck && w.momoCheckMatch && w.momoCheckMatch !== "unchecked" && w.momoCheck.number === num && w.momoCheck.name ? w.momoCheck : null;
+    const net = chk && AFFINITY_BANK[chk.network] ? chk.network : (MOMO_NETWORKS.find(([re]) => re.test(num)) || [])[1];
+    if (!net){ left.push({worker, amount:r.net, why:"can't tell the network from "+num}); continue; }
+    // The name on the account: the checked one, else the MoMo name typed for them when it's someone else's.
+    const typed = plainName(w.momoName);
+    const own = !typed || /^same$/i.test(typed) || (!typed.includes(" ") && worker.toLowerCase().split(" ").includes(typed.toLowerCase()));
+    rows.push({worker, name:chk ? titleCase(chk.name) : own ? worker : typed, amount:r2(r.net), bank:AFFINITY_BANK[net], account:num, checked:!!chk, bad:w.momoCheckMatch === "none"});
+  }
+  rows.sort((a, b) => a.worker.localeCompare(b.worker));
+  const byNum = {};
+  rows.forEach(x => (byNum[x.account] = byNum[x.account] || []).push(x));
+  for (const [num, list] of Object.entries(byNum)) if (list.length > 1) flags.push(list.map(x => x.worker).join(" and ")+" are paid into the same number ("+num+")");
+  const words = s => s.toLowerCase().split(" ").filter(x => x.length > 2);
+  const others = rows.filter(x => !words(x.name).some(p => words(x.worker).includes(p)));
+  if (others.length) flags.push("In someone else's name: "+others.map(x => x.worker+" → "+x.name).join(", "));
+  const bad = rows.filter(x => x.bad);
+  if (bad.length) flags.push("MoMo name doesn't match: "+bad.map(x => x.worker).join(", "));
+  const today = todayStr(), dates = weekDates(ws);
+  return {rows, left, flags, total:r2(rows.reduce((s, x) => s + x.amount, 0)), leftTotal:r2(left.reduce((s, x) => s + x.amount, 0)),
+    unchecked:rows.filter(x => !x.checked).length, toCome:dates.filter(d => d > today && parseYmd(d).getDay() !== 0)};
+}
+/** The file's name: the pay week, and the day it runs to while the week isn't over yet. */
+function affinityName(ws, A){
+  return "Affinity wages "+weekLabel(ws).replace(/\s*[–-]\s*/g, "-")+(A.toCome.length ? " (to "+dayLabel(todayStr())+")" : "")+".xls";
+}
+function affinityBoxHtml(W, ws){
+  const A = affinityRows(W, ws), mach = W.machineTotal && !W.pay.paid?.machines;
+  if (!A.rows.length) return `<div class="exportbox affbox"><span class="calc">Nobody left to pay by MoMo in this week.${A.left.length ? " Still to pay another way: "+A.left.map(x => esc(x.worker)+" "+ghs(x.amount)).join(", ")+"." : ""}</span></div>`;
+  return `<div class="exportbox affbox">
+    <span class="calc">The bank file for Affinity's bulk transfer: <b>${A.rows.length} MoMo ${A.rows.length === 1 ? "payment" : "payments"}, ${ghs(A.total)}</b>, everyone still to pay this week who has a MoMo number.</span>
+    ${A.toCome.length ? `<p class="calc"><span class="pill late">Up to today</span> ${A.toCome.map(d => DOW[parseYmd(d).getDay()]).join(" and ")} ${A.toCome.length === 1 ? "isn't" : "aren't"} marked yet. Download it again after the last check.</p>` : ""}
+    ${A.left.length ? `<p class="calc">Not in the file, pay another way: ${A.left.map(x => esc(x.worker)+" "+ghs(x.amount)+(x.why ? " ("+esc(x.why)+")" : "")).join(", ")} = ${ghs(A.leftTotal)}${A.left.every(x => !x.why) ? " (no MoMo number)" : ""}.</p>` : ""}
+    ${mach ? `<p class="calc">The steel machines (${ghs(W.machineTotal)}) aren't in it.</p>` : ""}
+    ${A.flags.length ? `<p class="calc"><span class="pill late">Look before you approve</span> ${A.flags.map(esc).join(". ")}.</p>` : ""}
+    ${A.unchecked ? `<p class="calc">${A.unchecked} of the ${A.rows.length} MoMo names aren't checked yet: compare them with the names Affinity shows.</p>` : ""}
+    <div class="paybar"><button data-act="affinity" ${S.affExporting ? "disabled" : ""}>${S.affExporting ? "Making the file…" : "Download the file"}</button></div>
+  </div>`;
+}
+async function affinityFile(){
+  if (S.affExporting) return;
+  const ws = S.week, A = affinityRows(weekData(ws), ws);
+  if (!A.rows.length) return toast("Nobody left to pay by MoMo in this week.");
+  S.affExporting = true; render();
+  try {
+    const XLSX = await loadXlsx();
+    const sh = XLSX.utils.aoa_to_sheet([AFFINITY_HEAD, ...A.rows.map(x => [x.name, x.amount, x.bank, x.account])]);
+    // Account numbers stay text (as a number the leading 0 would go); amounts are numbers, with pesewas.
+    A.rows.forEach((x, i) => { const n = sh[XLSX.utils.encode_cell({r:i+1, c:3})]; n.t = "s"; n.v = x.account; n.z = "@";
+      sh[XLSX.utils.encode_cell({r:i+1, c:1})].z = "#,##0.00"; });
+    sh["!cols"] = [{wch:31}, {wch:11}, {wch:34}, {wch:14}];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, sh, "affinity_bulk_transfer");
+    const buf = XLSX.write(wb, {type:"array", bookType:"xls"});
+    await S.downloads.save({filename:affinityName(ws, A), data:buf, type:"application/vnd.ms-excel"});
+    toast("Saved for Affinity: "+A.rows.length+" payments, "+ghs(A.total));
+  } catch(err){
+    if (err?.code !== "declined") toast(err?.code === "rate_limited" ? "A save is already open. Finish that first." : "Couldn't make the file: "+(err?.message || "try again"));
+  }
+  S.affExporting = false; render();
 }
 
 function copyReport(){
