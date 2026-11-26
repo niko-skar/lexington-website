@@ -105,6 +105,35 @@ export async function whatsAppNumberInfo(): Promise<{ display: string; name: str
 }
 
 /**
+ * What the website's WhatsApp key may do, in Meta's own words (its permissions, and for the WhatsApp ones which WhatsApp
+ * accounts they reach), for the Connect page (26 Nov 2026: "Switch on the number" was refused with (#10) even with full
+ * access to the account). Only names and ids come back, never the key.
+ */
+export async function whatsAppKeyScopes(): Promise<{ scopes: string[]; wabas: Record<string, string[]> } | null> {
+  const token = process.env.WHATSAPP_TOKEN?.trim();
+  if (!token) return null;
+  const get = (path: string) =>
+    fetch(`${graphBase()}${path}`, { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(10_000), cache: "no-store" });
+  try {
+    const debug = await get(`/debug_token?input_token=${encodeURIComponent(token)}`);
+    if (debug.ok) {
+      const out = (await debug.json()) as { data?: { scopes?: string[]; granular_scopes?: Array<{ scope?: string; target_ids?: string[] }> } };
+      if (Array.isArray(out.data?.scopes)) {
+        const wabas: Record<string, string[]> = {};
+        for (const g of out.data.granular_scopes ?? []) if (g.scope?.startsWith("whatsapp")) wabas[g.scope] = g.target_ids ?? [];
+        return { scopes: out.data.scopes, wabas };
+      }
+    }
+    const perms = await get("/me/permissions");
+    if (!perms.ok) return null;
+    const out = (await perms.json()) as { data?: Array<{ permission?: string; status?: string }> };
+    return { scopes: (out.data ?? []).filter((p) => p.status === "granted" && p.permission).map((p) => p.permission as string), wabas: {} };
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Switches the number on for the API (Meta's "register", 26 Nov 2026: possible only through the API, not in WhatsApp
  * Manager; Meta allows 10 tries per number in 3 days, so nothing here tries again by itself). The 6 digits become the
  * number's two-step verification PIN, or must be that PIN when it already has one. They go straight to Meta and are

@@ -16,7 +16,7 @@ import { chatAgentOn, chatSummary, readChatSwitch } from "@/lib/agents/chat";
 import { pilotConnected, usd } from "@/lib/agents/adsPilotCore";
 import { autoReplyMode } from "@/lib/agents/leadReply";
 import { metaLeadsConfigured, readMetaLeadsState } from "@/lib/agents/metaLeads";
-import { firstWhatsAppOn, whatsAppConfigured, whatsAppNumberInfo } from "@/lib/agents/whatsapp";
+import { firstWhatsAppOn, whatsAppConfigured, whatsAppKeyScopes, whatsAppNumberInfo } from "@/lib/agents/whatsapp";
 import { DEFAULT_TEMPLATE } from "@/lib/agents/whatsappCore";
 import { META_PIXEL_ID, capiKey, readMetaCapiState } from "@/lib/meta/conversions";
 import { GOOGLE_SCRIPT_VERSION, googleAdsScript } from "@/lib/ads/google";
@@ -97,7 +97,13 @@ export default async function ConnectPage() {
   const capi = capiKey();
   const chatReady = Boolean(process.env.META_APP_SECRET && process.env.META_WEBHOOK_VERIFY_TOKEN);
   const waConnected = whatsAppConfigured();
-  const waNumber = waConnected ? await whatsAppNumberInfo() : null;
+  const [waNumber, waKey] = waConnected ? await Promise.all([whatsAppNumberInfo(), whatsAppKeyScopes()]) : [null, null];
+  const waKeyWords = waKey
+    ? waKey.scopes
+        .filter((s) => s.startsWith("whatsapp"))
+        .map((s) => (waKey.wabas[s] ? `${s} (WhatsApp accounts: ${waKey.wabas[s].join(", ") || "none"})` : s))
+        .join("; ") || "nothing on WhatsApp"
+    : null;
   // Shown even once it is set: the same value goes into Facebook's webhook settings afterwards.
   const verifyToken = process.env.META_WEBHOOK_VERIFY_TOKEN?.trim() || null;
   const sampleVerify = verifyToken ? null : randomBytes(18).toString("base64url");
@@ -320,6 +326,7 @@ export default async function ConnectPage() {
               {waNumber
                 ? `The number ${waNumber.display}${waNumber.name ? ` (${waNumber.name})` : ""} is ${waNumber.on ? "switched on." : "NOT switched on yet."}`
                 : "Meta didn't say whether the number is switched on."}
+              {waKeyWords ? ` The website's key may: ${waKeyWords}.` : ""}
             </p>
             {!waNumber?.on && (
               <>
