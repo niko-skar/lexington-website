@@ -105,6 +105,16 @@ export function StatusChip({ status, worst, long = false }: { status: Status; wo
 const nowIso = () => new Date().toISOString();
 const has = (v: number | null | undefined): v is number => v !== null && v !== undefined;
 
+/**
+ * What a panel's boxes are filled from. The panel is drawn afresh (its boxes refilled) only when this changes: when
+ * what it shows was changed (its own save, an undo, a drag), never because another save came back from the server
+ * while a figure is being typed (Niko, 26 Nov 2026: typing was wiped, and Save then stored the old figure). Times are
+ * left out (a save's time can come back a moment different), figures to a tenth of a mm.
+ */
+function filledFrom(...parts: unknown[]): string {
+  return JSON.stringify(parts, (k, v) => (k === "at" ? undefined : typeof v === "number" ? Math.round(v * 10) / 10 : v));
+}
+
 /** A number typed by hand: "1,250" or " 300 " both work. */
 export function parseMm(text: string): number | null {
   const t = text.replace(/[,\s]/g, "");
@@ -146,9 +156,13 @@ export function Sheet({ floor, selection, tol, busy, onClose, onSave }: SheetPro
         ) : (
           <StatusChip status={boxStatus(floor, el, tol)} worst={dev?.worst ?? null} long />
         );
+      // Its own figures, the gaps to its neighbours (kept on them) and where the plan has it (its faces from the grid).
+      const tape = tapeListOf(el);
+      const around = tape ? gapsAround(floor, el as TapeEl).map((a) => [a.axis, a.before?.typed ?? null, a.after?.typed ?? null]) : null;
+      const placed = [boxOf(floor, el, "actual"), linePos(floor, "x", el.x, "actual"), linePos(floor, "y", el.y, "actual")];
       body = (
         <BoxBody
-          key={`${floor.key}:${el._key}:${floor._rev ?? ""}:${JSON.stringify([el.actual ?? null, "w" in el ? el.w : null, "h" in el ? el.h : null, "gx" in el ? el.gx : null, "gy" in el ? el.gy : null, "edges" in el ? (el.edges ?? null) : null])}`}
+          key={`${floor.key}:${el._key}:${filledFrom(el, around, placed)}`}
           floor={floor}
           list={selection.list}
           el={el}
@@ -178,9 +192,11 @@ export function Sheet({ floor, selection, tol, busy, onClose, onSave }: SheetPro
             worst={dev === null ? null : Math.abs(dev)}
           />
         );
+      // The edge's own figure, and the figure from the column it was opened from.
+      const fromVia = via ? ((via as TapeEl).edges?.find((f) => f.edge === edge._key)?.d ?? null) : null;
       body = (
         <EdgeBody
-          key={`${floor.key}:${edge._key}:${selection.via?.key ?? ""}:${floor._rev ?? ""}`}
+          key={`${floor.key}:${edge._key}:${selection.via?.key ?? ""}:${filledFrom(edge, fromVia)}`}
           floor={floor}
           edgeKey={edge._key}
           via={selection.via}
@@ -199,7 +215,7 @@ export function Sheet({ floor, selection, tol, busy, onClose, onSave }: SheetPro
       chip = <StatusChip status={gap.measured ? statusFor(diff, tol) : "none"} worst={gap.measured ? diff : null} long />;
       body = (
         <GapBody
-          key={`${floor.key}:${selection.axis}:${gap.to.id}:${floor._rev ?? ""}`}
+          key={`${floor.key}:${selection.axis}:${gap.to.id}:${filledFrom(gap.measured, gap.typed, gap.actual)}`}
           floor={floor}
           axis={selection.axis}
           toId={gap.to.id}
@@ -223,7 +239,7 @@ export function Sheet({ floor, selection, tol, busy, onClose, onSave }: SheetPro
       chip = <StatusChip status={gap.measured ? statusFor(diff, tol) : "none"} worst={gap.measured ? diff : null} long />;
       body = (
         <ColGapBody
-          key={`${floor.key}:${selection.axis}:${selection.key}:${floor._rev ?? ""}`}
+          key={`${floor.key}:${selection.axis}:${selection.key}:${filledFrom(gap.typed)}`}
           floor={floor}
           axis={selection.axis}
           list={selection.list}
