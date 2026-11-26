@@ -279,8 +279,8 @@ export default async function ConnectPage() {
           A number of its own on Meta&rsquo;s WhatsApp API, with no phone app: the assistant answers it, and you or the team
           write to people from the <strong>WhatsApp</strong> box on their record in Prospects. A few minutes after someone fills in a
           Facebook / Instagram lead form (once its email reply is decided), it sends them one WhatsApp, in their daytime: the
-          message Meta approved, &ldquo;Hi Ama, thank you for your enquiry about The Lexington in East Legon. What kind of home are
-          you looking for? Reply here and we&rsquo;ll send you the prices and floor plans.&rdquo; WhatsApp lets the number write
+          message Meta approved, &ldquo;Hi Ama, we received your enquiry about The Lexington Apartments, which unit are you
+          looking at?&rdquo; WhatsApp lets the number write
           freely only within 24 hours of a person&rsquo;s last message.
         </p>
         <p style={{ marginTop: 8 }}>

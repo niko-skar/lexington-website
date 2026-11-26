@@ -18,7 +18,8 @@ export const DEFAULT_TEMPLATE = "lexington_enquiry_reply";
 export const DEFAULT_TEMPLATE_LANG = "en";
 
 export function templateWords(first: string): string {
-  return `Hi ${first}, thank you for your enquiry about The Lexington in East Legon. What kind of home are you looking for? Reply here and we'll send you the prices and floor plans.`;
+  // His own words (26 Nov 2026); Meta took them as a utility message, so US (+1) numbers get it too.
+  return `Hi ${first}, we received your enquiry about The Lexington Apartments, which unit are you looking at?`;
 }
 
 /**
