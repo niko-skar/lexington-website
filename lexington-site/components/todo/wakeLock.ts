@@ -8,6 +8,9 @@ let lock: WakeLockSentinel | null = null;
 let asking = false;
 let watching = false;
 
+/** Something needs the app open right now (the app doesn't reload itself for a newer version meanwhile). */
+export const keptAwake = () => reasons.size > 0;
+
 export function keepAwake(reason: string, on: boolean) {
   if (on === reasons.has(reason)) return;
   if (on) reasons.add(reason);

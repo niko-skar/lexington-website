@@ -18,6 +18,7 @@ import {
   type PageSection,
   type TodoMe,
 } from "@/lib/todo/shared";
+import { forgetPhoneCopy } from "./phoneCopy";
 import styles from "./Todo.module.css";
 
 // What every part of the site app shares: its header, the bar at the bottom (Home, then the parts this
@@ -389,7 +390,8 @@ export function SiteMenu({
             Refresh now
           </button>
           {isAdmin && <Link href="/admin/crm">Back to the admin pages</Link>}
-          <form action={todoSignOutAction}>
+          {/* Nothing of this login stays on the phone after (its copy of the app: components/todo/phoneCopy.ts). */}
+          <form action={todoSignOutAction} onSubmit={() => forgetPhoneCopy()}>
             <button type="submit">Sign out</button>
           </form>
         </div>

@@ -1,5 +1,13 @@
 import type { NextConfig } from "next";
 
+// Which version of the site app this is, on every app page and API answer (27 Nov 2026): the phone's copy of the app
+// (public/todo-sw.js) fetches its pages again when the website says a newer one is out. A development server says
+// "dev", and then the phone keeps no copy at all.
+const APP_BUILD =
+  process.env.VERCEL_DEPLOYMENT_ID ||
+  process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 12) ||
+  (process.env.NODE_ENV === "production" ? `local-${Date.now().toString(36)}` : "dev");
+
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   images: {
@@ -38,11 +46,22 @@ const nextConfig: NextConfig = {
         // away (Android ignores that request while the camera is switched off). Later entries
         // win for the same header, so this overrides the line above for the app's pages only.
         source: "/todo",
-        headers: [{ key: "Permissions-Policy", value: "camera=(self), microphone=(), geolocation=()" }],
+        headers: [
+          { key: "Permissions-Policy", value: "camera=(self), microphone=(), geolocation=()" },
+          { key: "X-App-Build", value: APP_BUILD },
+        ],
       },
       {
         source: "/todo/:path*",
-        headers: [{ key: "Permissions-Policy", value: "camera=(self), microphone=(), geolocation=()" }],
+        headers: [
+          { key: "Permissions-Policy", value: "camera=(self), microphone=(), geolocation=()" },
+          { key: "X-App-Build", value: APP_BUILD },
+        ],
+      },
+      {
+        // The site app's own answers carry its version too (see APP_BUILD above).
+        source: "/api/:path*",
+        headers: [{ key: "X-App-Build", value: APP_BUILD }],
       },
       {
         // A buyer's own 3D page (public/3d/p/*.html, 18 Nov 2026: Armstrong's 5th-floor lock-off homes) shows inside

@@ -8,6 +8,7 @@ import { AccessSheet } from "./AccessSheet";
 import type { RollcallTab } from "./rollcallTab";
 import { startPolling } from "./api";
 import home from "./Dashboard.module.css";
+import { SAVED_AT } from "./phoneCopy";
 import { SiteHeader, SiteMenu, type View } from "./SiteChrome";
 import styles from "./Todo.module.css";
 
@@ -350,8 +351,9 @@ export function Dashboard({
     }
   }, []);
 
-  // The page brought the first figures: no need to ask again the moment it opens (only when coming back to it).
-  const pageBrought = useRef(Boolean(firstHome));
+  // The page brought the first figures: no need to ask again the moment it opens (only when coming back to it). A page
+  // opened from the copy kept on this phone (27 Nov 2026) brought the figures it had then: asked again at once.
+  const pageBrought = useRef(Boolean(firstHome) && !SAVED_AT);
   useEffect(() => {
     if (!active) return;
     const first = pageBrought.current ? undefined : setTimeout(() => void refresh(), 0);

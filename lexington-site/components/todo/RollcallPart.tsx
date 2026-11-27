@@ -26,6 +26,7 @@ export function RollcallPart({
   active,
   ask,
   onTab,
+  onWaiting,
 }: {
   me: TodoMe;
   active: boolean;
@@ -33,6 +34,8 @@ export function RollcallPart({
   ask: { tab: RollcallTab; at: number } | null;
   /** The tab on screen now (the address follows it). */
   onTab: (tab: RollcallTab) => void;
+  /** Changes kept on this phone that the website hasn't saved yet (27 Nov 2026: marked with no signal), for the app to say. */
+  onWaiting?: (n: number, noSignal: boolean) => void;
 }) {
   const can = rollcallAccess(me.sections);
   const tabs = (["today", "week", "workers"] as const).filter((t) => (t === "today" ? can.rollcall : t === "week" ? can.payday : can.workers));
@@ -77,15 +80,16 @@ export function RollcallPart({
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
       if (e.origin !== window.location.origin || e.source !== frame.current?.contentWindow) return;
-      const d = e.data as { type?: string; tab?: unknown } | null;
+      const d = e.data as { type?: string; tab?: unknown; n?: unknown; noSignal?: unknown } | null;
       if (d?.type === "rc-state" && isTab(d.tab)) {
         setCurrent(d.tab);
         onTab(d.tab);
       }
+      if (d?.type === "rc-waiting" && typeof d.n === "number") onWaiting?.(d.n, d.noSignal === true);
     };
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [onTab]);
+  }, [onTab, onWaiting]);
 
   // While another part is on screen, the page looks for changes less often.
   useEffect(() => {

@@ -5,6 +5,7 @@ import { useFormStatus } from "react-dom";
 
 import { adminLoginAction, type AdminLoginState } from "@/lib/actions/adminAuth";
 import { loginAction, type LoginState } from "@/lib/actions/login";
+import { forgetPhoneCopy } from "./phoneCopy";
 import styles from "./Todo.module.css";
 
 function Submit() {
@@ -24,6 +25,8 @@ export function TodoSignIn({ next = "/todo" }: { next?: string }) {
 
   useEffect(() => {
     navigator.serviceWorker?.register("/todo-sw.js", { scope: "/todo" }).catch(() => {});
+    // Signed out on this phone: no copy of the app (pages, figures) stays on it (components/todo/phoneCopy.ts).
+    forgetPhoneCopy();
   }, []);
 
   return (

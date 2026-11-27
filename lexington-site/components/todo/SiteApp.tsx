@@ -43,12 +43,15 @@ import { Dashboard, type FirstHome } from "./Dashboard";
 import type { ExpensePrefill } from "./ExpenseForm";
 import type { ProspectsData } from "./ProspectsApp";
 import { usePhoneAlerts } from "./PhoneAlerts";
+import { keepLoadedFiles, SAVED_AT, savedFigures, usePhoneCopyNews } from "./phoneCopy";
+import { PartBoundary } from "./PartBoundary";
 import { onUploads, resumeUploads, waitingUploads } from "./photoQueue";
 import { rollcallTabOf, type RollcallTab } from "./rollcallTab";
 import { appClass, CustomerTabs, FinanceTabs, SiteNav, type NavItem, type View } from "./SiteChrome";
 import type { BillPayment, BillPrefill } from "./SuppliersApp";
 import styles from "./Todo.module.css";
 import { useSheetGestures } from "./useSheetGestures";
+import { keptAwake } from "./wakeLock";
 
 // Each part's code is fetched when it is first needed, not all at once when the app opens (18 Nov 2026, Niko: "The app
 // takes forever to load on my phone": the phone used to download and start every part's code, about 1.3 MB, before the
@@ -172,12 +175,24 @@ const sectionFrom = (path: string): View | null =>
             : null;
 const hrefOf = (view: View) => (view === "home" ? "/todo" : view === "rollcall" ? "/todo/rollcall" : sectionHref(view));
 
-async function load(section: PageSection): Promise<SiteData> {
-  const get = async (url: string) => {
-    const response = await fetch(url, { cache: "no-store" });
-    if (!response.ok) throw new Error(String(response.status));
-    return response.json();
-  };
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- each part's own answer, typed where it's used
+type Get = (url: string) => Promise<any>;
+const fromWebsite: Get = async (url) => {
+  const response = await fetch(url, { cache: "no-store" });
+  if (!response.ok) throw new Error(String(response.status));
+  return response.json();
+};
+// A part's figures as this phone last had them (27 Nov 2026: public/todo-sw.js keeps each part's last answer), so a part
+// opened with no signal still shows something; on screen, it asks the website itself straight away.
+const fromPhone: Get = async (url) => {
+  const kept = await savedFigures(url);
+  if (kept === null) throw new Error("none kept");
+  return kept;
+};
+/** Parts whose figures come from this phone's copy when there's no signal (not the as-built record or Site updates: they're changed in place, so only ever from the website). */
+const keptOnPhone = (s: View): s is PageSection => (PAGE_SECTIONS as readonly string[]).includes(s) && !ON_OPENING.includes(s as PageSection);
+
+async function load(section: PageSection, get: Get = fromWebsite): Promise<SiteData> {
   if (section === "todo") return { todo: (await get("/api/todo")).tasks };
   if (section === "store") return { store: await get("/api/store") };
   if (section === "alerts") return { alerts: await get("/api/alerts") };
@@ -327,6 +342,28 @@ export function SiteApp({
   const [section, setSection] = useState<View>(first);
   const [opened, setOpened] = useState<View[]>([first]);
   const [data, setData] = useState<SiteData>(initial);
+  // The same two for go(), which stays the same function while they change.
+  const dataRef = useRef(data);
+  const openedRef = useRef(opened);
+  useEffect(() => {
+    dataRef.current = data;
+    openedRef.current = opened;
+  }, [data, opened]);
+  // The part the app opened on, from the copy kept on this phone: it asks the website for its figures straight away
+  // instead of trusting the page's (27 Nov 2026, public/todo-sw.js).
+  const isFresh = (s: View) => first === s && !SAVED_AT;
+  // Roll call marks kept on this phone, not saved by the website yet (its page says so; the other parts say it here).
+  const [rcWaiting, setRcWaiting] = useState({ n: 0, noSignal: false });
+  const onRcWaiting = useCallback((n: number, noSignal: boolean) => setRcWaiting({ n, noSignal }), []);
+  // A newer version of the app, or signed out: what the phone's copy says (components/todo/phoneCopy.ts).
+  const isBusy = useCallback(() => waitingUploads() > 0 || keptAwake(), []);
+  usePhoneCopyNews(isBusy);
+  useEffect(() => {
+    const sw = navigator.serviceWorker;
+    if (!sw) return;
+    sw.addEventListener("controllerchange", keepLoadedFiles);
+    return () => sw.removeEventListener("controllerchange", keepLoadedFiles);
+  }, []);
   // The store's tab asked for (the home page's To buy tile, the back button to #buy; it reads #buy itself on opening).
   const [storeAsk, setStoreAsk] = useState<{ tab: "buy"; at: number } | null>(null);
   // The to-do's list asked for (the home page's To-do and My to-do tiles).
@@ -400,9 +437,15 @@ export function SiteApp({
           setData((d) => ({ ...loaded, ...d }));
           if (loaded.alerts) setUnread(loaded.alerts.unread);
         } catch {
-          /* it loads when opened instead */
+          // No signal: the figures this phone last had, so the part still opens with something (it asks again when opened).
+          const kept = await load(s, fromPhone).catch(() => null);
+          if (!live) return;
+          if (kept) setData((d) => ({ ...kept, ...d }));
         }
       }
+      // The helper on the phone keeps all of this now (the app's code, this page), also the first time, when the page came
+      // before the helper was in charge: so one open with signal is enough for the next one to work with none.
+      if (live) keepLoadedFiles();
     }, 1200);
     return () => {
       live = false;
@@ -425,7 +468,15 @@ export function SiteApp({
       scrollAt.current[current.current] = window.scrollY;
       current.current = next;
       setSection(next);
-      setOpened((o) => (o.includes(next) ? o : [...o, next]));
+      const open = () => setOpened((o) => (o.includes(next) ? o : [...o, next]));
+      // Opened before its figures came (with no signal they may never): the ones this phone last had come first, a moment
+      // before the part shows; on screen it asks the website itself straight away, as always.
+      if (keptOnPhone(next) && !openedRef.current.includes(next) && dataRef.current[next] === undefined) {
+        void load(next, fromPhone)
+          .then((kept) => setData((d) => ({ ...kept, ...d })))
+          .catch(() => undefined)
+          .finally(open);
+      } else open();
       if (push) window.history.pushState(null, "", next === "prospects" ? prospectsPath.current : hrefOf(next));
     },
     [me.sections]
@@ -502,260 +553,305 @@ export function SiteApp({
   return (
     <div className={appClass(me)} data-app="site">
       <InstallHint />
-      {photosGoing > 0 && (
+      {(photosGoing > 0 || (rcWaiting.n > 0 && section !== "rollcall")) && (
         <p className={styles.photosGoing} role="status">
-          {photosGoing === 1 ? "1 photo" : `${photosGoing} photos`} still uploading: keep the app open until it&rsquo;s done
+          {[
+            photosGoing > 0 && `${photosGoing === 1 ? "1 photo" : `${photosGoing} photos`} still uploading: keep the app open until it’s done`,
+            rcWaiting.n > 0 &&
+              section !== "rollcall" &&
+              (rcWaiting.noSignal ? "Roll call: kept on this phone, it saves when the signal is back" : "Roll call: saving what was marked with no signal…"),
+          ]
+            .filter(Boolean)
+            .join(" · ")}
         </p>
       )}
       {show("home") && (
         <div hidden={section !== "home"}>
-          <Dashboard
-            me={me}
-            active={section === "home"}
-            firstHome={first === "home" ? firstHome : undefined}
-            onReady={onHomeReady}
-            onGo={go}
-            onRollcall={(tab) => {
-              setRcAsk({ tab, at: Date.now() });
-              go("rollcall");
-            }}
-            onStoreTab={(tab) => setStoreAsk({ tab, at: Date.now() })}
-            onTodoList={(list) => setListAsk({ list, at: Date.now() })}
-            unread={unread}
-          />
+          <PartBoundary>
+            <Dashboard
+              me={me}
+              active={section === "home"}
+              firstHome={first === "home" ? firstHome : undefined}
+              onReady={onHomeReady}
+              onGo={go}
+              onRollcall={(tab) => {
+                setRcAsk({ tab, at: Date.now() });
+                go("rollcall");
+              }}
+              onStoreTab={(tab) => setStoreAsk({ tab, at: Date.now() })}
+              onTodoList={(list) => setListAsk({ list, at: Date.now() })}
+              unread={unread}
+            />
+          </PartBoundary>
         </div>
       )}
       {show("todo") && (
         <div hidden={section !== "todo"}>
-          <TodoApp
-            me={me}
-            active={section === "todo"}
-            initialTasks={data.todo ?? null}
-            initialList={initialList}
-            listAsk={listAsk}
-            openJob={openJob}
-            phone={phone}
-            startedOffline={startedOffline && first === "todo"}
-            fresh={first === "todo"}
-          />
+          <PartBoundary>
+            <TodoApp
+              me={me}
+              active={section === "todo"}
+              initialTasks={data.todo ?? null}
+              initialList={initialList}
+              listAsk={listAsk}
+              openJob={openJob}
+              phone={phone}
+              startedOffline={startedOffline && first === "todo"}
+              fresh={isFresh("todo")}
+            />
+          </PartBoundary>
         </div>
       )}
       {show("visits") && (
         <div hidden={section !== "visits"}>
-          <VisitsApp
-            me={me}
-            active={section === "visits"}
-            initial={data.visits ?? null}
-            startedOffline={startedOffline && first === "visits"}
-            fresh={first === "visits"}
-            tabs={customerTabs("visits")}
-            onRecord={me.sections.includes("prospects") ? openProspect : undefined}
-          />
+          <PartBoundary>
+            <VisitsApp
+              me={me}
+              active={section === "visits"}
+              initial={data.visits ?? null}
+              startedOffline={startedOffline && first === "visits"}
+              fresh={isFresh("visits")}
+              tabs={customerTabs("visits")}
+              onRecord={me.sections.includes("prospects") ? openProspect : undefined}
+            />
+          </PartBoundary>
         </div>
       )}
       {show("prospects") && (
         <div hidden={section !== "prospects"}>
-          <ProspectsApp
-            me={me}
-            active={section === "prospects"}
-            initial={data.prospects ?? null}
-            startedOffline={startedOffline && first === "prospects"}
-            fresh={first === "prospects"}
-            tabs={customerTabs("prospects")}
-            ask={prospectAsk}
-            onPath={onProspectsPath}
-          />
+          <PartBoundary>
+            <ProspectsApp
+              me={me}
+              active={section === "prospects"}
+              initial={data.prospects ?? null}
+              startedOffline={startedOffline && first === "prospects"}
+              fresh={isFresh("prospects")}
+              tabs={customerTabs("prospects")}
+              ask={prospectAsk}
+              onPath={onProspectsPath}
+            />
+          </PartBoundary>
         </div>
       )}
       {show("store") && (
         <div hidden={section !== "store"}>
-          <StoreApp
-            me={me}
-            active={section === "store"}
-            initial={data.store ?? null}
-            startedOffline={startedOffline && first === "store"}
-            ask={storeAsk}
-            fresh={first === "store"}
-          />
+          <PartBoundary>
+            <StoreApp
+              me={me}
+              active={section === "store"}
+              initial={data.store ?? null}
+              startedOffline={startedOffline && first === "store"}
+              ask={storeAsk}
+              fresh={isFresh("store")}
+            />
+          </PartBoundary>
         </div>
       )}
       {show("expenses") && (
         <div hidden={section !== "expenses"}>
-          <ExpensesApp
-            me={me}
-            active={section === "expenses"}
-            initial={data.expenses ?? null}
-            openEntry={openEntry}
-            openDebit={openDebit}
-            onSteel={() => go("steel")}
-            payBill={payAsk}
-            payOrder={orderPayAsk}
-            tabs={tabs("expenses")}
-            startedOffline={startedOffline && first === "expenses"}
-            fresh={first === "expenses"}
-          />
+          <PartBoundary>
+            <ExpensesApp
+              me={me}
+              active={section === "expenses"}
+              initial={data.expenses ?? null}
+              openEntry={openEntry}
+              openDebit={openDebit}
+              onSteel={() => go("steel")}
+              payBill={payAsk}
+              payOrder={orderPayAsk}
+              tabs={tabs("expenses")}
+              startedOffline={startedOffline && first === "expenses"}
+              fresh={isFresh("expenses")}
+            />
+          </PartBoundary>
         </div>
       )}
       {show("orders") && (
         <div hidden={section !== "orders"}>
-          <OrdersApp
-            me={me}
-            active={section === "orders"}
-            initial={data.orders ?? null}
-            startedOffline={startedOffline && first === "orders"}
-            fresh={first === "orders"}
-            tabs={tabs("orders")}
-            ask={orderAsk}
-            onBill={(bill) => {
-              setSupplierAsk({ vendorId: bill.vendorId, bill, at: Date.now() });
-              go("suppliers");
-            }}
-            onPay={(prefill) => {
-              setOrderPayAsk({ prefill, at: Date.now() });
-              go("expenses");
-            }}
-          />
+          <PartBoundary>
+            <OrdersApp
+              me={me}
+              active={section === "orders"}
+              initial={data.orders ?? null}
+              startedOffline={startedOffline && first === "orders"}
+              fresh={isFresh("orders")}
+              tabs={tabs("orders")}
+              ask={orderAsk}
+              onBill={(bill) => {
+                setSupplierAsk({ vendorId: bill.vendorId, bill, at: Date.now() });
+                go("suppliers");
+              }}
+              onPay={(prefill) => {
+                setOrderPayAsk({ prefill, at: Date.now() });
+                go("expenses");
+              }}
+            />
+          </PartBoundary>
         </div>
       )}
       {show("cashflow") && (
         <div hidden={section !== "cashflow"}>
-          <CashflowApp
-            me={me}
-            active={section === "cashflow"}
-            initial={data.cashflow ?? null}
-            startedOffline={startedOffline && first === "cashflow"}
-            fresh={first === "cashflow"}
-            tabs={tabs("cashflow")}
-            onBill={(vendorId) => {
-              setSupplierAsk({ vendorId, at: Date.now() });
-              go("suppliers");
-            }}
-            onOrder={(orderId) => {
-              setOrderAsk({ orderId, at: Date.now() });
-              go("orders");
-            }}
-          />
+          <PartBoundary>
+            <CashflowApp
+              me={me}
+              active={section === "cashflow"}
+              initial={data.cashflow ?? null}
+              startedOffline={startedOffline && first === "cashflow"}
+              fresh={isFresh("cashflow")}
+              tabs={tabs("cashflow")}
+              onBill={(vendorId) => {
+                setSupplierAsk({ vendorId, at: Date.now() });
+                go("suppliers");
+              }}
+              onOrder={(orderId) => {
+                setOrderAsk({ orderId, at: Date.now() });
+                go("orders");
+              }}
+            />
+          </PartBoundary>
         </div>
       )}
       {show("alerts") && (
         <div hidden={section !== "alerts"}>
-          <AlertsApp
-            me={me}
-            active={section === "alerts"}
-            initial={data.alerts ?? null}
-            startedOffline={startedOffline && first === "alerts"}
-            fresh={first === "alerts"}
-            openAlert={openAlert}
-            onUnread={setUnread}
-            phone={phone}
-            onProspect={me.sections.includes("prospects") ? openProspect : undefined}
-          />
+          <PartBoundary>
+            <AlertsApp
+              me={me}
+              active={section === "alerts"}
+              initial={data.alerts ?? null}
+              startedOffline={startedOffline && first === "alerts"}
+              fresh={isFresh("alerts")}
+              openAlert={openAlert}
+              onUnread={setUnread}
+              phone={phone}
+              onProspect={me.sections.includes("prospects") ? openProspect : undefined}
+            />
+          </PartBoundary>
         </div>
       )}
       {show("concrete") && (
         <div hidden={section !== "concrete"}>
-          <ConcreteApp
-            me={me}
-            active={section === "concrete"}
-            initial={data.concrete ?? null}
-            openTruck={openTruck}
-            startedOffline={startedOffline && first === "concrete"}
-            fresh={first === "concrete"}
-            onOrder={
-              me.sections.includes("orders")
-                ? (orderId) => {
-                    setOrderAsk({ orderId, at: Date.now() });
-                    go("orders");
-                  }
-                : undefined
-            }
-          />
+          <PartBoundary>
+            <ConcreteApp
+              me={me}
+              active={section === "concrete"}
+              initial={data.concrete ?? null}
+              openTruck={openTruck}
+              startedOffline={startedOffline && first === "concrete"}
+              fresh={isFresh("concrete")}
+              onOrder={
+                me.sections.includes("orders")
+                  ? (orderId) => {
+                      setOrderAsk({ orderId, at: Date.now() });
+                      go("orders");
+                    }
+                  : undefined
+              }
+            />
+          </PartBoundary>
         </div>
       )}
       {show("buyers") && (
         <div hidden={section !== "buyers"}>
-          <BuyersApp
-            me={me}
-            active={section === "buyers"}
-            initial={data.buyers ?? null}
-            startedOffline={startedOffline && first === "buyers"}
-            fresh={first === "buyers"}
-            tabs={tabs("buyers")}
-          />
+          <PartBoundary>
+            <BuyersApp
+              me={me}
+              active={section === "buyers"}
+              initial={data.buyers ?? null}
+              startedOffline={startedOffline && first === "buyers"}
+              fresh={isFresh("buyers")}
+              tabs={tabs("buyers")}
+            />
+          </PartBoundary>
         </div>
       )}
       {show("asbuilt") && (
         <div hidden={section !== "asbuilt"}>
-          <AsBuiltPart me={me} active={section === "asbuilt"} initial={data.asbuilt ?? null} startedOffline={startedOffline && first === "asbuilt"} />
+          <PartBoundary>
+            <AsBuiltPart me={me} active={section === "asbuilt"} initial={data.asbuilt ?? null} startedOffline={startedOffline && first === "asbuilt"} />
+          </PartBoundary>
         </div>
       )}
       {show("updates") && (
         <div hidden={section !== "updates"}>
-          <UpdatesPart me={me} active={section === "updates"} initial={data.updates ?? null} startedOffline={startedOffline && first === "updates"} />
+          <PartBoundary>
+            <UpdatesPart me={me} active={section === "updates"} initial={data.updates ?? null} startedOffline={startedOffline && first === "updates"} />
+          </PartBoundary>
         </div>
       )}
       {show("steel") && (
         <div hidden={section !== "steel"}>
-          <SteelApp me={me} active={section === "steel"} initial={data.steel ?? null} startedOffline={startedOffline && first === "steel"} fresh={first === "steel"} />
+          <PartBoundary>
+            <SteelApp me={me} active={section === "steel"} initial={data.steel ?? null} startedOffline={startedOffline && first === "steel"} fresh={isFresh("steel")} />
+          </PartBoundary>
         </div>
       )}
       {show("spending") && (
         <div hidden={section !== "spending"}>
-          <SpendingApp
-            me={me}
-            active={section === "spending"}
-            initial={data.spending ?? null}
-            startedOffline={startedOffline && first === "spending"}
-            fresh={first === "spending"}
-            tabs={tabs("spending")}
-          />
+          <PartBoundary>
+            <SpendingApp
+              me={me}
+              active={section === "spending"}
+              initial={data.spending ?? null}
+              startedOffline={startedOffline && first === "spending"}
+              fresh={isFresh("spending")}
+              tabs={tabs("spending")}
+            />
+          </PartBoundary>
         </div>
       )}
       {show("analysis") && (
         <div hidden={section !== "analysis"}>
-          <AnalysisApp
-            me={me}
-            active={section === "analysis"}
-            initial={data.analysis ?? null}
-            startedOffline={startedOffline && first === "analysis"}
-            fresh={first === "analysis"}
-            tabs={tabs("analysis")}
-          />
+          <PartBoundary>
+            <AnalysisApp
+              me={me}
+              active={section === "analysis"}
+              initial={data.analysis ?? null}
+              startedOffline={startedOffline && first === "analysis"}
+              fresh={isFresh("analysis")}
+              tabs={tabs("analysis")}
+            />
+          </PartBoundary>
         </div>
       )}
       {show("filings") && (
         <div hidden={section !== "filings"}>
-          <FilingsApp
-            me={me}
-            active={section === "filings"}
-            initial={data.filings ?? null}
-            startedOffline={startedOffline && first === "filings"}
-            fresh={first === "filings"}
-            tabs={tabs("filings")}
-            open={openFiling}
-          />
+          <PartBoundary>
+            <FilingsApp
+              me={me}
+              active={section === "filings"}
+              initial={data.filings ?? null}
+              startedOffline={startedOffline && first === "filings"}
+              fresh={isFresh("filings")}
+              tabs={tabs("filings")}
+              open={openFiling}
+            />
+          </PartBoundary>
         </div>
       )}
       {show("suppliers") && (
         <div hidden={section !== "suppliers"}>
-          <SuppliersApp
-            me={me}
-            active={section === "suppliers"}
-            initial={data.suppliers ?? null}
-            startedOffline={startedOffline && first === "suppliers"}
-            fresh={first === "suppliers"}
-            onPay={(payment) => {
-              setPayAsk({ payment, at: Date.now() });
-              go("expenses");
-            }}
-            ask={supplierAsk}
-            tabs={tabs("suppliers")}
-          />
+          <PartBoundary>
+            <SuppliersApp
+              me={me}
+              active={section === "suppliers"}
+              initial={data.suppliers ?? null}
+              startedOffline={startedOffline && first === "suppliers"}
+              fresh={isFresh("suppliers")}
+              onPay={(payment) => {
+                setPayAsk({ payment, at: Date.now() });
+                go("expenses");
+              }}
+              ask={supplierAsk}
+              tabs={tabs("suppliers")}
+            />
+          </PartBoundary>
         </div>
       )}
       {show("rollcall") && (
         <div hidden={section !== "rollcall"}>
-          <RollcallPart me={me} active={section === "rollcall"} ask={rcAsk} onTab={onRcTab} />
+          <PartBoundary>
+            <RollcallPart me={me} active={section === "rollcall"} ask={rcAsk} onTab={onRcTab} onWaiting={onRcWaiting} />
+          </PartBoundary>
         </div>
       )}
       {/* Only the alerts carry a number on the bar (6 Nov 2026: none on Store; its shopping list says how many itself). */}
