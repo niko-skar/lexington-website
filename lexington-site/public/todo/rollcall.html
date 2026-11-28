@@ -947,9 +947,12 @@ function viewWeek(){
       ${isCur ? " Figures update as you mark attendance." : ""} Tap a day under a name to pay it as a half or full day.</p>
     ${locationsHtml(ws)}
     ${momoWeekHtml(W)}
-    <div class="actions"><button class="btn" data-act="copy">Copy report for WhatsApp</button>
+    <div class="actions"><button class="btn" data-act="copy" aria-expanded="${!!S.copyOpen}">Copy report for WhatsApp</button>
       ${S.downloads ? `<button class="btn" data-act="exportmenu" aria-expanded="${!!S.exportOpen}">Export to Excel</button>` : ""}
       ${S.downloads && money() ? `<button class="btn" data-act="affinitymenu" aria-expanded="${!!S.affinityOpen}">Download for Affinity</button>` : ""}</div>
+    ${S.copyOpen ? `<div class="exportbox"><span class="calc">Copy this week's report for WhatsApp:</span>
+      <div class="paybar"><button data-act="copyreport" data-v="simple">Simple, by trade</button>
+      <button data-act="copyreport" data-v="full">Full detail</button></div></div>` : ""}
     ${S.downloads && money() && S.affinityOpen ? affinityBoxHtml(W, ws) : ""}
     ${S.downloads && S.exportOpen ? `<div class="exportbox"><span class="calc">${S.exporting ? "Building the spreadsheet…" : "Save a backup of attendance, overtime, deductions, steel machines, curing, pour checks, payments and workers:"}</span>
       <div class="paybar"><button data-act="export" data-v="week" ${S.exporting?"disabled":""}>This week</button>
@@ -1314,10 +1317,12 @@ document.addEventListener("click", async e => {
       toast("Recorded "+ghs(amt)+" by "+METHODS[rec.method]); break; }
     case "unpay": { const patch = {paid:{[wid]:null}};
       S.pays[S.week] = deepMerge({...(S.pays[S.week]||{})}, patch); writeDoc("payments/"+S.week, patch, {weekStart:S.week}); break; }
-    case "copy": return copyReport();
-    case "exportmenu": S.exportOpen = !S.exportOpen; if (S.exportOpen) S.affinityOpen = false; break;
+    case "copy": S.copyOpen = !S.copyOpen; if (S.copyOpen){ S.exportOpen = false; S.affinityOpen = false; } break;
+    // The box closes first, so the copy box (when the phone won't let the page copy) lands in the new screen.
+    case "copyreport": S.copyOpen = false; render(); return copyReport(v);
+    case "exportmenu": S.exportOpen = !S.exportOpen; if (S.exportOpen){ S.affinityOpen = false; S.copyOpen = false; } break;
     case "export": return exportXlsx(v);
-    case "affinitymenu": S.affinityOpen = !S.affinityOpen; if (S.affinityOpen) S.exportOpen = false; break;
+    case "affinitymenu": S.affinityOpen = !S.affinityOpen; if (S.affinityOpen){ S.exportOpen = false; S.copyOpen = false; } break;
     case "affinity": return affinityFile();
     case "checkmomo": {
       const nw = v === "nw", w = nw ? null : S.workers[v], pre = nw ? "nw-" : "ed-";
@@ -1654,9 +1659,34 @@ async function affinityFile(){
   S.affExporting = false; render();
 }
 
-function copyReport(){
-  const W = weekData(S.week);
-  const lines = ["Site wages, week "+weekLabel(S.week), ""];
+/**
+ * The week's pay, simple, for WhatsApp: the carpenters, then the masons and labourers, each with their days and pay
+ * and the trade's total; the steel machines; the week's total, as Payday's To pay (Niko, 28 Nov 2026: "a payroll
+ * report that's simplified and split by carpenters and the masons/labourers so I can copy and paste it into WhatsApp").
+ */
+function simpleReport(ws){
+  const W = weekData(ws), cedis = n => ghs(n).replace(/\.00$/, "");
+  const today = todayStr(), toCome = W.dates.some(d => d > today && parseYmd(d).getDay() !== 0);
+  const lines = ["*Site wages, week "+weekLabel(ws)+"*"+(toCome ? " (up to "+dayLabel(today)+")" : "")];
+  for (const id of ["carpentry", "masonry"]){
+    const g = GROUPS.find(x => x.id === id);
+    const rows = W.rows.filter(r => TRADES[r.w.trade].group === id && r.net).sort((a, b) => a.w.name.localeCompare(b.w.name));
+    if (!rows.length) continue;
+    lines.push("", "*"+g.label+"* ("+rows.length+")");
+    // A part payment (half on Saturday, the rest on Monday) says how much went, not "paid".
+    for (const r of rows){ const p = r.paid ? Number(r.paid.amount) || 0 : 0;
+      lines.push(titleCase(r.w.name.trim())+": "+daysTxt(r.sixths)+", "+cedis(r.net)+(!r.paid ? "" : p >= r.net - 0.005 ? " (paid)" : " ("+cedis(p)+" paid)")); }
+    lines.push("_"+g.label+" total: "+cedis(r2(rows.reduce((s, r) => s + r.net, 0)))+"_");
+  }
+  if (W.machineTotal) lines.push("", "Steel machines: "+cedis(W.machineTotal)+(W.pay.paid?.machines ? " (paid)" : ""));
+  lines.push("", "*Total: "+cedis(W.due)+"*");
+  if (W.paidTotal) lines.push("Paid so far: "+cedis(W.paidTotal)+", left: "+cedis(Math.max(0, r2(W.due - W.paidTotal))));
+  return lines.join("\n");
+}
+/** Every worker's pay and how it's made up (days, late deductions, overtime, curing), and what's been paid. */
+function fullReport(ws){
+  const W = weekData(ws);
+  const lines = ["Site wages, week "+weekLabel(ws), ""];
   for (const r of W.rows){ if (!r.net && !r.paid) continue;
     let l = `${r.w.name}${r.w.nick ? " “"+r.w.nick+"”" : ""} (${TRADES[r.w.trade].label}): ${daysTxt(r.sixths)} = ${ghs(r.gross)}`;
     if (r.ded) l += ` − late ${ghs(r.ded)}`;
@@ -1671,7 +1701,11 @@ function copyReport(){
     const p = W.pay.paid?.machines; if (p) l += " · PAID "+ghs(p.amount)+" "+METHODS[p.method]+(p.to ? " to "+p.to : "");
     lines.push(l); }
   lines.push("", "Total due: "+ghs(W.due), "Paid: "+ghs(W.paidTotal));
-  const txt = lines.join("\n");
+  return lines.join("\n");
+}
+/** Copies the week's report ("simple" by trade, or "full" detail) for WhatsApp. */
+function copyReport(kind){
+  const txt = kind === "full" ? fullReport(S.week) : simpleReport(S.week);
   const fallback = () => { const ta = document.createElement("textarea"); ta.value = txt; ta.className = "field"; ta.style.height = "200px";
     ta.id = "copybox"; const old = document.getElementById("copybox"); old && old.remove();
     document.querySelector(".actions").after(ta); ta.select(); toast("Select all and copy the text below."); };
